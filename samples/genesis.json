@@ -1,0 +1,11 @@
+{
+  "chain_id": "7c926bb0-e053-4c31-a438-a79b5ff89a50",
+  "genesis_hash": "08b671180438e600b2fbd1ec7942560dccfbdb30c24e1657e8475e3c3c877774",
+  "input": {
+    "chain_id": "7c926bb0-e053-4c31-a438-a79b5ff89a50",
+    "protocol": "ARSS",
+    "timestamp": "2026-03-06T00:00:00.000000Z",
+    "version": "1.0"
+  },
+  "note": "Genesis Anchor: SHA256(JCS(input)). First prev_hash of this chain."
+}

@@ -1,0 +1,31 @@
+{
+  "actor": {
+    "execution_context": {
+      "session_id": "sess-001"
+    },
+    "human_actor": "61e4352d5041e3cb",
+    "organizational_actor": "org-lawfirm-001"
+  },
+  "chain_hash": "1a13e6b043f951be8e2926f12cddcc8260446d1445a84c73c8ce6165967d74d0",
+  "event_type": "HUMAN_REVIEW_LOGGED",
+  "governance_context": {
+    "authority_root": "aiba-root-v1",
+    "jurisdiction": "KR",
+    "policy_id": "legal-compliance-v1"
+  },
+  "payload": {
+    "event_type": "HUMAN_REVIEW_LOGGED",
+    "modification_hash": "51b6d7fe8c75e6cbddf5e132c14c52c2f1beab872b7f86417e023fd1df809e5d",
+    "prev_hash": "ea1505232ee2d490242bea1bc0ca8c35c07d1c69b2302144fed9261eb94794ea",
+    "review_comment_hash": "94d7805ead129bc85b2a015363b819123f4573f6943325c6f4943656c3144acb",
+    "review_duration_sec": 847,
+    "review_outcome": "MODIFIED",
+    "reviewed_rpu_id": "01956a20-0000-7000-8000-000000000001",
+    "reviewer_id": "61e4352d5041e3cb"
+  },
+  "payload_hash": "ad0e0ec3b1c8ae493551afd370473bfd674df7f882adca49882595b6963e672b",
+  "prev_hash": "ea1505232ee2d490242bea1bc0ca8c35c07d1c69b2302144fed9261eb94794ea",
+  "rpu_id": "01956a20-0000-7000-8000-000000000002",
+  "timestamp": "2026-03-06T10:15:00.000000Z",
+  "version": "rpu/1.0"
+}

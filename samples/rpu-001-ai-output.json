@@ -1,0 +1,29 @@
+{
+  "actor": {
+    "execution_context": {
+      "session_id": "sess-001"
+    },
+    "organizational_actor": "org-lawfirm-001",
+    "system_actor": "claude-sonnet-4-6"
+  },
+  "chain_hash": "ea1505232ee2d490242bea1bc0ca8c35c07d1c69b2302144fed9261eb94794ea",
+  "event_type": "AI_OUTPUT_GENERATED",
+  "governance_context": {
+    "authority_root": "aiba-root-v1",
+    "jurisdiction": "KR",
+    "policy_id": "legal-compliance-v1"
+  },
+  "payload": {
+    "confidence_level": "0.92",
+    "event_type": "AI_OUTPUT_GENERATED",
+    "flags": [],
+    "model_id": "claude-sonnet-4-6",
+    "output_payload_hash": "328ef722f6247ec71f847e801f2cbe81e9a0941d5c7150e923565de9a7f9fb77",
+    "prompt_hash": "a1fd09b518d68732d04aba0e526771cd4f01c3ae5fa1e81db3b0d7dad5a42291"
+  },
+  "payload_hash": "b740309049e572b6184eb576ff790ab2712f0239b083a9c6e2f4d6beb19ca10c",
+  "prev_hash": "08b671180438e600b2fbd1ec7942560dccfbdb30c24e1657e8475e3c3c877774",
+  "rpu_id": "01956a20-0000-7000-8000-000000000001",
+  "timestamp": "2026-03-06T09:00:00.000000Z",
+  "version": "rpu/1.0"
+}
