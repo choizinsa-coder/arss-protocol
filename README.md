@@ -1,109 +1,227 @@
 # ARSS — Accountability Record & Structural Signature
 
-> **Governance is not declared. It is recomputed.**
-
-ARSS is a **governance verification infrastructure** — not an AI system, not a governance policy, but the infrastructure that makes governance decisions independently verifiable.
-
-Any AI decision chain recorded with ARSS can be recomputed by anyone, at any time, producing the same cryptographic result.
+**ARSS is an open protocol for recording AI governance decisions as a cryptographic chain that anyone can independently recompute and verify.**
 
 ---
 
-## What This Repository Provides
+## The Problem
 
-| Resource | Description |
-|---|---|
-| [`spec/`](./spec/) | Protocol specification documents |
-| &nbsp;&nbsp;[`ARSS-RPU-Spec-v0.1.md`](./spec/ARSS-RPU-Spec-v0.1.md) | RPU v0.1 Specification — the core protocol definition |
-| &nbsp;&nbsp;[`genesis-anchor.md`](./spec/genesis-anchor.md) | Genesis Anchor — chain origin rules and trust root |
-| &nbsp;&nbsp;[`schema-versioning.md`](./spec/schema-versioning.md) | Schema Versioning — RPU version management and migration |
-| &nbsp;&nbsp;[`hash-algorithm-agility.md`](./spec/hash-algorithm-agility.md) | Hash Algorithm Agility — post-SHA256 transition path |
-| [`reference-verifier/`](./reference-verifier/) | Official reference implementation of the spec |
-| [`samples/`](./samples/) | Pre-verified sample chain (Law & Compliance domain) |
-| [`tests/`](./tests/) | Expected outputs for independent reproduction |
+Current AI governance relies on declarations, not evidence.
 
----
+Audit reports assert that a governance process occurred.  
+Policy documents declare that controls were followed.  
+Compliance records state that decisions were reviewed.
 
-## Core Concept
+None of these produce a record that an independent party can recompute.  
+If the record cannot be recomputed, it cannot be verified.  
+If it cannot be verified, it is trust — not proof.
 
-An ARSS chain records three governance events in sequence:
-
-```
-AI_OUTPUT_GENERATED  →  HUMAN_REVIEW_LOGGED  →  HUMAN_APPROVAL_RECORDED
-```
-
-Each event is linked by a cryptographic hash chain:
-
-```
-chain_hash = SHA256( prev_hash || 0x00 || payload_hash )
-payload_hash = SHA256( JCS( payload ) )
-```
-
-Anyone can recompute this chain from scratch and verify that no record has been altered.
+ARSS addresses this gap.
 
 ---
 
-## Quick Start
+## How ARSS Works
+
+ARSS converts governance events into **Record Proof Units (RPUs)** — deterministically serialized, cryptographically chained records that preserve the integrity of each decision point.
+
+```
+Governance Event
+       │
+       ▼
+JCS Canonicalization          ← RFC 8785, deterministic byte sequence
+       │
+       ▼
+Payload Hash (SHA256)
+       │
+       ▼
+Hash Chain  ←  SHA256(prev_hash ‖ 0x00 ‖ payload_c14n)
+       │
+       ▼
+RPU Record                    ← independently recomputable
+       │
+       ▼
+Reference Verifier            ← any third party, any environment
+```
+
+**Three core mechanisms:**
+
+1. **Deterministic serialization** — each governance event is normalized using JSON Canonicalization Scheme (JCS / RFC 8785), producing an identical byte sequence regardless of environment
+2. **Hash chaining** — each RPU embeds the hash of the previous record:
+   ```
+   SHA256(prev_hash || 0x00 || payload_c14n)
+   ```
+3. **Independent recomputability** — any party with the raw records can recompute the chain and confirm integrity without access to the original system
+
+### RPU Required Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `rpu_id` | UUIDv7 | Monotonically ordered record identifier |
+| `version` | string | Protocol version (`rpu/1.0`) |
+| `timestamp` | ISO 8601 UTC | Microsecond precision |
+| `actor_id` | string | Deterministic identifier derived from the actor's public key |
+| `payload_hash` | SHA256 | Hash of the governance event payload |
+| `governance_context` | object | Policy ID, Authority Root, Jurisdiction |
+| `prev_hash` | SHA256 | Hash of the preceding RPU (genesis: `0x00…00`) |
+
+---
+
+## Quick Start — 5-Minute Verification
+
+Verify a sample governance chain locally.
+
+**Requirements:** Python 3.8+
 
 ```bash
-git clone https://github.com/aiba-global/arss-protocol.git
+# 1. Clone the repository
+git clone https://github.com/choizinsa-coder/arss-protocol
 cd arss-protocol
-python reference-verifier/src/verifier.py samples/
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Run the reference verifier against the sample chain
+python reference-verifier/src/verifier.py samples
 ```
 
-Expected final chain hash:
+**Expected output:**
+
 ```
-3de51ae75318d7493fe7850046df41920e92362630a50a1a63af951adadf7763
+ARSS Reference Verifier v0.1
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Chain : genesis → rpu-001 → rpu-002 → rpu-003
+JCS normalization: PASS
+Hash chain       : PASS
+Anchor hash      : 3BAC33BE74B76B2AED83BE6C3594C7F08D3C9E889ABB9F0B97FD39BFD9E52C14
+
+RESULT: ALL PASS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-See [QUICKSTART.md](./QUICKSTART.md) for step-by-step instructions.
+To recompute a single RPU hash manually:
+
+```python
+import hashlib, json
+
+# Load normalized payload (JCS)
+payload_c14n = b'...'          # canonical JSON bytes
+prev_hash    = bytes(32)       # 32 zero-bytes for genesis RPU
+
+digest = hashlib.sha256(prev_hash + b'\x00' + payload_c14n).hexdigest()
+print(digest)
+```
+
+---
+
+## Repository Structure
+
+```
+arss-protocol/
+├── spec/                    # Protocol specification (Markdown)
+│   ├── rpu-schema.md        # RPU field definitions and constraints
+│   ├── hash-chain.md        # Chain construction and verification rules
+│   └── canonicalization.md  # JCS normalization requirements
+│
+├── reference-verifier/      # Minimal Python verifier
+│   └── src/
+│       └── verifier.py
+│
+├── samples/                 # Sample governance chain (directory of RPUs)
+│   ├── genesis.json
+│   ├── rpu-001.json
+│   ├── rpu-002.json
+│   └── rpu-003.json
+│
+└── tests/                   # Verification test vectors
+    └── test_vectors.json
+```
+
+---
+
+## Verification Logic
+
+The reference verifier performs three sequential checks:
+
+**Step 1 — Single RPU integrity**  
+Apply JCS normalization to each RPU payload. Recompute `payload_hash`. Confirm match.
+
+**Step 2 — Chain continuity**  
+For each RPU at position `n`, confirm:
+```
+rpu[n].prev_hash == SHA256(rpu[n-1].prev_hash || 0x00 || rpu[n-1].payload_c14n)
+```
+
+**Step 3 — HACS verification** *(optional in v0.1)*  
+Verify HACS (Human Actor Cryptographic Signature) if present in `governance_context`.
+
+A chain that passes all three steps is structurally sound — its integrity can be confirmed by any independent party without access to the originating system.
+
+---
+
+## Protocol Status
+
+ARSS is an open protocol under active development.
+
+Current release: **v0.1 (specification draft)**
+
+- [x] RPU schema defined
+- [x] Hash chain formula specified
+- [x] JCS normalization requirement documented
+- [x] Reference verifier (Python, single-file)
+- [x] Sample chain with known verification hash
+- [ ] Formal test vector suite
+- [ ] Multi-language verifier implementations
+- [ ] HACS full integration in verifier
+
+The v0.1 verification anchor hash is:
+```
+3BAC33BE74B76B2AED83BE6C3594C7F08D3C9E889ABB9F0B97FD39BFD9E52C14
+```
+
+This hash is publicly declared and independently recomputable from the sample chain in `samples/`.
 
 ---
 
 ## Design Principles
 
-**1. Recomputable Governance**
-Every governance record can be independently recomputed. Trust is structural, not declarative.
+**Recomputable, not trusted.**  
+Any claim about a governance chain's integrity must be independently verifiable from the raw records alone.
 
-**2. Event Immutability**
-Once written, an RPU payload is never modified. Corrections are new events, appended to the chain.
+**Deterministic, not environment-dependent.**  
+JCS normalization guarantees that the same governance event produces the same byte sequence on any machine.
 
-**3. Infrastructure, Not Certification**
-ARSS provides the verification infrastructure. Auditors and certifiers remain independent third parties.
-
-**4. Natural Lock-in via Chain Continuity**
-The `prev_hash` chain structure means switching systems breaks chain continuity — a structural property, not an artificial barrier.
+**Open, not proprietary.**  
+The protocol specification and reference verifier are open. No dependency on AIBA infrastructure is required for verification.
 
 ---
 
-## Protocol Stack
+## Design Rationale
 
-```
-Concept  :  Recomputable Governance
-Protocol :  ARSS (Accountability Record & Structural Signature)
-Record   :  RPU (Record Proof Unit)
-Chain    :  SHA256 hash chain with JCS canonicalization
-```
+For technical positioning and design decisions — including comparisons with blockchain and transparency logs, and the limits of cryptographic integrity — see [DESIGN.md](DESIGN.md).
 
 ---
 
-## Status
+## Contributing
 
-| Item | Status |
-|---|---|
-| Event Model v0.1 | ✅ Defined |
-| RPU Specification v0.1 | ✅ Draft complete |
-| Independent recomputation test | ✅ ALL PASS |
-| Reference Verifier CLI | 🔧 In progress |
-| GitHub public release | 🔧 In preparation |
-| First pilot (Law & Compliance) | 📋 Planned |
+ARSS is an open protocol. Contributions welcome:
+
+- Protocol critique and edge case analysis
+- Additional language implementations of the reference verifier
+- Test vector submissions
+- Integration proposals
+
+Open an issue or submit a pull request.
 
 ---
 
 ## License
 
-Specification: [CC BY 4.0](./LICENSE-SPEC)
-Reference Verifier: [Apache 2.0](./LICENSE)
+- **Protocol specification** (`spec/`): [Apache 2.0](LICENSE-SPEC)
+- **Reference verifier** (`reference-verifier/`): [MIT](LICENSE-VERIFIER)
+
+ARSS protocol development is initiated by **[AIBA Global](https://aiba.global)**.  
+The protocol specification is independent of AIBA's commercial infrastructure.
 
 ---
 
-*AIBA Global Project — [aiba.global](https://aiba.global)*
+*"Governance is not declared. It is recomputed."*
