@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARSS Protocol — Verifiable Governance Evidence</title>
+<meta name="description" content="ARSS is an open governance evidence protocol. Every governance decision is recorded as a recomputable, cryptographically verifiable hash chain. Governance is not declared. It is recomputed.">
+<meta property="og:title" content="ARSS Protocol — Verifiable Governance Evidence">
+<meta property="og:description" content="Governance is not declared. It is recomputed.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #0a0c0f; --bg2: #0f1216; --bg3: #151a20;
+  --border: #1e2730; --border2: #263040;
+  --text: #e8edf2; --text2: #8a99aa; --text3: #4a5a6a;
+  --accent: #00d4aa; --accent2: #4d9fdc; --red: #e05c5c;
+  --mono: 'IBM Plex Mono','Courier New',monospace;
+  --sans: 'DM Sans',system-ui,sans-serif;
+}
+html { scroll-behavior: smooth; }
+body { background:var(--bg); color:var(--text); font-family:var(--sans); font-weight:300; font-size:16px; line-height:1.6; overflow-x:hidden; }
+
+nav { position:sticky; top:0; z-index:100; background:rgba(10,12,15,0.93); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); padding:0 2rem; display:flex; align-items:center; justify-content:space-between; height:56px; }
+.nav-logo { font-family:var(--mono); font-size:13px; font-weight:600; color:var(--accent); letter-spacing:0.08em; text-decoration:none; }
+.nav-links { display:flex; gap:2rem; list-style:none; }
+.nav-links a { font-size:13px; color:var(--text2); text-decoration:none; letter-spacing:0.04em; transition:color 0.2s; }
+.nav-links a:hover { color:var(--text); }
+.nav-cta { font-family:var(--mono); font-size:11px; font-weight:500; color:var(--accent); border:1px solid var(--accent); padding:6px 16px; text-decoration:none; letter-spacing:0.06em; transition:all 0.2s; }
+.nav-cta:hover { background:var(--accent); color:var(--bg); }
+
+.hero { max-width:1100px; margin:0 auto; padding:8rem 2rem; display:grid; grid-template-columns:1fr 1fr; gap:5rem; align-items:center; }
+.hero-label { font-family:var(--mono); font-size:11px; color:var(--accent); letter-spacing:0.14em; text-transform:uppercase; margin-bottom:1.5rem; display:flex; align-items:center; gap:10px; }
+.hero-label::before { content:''; display:block; width:28px; height:1px; background:var(--accent); flex-shrink:0; }
+h1 { font-size:clamp(2rem,4vw,3rem); font-weight:400; line-height:1.15; letter-spacing:-0.025em; margin-bottom:1.5rem; }
+h1 em { font-style:normal; color:var(--accent); }
+.hero-sub { font-size:15px; color:var(--text2); line-height:1.75; margin-bottom:2.5rem; max-width:480px; }
+.btn-row { display:flex; gap:12px; flex-wrap:wrap; }
+.btn-primary { display:inline-flex; align-items:center; font-family:var(--mono); font-size:12px; font-weight:500; color:var(--bg); background:var(--accent); padding:12px 24px; text-decoration:none; letter-spacing:0.06em; transition:background 0.2s; cursor:pointer; border:none; }
+.btn-primary:hover { background:#00f0c0; }
+.btn-secondary { display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12px; color:var(--text2); border:1px solid var(--border2); padding:12px 24px; text-decoration:none; letter-spacing:0.06em; transition:all 0.2s; background:transparent; cursor:pointer; }
+.btn-secondary:hover { border-color:var(--text2); color:var(--text); }
+
+.chain-viz { background:var(--bg2); border:1px solid var(--border); padding:1.5rem; font-family:var(--mono); font-size:11px; }
+.chain-header { color:var(--text3); margin-bottom:1.25rem; font-size:10px; letter-spacing:0.08em; }
+.chain-block { background:var(--bg3); border:1px solid var(--border); padding:14px; margin-bottom:6px; }
+.chain-block.active { border-color:var(--accent); box-shadow:0 0 0 1px rgba(0,212,170,0.12); }
+.block-label { font-size:9px; color:var(--text3); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:8px; }
+.block-hash { color:var(--accent2); font-size:10px; line-height:1.6; word-break:break-all; }
+.block-hash.accent { color:var(--accent); }
+.chain-arrow { text-align:center; color:var(--border2); font-size:16px; line-height:1.8; }
+.verify-badge { margin-top:1rem; padding:10px 14px; background:rgba(0,212,170,0.05); border:1px solid rgba(0,212,170,0.18); display:flex; align-items:center; gap:10px; font-size:10px; color:var(--accent); letter-spacing:0.06em; }
+.verify-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); flex-shrink:0; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+.tagline-band { background:var(--bg2); border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:5rem 2rem; text-align:center; }
+.tagline-band blockquote { font-family:var(--mono); font-size:clamp(14px,2vw,19px); color:var(--text); letter-spacing:0.03em; line-height:1.75; max-width:700px; margin:0 auto; font-style:normal; }
+.tagline-band span { color:var(--accent); }
+
+.section { max-width:1100px; margin:0 auto; padding:6rem 2rem; }
+.section+.section { border-top:1px solid var(--border); }
+.full-bleed { border-top:1px solid var(--border); border-bottom:1px solid var(--border); background:var(--bg2); padding:6rem 2rem; }
+.full-bleed .inner { max-width:1100px; margin:0 auto; }
+.section-label { font-family:var(--mono); font-size:10px; color:var(--accent); letter-spacing:0.16em; text-transform:uppercase; margin-bottom:1rem; }
+h2 { font-size:clamp(1.4rem,2.5vw,1.9rem); font-weight:400; letter-spacing:-0.02em; margin-bottom:1rem; line-height:1.25; }
+.section-desc { font-size:15px; color:var(--text2); line-height:1.75; max-width:680px; margin-bottom:3rem; }
+
+.problem-context { background:var(--bg2); border:1px solid var(--border); padding:2rem; margin-bottom:2.5rem; }
+.problem-context p { font-size:14px; color:var(--text2); line-height:1.75; }
+.problem-context p+p { margin-top:1rem; }
+.problem-context strong { color:var(--text); font-weight:400; }
+.framework-tags { display:flex; gap:8px; flex-wrap:wrap; margin-top:1.25rem; }
+.tag { font-family:var(--mono); font-size:10px; color:var(--text3); border:1px solid var(--border); padding:4px 10px; letter-spacing:0.06em; }
+.problem-grid { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border); }
+.problem-cell { background:var(--bg); padding:2rem; }
+.problem-cell.alt { background:var(--bg2); }
+.cell-label { font-family:var(--mono); font-size:10px; color:var(--text3); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:0.75rem; }
+.cell-title { font-size:16px; font-weight:400; color:var(--text); margin-bottom:0.6rem; }
+.cell-title.accent { color:var(--accent); }
+.cell-desc { font-size:13px; color:var(--text2); line-height:1.65; }
+
+.stack-wrap { display:grid; grid-template-columns:1fr 1fr; gap:4rem; align-items:start; }
+.stack-diagram { display:flex; flex-direction:column; gap:3px; }
+.stack-layer { border:1px solid var(--border); padding:1.25rem 1.5rem; position:relative; }
+.stack-layer.highlight { border-color:var(--accent); background:rgba(0,212,170,0.04); }
+.stack-layer-label { font-family:var(--mono); font-size:9px; color:var(--text3); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:0.4rem; }
+.stack-layer-name { font-size:15px; font-weight:400; color:var(--text); margin-bottom:0.25rem; }
+.stack-layer-name.accent { color:var(--accent); }
+.stack-layer-items { font-family:var(--mono); font-size:11px; color:var(--text3); line-height:1.6; }
+.stack-badge { position:absolute; right:1rem; top:50%; transform:translateY(-50%); font-family:var(--mono); font-size:9px; color:var(--accent); border:1px solid rgba(0,212,170,0.3); padding:3px 8px; letter-spacing:0.08em; }
+.stack-arrow { text-align:center; color:var(--border2); font-size:14px; line-height:1; padding:2px 0; }
+.stack-desc h3 { font-size:16px; font-weight:400; margin-bottom:1rem; }
+.stack-desc p { font-size:14px; color:var(--text2); line-height:1.75; margin-bottom:1rem; }
+.stack-analogy { font-family:var(--mono); font-size:13px; color:var(--accent); line-height:1.6; }
+
+.not-blockchain { background:var(--bg2); border-left:2px solid var(--accent); padding:2rem; margin-bottom:3rem; }
+.nb-lines { font-family:var(--mono); font-size:14px; color:var(--text2); line-height:2.2; margin-bottom:1.5rem; }
+.nb-lines s { text-decoration:line-through; color:var(--text3); }
+.nb-statement { font-family:var(--mono); font-size:14px; color:var(--accent); line-height:1.7; }
+
+.step { display:grid; grid-template-columns:64px 1fr; border-top:1px solid var(--border); padding:2.25rem 0; gap:1rem; }
+.step:last-child { border-bottom:1px solid var(--border); }
+.step-num { font-family:var(--mono); font-size:11px; color:var(--text3); padding-top:4px; }
+.step-content h3 { font-size:16px; font-weight:400; margin-bottom:0.6rem; }
+.step-content p { font-size:14px; color:var(--text2); line-height:1.7; }
+.step-content code { font-family:var(--mono); font-size:12px; color:var(--accent2); background:var(--bg2); padding:2px 7px; border:1px solid var(--border); }
+
+.spec-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border); margin-top:3rem; }
+.spec-card { background:var(--bg2); padding:1.25rem 1.5rem; }
+.spec-card-label { font-family:var(--mono); font-size:10px; color:var(--text3); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.5rem; }
+.spec-card-val { font-family:var(--mono); font-size:13px; color:var(--accent2); }
+
+/* DEMO */
+.demo-intro { display:grid; grid-template-columns:1fr 1fr; gap:3rem; margin-bottom:2.5rem; align-items:start; }
+.demo-explain h3 { font-size:16px; font-weight:400; margin-bottom:0.75rem; }
+.demo-explain p { font-size:14px; color:var(--text2); line-height:1.75; margin-bottom:0.75rem; }
+.demo-explain p:last-child { margin-bottom:0; }
+.demo-notice { background:var(--bg3); border:1px solid var(--border); padding:1rem 1.25rem; font-family:var(--mono); font-size:11px; color:var(--text3); line-height:1.7; }
+.demo-notice span { color:var(--accent2); }
+.demo-controls { display:flex; gap:8px; margin-bottom:1.75rem; flex-wrap:wrap; }
+.ctrl-btn { font-family:var(--mono); font-size:11px; padding:9px 18px; background:transparent; border:1px solid var(--border2); color:var(--text2); cursor:pointer; letter-spacing:0.06em; transition:all 0.2s; }
+.ctrl-btn:hover { border-color:var(--text2); color:var(--text); }
+.ctrl-btn.primary { border-color:var(--accent); color:var(--accent); }
+.ctrl-btn.primary:hover { background:var(--accent); color:var(--bg); }
+.ctrl-btn.danger { border-color:var(--red); color:var(--red); }
+.ctrl-btn.danger:hover { background:var(--red); color:var(--bg); }
+
+.demo-chain { display:grid; grid-template-columns:1fr 32px 1fr 32px 1fr; gap:0; align-items:stretch; margin-bottom:1.5rem; }
+.d-block { background:var(--bg2); border:1px solid var(--border); padding:1rem; transition:border-color 0.3s, box-shadow 0.3s; }
+.d-block.valid { border-color:var(--accent); box-shadow:0 0 0 1px rgba(0,212,170,0.1); }
+.d-block.invalid { border-color:var(--red); box-shadow:0 0 0 1px rgba(224,92,92,0.1); }
+.d-block-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; }
+.d-block-id { font-family:var(--mono); font-size:10px; color:var(--text3); letter-spacing:0.1em; }
+.d-status { font-family:var(--mono); font-size:10px; padding:2px 8px; letter-spacing:0.06em; border:1px solid var(--border); color:var(--text3); transition:all 0.3s; }
+.d-status.ok { color:var(--accent); border-color:rgba(0,212,170,0.3); }
+.d-status.fail { color:var(--red); border-color:rgba(224,92,92,0.3); }
+.d-field { margin-bottom:0.6rem; }
+.d-field:last-child { margin-bottom:0; }
+.d-field-label { font-family:var(--mono); font-size:9px; color:var(--text3); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:3px; }
+.d-val { font-family:var(--mono); font-size:10px; color:var(--accent2); word-break:break-all; line-height:1.5; }
+.d-val.muted { color:var(--text3); }
+.d-val.ok { color:var(--accent); }
+.d-val.fail-col { color:var(--red); }
+.d-val.match { color:var(--accent); }
+.d-val.mismatch { color:var(--red); }
+textarea.d-val { background:var(--bg3); border:1px solid var(--border); padding:5px 7px; width:100%; resize:none; outline:none; color:var(--accent2); font-family:var(--mono); font-size:10px; line-height:1.6; transition:border-color 0.2s; }
+textarea.d-val:focus { border-color:var(--border2); }
+.d-arrow { display:flex; align-items:center; justify-content:center; color:var(--border2); font-size:16px; }
+.genesis-anchor-badge { font-family:var(--mono); font-size:9px; color:var(--text3); border:1px solid var(--border); padding:2px 7px; letter-spacing:0.08em; margin-top:0.5rem; display:inline-block; }
+
+.result-band { padding:1rem 1.25rem; border:1px solid; display:flex; align-items:flex-start; gap:12px; transition:all 0.3s; margin-bottom:1rem; }
+.result-band.pass { border-color:rgba(0,212,170,0.3); background:rgba(0,212,170,0.05); }
+.result-band.fail { border-color:rgba(224,92,92,0.3); background:rgba(224,92,92,0.05); }
+.result-band.idle { border-color:var(--border); background:var(--bg2); }
+.r-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:4px; }
+.pass .r-dot { background:var(--accent); }
+.fail .r-dot { background:var(--red); }
+.idle .r-dot { background:var(--text3); }
+.r-text { font-family:var(--mono); font-size:12px; line-height:1.7; }
+.pass .r-text { color:var(--accent); }
+.fail .r-text { color:var(--red); }
+.idle .r-text { color:var(--text3); }
+.demo-footer { font-family:var(--mono); font-size:10px; color:var(--text3); line-height:1.7; }
+.demo-footer span { color:var(--accent2); }
+
+.dev-grid { display:grid; grid-template-columns:1fr 1fr; gap:3rem; align-items:start; }
+.code-block { background:var(--bg3); border:1px solid var(--border); padding:1.5rem; font-family:var(--mono); }
+.code-block-header { font-size:10px; color:var(--text3); letter-spacing:0.1em; margin-bottom:1rem; display:flex; justify-content:space-between; }
+.code-block pre { font-size:12px; color:var(--accent2); line-height:1.9; overflow-x:auto; white-space:pre-wrap; }
+.c-comment { color:var(--text3); }
+.c-ok { color:var(--accent); }
+.dev-desc h3 { font-size:16px; font-weight:400; margin-bottom:0.75rem; }
+.dev-desc p { font-size:14px; color:var(--text2); line-height:1.75; margin-bottom:1rem; }
+.dev-desc code { font-family:var(--mono); font-size:12px; color:var(--accent2); background:var(--bg2); padding:2px 7px; border:1px solid var(--border); }
+
+.use-cases { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.use-case { background:var(--bg2); border:1px solid var(--border); padding:1.75rem; transition:border-color 0.2s; }
+.use-case:hover { border-color:var(--border2); }
+.use-case-icon { width:36px; height:36px; border:1px solid var(--border2); display:flex; align-items:center; justify-content:center; margin-bottom:1.25rem; }
+.use-case-icon svg { width:18px; height:18px; stroke:var(--accent); fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+.use-case h3 { font-size:14px; font-weight:400; margin-bottom:0.6rem; }
+.use-case p { font-size:13px; color:var(--text2); line-height:1.6; }
+
+.outreach-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border); }
+.outreach-cell { background:var(--bg); padding:2rem; }
+.outreach-cell-label { font-family:var(--mono); font-size:10px; color:var(--text3); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.5rem; }
+.outreach-status { font-family:var(--mono); font-size:10px; color:var(--accent); letter-spacing:0.08em; margin-bottom:1rem; }
+.outreach-cell p { font-size:13px; color:var(--text2); line-height:1.6; }
+
+.cta-band { background:var(--bg2); border-top:1px solid var(--border); text-align:center; padding:6rem 2rem; }
+.cta-mono { font-family:var(--mono); font-size:11px; color:var(--text3); letter-spacing:0.1em; margin-bottom:1.25rem; }
+.cta-band h2 { margin-bottom:1.5rem; }
+.cta-tagline { font-family:var(--mono); font-size:14px; color:var(--text2); line-height:2; margin-bottom:2.5rem; }
+.cta-tagline strong { color:var(--accent); font-weight:400; }
+.cta-band .btn-row { justify-content:center; }
+
+footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-family:var(--mono); font-size:11px; color:var(--text3); }
+.footer-links { display:flex; gap:1.5rem; }
+.footer-links a { color:var(--text3); text-decoration:none; transition:color 0.2s; }
+.footer-links a:hover { color:var(--text2); }
+
+@media(max-width:900px){
+  nav { padding:0 1rem; }
+  .nav-links { display:none; }
+  .hero { grid-template-columns:1fr; gap:3rem; padding:5rem 1.5rem 4rem; }
+  .problem-grid { grid-template-columns:1fr; }
+  .stack-wrap { grid-template-columns:1fr; }
+  .demo-intro { grid-template-columns:1fr; }
+  .demo-chain { grid-template-columns:1fr; }
+  .d-arrow { height:28px; }
+  .spec-grid { grid-template-columns:1fr 1fr; }
+  .use-cases { grid-template-columns:1fr; }
+  .dev-grid { grid-template-columns:1fr; }
+  .outreach-grid { grid-template-columns:1fr; }
+  footer { flex-direction:column; gap:1rem; text-align:center; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="#">ARSS Protocol</a>
+  <ul class="nav-links">
+    <li><a href="#demo">Live Demo</a></li>
+    <li><a href="#stack">Stack Position</a></li>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#dev">Developers</a></li>
+    <li><a href="https://github.com/choizinsa-coder/arss-protocol">GitHub</a></li>
+  </ul>
+  <a class="nav-cta" href="https://github.com/choizinsa-coder/arss-protocol">View on GitHub ↗</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div>
+    <div class="hero-label">Governance Evidence Protocol · RPU v0.1</div>
+    <h1>Governance is not declared.<br>It is <em>recomputed</em>.</h1>
+    <p class="hero-sub">ARSS is a governance evidence protocol. Every governance decision is recorded as a recomputable, cryptographically verifiable hash chain — so auditors, regulators, and counterparties can verify structural integrity without trusting any intermediary.</p>
+    <div class="btn-row">
+      <a class="btn-primary" href="#demo">Try the Live Demo</a>
+      <a class="btn-secondary" href="https://github.com/choizinsa-coder/arss-protocol">GitHub ↗</a>
+    </div>
+  </div>
+  <div>
+    <div class="chain-viz">
+      <div class="chain-header">// ARSS sample chain · verified</div>
+      <div class="chain-block">
+        <div class="block-label">Genesis Anchor</div>
+        <div class="block-hash">rpu_id: 019508a0-7c3e-7000-...<br>prev_hash: 0x0000...0000<br>actor_id: did:key:zQ3sh9...</div>
+      </div>
+      <div class="chain-arrow">↓</div>
+      <div class="chain-block">
+        <div class="block-label">RPU-001 · governance_decision</div>
+        <div class="block-hash">SHA256(prev ∥ 0x00 ∥ payload_c14n)<br>→ a7f3c8d2e1b945...</div>
+      </div>
+      <div class="chain-arrow">↓</div>
+      <div class="chain-block active">
+        <div class="block-label">RPU-003 · verified ✓</div>
+        <div class="block-hash accent">anchor_hash: 3BAC33BE74B76B2A<br>ED83BE6C3594C7F0...<br><br>RESULT: ALL PASS</div>
+      </div>
+      <div class="verify-badge">
+        <div class="verify-dot"></div>
+        Chain integrity verified · independently recomputable
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAGLINE -->
+<div class="tagline-band">
+  <blockquote>
+    "Governance frameworks produce policies.<br>
+    <span>ARSS produces evidence.</span><br><br>
+    Policies describe governance.<br>
+    <span>Evidence proves it happened.</span>"
+  </blockquote>
+</div>
+
+<!-- LIVE DEMO v5 -->
+<div class="full-bleed" id="demo">
+  <div class="inner">
+    <div class="section-label">Live Demo · Verifier</div>
+    <h2>Pre-committed hashes. Your recomputation.<br>Edit a payload and watch the chain break.</h2>
+
+    <div class="demo-intro">
+      <div class="demo-explain">
+        <h3>How this demo works</h3>
+        <p>The expected hash for each RPU below is a pre-committed constant — derived from the original, unmodified payloads and hardcoded into this page before it was published. When you press Run Verify, your browser recomputes each chain hash from scratch using SHA-256 and compares against that fixed value.</p>
+        <p>If the payloads are intact, computed matches expected: PASS. Edit any payload — even one character — and the recomputed hash diverges from the pre-committed value: FAIL. This demonstrates the core hash-verification logic of the reference verifier: recompute, compare, detect mismatch.</p>
+      </div>
+      <div class="demo-notice">
+        <div style="color:var(--accent);margin-bottom:6px;letter-spacing:0.08em;">// Implementation note</div>
+        This demo uses a <span>simplified key-sort canonicalization</span> for educational purposes. The normative implementation uses full <span>RFC 8785 JCS</span>. For production-grade verification — including chain continuity and HACS signature checks — use the <span>reference verifier</span> in the GitHub repository.
+      </div>
+    </div>
+
+    <div class="demo-controls">
+      <button class="ctrl-btn primary" onclick="runVerify()">▶ Run Verify</button>
+      <button class="ctrl-btn danger" onclick="tamperBlock()">⚡ Tamper RPU-001</button>
+      <button class="ctrl-btn" onclick="resetDemo()">↺ Reset to original chain</button>
+    </div>
+
+    <div class="demo-chain">
+      <!-- Genesis -->
+      <div class="d-block valid" id="db0">
+        <div class="d-block-top">
+          <span class="d-block-id">GENESIS</span>
+          <span class="d-status ok" id="ds0">ANCHOR</span>
+        </div>
+        <div class="d-field">
+          <div class="d-field-label">payload (fixed)</div>
+          <div class="d-val muted">{"jurisdiction":"global",<br>"version":"rpu/1.0"}</div>
+        </div>
+        <div class="d-field">
+          <div class="d-field-label">prev_hash</div>
+          <div class="d-val muted">0000...0000</div>
+        </div>
+        <div class="d-field">
+          <div class="d-field-label">chain_hash (pre-committed)</div>
+          <div class="d-val ok" id="dh0">c004ef9c...ecd93c</div>
+        </div>
+        <div class="genesis-anchor-badge">immutable baseline</div>
+      </div>
+
+      <div class="d-arrow">→</div>
+
+      <!-- RPU-001 -->
+      <div class="d-block" id="db1">
+        <div class="d-block-top">
+          <span class="d-block-id">RPU-001</span>
+          <span class="d-status" id="ds1">—</span>
+        </div>
+        <div class="d-field">
+          <div class="d-field-label">payload (editable)</div>
+          <textarea class="d-val" id="dp1" rows="3">{"actor":"governance_board","decision":"model_v2_approved","risk_level":"medium"}</textarea>
+        </div>
+        <div class="d-field">
+          <div class="d-field-label">computed hash</div>
+          <div class="d-val muted" id="dh1">—</div>
+        </div>
+        <div class="d-field">
+          <div class="d-field-label">expected hash (pre-committed)</div>
+          <div class="d-val muted">d6dd1c03...b3d70a</div>
+        </div>
+        <div class="d-field">
+          <div class="d-field-label">verdict</div>
+          <div class="d-val muted" id="dv1">—</div>
+        </div>
+      </div>
+
+      <div class="d-arrow">→</div>
+
+      <!-- RPU-002 -->
+      <div class="d-block" id="db2">
+        <div class="d-block-top">
+          <span class="d-block-id">RPU-002</span>
+          <span class="d-status" id="ds2">—</span>
+        </div>
+        <div class="d-field">
+          <div class="d-field-label">payload (editable)</div>
+          <textarea class="d-val" id="dp2" rows="3">{"actor":"external_auditor","decision":"audit_completed","finding":"no_violations"}</textarea>
+        </div>
+        <div class="d-field">
+          <div class="d-field-label">computed hash</div>
+          <div class="d-val muted" id="dh2">—</div>
+        </div>
+        <div class="d-field">
+          <div class="d-field-label">expected hash (pre-committed)</div>
+          <div class="d-val muted">84d4dc16...e5e29f</div>
+        </div>
+        <div class="d-field">
+          <div class="d-field-label">verdict</div>
+          <div class="d-val muted" id="dv2">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-band idle" id="demo-result">
+      <div class="r-dot"></div>
+      <div class="r-text" id="demo-result-text">Press "Run Verify" — your browser will recompute each chain hash and compare against the pre-committed expected values.</div>
+    </div>
+
+    <div class="demo-footer">
+      SHA256(prev_hash_bytes <span>∥ 0x00 ∥</span> payload_c14n) &nbsp;·&nbsp;
+      expected hashes pre-committed from original sample payloads &nbsp;·&nbsp;
+      <span>Computed entirely in your browser via Web Crypto API. No server. No trust.</span>
+    </div>
+  </div>
+</div>
+
+<!-- PROBLEM -->
+<div class="section">
+  <div class="section-label">The Problem</div>
+  <h2>The governance ecosystem is expanding.<br>The verification layer is missing.</h2>
+  <p class="section-desc">The global AI governance landscape has grown rapidly. Major frameworks now define standards, requirements, and obligations at every level — yet all of them share the same structural gap.</p>
+  <div class="problem-context">
+    <p><strong>EU AI Act, NIST AI RMF, ISO/IEC 42001</strong> — and dozens of enterprise governance programs — have established a dense policy layer for AI systems. Each framework defines what organizations must declare and commit to.</p>
+    <p>Yet no major governance framework today provides a native protocol layer for independently recomputable cryptographic decision-chain evidence. Organizations can declare compliance. They cannot yet prove it structurally — in sequence, by a specific actor, at a specific time — to any party, without a trusted intermediary.</p>
+    <div class="framework-tags">
+      <span class="tag">EU AI Act</span>
+      <span class="tag">NIST AI RMF</span>
+      <span class="tag">ISO/IEC 42001</span>
+      <span class="tag">Enterprise governance programs</span>
+      <span class="tag">Internal audit systems</span>
+    </div>
+  </div>
+  <div class="problem-grid">
+    <div class="problem-cell">
+      <div class="cell-label">Today</div>
+      <div class="cell-title">Policy declarations</div>
+      <div class="cell-desc">Organizations declare governance commitments. Auditors review documents. Trust is asserted. No structural record of actual decisions exists — and no mechanism to verify one independently.</div>
+    </div>
+    <div class="problem-cell alt">
+      <div class="cell-label">With ARSS</div>
+      <div class="cell-title accent">Verifiable decision chains</div>
+      <div class="cell-desc">Every governance decision is recorded as a signed, hash-chained RPU. Any party can independently recompute the chain and verify structural integrity — without access to the original system.</div>
+    </div>
+    <div class="problem-cell alt">
+      <div class="cell-label">Today</div>
+      <div class="cell-title">Snapshot compliance</div>
+      <div class="cell-desc">Compliance is a point-in-time claim. There is no way to verify that a system behaved consistently with stated policies over time, or to reconstruct a governance timeline after the fact.</div>
+    </div>
+    <div class="problem-cell">
+      <div class="cell-label">With ARSS</div>
+      <div class="cell-title accent">Immutable baseline + audit trail</div>
+      <div class="cell-desc">The genesis anchor establishes an immutable baseline. All subsequent RPUs form a tamper-evident chain — verifiable at any point in time, reconstructible for incident investigation.</div>
+    </div>
+  </div>
+</div>
+
+<!-- STACK -->
+<div class="full-bleed" id="stack">
+  <div class="inner">
+    <div class="section-label">Stack Position</div>
+    <h2>ARSS is not a framework.<br>It is the verification layer beneath them.</h2>
+    <p class="section-desc">Existing AI governance frameworks operate at the policy and management layers. ARSS occupies the protocol layer — the structural foundation that makes framework commitments verifiable.</p>
+    <div class="stack-wrap">
+      <div class="stack-diagram">
+        <div class="stack-layer">
+          <div class="stack-layer-label">Policy Layer</div>
+          <div class="stack-layer-name">Regulatory Frameworks</div>
+          <div class="stack-layer-items">EU AI Act · NIST AI RMF · ISO/IEC 42001</div>
+        </div>
+        <div class="stack-arrow">↓</div>
+        <div class="stack-layer">
+          <div class="stack-layer-label">Management Layer</div>
+          <div class="stack-layer-name">Enterprise Governance Programs</div>
+          <div class="stack-layer-items">Internal audit · Certification bodies · Compliance teams</div>
+        </div>
+        <div class="stack-arrow">↓</div>
+        <div class="stack-layer highlight">
+          <div class="stack-layer-label">Protocol Layer</div>
+          <div class="stack-layer-name accent">ARSS</div>
+          <div class="stack-layer-items">Verifiable governance records · Cryptographic decision chains · Independent recomputation</div>
+          <div class="stack-badge">THIS LAYER</div>
+        </div>
+      </div>
+      <div class="stack-desc">
+        <h3>Why the protocol layer matters</h3>
+        <p>Policy frameworks define what must be governed. Management programs define how organizations respond. But neither layer provides structural proof that the response actually occurred — in the right sequence, by the right actor, at the right time.</p>
+        <p>ARSS fills this gap. It is not a competitor to existing frameworks — it is the protocol layer that makes their requirements provable. Organizations implementing EU AI Act obligations or ISO/IEC 42001 certification can use ARSS to produce chain evidence that satisfies auditors without requiring trust in any single intermediary.</p>
+        <p class="stack-analogy">ARSS is to governance what PKI is to identity:<br>a structural layer that makes declarations verifiable.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="section" id="how">
+  <div class="section-label">How It Works</div>
+  <h2>Three-step verification model</h2>
+  <div class="not-blockchain">
+    <div class="nb-lines">
+      ARSS is <s>not a blockchain</s>.<br>
+      It is <s>not a transparency log</s>.<br>
+      It is <s>not a trust guarantee</s>.
+    </div>
+    <div class="nb-statement">
+      ARSS is a structural evidence protocol.<br>
+      If a governance decision was recorded,<br>
+      any party can independently verify that the record is intact.
+    </div>
+  </div>
+  <div class="how-steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-content">
+        <h3>Record · RPU generation</h3>
+        <p>Every governance decision is captured as a Record of Policy Update (RPU). Required fields: <code>rpu_id</code>, <code>actor_id</code>, <code>payload_hash</code>, <code>governance_context</code>. Serialized via JCS (RFC 8785) for canonical reproducibility across all verifiers — regardless of language or platform.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-content">
+        <h3>Chain · cryptographic linkage</h3>
+        <p>Each RPU is linked to its predecessor via <code>SHA256(prev_hash ∥ 0x00 ∥ payload_c14n)</code>. Tampering with any record breaks all subsequent hashes — detectable immediately by any verifier, without access to the original system or its operators.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-content">
+        <h3>Verify · independent recomputation</h3>
+        <p>Any party runs the reference verifier against the chain. No trusted intermediary required. Pass means structural integrity confirmed. Fail surfaces the break point: chain position, RPU ID, and hash delta — enabling precise forensic reconstruction.</p>
+      </div>
+    </div>
+  </div>
+  <div class="spec-grid">
+    <div class="spec-card"><div class="spec-card-label">Serialization</div><div class="spec-card-val">JCS · RFC 8785</div></div>
+    <div class="spec-card"><div class="spec-card-label">Hash Algorithm</div><div class="spec-card-val">SHA-256</div></div>
+    <div class="spec-card"><div class="spec-card-label">Identifiers</div><div class="spec-card-val">UUIDv7</div></div>
+    <div class="spec-card"><div class="spec-card-label">Timestamps</div><div class="spec-card-val">RFC 3339 UTC μs</div></div>
+    <div class="spec-card"><div class="spec-card-label">Signature · HACS</div><div class="spec-card-val" style="color:var(--text3)">Ed25519 · v0.2 planned</div></div>
+    <div class="spec-card"><div class="spec-card-label">License</div><div class="spec-card-val">Apache 2.0 / CC BY 4.0</div></div>
+  </div>
+</div>
+
+<!-- DEVELOPER -->
+<div class="section" id="dev">
+  <div class="section-label">Developers</div>
+  <h2>Run the verifier in under five minutes</h2>
+  <p class="section-desc">Clone the repository, run the reference verifier against the sample chain, and inspect the output. No configuration required.</p>
+  <div class="dev-grid">
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Terminal</span>
+        <span style="color:var(--accent)">reference-verifier/src/verifier.py</span>
+      </div>
+      <pre><span class="c-comment"># Clone the repository</span>
+git clone https://github.com/choizinsa-coder/arss-protocol
+cd arss-protocol
+
+<span class="c-comment"># Run verifier against sample chain</span>
+python reference-verifier/src/verifier.py \
+  samples/genesis.json \
+  samples/rpu-001.json \
+  samples/rpu-002.json \
+  samples/rpu-003.json
+
+<span class="c-comment"># Expected output</span>
+<span class="c-ok">RESULT: ALL PASS</span>
+anchor_hash: 3BAC33BE74B76B2A
+              ED83BE6C3594C7F0...</pre>
+    </div>
+    <div class="dev-desc">
+      <h3>What the verifier does</h3>
+      <p>The reference verifier performs three sequential checks: (1) JCS normalization and single-RPU hash integrity, (2) PrevHash chain continuity across all records, (3) HACS cryptographic signature verification per actor <span style="font-family:var(--mono);font-size:12px;color:var(--text3);border:1px solid var(--border);padding:1px 6px;">v0.2 planned</span>.</p>
+      <p>Any failure surfaces the exact position in the chain where integrity breaks — giving investigators a precise forensic entry point rather than a binary result.</p>
+      <p>The verifier has no dependencies beyond Python's standard library and the <code>cryptography</code> package. Any party with access to the chain JSON can run it — independent of the original system and its operators.</p>
+      <div class="btn-row" style="margin-top:1.5rem">
+        <a class="btn-secondary" href="https://github.com/choizinsa-coder/arss-protocol">View on GitHub ↗</a>
+        <a class="btn-secondary" href="https://github.com/choizinsa-coder/arss-protocol/blob/main/DESIGN.md">DESIGN.md</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- USE CASES -->
+<div class="section" style="border-top:1px solid var(--border)">
+  <div class="section-label">Applications</div>
+  <h2>Protocol for accountability</h2>
+  <p class="section-desc">ARSS provides the structural foundation for any entity that needs to prove governance decisions were made — and made consistently over time.</p>
+  <div class="use-cases">
+    <div class="use-case">
+      <div class="use-case-icon"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div>
+      <h3>Compliance &amp; Regulatory Audit</h3>
+      <p>Provide regulators with independently verifiable records of AI governance decisions. Structural evidence that survives third-party scrutiny under EU AI Act, NIST AI RMF, and ISO/IEC 42001 obligations.</p>
+    </div>
+    <div class="use-case">
+      <div class="use-case-icon"><svg viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg></div>
+      <h3>Enterprise AI Governance</h3>
+      <p>Maintain a tamper-evident log of every governance decision, policy change, and override event across AI systems — auditable at any point without rebuilding the original context.</p>
+    </div>
+    <div class="use-case">
+      <div class="use-case-icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></div>
+      <h3>Certification Bodies</h3>
+      <p>Issue certifications backed by recomputable chain evidence. Any party can verify the certification basis independently — no trusted intermediary, no snapshot dependency, no expiry ambiguity.</p>
+    </div>
+    <div class="use-case">
+      <div class="use-case-icon"><svg viewBox="0 0 24 24"><path d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z"/></svg></div>
+      <h3>AI Incident Investigation</h3>
+      <p>When an AI failure occurs, investigators can recompute the governance chain to determine whether required decisions were recorded — and where the chain breaks. ARSS enables forensic reconstruction for insurance claims, litigation, and regulatory probes.</p>
+    </div>
+  </div>
+</div>
+
+<!-- OUTREACH STATUS -->
+<div class="section" style="border-top:1px solid var(--border)">
+  <div class="section-label">Outreach Status</div>
+  <h2>Outreach Program · March 2026</h2>
+  <p class="section-desc">ARSS is in staged outreach to AI governance practitioners, audit firms, and standards-adjacent organizations. Current status below.</p>
+  <div class="outreach-grid">
+    <div class="outreach-cell">
+      <div class="outreach-cell-label">Governance Practitioners</div>
+      <div class="outreach-status">● Active outreach</div>
+      <p>Engaging AI risk and compliance teams at organizations deploying EU AI Act and ISO/IEC 42001 governance programs. Focus: integration with existing audit workflows.</p>
+    </div>
+    <div class="outreach-cell">
+      <div class="outreach-cell-label">Certification Programs</div>
+      <div class="outreach-status">● Initiated</div>
+      <p>In contact with AI audit and certification bodies exploring verifiable evidence requirements. ARSS positioned as the protocol layer for certification evidence.</p>
+    </div>
+    <div class="outreach-cell">
+      <div class="outreach-cell-label">Standards Alignment</div>
+      <div class="outreach-status">● Monitoring</div>
+      <p>Tracking EU AI Act implementation guidance, NIST AI RMF supplementary materials, and ISO/IEC 42001 audit framework development for protocol alignment opportunities.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ROADMAP -->
+<div class="section" style="border-top:1px solid var(--border)">
+  <div class="section-label">Roadmap</div>
+  <h2>Protocol evolution</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);margin-top:2rem">
+    <div style="background:var(--bg2);padding:2rem;border-left:2px solid var(--accent)">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.75rem">v0.1 · Current</div>
+      <div style="font-size:16px;font-weight:400;margin-bottom:0.75rem">Hash-chain governance evidence protocol</div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--text3);line-height:1.9">
+        governance event record<br>
+        hash-chain integrity<br>
+        recomputable verification<br>
+        reference verifier<br>
+        protocol specification
+      </div>
+    </div>
+    <div style="background:var(--bg);padding:2rem">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.75rem">v0.2 · Planned</div>
+      <div style="font-size:16px;font-weight:400;color:var(--text2);margin-bottom:0.75rem">HACS: Hash-Anchored Cryptographic Signatures</div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--text3);line-height:1.9">
+        signature verification layer<br>
+        actor identity binding<br>
+        key management specification<br>
+        trust anchor architecture<br>
+        public spec release
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-band">
+  <div class="cta-mono">// Open protocol · open source · RPU v0.1</div>
+  <h2>Run the verifier yourself</h2>
+  <div class="cta-tagline">
+    Run the reference verifier against the public sample chain.<br>
+    Recompute the anchor hash yourself.<br>
+    <strong>Do not trust the claim — verify the record.</strong>
+  </div>
+  <div class="btn-row">
+    <a class="btn-primary" href="https://github.com/choizinsa-coder/arss-protocol">View on GitHub</a>
+    <a class="btn-secondary" href="https://github.com/choizinsa-coder/arss-protocol/blob/main/DESIGN.md">Read DESIGN.md</a>
+    <a class="btn-secondary" href="/cdn-cgi/l/email-protection#e3808c8d97828097a3828a8182cd848f8c81828f">Contact AIBA</a>
+  </div>
+</div>
+
+<footer>
+  <span>ARSS Protocol · AIBA Global Project · RPU v0.1 · 2026</span>
+  <div class="footer-links">
+    <a href="https://github.com/choizinsa-coder/arss-protocol">GitHub</a>
+    <a href="https://github.com/choizinsa-coder/arss-protocol/blob/main/DESIGN.md">Specification</a>
+    <a href="https://github.com/choizinsa-coder/arss-protocol/blob/main/LICENSE">License</a>
+  </div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// Pre-committed expected hashes
+// Derived from original sample payloads using SHA256(prev_hash || 0x00 || payload_c14n)
+// Computed via reference verifier logic (Python, key-sorted JSON) before publication.
+const EXPECTED = {
+  genesis: 'c004ef9cf1c3840c9241627de41f42f8b67e542cd4addad51966ff6be6ecd93c',
+  rpu1:    'd6dd1c03d298b391ed2a95adf007c7ac84057eba8a91fc22195687f16fb3d70a',
+  rpu2:    '84d4dc16c949d3df91f4175fd922f7502496d9971297da9f21beb95f32e5e29f'
+};
+
+const GENESIS_PREV    = '0000000000000000000000000000000000000000000000000000000000000000';
+const GENESIS_PAYLOAD = '{"jurisdiction":"global","version":"rpu/1.0"}';
+const ORIG_P1 = '{"actor":"governance_board","decision":"model_v2_approved","risk_level":"medium"}';
+const ORIG_P2 = '{"actor":"external_auditor","decision":"audit_completed","finding":"no_violations"}';
+
+async function sha256hex(buf) {
+  const h = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+function hex2bytes(hex) {
+  const b = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) b[i/2] = parseInt(hex.substr(i,2),16);
+  return b;
+}
+function canon(str) {
+  try {
+    const o = JSON.parse(str);
+    const s = {}; Object.keys(o).sort().forEach(k => s[k] = o[k]);
+    return JSON.stringify(s);
+  } catch { return str; }
+}
+async function chainHash(prevHex, payloadStr) {
+  const prev    = hex2bytes(prevHex);
+  const sep     = new Uint8Array([0x00]);
+  const payload = new TextEncoder().encode(canon(payloadStr));
+  const buf     = new Uint8Array(prev.length + 1 + payload.length);
+  buf.set(prev, 0); buf.set(sep, prev.length); buf.set(payload, prev.length + 1);
+  return sha256hex(buf);
+}
+function short(h) { return h ? h.slice(0,10) + '...' + h.slice(-6) : '—'; }
+function setStatus(id, cls, text) {
+  const s = document.getElementById('ds' + id);
+  s.className = 'd-status' + (cls ? ' ' + cls : '');
+  s.textContent = text;
+}
+function setBlock(id, cls) {
+  document.getElementById('db' + id).className = 'd-block' + (cls ? ' ' + cls : '');
+}
+function setResult(state, html) {
+  document.getElementById('demo-result').className = 'result-band ' + state;
+  document.getElementById('demo-result-text').innerHTML = html;
+}
+
+async function runVerify() {
+  const p1 = document.getElementById('dp1').value;
+  const p2 = document.getElementById('dp2').value;
+
+  // Genesis — always valid (fixed payload, pre-committed)
+  const gHash = await chainHash(GENESIS_PREV, GENESIS_PAYLOAD);
+  document.getElementById('dh0').textContent = short(gHash);
+  document.getElementById('dh0').className = 'd-val ok';
+  setBlock(0, 'valid'); setStatus(0, 'ok', 'ANCHOR ✓');
+
+  // RPU-001
+  const h1     = await chainHash(gHash, p1);
+  const match1 = (h1 === EXPECTED.rpu1);
+  const dh1 = document.getElementById('dh1');
+  dh1.textContent = short(h1);
+  dh1.className = 'd-val ' + (match1 ? 'ok' : 'fail-col');
+  const dv1 = document.getElementById('dv1');
+  dv1.textContent = match1 ? 'MATCH ✓' : 'MISMATCH ✗';
+  dv1.className = 'd-val ' + (match1 ? 'match' : 'mismatch');
+  setBlock(1, match1 ? 'valid' : 'invalid');
+  setStatus(1, match1 ? 'ok' : 'fail', match1 ? 'PASS ✓' : 'FAIL ✗');
+
+  // RPU-002 — propagates from h1 (not EXPECTED.rpu1)
+  const h2     = await chainHash(h1, p2);
+  const match2 = match1 && (h2 === EXPECTED.rpu2);
+  const dh2 = document.getElementById('dh2');
+  dh2.textContent = match1 ? short(h2) : 'INVALIDATED';
+  dh2.className = 'd-val ' + (match2 ? 'ok' : 'fail-col');
+  const dv2 = document.getElementById('dv2');
+  dv2.textContent = match2 ? 'MATCH ✓' : (!match1 ? 'DOWNSTREAM FAIL ✗' : 'MISMATCH ✗');
+  dv2.className = 'd-val ' + (match2 ? 'match' : 'mismatch');
+  setBlock(2, match2 ? 'valid' : 'invalid');
+  setStatus(2, match2 ? 'ok' : 'fail', match2 ? 'PASS ✓' : 'FAIL ✗');
+
+  if (match1 && match2) {
+    setResult('pass',
+      'RESULT: ALL PASS<br>' +
+      'Both RPUs: computed hash matches pre-committed expected hash · chain integrity confirmed<br>' +
+      'anchor_hash: ' + h2.slice(0,16).toUpperCase() + '...');
+  } else {
+    const bp    = !match1 ? 'RPU-001' : 'RPU-002';
+    const cause = !match1
+      ? 'RPU-001 payload modified — computed hash diverges from pre-committed expected value · RPU-002 downstream invalidated'
+      : 'RPU-002 payload modified — computed hash diverges from pre-committed expected value';
+    setResult('fail',
+      'RESULT: CHAIN BROKEN at ' + bp + '<br>' +
+      cause + '<br>' +
+      'This mismatch is detectable by any independent verifier with access to the expected hash.');
+  }
+}
+
+async function tamperBlock() {
+  document.getElementById('dp1').value =
+    '{"actor":"governance_board","decision":"model_v2_approved","risk_level":"LOW_OVERRIDE"}';
+  await runVerify();
+}
+
+function resetDemo() {
+  document.getElementById('dp1').value = ORIG_P1;
+  document.getElementById('dp2').value = ORIG_P2;
+  ['dh1','dh2','dv1','dv2'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = '—'; el.className = 'd-val muted';
+  });
+  document.getElementById('dh0').textContent = short(EXPECTED.genesis);
+  document.getElementById('dh0').className = 'd-val ok';
+  setBlock(0,'valid'); setBlock(1,''); setBlock(2,'');
+  setStatus(0,'ok','ANCHOR ✓'); setStatus(1,'','—'); setStatus(2,'','—');
+  setResult('idle', 'Pre
