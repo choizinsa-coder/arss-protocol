@@ -226,7 +226,7 @@ Open an issue or submit a pull request.
 - **Protocol specification** (`spec/`): [Apache 2.0](LICENSE-SPEC)
 - **Reference verifier** (`reference-verifier/`): [MIT](LICENSE-VERIFIER)
 
-ARSS protocol development is initiated by **[AIBA Global](https://aiba.global)**.  
+ARSS protocol development is initiated by **AIBA Global**.  
 The protocol specification is independent of AIBA's commercial infrastructure.
 
 ---
