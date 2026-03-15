@@ -151,8 +151,8 @@ For each RPU at position `n`, confirm:
 rpu[n].prev_hash == SHA256(rpu[n-1].prev_hash || 0x00 || rpu[n-1].payload_c14n)
 ```
 
-**Step 3 — HACS verification** *(optional in v0.1)*  
-Verify HACS (Human Actor Cryptographic Signature) if present in `governance_context`.
+**Step 3 — HACS verification** *(implemented — public specification: v0.2 planned)*  
+Verify HACS (Human Actor Cryptographic Signature) if present in `governance_context`. The reference verifier includes HACS verification logic; the public key specification and key management guidelines are scoped to v0.2.
 
 A chain that passes all three steps is structurally sound — its integrity can be confirmed by any independent party without access to the originating system.
 
@@ -171,7 +171,7 @@ Current release: **v0.1 (specification draft)**
 - [x] Sample chain with known verification hash
 - [ ] Formal test vector suite
 - [ ] Multi-language verifier implementations
-- [ ] HACS full integration in verifier
+- [x] HACS verification logic (implemented — public spec: v0.2 planned)
 
 The v0.1 verification anchor hash is:
 ```
@@ -182,7 +182,14 @@ This hash is publicly declared and independently recomputable from the sample ch
 
 ---
 
-## Design Principles
+## Roadmap
+
+| Version | Scope | Status |
+|---------|-------|--------|
+| v0.1 | Hash-chain governance evidence protocol | Current |
+| v0.2 | HACS: Hash-Anchored Cryptographic Signatures — public specification, key management guidelines, trust anchor architecture | Planned |
+
+---
 
 **Recomputable, not trusted.**  
 Any claim about a governance chain's integrity must be independently verifiable from the raw records alone.
