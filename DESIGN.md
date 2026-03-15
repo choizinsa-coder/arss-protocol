@@ -154,6 +154,42 @@ ARSS does not resolve all questions of AI accountability. It provides structural
 
 ---
 
+## 4a. Architecture: Current Scope and Extension Points
+
+### v0.1 — Hash-Chain Protocol (Current Public Scope)
+
+ARSS v0.1 defines a governance evidence protocol based on recomputable hash chains. The following components are fully specified and publicly documented:
+
+- Governance event record (RPU) with required fields
+- Hash-chain construction: `SHA256(prev_hash || 0x00 || payload_c14n)`
+- JCS normalization (RFC 8785) for deterministic serialization
+- Reference verifier (Python, single-file, no external dependencies beyond `cryptography`)
+- Sample chain with known anchor hash
+
+### HACS — Hash-Anchored Cryptographic Signatures
+
+**Status: Implemented — public specification: v0.2 planned**
+
+HACS is the signature verification layer that binds human actor identity to governance records via cryptographic signatures. The reference verifier includes HACS verification logic. The public key specification, key management guidelines, and trust anchor architecture are scoped to v0.2.
+
+```
+v0.1  hash-chain governance evidence protocol   ← current public scope
+v0.2  HACS: Hash-Anchored Cryptographic Signatures ← public spec planned
+```
+
+Architecture position:
+
+```
+arss-protocol/
+├── spec/                    ← v0.1 public specification
+├── reference-verifier/      ← HACS logic implemented, spec v0.2
+└── samples/                 ← hash-chain verification only
+```
+
+Separate repository candidate: `arss-hacs` (future, post v0.2 spec release)
+
+---
+
 ## 5. Design Principles
 
 **Recomputable, not trusted.**
