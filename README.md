@@ -66,9 +66,9 @@ Reference Verifier            ← any third party, any environment
 
 ---
 
-## Quick Start — 5-Minute Verification
+## Quick Start — Inspect the Protocol
 
-Verify a sample governance chain locally.
+Review the reference verifier source and sample chain structure.
 
 **Requirements:** Python 3.8+
 
@@ -77,26 +77,17 @@ Verify a sample governance chain locally.
 git clone https://github.com/choizinsa-coder/arss-protocol
 cd arss-protocol
 
-# 2. Install dependencies
-pip install -r requirements.txt
+# 2. Inspect the reference verifier
+cat reference-verifier/src/verifier.py
 
-# 3. Run the reference verifier against the sample chain
-python reference-verifier/src/verifier.py samples
+# 3. Inspect the sample chain structure
+cat samples/genesis.json
+cat samples/rpu-001.json
 ```
 
-**Expected output:**
-
-```
-ARSS Reference Verifier v0.1
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Chain : genesis → rpu-001 → rpu-002 → rpu-003
-JCS normalization: PASS
-Hash chain       : PASS
-Anchor hash      : 3BAC33BE74B76B2AED83BE6C3594C7F08D3C9E889ABB9F0B97FD39BFD9E52C14
-
-RESULT: ALL PASS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+> **Note [PRE-RPU · PHASE 0]:** The reference verifier is not yet deployed for live execution.
+> Full verifier execution — including chain continuity and HACS signature checks — will be available in Phase 1 upon infrastructure deployment.
+> The sample chain in `samples/` is a specification prototype, not a cryptographically verified chain.
 
 To recompute a single RPU hash manually:
 
@@ -126,7 +117,7 @@ arss-protocol/
 │   └── src/
 │       └── verifier.py
 │
-├── samples/                 # Sample governance chain (directory of RPUs)
+├── samples/                 # Sample governance chain (PRE-RPU spec prototype)
 │   ├── genesis.json
 │   ├── rpu-001.json
 │   ├── rpu-002.json
@@ -162,13 +153,18 @@ A chain that passes all three steps is structurally sound — its integrity can 
 
 ARSS is an open protocol under active development.
 
-Current release: **v0.1 (specification draft)**
+Current release: **v0.1 (specification draft) · PHASE 0 — PRE-RPU**
+
+> **[PRE-RPU · PHASE 0]** The current state is specification and infrastructure preparation.
+> Live verifier execution and cryptographically verified chain generation will begin in Phase 1,
+> upon completion of: VPS deployment, reference verifier execution confirmed, and sample RPU hash recomputation verified.
 
 - [x] RPU schema defined
 - [x] Hash chain formula specified
 - [x] JCS normalization requirement documented
-- [x] Reference verifier (Python, single-file)
-- [x] Sample chain with known verification hash
+- [x] Reference verifier source (Python, single-file)
+- [x] Sample chain structure (spec prototype · PRE-RPU)
+- [ ] Reference verifier live deployment (Phase 1)
 - [ ] Formal test vector suite
 - [ ] Multi-language verifier implementations
 - [x] HACS verification logic (implemented — public spec: v0.2 planned)
@@ -178,7 +174,8 @@ The v0.1 verification anchor hash is:
 3BAC33BE74B76B2AED83BE6C3594C7F08D3C9E889ABB9F0B97FD39BFD9E52C14
 ```
 
-This hash is publicly declared and independently recomputable from the sample chain in `samples/`.
+This hash is derived from the protocol specification and will be independently recomputable
+from the sample chain once the reference verifier is deployed in Phase 1.
 
 ---
 
@@ -186,7 +183,7 @@ This hash is publicly declared and independently recomputable from the sample ch
 
 | Version | Scope | Status |
 |---------|-------|--------|
-| v0.1 | Hash-chain governance evidence protocol | Current |
+| v0.1 | Hash-chain governance evidence protocol · specification draft | Current |
 | v0.2 | HACS: Hash-Anchored Cryptographic Signatures — public specification, key management guidelines, trust anchor architecture | Planned |
 
 ---
