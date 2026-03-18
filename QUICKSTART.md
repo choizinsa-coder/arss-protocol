@@ -1,6 +1,10 @@
 # ARSS Quick Start
 
-Recompute a governance chain in under 5 minutes.
+Inspect the governance chain protocol and prepare for verification.
+
+> **[PRE-RPU · PHASE 0]** The reference verifier is not yet deployed for live execution.
+> This Quick Start guides you through protocol inspection and manual hash recomputation.
+> Full automated verification will be available in Phase 1 upon infrastructure deployment.
 
 ---
 
@@ -14,7 +18,7 @@ Recompute a governance chain in under 5 minutes.
 ## Step 1 — Clone the Repository
 
 ```bash
-git clone https://github.com/aiba-global/arss-protocol.git
+git clone https://github.com/choizinsa-coder/arss-protocol
 cd arss-protocol
 ```
 
@@ -22,74 +26,82 @@ cd arss-protocol
 
 ## Step 2 — Inspect the Sample Chain
 
-The `samples/` directory contains a pre-verified 3-event chain from the Law & Compliance domain:
+The `samples/` directory contains a spec prototype chain (PRE-RPU):
 
 ```
 samples/
-├── genesis.json            ← Chain start anchor
-├── rpu-001-ai-output.json  ← AI_OUTPUT_GENERATED
-├── rpu-002-human-review.json  ← HUMAN_REVIEW_LOGGED
-└── rpu-003-human-approval.json ← HUMAN_APPROVAL_RECORDED
+├── genesis.json       ← Chain start anchor
+├── rpu-001.json       ← First governance record
+├── rpu-002.json       ← Second governance record
+└── rpu-003.json       ← Third governance record
 ```
 
-This represents: AI drafts a legal document → attorney reviews → partner approves.
+> These files are **specification prototypes**, not cryptographically verified chains.
+> They demonstrate the RPU structure and hash chain formula defined in the protocol spec.
 
----
-
-## Step 3 — Run the Reference Verifier
+Inspect the genesis anchor:
 
 ```bash
-python reference-verifier/src/verifier.py samples/
-```
-
-You should see:
-
-```
-============================================================
-ARSS Reference Verifier v0.1
-============================================================
-Genesis Anchor ... OK
-RPU #1 (AI_OUTPUT_GENERATED)
-  payload_hash  : PASS
-  chain_hash    : PASS
-RPU #2 (HUMAN_REVIEW_LOGGED)
-  payload_hash  : PASS
-  chain_hash    : PASS
-RPU #3 (HUMAN_APPROVAL_RECORDED)
-  payload_hash  : PASS
-  chain_hash    : PASS
-  hacs_signature: PRESENT (full verification requires public key)
-============================================================
-RESULT: ALL PASS
-Final chain hash:
-  3de51ae75318d7493fe7850046df41920e92362630a50a1a63af951adadf7763
-============================================================
+cat samples/genesis.json
 ```
 
 ---
 
-## Step 4 — Verify the Expected Hash
+## Step 3 — Inspect the Reference Verifier
 
 ```bash
-cat tests/expected-chain-hash.txt
+cat reference-verifier/src/verifier.py
 ```
 
-Compare with the output above. If they match:
+The verifier performs three sequential checks:
 
-> **You have independently recomputed the ARSS governance chain.**
-> **The recomputation produced the same result.**
+1. JCS normalization + single RPU payload hash integrity
+2. PrevHash chain continuity across all records
+3. HACS cryptographic signature verification *(v0.2 planned)*
 
-This is Recomputable Governance.
+> **Live execution of the verifier is pending Phase 1 infrastructure deployment.**
+> Once deployed, running the verifier against the sample chain will produce:
+>
+> ```
+> RESULT: ALL PASS
+> anchor_hash: 3BAC33BE74B76B2AED83BE6C3594C7F08D3C9E889ABB9F0B97FD39BFD9E52C14
+> ```
 
 ---
 
-## What Just Happened
+## Step 4 — Manually Recompute a Single RPU Hash
 
-You independently verified that:
+You can verify the hash chain formula directly with Python:
+
+```python
+import hashlib
+
+# Hash chain formula: SHA256(prev_hash || 0x00 || payload_c14n)
+payload_c14n = b'...'      # JCS-normalized payload bytes
+prev_hash    = bytes(32)   # 32 zero-bytes for genesis RPU
+
+digest = hashlib.sha256(prev_hash + b'\x00' + payload_c14n).hexdigest()
+print(digest)
+```
+
+The v0.1 anchor hash derived from the protocol specification:
+
+```
+3BAC33BE74B76B2AED83BE6C3594C7F08D3C9E889ABB9F0B97FD39BFD9E52C14
+```
+
+This value will be independently recomputable from the sample chain
+once the reference verifier is deployed in Phase 1.
+
+---
+
+## What This Protocol Guarantees
+
+When Phase 1 is complete, any party will be able to independently verify that:
 
 1. Each RPU's payload was not altered (payload_hash check)
 2. The chain was not broken or reordered (chain_hash check)
-3. The governance process — AI output → human review → human approval — is structurally intact
+3. The governance process is structurally intact
 
 No trust in AIBA required. The math speaks for itself.
 
@@ -97,10 +109,10 @@ No trust in AIBA required. The math speaks for itself.
 
 ## Next Steps
 
-- Read the full specification: [`spec/ARSS-RPU-Spec-v0.1.md`](./spec/ARSS-RPU-Spec-v0.1.md)
-- Dive deeper into specific topics:
-  - [Genesis Anchor](./spec/genesis-anchor.md) — how a chain's cryptographic origin is established
-  - [Schema Versioning](./spec/schema-versioning.md) — how RPU structure evolves over time
-  - [Hash Algorithm Agility](./spec/hash-algorithm-agility.md) — how ARSS handles algorithm transitions
+- Read the full specification: [`DESIGN.md`](./DESIGN.md)
 - Explore the verifier source: [`reference-verifier/src/verifier.py`](./reference-verifier/src/verifier.py)
-- Run the test suite: `python -m pytest reference-verifier/tests/`
+- Open an issue or submit a pull request
+
+---
+
+*"Governance is not declared. It is recomputed."*
