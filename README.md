@@ -77,17 +77,21 @@ Review the reference verifier source and sample chain structure.
 git clone https://github.com/choizinsa-coder/arss-protocol
 cd arss-protocol
 
-# 2. Inspect the reference verifier
+# 2. Run the reference verifier against the sample chain
+python3 reference-verifier/src/verifier.py samples/
+
+# 3. Inspect the reference verifier source
 cat reference-verifier/src/verifier.py
 
-# 3. Inspect the sample chain structure
+# 4. Inspect the sample chain structure
 cat samples/genesis.json
 cat samples/rpu-001.json
 ```
 
-> **Note [PRE-RPU · PHASE 0]:** The reference verifier is not yet deployed for live execution.
-> Full verifier execution — including chain continuity and HACS signature checks — will be available in Phase 1 upon infrastructure deployment.
-> The sample chain in `samples/` is a specification prototype, not a cryptographically verified chain.
+> **Note [PHASE 1 — VERIFIER ACTIVE]:** The reference verifier is deployed and confirmed operational
+> on an independent VPS (`arss-governance-engine-v1`), isolated from the record-generation environment.
+> The sample chain in `samples/` has been cryptographically verified: all RPU integrity checks,
+> chain continuity, and HACS signature checks pass with exit code 0.
 
 To recompute a single RPU hash manually:
 
@@ -117,7 +121,7 @@ arss-protocol/
 │   └── src/
 │       └── verifier.py
 │
-├── samples/                 # Sample governance chain (PRE-RPU spec prototype)
+├── samples/                 # Sample governance chain (cryptographically verified · PHASE 1)
 │   ├── genesis.json
 │   ├── rpu-001.json
 │   ├── rpu-002.json
@@ -153,29 +157,38 @@ A chain that passes all three steps is structurally sound — its integrity can 
 
 ARSS is an open protocol under active development.
 
-Current release: **v0.1 (specification draft) · PHASE 0 — PRE-RPU**
+Current release: **v0.1 · PHASE 1 — VERIFIER ACTIVE**
 
-> **[PRE-RPU · PHASE 0]** The current state is specification and infrastructure preparation.
-> Live verifier execution and cryptographically verified chain generation will begin in Phase 1,
-> upon completion of: VPS deployment, reference verifier execution confirmed, and sample RPU hash recomputation verified.
+> **[PHASE 1 — VERIFIER ACTIVE]** The reference verifier is deployed on an independent VPS
+> and confirmed operational as of 2026-03-19. The sample chain passes all three verification steps:
+> RPU integrity, chain continuity, and HACS signature check (exit code 0).
+> Live RPU generation is underway. HACS public key specification is scoped to v0.2.
 
 - [x] RPU schema defined
 - [x] Hash chain formula specified
 - [x] JCS normalization requirement documented
 - [x] Reference verifier source (Python, single-file)
-- [x] Sample chain structure (spec prototype · PRE-RPU)
-- [ ] Reference verifier live deployment (Phase 1)
+- [x] Sample chain structure (cryptographically verified · PHASE 1)
+- [x] Reference verifier live deployment (PHASE 1 — confirmed 2026-03-19)
 - [ ] Formal test vector suite
 - [ ] Multi-language verifier implementations
 - [x] HACS verification logic (implemented — public spec: v0.2 planned)
 
-The v0.1 verification anchor hash is:
+**Verification anchor hashes:**
+
+Genesis Anchor (protocol specification baseline):
 ```
 3BAC33BE74B76B2AED83BE6C3594C7F08D3C9E889ABB9F0B97FD39BFD9E52C14
 ```
 
-This hash is derived from the protocol specification and will be independently recomputable
-from the sample chain once the reference verifier is deployed in Phase 1.
+Final chain hash (independently recomputed on `arss-governance-engine-v1` · 2026-03-19):
+```
+3de51ae75318d7493fe7850046df41920e92362630a50a1a63af951adadf7763
+```
+
+The Genesis Anchor is derived from the protocol specification and is independently recomputable
+from the sample chain. The Final chain hash was produced by running the reference verifier
+on an isolated VPS environment, confirming full chain integrity across all three RPUs.
 
 ---
 
@@ -183,7 +196,7 @@ from the sample chain once the reference verifier is deployed in Phase 1.
 
 | Version | Scope | Status |
 |---------|-------|--------|
-| v0.1 | Hash-chain governance evidence protocol · specification draft | Current |
+| v0.1 | Hash-chain governance evidence protocol · PHASE 1 — VERIFIER ACTIVE | Current |
 | v0.2 | HACS: Hash-Anchored Cryptographic Signatures — public specification, key management guidelines, trust anchor architecture | Planned |
 
 ---
