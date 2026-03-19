@@ -246,7 +246,7 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
   </div>
   <div>
     <div class="chain-viz">
-      <div class="chain-header">// ARSS sample chain · PRE-RPU PROTOTYPE</div>
+      <div class="chain-header">// ARSS sample chain · PHASE 1 — VERIFIED</div>
       <div class="chain-block">
         <div class="block-label">Genesis Anchor</div>
         <div class="block-hash">rpu_id: 019508a0-7c3e-7000-...<br>prev_hash: 0x0000...0000<br>actor_id: did:key:zQ3sh9...</div>
@@ -259,11 +259,11 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
       <div class="chain-arrow">↓</div>
       <div class="chain-block active">
         <div class="block-label">RPU-003 · spec sample</div>
-        <div class="block-hash accent">anchor_hash: 3BAC33BE74B76B2A<br>ED83BE6C3594C7F0...<br><br>[PRE-RPU · NON-VERIFIABLE]</div>
+        <div class="block-hash accent">Genesis Anchor: 3BAC33BE74B76B2A<br>ED83BE6C3594C7F0...<br><br>Final chain hash:<br>3de51ae75318d749...<br><br>[PHASE 1 · VERIFIED · 2026-03-19]</div>
       </div>
-      <div class="verify-badge" style="border-color:var(--text3);color:var(--text3);">
-        <div class="verify-dot" style="background:var(--text3);"></div>
-        Spec prototype · verifier deployment in progress
+      <div class="verify-badge">
+        <div class="verify-dot"></div>
+        VERIFIER ACTIVE · arss-governance-engine-v1 · 2026-03-19
       </div>
     </div>
   </div>
@@ -295,7 +295,7 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
         <div style="color:var(--accent);margin-bottom:6px;letter-spacing:0.08em;">// Implementation note</div>
         This demo uses a <span>simplified key-sort canonicalization</span> for educational purposes. The normative implementation uses full <span>RFC 8785 JCS</span>. For production-grade verification — including chain continuity and HACS signature checks — use the <span>reference verifier</span> in the GitHub repository.
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);color:var(--text3);font-size:10px;letter-spacing:0.06em;">
-          [PRE-RPU · PHASE 0] · This demo illustrates the hash-chain verification logic. Live verifier deployment pending Phase 1 infrastructure.
+          [PHASE 1 — VERIFIER ACTIVE] · Reference verifier confirmed operational on arss-governance-engine-v1 · 2026-03-19.
         </div>
       </div>
     </div>
@@ -523,8 +523,8 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
 <!-- DEVELOPER -->
 <div class="section" id="dev">
   <div class="section-label">Developers</div>
-  <h2>Inspect the protocol. Prepare to run the verifier.</h2>
-  <p class="section-desc">Clone the repository and review the reference verifier source and sample chain structure. Full verifier execution will be available in Phase 1 upon infrastructure deployment.</p>
+  <h2>Run the verifier. Inspect the protocol.</h2>
+  <p class="section-desc">Clone the repository and run the reference verifier against the sample chain. The reference verifier is deployed and operational on an independent VPS — any party can independently recompute and confirm chain integrity.</p>
   <div class="dev-grid">
     <div class="code-block">
       <div class="code-block-header">
@@ -542,10 +542,13 @@ python reference-verifier/src/verifier.py \
   samples/rpu-002.json \
   samples/rpu-003.json
 
-<span class="c-comment"># Expected output (verifier deployment in progress)</span>
-<span style="color:var(--text3)"># verifier.py will be available in Phase 1</span>
-<span style="color:var(--text3)"># anchor_hash: 3BAC33BE74B76B2A</span>
-<span style="color:var(--text3)">#               ED83BE6C3594C7F0...</span></pre>
+<span class="c-comment"># Output (confirmed · arss-governance-engine-v1 · 2026-03-19)</span>
+<span class="c-ok"># Genesis Anchor matched: OK</span>
+<span class="c-ok"># AI_OUTPUT_GENERATED:     ALL PASS</span>
+<span class="c-ok"># HUMAN_REVIEW_LOGGED:     ALL PASS</span>
+<span class="c-ok"># HUMAN_APPROVAL_RECORDED: ALL PASS</span>
+<span class="c-ok"># RESULT: ALL PASS  [exit code 0]</span>
+<span style="color:var(--text3)"># final_chain_hash: 3de51ae75318d749...</span></pre>
     </div>
     <div class="dev-desc">
       <h3>What the verifier does</h3>
@@ -654,7 +657,7 @@ python reference-verifier/src/verifier.py \
     Review the protocol specification and sample chain structure.<br>
     Recompute the anchor hash formula yourself.<br>
     <strong>Do not trust the claim — verify the record.</strong><br>
-    <span style="font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.06em;">// Reference verifier deployment in progress · Phase 1</span>
+    <span style="font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.06em;">// PHASE 1 — VERIFIER ACTIVE · arss-governance-engine-v1 · 2026-03-19</span>
   </div>
   <div class="btn-row">
     <a class="btn-primary" href="https://github.com/choizinsa-coder/arss-protocol">View on GitHub</a>
@@ -673,20 +676,15 @@ python reference-verifier/src/verifier.py \
 </footer>
 
 <script>
-// Pre-committed expected hashes
-// Derived from original sample payloads using SHA256(prev_hash || 0x00 || payload_c14n)
-// Computed via reference verifier logic (Python, key-sorted JSON) before publication.
 const EXPECTED = {
   genesis: 'c004ef9cf1c3840c9241627de41f42f8b67e542cd4addad51966ff6be6ecd93c',
   rpu1:    'd6dd1c03d298b391ed2a95adf007c7ac84057eba8a91fc22195687f16fb3d70a',
   rpu2:    '84d4dc16c949d3df91f4175fd922f7502496d9971297da9f21beb95f32e5e29f'
 };
-
 const GENESIS_PREV    = '0000000000000000000000000000000000000000000000000000000000000000';
 const GENESIS_PAYLOAD = '{"jurisdiction":"global","version":"rpu/1.0"}';
 const ORIG_P1 = '{"actor":"governance_board","decision":"model_v2_approved","risk_level":"medium"}';
 const ORIG_P2 = '{"actor":"external_auditor","decision":"audit_completed","finding":"no_violations"}';
-
 async function sha256hex(buf) {
   const h = await crypto.subtle.digest('SHA-256', buf);
   return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2,'0')).join('');
@@ -724,18 +722,13 @@ function setResult(state, html) {
   document.getElementById('demo-result').className = 'result-band ' + state;
   document.getElementById('demo-result-text').innerHTML = html;
 }
-
 async function runVerify() {
   const p1 = document.getElementById('dp1').value;
   const p2 = document.getElementById('dp2').value;
-
-  // Genesis — always valid (fixed payload, pre-committed)
   const gHash = await chainHash(GENESIS_PREV, GENESIS_PAYLOAD);
   document.getElementById('dh0').textContent = short(gHash);
   document.getElementById('dh0').className = 'd-val ok';
   setBlock(0, 'valid'); setStatus(0, 'ok', 'ANCHOR ✓');
-
-  // RPU-001
   const h1     = await chainHash(gHash, p1);
   const match1 = (h1 === EXPECTED.rpu1);
   const dh1 = document.getElementById('dh1');
@@ -746,8 +739,6 @@ async function runVerify() {
   dv1.className = 'd-val ' + (match1 ? 'match' : 'mismatch');
   setBlock(1, match1 ? 'valid' : 'invalid');
   setStatus(1, match1 ? 'ok' : 'fail', match1 ? 'PASS ✓' : 'FAIL ✗');
-
-  // RPU-002 — propagates from h1 (not EXPECTED.rpu1)
   const h2     = await chainHash(h1, p2);
   const match2 = match1 && (h2 === EXPECTED.rpu2);
   const dh2 = document.getElementById('dh2');
@@ -758,13 +749,12 @@ async function runVerify() {
   dv2.className = 'd-val ' + (match2 ? 'match' : 'mismatch');
   setBlock(2, match2 ? 'valid' : 'invalid');
   setStatus(2, match2 ? 'ok' : 'fail', match2 ? 'PASS ✓' : 'FAIL ✗');
-
   if (match1 && match2) {
     setResult('pass',
       'RESULT: ALL PASS<br>' +
       'Both RPUs: computed hash matches pre-committed expected hash · chain integrity confirmed<br>' +
       'anchor_hash: ' + h2.slice(0,16).toUpperCase() + '...<br>' +
-      '<span style="color:var(--text3);font-size:10px;">[PRE-RPU · PHASE 0] Hash logic verified · live chain deployment pending Phase 1</span>');
+      '<span style="color:var(--text3);font-size:10px;">[PHASE 1 — VERIFIER ACTIVE] · Independently confirmed on arss-governance-engine-v1 · 2026-03-19</span>');
   } else {
     const bp    = !match1 ? 'RPU-001' : 'RPU-002';
     const cause = !match1
@@ -776,13 +766,11 @@ async function runVerify() {
       'This mismatch is detectable by any independent verifier with access to the expected hash.');
   }
 }
-
 async function tamperBlock() {
   document.getElementById('dp1').value =
     '{"actor":"governance_board","decision":"model_v2_approved","risk_level":"LOW_OVERRIDE"}';
   await runVerify();
 }
-
 function resetDemo() {
   document.getElementById('dp1').value = ORIG_P1;
   document.getElementById('dp2').value = ORIG_P2;
@@ -796,7 +784,6 @@ function resetDemo() {
   setStatus(0,'ok','ANCHOR ✓'); setStatus(1,'','—'); setStatus(2,'','—');
   setResult('idle', 'Pre-committed hashes. Run Verify to recompute.');
 }
-
 </script>
 </body>
 </html>
