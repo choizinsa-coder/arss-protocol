@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARSS — 2-RPU Proof Card</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #0a0a0a;
+    --white: #f5f4f0;
+    --accent: #c8ff00;
+    --dim: #2a2a2a;
+    --mid: #555;
+    --border: #222;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .card {
+    width: 720px;
+    border: 1px solid var(--border);
+    background: var(--black);
+    position: relative;
+    overflow: hidden;
+    animation: fadeIn 0.8s ease forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Top stripe */
+  .stripe {
+    height: 4px;
+    background: var(--accent);
+    width: 100%;
+  }
+
+  /* Header */
+  .header {
+    padding: 36px 40px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .brand-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .brand-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    letter-spacing: -0.01em;
+    color: var(--white);
+  }
+
+  .status-pill {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 5px 12px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Definition */
+  .definition {
+    padding: 32px 40px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .def-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--mid);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .def-text {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    line-height: 1.45;
+    color: var(--white);
+    font-style: italic;
+  }
+
+  .def-text span {
+    color: var(--accent);
+    font-style: normal;
+  }
+
+  /* RPU Evidence */
+  .evidence {
+    padding: 32px 40px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .evidence-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--mid);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .rpu-row {
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    align-items: start;
+    padding: 16px 0;
+    border-top: 1px solid var(--border);
+    gap: 20px;
+    animation: slideIn 0.5s ease forwards;
+    opacity: 0;
+  }
+
+  .rpu-row:nth-child(2) { animation-delay: 0.2s; }
+  .rpu-row:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .rpu-id {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+
+  .rpu-content {}
+
+  .rpu-title {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--white);
+    margin-bottom: 4px;
+  }
+
+  .rpu-desc {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    color: var(--mid);
+    line-height: 1.5;
+  }
+
+  .rpu-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    border: 1px solid #1e2e00;
+    background: #0d1400;
+    padding: 3px 8px;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+
+  /* Hash chain */
+  .chain {
+    padding: 24px 40px;
+    border-bottom: 1px solid var(--border);
+    background: #0d0d0d;
+  }
+
+  .chain-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--mid);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .chain-flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .chain-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .chain-box {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8px;
+    color: var(--white);
+    background: var(--dim);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .chain-box.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .chain-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 7px;
+    color: var(--mid);
+    letter-spacing: 0.05em;
+  }
+
+  .chain-arrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--border);
+    padding: 0 6px;
+    padding-bottom: 16px;
+    flex-shrink: 0;
+  }
+
+  /* Tech */
+  .tech {
+    padding: 24px 40px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .tech-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--mid);
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    letter-spacing: 0.08em;
+  }
+
+  /* Tagline */
+  .tagline {
+    padding: 28px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .tagline-text {
+    font-family: 'DM Serif Display', serif;
+    font-size: 15px;
+    font-style: italic;
+    color: var(--white);
+    opacity: 0.7;
+  }
+
+  .tagline-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--mid);
+    letter-spacing: 0.1em;
+    text-align: right;
+    line-height: 1.8;
+  }
+
+  /* Corner decoration */
+  .corner {
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 60px; height: 60px;
+    border-top: 1px solid var(--border);
+    border-left: 1px solid var(--border);
+    opacity: 0.3;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="stripe"></div>
+
+  <div class="header">
+    <div class="brand">
+      <span class="brand-label">AIBA Global · Proof Card</span>
+      <span class="brand-name">ARSS Protocol</span>
+    </div>
+    <div class="status-pill">
+      <div class="dot"></div>
+      VERIFIER ACTIVE
+    </div>
+  </div>
+
+  <div class="definition">
+    <div class="def-label">Protocol Definition</div>
+    <div class="def-text">
+      ARSS is a protocol that turns governance decisions into
+      <span>recomputable evidence</span> — cryptographically sealed,
+      independently verifiable by any third party.
+    </div>
+  </div>
+
+  <div class="evidence">
+    <div class="evidence-label">Operational Evidence — 2 RPU Chain</div>
+
+    <div class="rpu-row">
+      <div class="rpu-id">RPU-0001</div>
+      <div class="rpu-content">
+        <div class="rpu-title">Phase 1 Activation</div>
+        <div class="rpu-desc">System transitioned from PRE-OPERATIONAL to PHASE_1_MANUAL_ISSUANCE. Verifier confirmed ALL PASS on independent recomputation.</div>
+      </div>
+      <div class="rpu-badge">ALL PASS</div>
+    </div>
+
+    <div class="rpu-row">
+      <div class="rpu-id">RPU-0002</div>
+      <div class="rpu-content">
+        <div class="rpu-title">Chain Seal — Self-referential</div>
+        <div class="rpu-desc">System recorded and sealed its own operational state. ARSS recorded its own evidence — not just external events.</div>
+      </div>
+      <div class="rpu-badge">ALL PASS</div>
+    </div>
+  </div>
+
+  <div class="chain">
+    <div class="chain-label">Hash Chain — Verified Continuity</div>
+    <div class="chain-flow">
+      <div class="chain-node">
+        <div class="chain-box">Genesis Anchor</div>
+        <div class="chain-sub">3BAC33BE…</div>
+      </div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node">
+        <div class="chain-box">Pre-chain</div>
+        <div class="chain-sub">3de51ae7…</div>
+      </div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node">
+        <div class="chain-box active">RPU-0001</div>
+        <div class="chain-sub">c8aff794…</div>
+      </div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node">
+        <div class="chain-box active">RPU-0002</div>
+        <div class="chain-sub">ee01ddcd…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tech">
+    <div class="tech-tag">SHA-256 Hash Chain</div>
+    <div class="tech-tag">JCS / RFC 8785</div>
+    <div class="tech-tag">Independent Verifier</div>
+    <div class="tech-tag">UUIDv7</div>
+    <div class="tech-tag">RFC 3339 UTC</div>
+  </div>
+
+  <div class="tagline">
+    <div class="tagline-text">"Governance is not declared. It is recomputed."</div>
+    <div class="tagline-meta">
+      AIBA Global · ARSS v0.1<br>
+      2026-03-20 · PHASE 1
+    </div>
+  </div>
+
+  <div class="corner"></div>
+</div>
+</body>
+</html>
