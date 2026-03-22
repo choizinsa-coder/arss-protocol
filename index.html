@@ -327,6 +327,13 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
         Formula: &nbsp;<span style="color:var(--accent2)">SHA256(prev_hash + ":" + payload_hash)</span> [UTF-8]<br>
         Source: &nbsp;&nbsp;<a href="https://github.com/choizinsa-coder/arss-protocol/tree/main/samples" style="color:var(--accent2);text-decoration:none;">github.com/choizinsa-coder/arss-protocol/samples/</a>
       </div>
+      <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text3);line-height:2;">
+        Step 2 — Recompute from source<br>
+        <div style="display:flex;gap:10px;margin-top:0.75rem;flex-wrap:wrap;">
+          <a href="https://raw.githubusercontent.com/choizinsa-coder/arss-protocol/main/samples/rpu-0008.json" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--accent2);border:1px solid var(--border2);padding:7px 14px;text-decoration:none;letter-spacing:0.06em;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border2)'">→ View rpu-0008.json (raw)</a>
+          <a href="https://raw.githubusercontent.com/choizinsa-coder/arss-protocol/main/samples/ledger.json" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--accent2);border:1px solid var(--border2);padding:7px 14px;text-decoration:none;letter-spacing:0.06em;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border2)'">→ View ledger.json (raw)</a>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -367,6 +374,13 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
         <div class="log-label">// Verification Log</div>
         <div id="log-content"></div>
         <button class="dl-btn" onclick="downloadVerificationLog()" id="dl-btn">↓ Download Verification Log (JSON)</button>
+      </div>
+      <div id="verify-trigger" style="display:none;margin-top:1rem;padding:1rem 1.25rem;background:var(--bg3);border:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text3);line-height:2;">
+        You verified this chain locally.<br>
+        Now verify it independently.<br>
+        <div style="display:flex;gap:10px;margin-top:0.75rem;flex-wrap:wrap;">
+          <a href="https://github.com/choizinsa-coder/arss-protocol/tree/main/samples" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--accent2);border:1px solid var(--border2);padding:7px 14px;text-decoration:none;letter-spacing:0.06em;" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border2)'">&#8594; Recompute from raw source on GitHub</a>
+        </div>
       </div>
     </div>
 
@@ -927,6 +941,7 @@ async function verifyProductionChain() {
     ).join('\n');
 
     logEl.style.display = 'block';
+    document.getElementById('verify-trigger').style.display = 'block';
     document.getElementById('local-status').textContent = 'PASS';
     document.getElementById('local-status').style.color = 'var(--accent)';
     document.getElementById('local-ts').textContent = 'timestamp: ' + ts;
