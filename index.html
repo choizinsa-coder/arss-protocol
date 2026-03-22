@@ -113,7 +113,6 @@ h2 { font-size:clamp(1.4rem,2.5vw,1.9rem); font-weight:400; letter-spacing:-0.02
 .spec-card-label { font-family:var(--mono); font-size:10px; color:var(--text3); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.5rem; }
 .spec-card-val { font-family:var(--mono); font-size:13px; color:var(--accent2); }
 
-/* DEMO */
 .demo-intro { display:grid; grid-template-columns:1fr 1fr; gap:3rem; margin-bottom:2.5rem; align-items:start; }
 .demo-explain h3 { font-size:16px; font-weight:400; margin-bottom:0.75rem; }
 .demo-explain p { font-size:14px; color:var(--text2); line-height:1.75; margin-bottom:0.75rem; }
@@ -184,12 +183,6 @@ textarea.d-val:focus { border-color:var(--border2); }
 .use-case h3 { font-size:14px; font-weight:400; margin-bottom:0.6rem; }
 .use-case p { font-size:13px; color:var(--text2); line-height:1.6; }
 
-.outreach-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border); }
-.outreach-cell { background:var(--bg); padding:2rem; }
-.outreach-cell-label { font-family:var(--mono); font-size:10px; color:var(--text3); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.5rem; }
-.outreach-status { font-family:var(--mono); font-size:10px; color:var(--accent); letter-spacing:0.08em; margin-bottom:1rem; }
-.outreach-cell p { font-size:13px; color:var(--text2); line-height:1.6; }
-
 .cta-band { background:var(--bg2); border-top:1px solid var(--border); text-align:center; padding:6rem 2rem; }
 .cta-mono { font-family:var(--mono); font-size:11px; color:var(--text3); letter-spacing:0.1em; margin-bottom:1.25rem; }
 .cta-band h2 { margin-bottom:1.5rem; }
@@ -214,7 +207,6 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
   .spec-grid { grid-template-columns:1fr 1fr; }
   .use-cases { grid-template-columns:1fr; }
   .dev-grid { grid-template-columns:1fr; }
-  .outreach-grid { grid-template-columns:1fr; }
   footer { flex-direction:column; gap:1rem; text-align:center; }
 }
 </style>
@@ -237,7 +229,7 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
 <!-- HERO -->
 <div class="hero">
   <div>
-    <div class="hero-label">Governance Evidence Protocol · RPU v0.1</div>
+    <div class="hero-label">Governance Evidence Protocol · RPU v0.1 · STATE-002 OPERATIONAL</div>
     <h1>Governance is not declared.<br>It is <em>recomputed</em>.</h1>
     <p class="hero-sub">ARSS is a governance evidence protocol. Every governance decision is recorded as a recomputable, cryptographically verifiable hash chain — so auditors, regulators, and counterparties can verify structural integrity without trusting any intermediary.</p>
     <div class="btn-row">
@@ -247,24 +239,24 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
   </div>
   <div>
     <div class="chain-viz">
-      <div class="chain-header">// ARSS sample chain · PHASE 1 — VERIFIED</div>
+      <div class="chain-header">// ARSS production chain · STATE-002 OPERATIONAL · 2026-03-22</div>
       <div class="chain-block">
-        <div class="block-label">Genesis Anchor</div>
-        <div class="block-hash">rpu_id: 019508a0-7c3e-7000-...<br>prev_hash: 0x0000...0000<br>actor_id: did:key:zQ3sh9...</div>
+        <div class="block-label">RPU-0006 · APPROVAL · STATE-001</div>
+        <div class="block-hash">chain_hash = SHA256(prev + ":" + payload_hash)<br>→ ad0a2fdf6fe2f3e2...</div>
       </div>
       <div class="chain-arrow">↓</div>
       <div class="chain-block">
-        <div class="block-label">RPU-001 · governance_decision</div>
-        <div class="block-hash">SHA256(prev ∥ 0x00 ∥ payload_c14n)<br>→ a7f3c8d2e1b945...</div>
+        <div class="block-label">RPU-0007 · EXECUTION · STATE-002</div>
+        <div class="block-hash">Internal Proof Mode ALL PASS<br>→ 82d6606293e2fe69...</div>
       </div>
       <div class="chain-arrow">↓</div>
       <div class="chain-block active">
-        <div class="block-label">RPU-003 · spec sample</div>
-        <div class="block-hash accent">Genesis Anchor: 3BAC33BE74B76B2A<br>ED83BE6C3594C7F0...<br><br>Final chain hash:<br>3de51ae75318d749...<br><br>[PHASE 1 · VERIFIED · 2026-03-19]</div>
+        <div class="block-label">RPU-0008 · EVIDENCE · Chain Tip ★</div>
+        <div class="block-hash accent">Genesis Anchor: 3BAC33BE74B76B2A...<br><br>Chain Tip (STATE-002):<br>3fa890300b41871f...<br>9e3aa0ed0d6b8463...<br><br>[STATE-002 OPERATIONAL · 2026-03-22]</div>
       </div>
       <div class="verify-badge">
         <div class="verify-dot"></div>
-        VERIFIER ACTIVE · arss-governance-engine-v1 · 2026-03-19
+        PRODUCTION CHAIN ACTIVE · Internal Proof ALL PASS · 2026-03-22
       </div>
     </div>
   </div>
@@ -280,7 +272,7 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
   </blockquote>
 </div>
 
-<!-- LIVE DEMO v5 -->
+<!-- LIVE DEMO -->
 <div class="full-bleed" id="demo">
   <div class="inner">
     <div class="section-label">Hash Demo · Verifier</div>
@@ -294,9 +286,9 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
       </div>
       <div class="demo-notice">
         <div style="color:var(--accent);margin-bottom:6px;letter-spacing:0.08em;">// Implementation note</div>
-        This demo uses a <span>simplified key-sort canonicalization</span> for educational purposes. The normative implementation uses full <span>RFC 8785 JCS</span>. For production-grade verification — including chain continuity and HACS signature checks — use the <span>reference verifier</span> in the GitHub repository.
+        This demo uses a <span>simplified key-sort canonicalization</span> for educational purposes. The normative implementation uses full <span>RFC 8785 JCS</span> with recursive key sorting. For production-grade verification — including chain continuity checks — use the <span>reference generator and verifier</span> in the GitHub repository.
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);color:var(--text3);font-size:10px;letter-spacing:0.06em;">
-          [PHASE 1 — VERIFIER ACTIVE] · Reference verifier confirmed operational on arss-governance-engine-v1 · 2026-03-19.
+          [PHASE 1 — PRODUCTION CHAIN OPERATIONAL] · Internal Proof Mode ALL PASS · 2026-03-22 · Chain Tip: 3fa89030...572c52
         </div>
       </div>
     </div>
@@ -388,8 +380,8 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
     </div>
 
     <div class="demo-footer">
-      SHA256(prev_hash_bytes <span>∥ 0x00 ∥</span> payload_c14n) &nbsp;·&nbsp;
-      expected hashes pre-committed from original sample payloads &nbsp;·&nbsp;
+      Demo uses simplified canonicalization for educational purposes. &nbsp;·&nbsp;
+      Production formula: <span>SHA256(prev_hash + ":" + payload_hash)</span> [UTF-8] &nbsp;·&nbsp;
       <span>Computed entirely in your browser via Web Crypto API. No server. No trust.</span>
     </div>
   </div>
@@ -493,14 +485,16 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
       <div class="step-num">01</div>
       <div class="step-content">
         <h3>Record · RPU generation</h3>
-        <p>Every governance decision is captured as a Record of Policy Update (RPU). Required fields: <code>rpu_id</code>, <code>actor_id</code>, <code>payload_hash</code>, <code>governance_context</code>. Serialized via JCS (RFC 8785) for canonical reproducibility across all verifiers — regardless of language or platform.</p>
+        <p>Every governance decision is captured as a Record Proof Unit (RPU). Required fields: <code>rpu_id</code>, <code>actor_id</code>, <code>payload_hash</code>, <code>governance_context</code>. Serialized via JCS (RFC 8785) — keys sorted in ascending alphabetical order, recursively — producing an identical byte sequence across all verifiers regardless of language or platform.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">02</div>
       <div class="step-content">
         <h3>Chain · cryptographic linkage</h3>
-        <p>Each RPU is linked to its predecessor via <code>SHA256(prev_hash ∥ 0x00 ∥ payload_c14n)</code>. Tampering with any record breaks all subsequent hashes — detectable immediately by any verifier, without access to the original system or its operators.</p>
+        <p>Each RPU is linked to its predecessor via the chain hash formula:</p>
+        <p style="margin:0.5rem 0"><code>chain_hash = SHA256(prev_hash + ":" + payload_hash)</code> [UTF-8]</p>
+        <p>Tampering with any record — payload, prev_hash, or chain_hash — is detectable immediately by any verifier, without access to the original system or its operators.</p>
       </div>
     </div>
     <div class="step">
@@ -514,18 +508,18 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
   <div class="spec-grid">
     <div class="spec-card"><div class="spec-card-label">Serialization</div><div class="spec-card-val">JCS · RFC 8785</div></div>
     <div class="spec-card"><div class="spec-card-label">Hash Algorithm</div><div class="spec-card-val">SHA-256</div></div>
-    <div class="spec-card"><div class="spec-card-label">Identifiers</div><div class="spec-card-val">UUIDv7</div></div>
-    <div class="spec-card"><div class="spec-card-label">Timestamps</div><div class="spec-card-val">RFC 3339 UTC μs</div></div>
+    <div class="spec-card"><div class="spec-card-label">Identifiers</div><div class="spec-card-val">RPU-000X (Phase A)</div></div>
+    <div class="spec-card"><div class="spec-card-label">Timestamps</div><div class="spec-card-val">ISO 8601 UTC (second)</div></div>
     <div class="spec-card"><div class="spec-card-label">Signature · HACS</div><div class="spec-card-val" style="color:var(--text3)">Ed25519 · v0.2 planned</div></div>
-    <div class="spec-card"><div class="spec-card-label">License</div><div class="spec-card-val">Apache 2.0 / CC BY 4.0</div></div>
+    <div class="spec-card"><div class="spec-card-label">License</div><div class="spec-card-val">Apache 2.0 / MIT</div></div>
   </div>
 </div>
 
 <!-- DEVELOPER -->
 <div class="section" id="dev">
   <div class="section-label">Developers</div>
-  <h2>Run the verifier. Inspect the protocol.</h2>
-  <p class="section-desc">Clone the repository and run the reference verifier against the sample chain. The reference verifier is deployed and operational on an independent VPS — any party can independently recompute and confirm chain integrity.</p>
+  <h2>Run the verifier. Inspect the production chain.</h2>
+  <p class="section-desc">Clone the repository and inspect the live production chain records in <code>SNAPSHOT_LOG/</code>. The reference generator (Canonical Schema v1.0) and verifier are both available. Any party can independently recompute and confirm chain integrity.</p>
   <div class="dev-grid">
     <div class="code-block">
       <div class="code-block-header">
@@ -536,26 +530,35 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
 git clone https://github.com/choizinsa-coder/arss-protocol
 cd arss-protocol
 
-<span class="c-comment"># Run verifier against sample chain</span>
-python reference-verifier/src/verifier.py \
-  samples/genesis.json \
-  samples/rpu-001.json \
-  samples/rpu-002.json \
-  samples/rpu-003.json
+<span class="c-comment"># Inspect the live production chain</span>
+cat SNAPSHOT_LOG/ledger.json
+cat SNAPSHOT_LOG/rpu-0008.json
 
-<span class="c-comment"># Output (confirmed · arss-governance-engine-v1 · 2026-03-19)</span>
-<span class="c-ok"># Genesis Anchor matched: OK</span>
-<span class="c-ok"># AI_OUTPUT_GENERATED:     ALL PASS</span>
-<span class="c-ok"># HUMAN_REVIEW_LOGGED:     ALL PASS</span>
-<span class="c-ok"># HUMAN_APPROVAL_RECORDED: ALL PASS</span>
-<span class="c-ok"># RESULT: ALL PASS  [exit code 0]</span>
-<span style="color:var(--text3)"># final_chain_hash: 3de51ae75318d749...</span></pre>
+<span class="c-comment"># Run verifier against production chain</span>
+python3 reference-verifier/src/verifier.py \
+  SNAPSHOT_LOG/rpu-0004.json \
+  SNAPSHOT_LOG/rpu-0005.json \
+  SNAPSHOT_LOG/rpu-0006.json \
+  SNAPSHOT_LOG/rpu-0007.json \
+  SNAPSHOT_LOG/rpu-0008.json
+
+<span class="c-comment"># Internal Proof Mode result (2026-03-22)</span>
+<span class="c-ok"># Determinism:       10/10 PASS</span>
+<span class="c-ok"># JCS normalization: 3/3   PASS</span>
+<span class="c-ok"># Chain integrity:   3/3   PASS</span>
+<span class="c-ok"># Ledger integrity:  3/3   PASS</span>
+<span class="c-ok"># RESULT: ALL PASS</span>
+<span style="color:var(--text3)"># chain_tip: 3fa890300b41871f...</span></pre>
     </div>
     <div class="dev-desc">
-      <h3>What the verifier does</h3>
-      <p>The reference verifier performs three sequential checks: (1) JCS normalization and single-RPU hash integrity, (2) PrevHash chain continuity across all records, (3) HACS cryptographic signature verification per actor <span style="font-family:var(--mono);font-size:12px;color:var(--text3);border:1px solid var(--border);padding:1px 6px;">v0.2 planned</span>.</p>
-      <p>Any failure surfaces the exact position in the chain where integrity breaks — giving investigators a precise forensic entry point rather than a binary result.</p>
-      <p>The verifier has no dependencies beyond Python's standard library and the <code>cryptography</code> package. Any party with access to the chain JSON can run it — independent of the original system and its operators.</p>
+      <h3>What to verify</h3>
+      <p>The reference verifier performs three sequential checks: (1) JCS normalization and single-RPU payload hash integrity, (2) chain_hash continuity across all records using <code>SHA256(prev + ":" + payload_hash)</code>, (3) HACS cryptographic signature verification <span style="font-family:var(--mono);font-size:12px;color:var(--text3);border:1px solid var(--border);padding:1px 6px;">v0.2 planned</span>.</p>
+      <p>The production chain (RPU-0004 ~ RPU-0008) is publicly available in <code>SNAPSHOT_LOG/</code>. The Chain Tip is independently recomputable from the raw JSON records — no AIBA infrastructure access required.</p>
+      <p>The reference generator (<code>arss_generator_v1.py</code>) implements Canonical Schema v1.0 LOCK and can be used to generate new RPUs or cross-validate existing ones.</p>
+      <div style="margin-top:1rem;padding:0.75rem 1rem;background:var(--bg2);border:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text3);">
+        Chain Tip (STATE-002 · 2026-03-22)<br>
+        <span style="color:var(--accent);word-break:break-all;">3fa890300b41871f9e3aa0ed0d6b8463231bb75efba9dd250bccdf3e3e572c52</span>
+      </div>
       <div class="btn-row" style="margin-top:1.5rem">
         <a class="btn-secondary" href="https://github.com/choizinsa-coder/arss-protocol">View on GitHub ↗</a>
         <a class="btn-secondary" href="https://github.com/choizinsa-coder/arss-protocol/blob/main/DESIGN.md">DESIGN.md</a>
@@ -593,44 +596,21 @@ python reference-verifier/src/verifier.py \
   </div>
 </div>
 
-<!-- OUTREACH STATUS -->
-<div class="section" style="border-top:1px solid var(--border)">
-  <div class="section-label">Outreach Status</div>
-  <h2>Outreach Program · March 2026</h2>
-  <p class="section-desc">ARSS is in staged outreach to AI governance practitioners, audit firms, and standards-adjacent organizations. Current status below.</p>
-  <div class="outreach-grid">
-    <div class="outreach-cell">
-      <div class="outreach-cell-label">Governance Practitioners</div>
-      <div class="outreach-status">● Active outreach</div>
-      <p>Engaging AI risk and compliance teams at organizations deploying EU AI Act and ISO/IEC 42001 governance programs. Focus: integration with existing audit workflows.</p>
-    </div>
-    <div class="outreach-cell">
-      <div class="outreach-cell-label">Certification Programs</div>
-      <div class="outreach-status">● Initiated</div>
-      <p>In contact with AI audit and certification bodies exploring verifiable evidence requirements. ARSS positioned as the protocol layer for certification evidence.</p>
-    </div>
-    <div class="outreach-cell">
-      <div class="outreach-cell-label">Standards Alignment</div>
-      <div class="outreach-status">● Monitoring</div>
-      <p>Tracking EU AI Act implementation guidance, NIST AI RMF supplementary materials, and ISO/IEC 42001 audit framework development for protocol alignment opportunities.</p>
-    </div>
-  </div>
-</div>
-
 <!-- ROADMAP -->
 <div class="section" style="border-top:1px solid var(--border)">
   <div class="section-label">Roadmap</div>
   <h2>Protocol evolution</h2>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);margin-top:2rem">
     <div style="background:var(--bg2);padding:2rem;border-left:2px solid var(--accent)">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.75rem">v0.1 · Current</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.75rem">v0.1 · Current · STATE-002 OPERATIONAL</div>
       <div style="font-size:16px;font-weight:400;margin-bottom:0.75rem">Hash-chain governance evidence protocol</div>
       <div style="font-family:var(--mono);font-size:12px;color:var(--text3);line-height:1.9">
-        governance event record<br>
-        hash-chain integrity<br>
+        governance event record (RPU)<br>
+        hash-chain integrity (Canonical Schema v1.0)<br>
         recomputable verification<br>
-        reference verifier<br>
-        protocol specification
+        reference generator + verifier<br>
+        production chain live (RPU-0004~0008)<br>
+        internal proof mode: ALL PASS
       </div>
     </div>
     <div style="background:var(--bg);padding:2rem">
@@ -645,20 +625,17 @@ python reference-verifier/src/verifier.py \
       </div>
     </div>
   </div>
-  <div style="margin-top:1.5rem;font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.06em;">
-    Institutional inquiries: Official communication channel opening in v0.2
-  </div>
 </div>
 
 <!-- CTA -->
 <div class="cta-band">
-  <div class="cta-mono">// Open protocol · open source · RPU v0.1</div>
+  <div class="cta-mono">// Open protocol · open source · RPU v0.1 · STATE-002 OPERATIONAL</div>
   <h2>Run the verifier yourself</h2>
   <div class="cta-tagline">
-    Review the protocol specification and sample chain structure.<br>
-    Recompute the anchor hash formula yourself.<br>
+    Inspect the production chain records in <code style="font-size:12px;color:var(--accent2)">SNAPSHOT_LOG/</code>.<br>
+    Recompute the Chain Tip from raw RPU JSON.<br>
     <strong>Do not trust the claim — verify the record.</strong><br>
-    <span style="font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.06em;">// PHASE 1 — VERIFIER ACTIVE · arss-governance-engine-v1 · 2026-03-19</span>
+    <span style="font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.06em;">// Chain Tip: 3fa890300b41871f...572c52 · Internal Proof ALL PASS · 2026-03-22</span>
   </div>
   <div class="btn-row">
     <a class="btn-primary" href="https://github.com/choizinsa-coder/arss-protocol">View on GitHub</a>
@@ -668,7 +645,7 @@ python reference-verifier/src/verifier.py \
 </div>
 
 <footer>
-  <span>ARSS Protocol · AIBA Global Project · RPU v0.1 · 2026</span>
+  <span>ARSS Protocol · AIBA Global Project · RPU v0.1 · STATE-002 OPERATIONAL · 2026</span>
   <div class="footer-links">
     <a href="https://github.com/choizinsa-coder/arss-protocol">GitHub</a>
     <a href="https://github.com/choizinsa-coder/arss-protocol/blob/main/DESIGN.md">Specification</a>
@@ -755,7 +732,7 @@ async function runVerify() {
       'RESULT: ALL PASS<br>' +
       'Both RPUs: computed hash matches pre-committed expected hash · chain integrity confirmed<br>' +
       'anchor_hash: ' + h2.slice(0,16).toUpperCase() + '...<br>' +
-      '<span style="color:var(--text3);font-size:10px;">[PHASE 1 — VERIFIER ACTIVE] · Independently confirmed on arss-governance-engine-v1 · 2026-03-19</span>');
+      '<span style="color:var(--text3);font-size:10px;">[PRODUCTION CHAIN OPERATIONAL] · Internal Proof ALL PASS · 2026-03-22 · Chain Tip: 3fa890300b41871f...572c52</span>');
   } else {
     const bp    = !match1 ? 'RPU-001' : 'RPU-002';
     const cause = !match1
