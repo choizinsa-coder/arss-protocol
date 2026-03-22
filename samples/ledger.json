@@ -1,0 +1,89 @@
+{
+  "ledger_id": "ARSS-LEDGER-AIBA-OS-v0.1",
+  "version": "ledger/1.0",
+  "created_at": "2026-03-22T04:53:59Z",
+  "updated_at": "2026-03-22T05:08:54Z",
+  "current_state": {
+    "state_id": "STATE-002",
+    "state_name": "Operational State",
+    "activated_at": "2026-03-22T05:08:54Z",
+    "activating_rpu": "RPU-0008",
+    "chain_tip": "3fa890300b41871f9e3aa0ed0d6b8463231bb75efba9dd250bccdf3e3e572c52",
+    "is_current": true,
+    "prev_state_id": "STATE-001",
+    "transition_type": "REPLACE"
+  },
+  "state_history": [
+    {
+      "state_id": "STATE-001",
+      "state_name": "Genesis State",
+      "activated_at": "2026-03-22T04:53:59Z",
+      "superseded_at": "2026-03-22T05:08:54Z",
+      "superseded_by": "STATE-002",
+      "chain_tip": "ad0a2fdf6fe2f3e2c94aec9153cd02f55491e3986b92689a80519d1cd6990300",
+      "is_current": false,
+      "rpu_range": {
+        "from": "RPU-0004",
+        "to": "RPU-0006"
+      }
+    },
+    {
+      "state_id": "STATE-002",
+      "state_name": "Operational State",
+      "activated_at": "2026-03-22T05:08:54Z",
+      "chain_tip": "3fa890300b41871f9e3aa0ed0d6b8463231bb75efba9dd250bccdf3e3e572c52",
+      "is_current": true,
+      "rpu_range": {
+        "from": "RPU-0007",
+        "to": "RPU-0008"
+      }
+    }
+  ],
+  "chain": [
+    {
+      "rpu_id": "RPU-0004",
+      "event_type": "GOVERNANCE_EVENT",
+      "timestamp": "2026-03-22T04:53:59Z",
+      "payload_hash": "3a8a01cbaefb890c55735a7178be3b1eb8f25dfbf8e8f416c64a09008e0a8248",
+      "chain_hash": "dcb3b378afdd5a41902798d3d47e599e5ddf702251df51673fb38f80643fd7b4",
+      "prev_hash": "8ddb89162eb621a9d1f9391eff812d7afd4d3c28a06009db4712cae499cb8908",
+      "sequence_label": "STATE-001/RPU-0004"
+    },
+    {
+      "rpu_id": "RPU-0005",
+      "event_type": "DECISION",
+      "timestamp": "2026-03-22T04:53:59Z",
+      "payload_hash": "a21d0c6f18e9f9bc08a223fa9a9530a57ba44fa62fa8124287468c3193a1c666",
+      "chain_hash": "db273fa39267a93ca6da6e91ba8ba0a1a70ed416788835ec675628b23010ff42",
+      "prev_hash": "dcb3b378afdd5a41902798d3d47e599e5ddf702251df51673fb38f80643fd7b4",
+      "sequence_label": "STATE-001/RPU-0005"
+    },
+    {
+      "rpu_id": "RPU-0006",
+      "event_type": "APPROVAL",
+      "timestamp": "2026-03-22T04:53:59Z",
+      "payload_hash": "d9b17f6af3ce41b2ef344db4a115d1f88deb7d0aa078746db511e5e38e1b1fc4",
+      "chain_hash": "ad0a2fdf6fe2f3e2c94aec9153cd02f55491e3986b92689a80519d1cd6990300",
+      "prev_hash": "db273fa39267a93ca6da6e91ba8ba0a1a70ed416788835ec675628b23010ff42",
+      "sequence_label": "STATE-001/RPU-0006"
+    },
+    {
+      "rpu_id": "RPU-0007",
+      "event_type": "EXECUTION",
+      "timestamp": "2026-03-22T05:08:54Z",
+      "payload_hash": "001a0b898f2d1a0b50895ee430a9d025e1908d5215534286ca3e945f10609223",
+      "chain_hash": "82d6606293e2fe69388648f5611bb6d844c2b28513bfb6a07a7c7432add69e9d",
+      "prev_hash": "ad0a2fdf6fe2f3e2c94aec9153cd02f55491e3986b92689a80519d1cd6990300",
+      "sequence_label": "STATE-002/RPU-0007"
+    },
+    {
+      "rpu_id": "RPU-0008",
+      "event_type": "EVIDENCE",
+      "timestamp": "2026-03-22T05:08:54Z",
+      "payload_hash": "a6d57d5ba37f2959eca3e2020badb54440d9243eb6384415541c4fa4555f2956",
+      "chain_hash": "3fa890300b41871f9e3aa0ed0d6b8463231bb75efba9dd250bccdf3e3e572c52",
+      "prev_hash": "82d6606293e2fe69388648f5611bb6d844c2b28513bfb6a07a7c7432add69e9d",
+      "sequence_label": "STATE-002/RPU-0008"
+    }
+  ]
+}
