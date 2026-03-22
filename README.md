@@ -31,10 +31,10 @@ Governance Event
 JCS Canonicalization          ← RFC 8785, deterministic byte sequence
        │
        ▼
-Payload Hash (SHA256)
+Payload Hash                  ← SHA256(canonical_json(payload))
        │
        ▼
-Hash Chain  ←  SHA256(prev_hash ‖ 0x00 ‖ payload_c14n)
+Hash Chain                    ← SHA256(prev_hash + ":" + payload_hash)  [UTF-8]
        │
        ▼
 RPU Record                    ← independently recomputable
@@ -45,10 +45,11 @@ Reference Verifier            ← any third party, any environment
 
 **Three core mechanisms:**
 
-1. **Deterministic serialization** — each governance event is normalized using JSON Canonicalization Scheme (JCS / RFC 8785), producing an identical byte sequence regardless of environment
+1. **Deterministic serialization** — each governance event is normalized using JSON Canonicalization Scheme (JCS / RFC 8785), producing an identical byte sequence regardless of environment. Keys are sorted in ascending alphabetical order, recursively.
 2. **Hash chaining** — each RPU embeds the hash of the previous record:
    ```
-   SHA256(prev_hash || 0x00 || payload_c14n)
+   chain_hash = SHA256(prev_hash + ":" + payload_hash)  [UTF-8 encoded]
+   genesis    = SHA256("GENESIS:" + payload_hash)
    ```
 3. **Independent recomputability** — any party with the raw records can recompute the chain and confirm integrity without access to the original system
 
@@ -56,19 +57,21 @@ Reference Verifier            ← any third party, any environment
 
 | Field | Type | Description |
 |---|---|---|
-| `rpu_id` | UUIDv7 | Monotonically ordered record identifier |
+| `rpu_id` | string | Record identifier (`RPU-000X` format · Phase A) |
 | `version` | string | Protocol version (`rpu/1.0`) |
-| `timestamp` | ISO 8601 UTC | Microsecond precision |
-| `actor_id` | string | Deterministic identifier derived from the actor's public key |
-| `payload_hash` | SHA256 | Hash of the governance event payload |
+| `timestamp` | ISO 8601 UTC | Second precision (e.g. `2026-03-22T05:08:54Z`) |
+| `actor_id` | string | Identifier of the decision actor |
+| `payload_hash` | SHA256 hex | Hash of the governance event payload |
 | `governance_context` | object | Policy ID, Authority Root, Jurisdiction |
-| `prev_hash` | SHA256 | Hash of the preceding RPU (genesis: `0x00…00`) |
+| `prev_hash` | SHA256 hex | Hash of the preceding RPU chain_hash |
+
+All meta-fields (`actor_id`, `timestamp`, `event_type`, `governance_context`, `sequence_label`, `version`) are located **inside** the `payload` block. The `chain` block contains only `prev_hash`, `payload_hash`, and `chain_hash`.
 
 ---
 
 ## Quick Start — Inspect the Protocol
 
-Review the reference verifier source and sample chain structure.
+Review the reference generator and verifier source, then inspect the live production chain.
 
 **Requirements:** Python 3.8+
 
@@ -80,30 +83,35 @@ cd arss-protocol
 # 2. Run the reference verifier against the sample chain
 python3 reference-verifier/src/verifier.py samples/
 
-# 3. Inspect the reference verifier source
-cat reference-verifier/src/verifier.py
+# 3. Inspect the reference generator (Canonical Schema v1.0)
+cat reference-generator/src/arss_generator_v1.py
 
-# 4. Inspect the sample chain structure
-cat samples/genesis.json
-cat samples/rpu-001.json
+# 4. Inspect the production chain
+cat reference-verifier/SNAPSHOT_LOG/ledger.json
+cat reference-verifier/SNAPSHOT_LOG/rpu-0007.json
+cat reference-verifier/SNAPSHOT_LOG/rpu-0008.json
 ```
 
-> **Note [PHASE 1 — VERIFIER ACTIVE]:** The reference verifier is deployed and confirmed operational
-> on an independent VPS (`arss-governance-engine-v1`), isolated from the record-generation environment.
-> The sample chain in `samples/` has been cryptographically verified: all RPU integrity checks,
-> chain continuity, and HACS signature checks pass with exit code 0.
+> **[PHASE 1 — VERIFIER ACTIVE · PRODUCTION CHAIN OPERATIONAL]**
+> The reference verifier is deployed and confirmed operational.
+> Generator v1.0 has passed Internal Proof Mode verification:
+> Determinism (10/10), JCS normalization (3/3), Chain integrity attacks (3/3), Ledger integrity (3/3).
+> All tests PASS. Production chain is live from RPU-0004 through RPU-0008.
 
-To recompute a single RPU hash manually:
+To recompute a chain hash manually:
 
 ```python
 import hashlib, json
 
-# Load normalized payload (JCS)
-payload_c14n = b'...'          # canonical JSON bytes
-prev_hash    = bytes(32)       # 32 zero-bytes for genesis RPU
+def canonical_json(obj):
+    if isinstance(obj, dict):
+        sorted_items = sorted(obj.items(), key=lambda x: x[0])
+        inner = ",".join(f'"{k}":{canonical_json(v)}' for k, v in sorted_items)
+        return "{" + inner + "}"
+    # ... (see reference-generator/src/arss_generator_v1.py for full implementation)
 
-digest = hashlib.sha256(prev_hash + b'\x00' + payload_c14n).hexdigest()
-print(digest)
+payload_hash = hashlib.sha256(canonical_json(payload).encode("utf-8")).hexdigest()
+chain_hash   = hashlib.sha256((prev_hash + ":" + payload_hash).encode("utf-8")).hexdigest()
 ```
 
 ---
@@ -112,22 +120,31 @@ print(digest)
 
 ```
 arss-protocol/
-├── spec/                    # Protocol specification (Markdown)
-│   ├── rpu-schema.md        # RPU field definitions and constraints
-│   ├── hash-chain.md        # Chain construction and verification rules
-│   └── canonicalization.md  # JCS normalization requirements
+├── spec/                         # Protocol specification (Markdown)
+│   ├── rpu-schema.md             # RPU field definitions and constraints
+│   ├── hash-chain.md             # Chain construction and verification rules
+│   └── canonicalization.md       # JCS normalization requirements
 │
-├── reference-verifier/      # Minimal Python verifier
+├── reference-verifier/           # Minimal Python verifier
 │   └── src/
 │       └── verifier.py
 │
-├── samples/                 # Sample governance chain (cryptographically verified · PHASE 1)
-│   ├── genesis.json
-│   ├── rpu-001.json
-│   ├── rpu-002.json
-│   └── rpu-003.json
+├── reference-generator/          # Reference RPU generator (Canonical Schema v1.0)
+│   └── src/
+│       └── arss_generator_v1.py
 │
-└── tests/                   # Verification test vectors
+├── SNAPSHOT_LOG/                 # Live production chain records
+│   ├── ledger.json               # Full chain index + state registry
+│   ├── rpu-0004.json             # GOVERNANCE_EVENT — Production chain genesis
+│   ├── rpu-0005.json             # DECISION
+│   ├── rpu-0006.json             # APPROVAL  (STATE-001 activation)
+│   ├── rpu-0007.json             # EXECUTION (STATE-002 activation)
+│   └── rpu-0008.json             # EVIDENCE  (Internal Proof Mode seal)
+│
+├── samples/                      # Minimal sample chain for quick inspection
+│   └── genesis.json
+│
+└── tests/                        # Verification test vectors
     └── test_vectors.json
 ```
 
@@ -143,11 +160,11 @@ Apply JCS normalization to each RPU payload. Recompute `payload_hash`. Confirm m
 **Step 2 — Chain continuity**  
 For each RPU at position `n`, confirm:
 ```
-rpu[n].prev_hash == SHA256(rpu[n-1].prev_hash || 0x00 || rpu[n-1].payload_c14n)
+chain_hash[n] == SHA256(chain_hash[n-1] + ":" + payload_hash[n])  [UTF-8]
 ```
 
 **Step 3 — HACS verification** *(implemented — public specification: v0.2 planned)*  
-Verify HACS (Human Actor Cryptographic Signature) if present in `governance_context`. The reference verifier includes HACS verification logic; the public key specification and key management guidelines are scoped to v0.2.
+Verify HACS (Human Actor Cryptographic Signature) if present in `governance_context`.
 
 A chain that passes all three steps is structurally sound — its integrity can be confirmed by any independent party without access to the originating system.
 
@@ -157,38 +174,46 @@ A chain that passes all three steps is structurally sound — its integrity can 
 
 ARSS is an open protocol under active development.
 
-Current release: **v0.1 · PHASE 1 — VERIFIER ACTIVE**
+Current release: **v0.1 · PHASE 1 — VERIFIER ACTIVE · PRODUCTION CHAIN OPERATIONAL**
 
-> **[PHASE 1 — VERIFIER ACTIVE]** The reference verifier is deployed on an independent VPS
-> and confirmed operational as of 2026-03-19. The sample chain passes all three verification steps:
-> RPU integrity, chain continuity, and HACS signature check (exit code 0).
-> Live RPU generation is underway. HACS public key specification is scoped to v0.2.
+> **[PHASE 1 — INTERNAL PROOF MODE: ALL PASS]**
+> Generator v1.0 (Canonical Schema v1.0 LOCK) has completed full internal verification:
+> - Determinism: 10/10 identical outputs confirmed
+> - JCS normalization: key-order / whitespace / compact variants — all produce identical hash
+> - Chain integrity: payload tampering, prev_hash forgery, chain_hash forgery — all detected (FAIL as expected)
+> - Ledger integrity: duplicate is_current, chain discontinuity, chain_tip mismatch — all detected (FAIL as expected)
+>
+> Production chain (RPU-0004 ~ RPU-0008) is live. STATE-002 Operational State active.
+
+**Progress:**
 
 - [x] RPU schema defined
-- [x] Hash chain formula specified
+- [x] Hash chain formula specified (Canonical Schema v1.0 LOCK)
 - [x] JCS normalization requirement documented
 - [x] Reference verifier source (Python, single-file)
-- [x] Sample chain structure (cryptographically verified · PHASE 1)
-- [x] Reference verifier live deployment (PHASE 1 — confirmed 2026-03-19)
+- [x] Reference generator source (Python · arss_generator_v1.py)
+- [x] Sample chain structure
+- [x] Internal Proof Mode — ALL PASS (2026-03-22)
+- [x] Production chain live — RPU-0004 ~ RPU-0008 (STATE-002 ACTIVE)
+- [x] HACS verification logic (implemented — public spec: v0.2 planned)
 - [ ] Formal test vector suite
 - [ ] Multi-language verifier implementations
-- [x] HACS verification logic (implemented — public spec: v0.2 planned)
 
-**Verification anchor hashes:**
+**Verification anchor hashes (Canonical Schema v1.0 · 2026-03-22):**
 
 Genesis Anchor (protocol specification baseline):
 ```
 3BAC33BE74B76B2AED83BE6C3594C7F08D3C9E889ABB9F0B97FD39BFD9E52C14
 ```
 
-Final chain hash (independently recomputed on `arss-governance-engine-v1` · 2026-03-19):
+Production Chain Tip (STATE-002 · RPU-0008 · independently recomputable):
 ```
-3de51ae75318d7493fe7850046df41920e92362630a50a1a63af951adadf7763
+3fa890300b41871f9e3aa0ed0d6b8463231bb75efba9dd250bccdf3e3e572c52
 ```
 
-The Genesis Anchor is derived from the protocol specification and is independently recomputable
-from the sample chain. The Final chain hash was produced by running the reference verifier
-on an isolated VPS environment, confirming full chain integrity across all three RPUs.
+The Chain Tip is independently recomputable from the raw RPU records in `SNAPSHOT_LOG/`
+using the reference generator or any SHA256 implementation.
+Recomputation requires no access to AIBA infrastructure.
 
 ---
 
@@ -196,7 +221,7 @@ on an isolated VPS environment, confirming full chain integrity across all three
 
 | Version | Scope | Status |
 |---------|-------|--------|
-| v0.1 | Hash-chain governance evidence protocol · PHASE 1 — VERIFIER ACTIVE | Current |
+| v0.1 | Hash-chain governance evidence protocol · PHASE 1 — VERIFIER ACTIVE | **Current** |
 | v0.2 | HACS: Hash-Anchored Cryptographic Signatures — public specification, key management guidelines, trust anchor architecture | Planned |
 
 ---
