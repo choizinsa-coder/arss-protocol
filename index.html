@@ -56,6 +56,18 @@ h1 em { font-style:normal; color:var(--accent); }
 .verify-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); flex-shrink:0; animation:pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
 
+/* ── MISSION BLOCK ── */
+.mission-band { border-top:1px solid var(--border); border-bottom:1px solid var(--border); background:var(--bg2); padding:4rem 2rem; }
+.mission-inner { max-width:1100px; margin:0 auto; }
+.mission-label { font-family:var(--mono); font-size:10px; color:var(--accent); letter-spacing:0.16em; text-transform:uppercase; margin-bottom:1.5rem; }
+.mission-block { background:var(--bg3); border:1px solid var(--border2); padding:2rem; }
+.mission-directive { font-family:var(--mono); font-size:13px; color:var(--text2); line-height:1.9; margin-bottom:1.5rem; }
+.mission-hash-label { font-family:var(--mono); font-size:9px; color:var(--text3); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:0.5rem; }
+.mission-hash { font-family:var(--mono); font-size:13px; color:var(--accent); word-break:break-all; letter-spacing:0.03em; line-height:1.6; margin-bottom:1.5rem; }
+.mission-logic { font-family:var(--mono); font-size:11px; color:var(--text3); line-height:2; border-top:1px solid var(--border); padding-top:1rem; }
+.mission-logic .if-pass { color:var(--accent); }
+.mission-logic .if-fail { color:var(--red); }
+
 .tagline-band { background:var(--bg2); border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:5rem 2rem; text-align:center; }
 .tagline-band blockquote { font-family:var(--mono); font-size:clamp(14px,2vw,19px); color:var(--text); letter-spacing:0.03em; line-height:1.75; max-width:700px; margin:0 auto; font-style:normal; }
 .tagline-band span { color:var(--accent); }
@@ -68,6 +80,41 @@ h1 em { font-style:normal; color:var(--accent); }
 h2 { font-size:clamp(1.4rem,2.5vw,1.9rem); font-weight:400; letter-spacing:-0.02em; margin-bottom:1rem; line-height:1.25; }
 .section-desc { font-size:15px; color:var(--text2); line-height:1.75; max-width:680px; margin-bottom:3rem; }
 
+/* ── LOCAL VERIFY STATUS ── */
+.local-status-block { font-family:var(--mono); font-size:11px; background:var(--bg3); border:1px solid var(--border); padding:1rem 1.25rem; line-height:1.9; margin-top:1.25rem; }
+.local-status-label { font-size:9px; color:var(--text3); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:0.5rem; }
+.local-status-value { color:var(--accent); }
+.local-status-ts { color:var(--text3); font-size:10px; }
+
+/* ── PRODUCTION CHAIN VERIFY ── */
+.prod-verify-section { border-top:1px solid var(--border); background:var(--bg); }
+.prod-verify-inner { max-width:1100px; margin:0 auto; padding:6rem 2rem; }
+.prod-verify-block { background:var(--bg2); border:1px solid var(--border); padding:2rem; margin-top:2rem; }
+.prod-verify-controls { display:flex; gap:8px; margin-bottom:1.5rem; flex-wrap:wrap; }
+.prod-result { font-family:var(--mono); font-size:12px; padding:1.25rem; border:1px solid var(--border); background:var(--bg3); line-height:2; min-height:80px; transition:all 0.3s; }
+.prod-result.pass { border-color:rgba(0,212,170,0.3); background:rgba(0,212,170,0.04); color:var(--accent); }
+.prod-result.fail { border-color:rgba(224,92,92,0.3); background:rgba(224,92,92,0.04); color:var(--red); }
+.prod-result.idle { color:var(--text3); }
+.prod-result.running { color:var(--accent2); }
+
+/* ── VERIFIED LOG OUTPUT ── */
+.verified-log { display:none; margin-top:1rem; background:var(--bg3); border:1px solid rgba(0,212,170,0.2); padding:1.25rem; font-family:var(--mono); font-size:11px; color:var(--accent); line-height:2; }
+.verified-log .log-label { font-size:9px; color:var(--text3); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:0.75rem; }
+.dl-btn { display:inline-flex; align-items:center; gap:6px; font-family:var(--mono); font-size:11px; color:var(--accent); border:1px solid rgba(0,212,170,0.3); padding:8px 16px; background:transparent; cursor:pointer; letter-spacing:0.06em; margin-top:1rem; transition:all 0.2s; text-decoration:none; }
+.dl-btn:hover { background:rgba(0,212,170,0.08); border-color:var(--accent); }
+
+/* ── CHALLENGE LAYER ── */
+.challenge-block { border:1px solid var(--border2); padding:1.5rem 2rem; background:var(--bg2); margin-bottom:2.5rem; }
+.challenge-text { font-family:var(--mono); font-size:14px; color:var(--text2); line-height:1.9; }
+.challenge-text em { font-style:normal; color:var(--accent); }
+
+/* ── FIRST VERIFIER ── */
+.first-verifier { font-family:var(--mono); font-size:11px; background:var(--bg3); border:1px solid var(--border); padding:1rem 1.25rem; margin-top:2rem; line-height:1.9; }
+.fv-label { font-size:9px; color:var(--text3); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:0.5rem; }
+.fv-status { color:var(--text3); }
+.fv-status.active { color:var(--accent); }
+
+/* ── DEMO ── */
 .problem-context { background:var(--bg2); border:1px solid var(--border); padding:2rem; margin-bottom:2.5rem; }
 .problem-context p { font-size:14px; color:var(--text2); line-height:1.75; }
 .problem-context p+p { margin-top:1rem; }
@@ -189,6 +236,8 @@ textarea.d-val:focus { border-color:var(--border2); }
 .cta-tagline { font-family:var(--mono); font-size:14px; color:var(--text2); line-height:2; margin-bottom:2.5rem; }
 .cta-tagline strong { color:var(--accent); font-weight:400; }
 .cta-band .btn-row { justify-content:center; }
+.cta-warning { font-family:var(--mono); font-size:11px; color:var(--text3); margin-top:2rem; letter-spacing:0.06em; border-top:1px solid var(--border); padding-top:1.5rem; }
+.cta-warning strong { color:var(--text2); font-weight:400; }
 
 footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-family:var(--mono); font-size:11px; color:var(--text3); }
 .footer-links { display:flex; gap:1.5rem; }
@@ -216,14 +265,13 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
 <nav>
   <a class="nav-logo" href="#">ARSS Protocol</a>
   <ul class="nav-links">
+    <li><a href="#mission">Mission</a></li>
+    <li><a href="#verify">Verify Chain</a></li>
     <li><a href="#demo">Hash Demo</a></li>
-    <li><a href="#stack">Stack Position</a></li>
-    <li><a href="#how">How It Works</a></li>
     <li><a href="#dev">Developers</a></li>
     <li><a href="https://github.com/choizinsa-coder/arss-protocol">GitHub</a></li>
-    <li><a href="./proof.html">Proof Card</a></li>
   </ul>
-  <a class="nav-cta" href="https://github.com/choizinsa-coder/arss-protocol">View on GitHub ↗</a>
+  <a class="nav-cta" href="#verify">Verify Now ↓</a>
 </nav>
 
 <!-- HERO -->
@@ -233,7 +281,7 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
     <h1>Governance is not declared.<br>It is <em>recomputed</em>.</h1>
     <p class="hero-sub">ARSS is a governance evidence protocol. Every governance decision is recorded as a recomputable, cryptographically verifiable hash chain — so auditors, regulators, and counterparties can verify structural integrity without trusting any intermediary.</p>
     <div class="btn-row">
-      <a class="btn-primary" href="#demo">Try the Hash Demo</a>
+      <a class="btn-primary" href="#verify">Verify Production Chain</a>
       <a class="btn-secondary" href="https://github.com/choizinsa-coder/arss-protocol">GitHub ↗</a>
     </div>
   </div>
@@ -252,11 +300,32 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
       <div class="chain-arrow">↓</div>
       <div class="chain-block active">
         <div class="block-label">RPU-0008 · EVIDENCE · Chain Tip ★</div>
-        <div class="block-hash accent">Genesis Anchor: 3BAC33BE74B76B2A...<br><br>Chain Tip (STATE-002):<br>3fa890300b41871f...<br>9e3aa0ed0d6b8463...<br><br>[STATE-002 OPERATIONAL · 2026-03-22]</div>
+        <div class="block-hash accent">Chain Tip (STATE-002):<br>3fa890300b41871f...<br>9e3aa0ed0d6b8463...<br><br>[STATE-002 OPERATIONAL · 2026-03-22]</div>
       </div>
       <div class="verify-badge">
         <div class="verify-dot"></div>
         PRODUCTION CHAIN ACTIVE · Internal Proof ALL PASS · 2026-03-22
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MISSION BLOCK -->
+<div class="mission-band" id="mission">
+  <div class="mission-inner">
+    <div class="mission-label">// Mission</div>
+    <div class="mission-block">
+      <div class="mission-directive">
+        Recompute this chain tip:
+      </div>
+      <div class="mission-hash-label">Chain Tip · RPU-0008 · STATE-002</div>
+      <div class="mission-hash">3fa890300b41871f9e3aa0ed0d6b8463231bb75efba9dd250bccdf3e3e572c52</div>
+      <div class="mission-logic">
+        If your result matches &nbsp;→ &nbsp;<span class="if-pass">chain is valid.</span><br>
+        If your result differs &nbsp;&nbsp;→ &nbsp;<span class="if-fail">the system is broken.</span><br>
+        <br>
+        Formula: &nbsp;<span style="color:var(--accent2)">SHA256(prev_hash + ":" + payload_hash)</span> [UTF-8]<br>
+        Source: &nbsp;&nbsp;<a href="https://github.com/choizinsa-coder/arss-protocol/tree/main/samples" style="color:var(--accent2);text-decoration:none;">github.com/choizinsa-coder/arss-protocol/samples/</a>
       </div>
     </div>
   </div>
@@ -272,7 +341,52 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
   </blockquote>
 </div>
 
-<!-- LIVE DEMO -->
+<!-- PRODUCTION CHAIN VERIFY -->
+<div class="prod-verify-section" id="verify">
+  <div class="prod-verify-inner">
+    <div class="section-label">Production Chain · Real Verification</div>
+    <h2>Verify the actual production chain.<br>Your browser. No server.</h2>
+    <p class="section-desc">This is not a demo. The hashes below are the actual production chain records (RPU-0004 ~ RPU-0008). Your browser recomputes each chain_hash from the embedded payloads and compares against the pre-committed values.</p>
+
+    <!-- Challenge Layer -->
+    <div class="challenge-block">
+      <div class="challenge-text">
+        Do not believe this chain is valid.<br>
+        <em>Try to break it.</em>
+      </div>
+    </div>
+
+    <div class="prod-verify-block">
+      <div class="prod-verify-controls">
+        <button class="ctrl-btn primary" onclick="verifyProductionChain()">▶ VERIFY PRODUCTION CHAIN</button>
+      </div>
+      <div class="prod-result idle" id="prod-result">
+        Press VERIFY PRODUCTION CHAIN — your browser will recompute each chain_hash from RPU-0004 to RPU-0008 and compare against pre-committed values.
+      </div>
+      <div class="verified-log" id="verified-log">
+        <div class="log-label">// Verification Log</div>
+        <div id="log-content"></div>
+        <button class="dl-btn" onclick="downloadVerificationLog()" id="dl-btn">↓ Download Verification Log (JSON)</button>
+      </div>
+    </div>
+
+    <!-- Local Status -->
+    <div class="local-status-block">
+      <div class="local-status-label">Last Verified (Local)</div>
+      <div>status: <span class="local-status-value" id="local-status">—</span></div>
+      <div class="local-status-ts" id="local-ts">timestamp: —</div>
+    </div>
+
+    <!-- First Verifier Marker -->
+    <div class="first-verifier">
+      <div class="fv-label">First Independent Verifier</div>
+      <div>status: <span class="fv-status" id="fv-status">pending</span></div>
+      <div style="color:var(--text3);font-size:10px;margin-top:4px;">Updated when external GitHub issue / comment is received.</div>
+    </div>
+  </div>
+</div>
+
+<!-- EDUCATIONAL DEMO -->
 <div class="full-bleed" id="demo">
   <div class="inner">
     <div class="section-label">Hash Demo · Verifier</div>
@@ -282,11 +396,11 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
       <div class="demo-explain">
         <h3>How this demo works</h3>
         <p>The expected hash for each RPU below is a pre-committed constant — derived from the original, unmodified payloads and hardcoded into this page before it was published. When you press Run Verify, your browser recomputes each chain hash from scratch using SHA-256 and compares against that fixed value.</p>
-        <p>If the payloads are intact, computed matches expected: PASS. Edit any payload — even one character — and the recomputed hash diverges from the pre-committed value: FAIL. This demonstrates the core hash-verification logic of the reference verifier: recompute, compare, detect mismatch.</p>
+        <p>If the payloads are intact, computed matches expected: PASS. Edit any payload — even one character — and the recomputed hash diverges from the pre-committed value: FAIL.</p>
       </div>
       <div class="demo-notice">
         <div style="color:var(--accent);margin-bottom:6px;letter-spacing:0.08em;">// Implementation note</div>
-        This demo uses a <span>simplified key-sort canonicalization</span> for educational purposes. The normative implementation uses full <span>RFC 8785 JCS</span> with recursive key sorting. For production-grade verification — including chain continuity checks — use the <span>reference generator and verifier</span> in the GitHub repository.
+        This demo uses a <span>simplified key-sort canonicalization</span> for educational purposes. The normative implementation uses full <span>RFC 8785 JCS</span> with recursive key sorting. For production-grade verification use the <span>reference generator and verifier</span> in the GitHub repository.
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);color:var(--text3);font-size:10px;letter-spacing:0.06em;">
           [PHASE 1 — PRODUCTION CHAIN OPERATIONAL] · Internal Proof Mode ALL PASS · 2026-03-22 · Chain Tip: 3fa89030...572c52
         </div>
@@ -519,7 +633,16 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
 <div class="section" id="dev">
   <div class="section-label">Developers</div>
   <h2>Run the verifier. Inspect the production chain.</h2>
-  <p class="section-desc">Clone the repository and inspect the live production chain records in <code>SNAPSHOT_LOG/</code>. The reference generator (Canonical Schema v1.0) and verifier are both available. Any party can independently recompute and confirm chain integrity.</p>
+
+  <!-- Challenge Layer — Developer position -->
+  <div class="challenge-block" style="margin-bottom:2rem;">
+    <div class="challenge-text">
+      Do not believe this chain is valid.<br>
+      <em>Try to break it.</em>
+    </div>
+  </div>
+
+  <p class="section-desc">Clone the repository and inspect the live production chain records in <code>samples/</code>. The reference generator (Canonical Schema v1.0) and verifier are both available. Any party can independently recompute and confirm chain integrity.</p>
   <div class="dev-grid">
     <div class="code-block">
       <div class="code-block-header">
@@ -531,30 +654,40 @@ git clone https://github.com/choizinsa-coder/arss-protocol
 cd arss-protocol
 
 <span class="c-comment"># Inspect the live production chain</span>
-cat SNAPSHOT_LOG/ledger.json
-cat SNAPSHOT_LOG/rpu-0008.json
+cat samples/ledger.json
+cat samples/rpu-0008.json
 
-<span class="c-comment"># Run verifier against production chain</span>
-python3 reference-verifier/src/verifier.py \
-  SNAPSHOT_LOG/rpu-0004.json \
-  SNAPSHOT_LOG/rpu-0005.json \
-  SNAPSHOT_LOG/rpu-0006.json \
-  SNAPSHOT_LOG/rpu-0007.json \
-  SNAPSHOT_LOG/rpu-0008.json
+<span class="c-comment"># Recompute chain_hash manually (Python 3)</span>
+python3 -c "
+import hashlib, json
 
-<span class="c-comment"># Internal Proof Mode result (2026-03-22)</span>
-<span class="c-ok"># Determinism:       10/10 PASS</span>
-<span class="c-ok"># JCS normalization: 3/3   PASS</span>
-<span class="c-ok"># Chain integrity:   3/3   PASS</span>
-<span class="c-ok"># Ledger integrity:  3/3   PASS</span>
-<span class="c-ok"># RESULT: ALL PASS</span>
-<span style="color:var(--text3)"># chain_tip: 3fa890300b41871f...</span></pre>
+def canonical_json(obj):
+    if isinstance(obj, dict):
+        return '{' + ','.join(
+            f'{canonical_json(k)}:{canonical_json(v)}'
+            for k, v in sorted(obj.items())
+        ) + '}'
+    if isinstance(obj, list):
+        return '[' + ','.join(canonical_json(i) for i in obj) + ']'
+    if isinstance(obj, bool): return 'true' if obj else 'false'
+    if isinstance(obj, (int, float)): return str(obj)
+    return json.dumps(obj, ensure_ascii=False)
+
+with open('samples/rpu-0008.json') as f:
+    rpu = json.load(f)
+ph = hashlib.sha256(canonical_json(rpu['payload']).encode()).hexdigest()
+ch = hashlib.sha256((rpu['chain']['prev_hash']+':'+ph).encode()).hexdigest()
+print('chain_tip:', ch)
+"
+
+<span class="c-ok"># Expected:</span>
+<span class="c-ok"># chain_tip: 3fa890300b41871f9e3aa0ed0d6b8463231bb75efba9dd250bccdf3e3e572c52</span></pre>
     </div>
     <div class="dev-desc">
       <h3>What to verify</h3>
       <p>The reference verifier performs three sequential checks: (1) JCS normalization and single-RPU payload hash integrity, (2) chain_hash continuity across all records using <code>SHA256(prev + ":" + payload_hash)</code>, (3) HACS cryptographic signature verification <span style="font-family:var(--mono);font-size:12px;color:var(--text3);border:1px solid var(--border);padding:1px 6px;">v0.2 planned</span>.</p>
-      <p>The production chain (RPU-0004 ~ RPU-0008) is publicly available in <code>SNAPSHOT_LOG/</code>. The Chain Tip is independently recomputable from the raw JSON records — no AIBA infrastructure access required.</p>
-      <p>The reference generator (<code>arss_generator_v1.py</code>) implements Canonical Schema v1.0 LOCK and can be used to generate new RPUs or cross-validate existing ones.</p>
+      <p>The production chain (RPU-0004 ~ RPU-0008) is publicly available in <code>samples/</code>. The Chain Tip is independently recomputable from the raw JSON records — no AIBA infrastructure access required.</p>
+      <p>Requirements: Python 3, standard library only. SHA-256 + JSON. No external dependencies.</p>
       <div style="margin-top:1rem;padding:0.75rem 1rem;background:var(--bg2);border:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text3);">
         Chain Tip (STATE-002 · 2026-03-22)<br>
         <span style="color:var(--accent);word-break:break-all;">3fa890300b41871f9e3aa0ed0d6b8463231bb75efba9dd250bccdf3e3e572c52</span>
@@ -632,7 +765,7 @@ python3 reference-verifier/src/verifier.py \
   <div class="cta-mono">// Open protocol · open source · RPU v0.1 · STATE-002 OPERATIONAL</div>
   <h2>Run the verifier yourself</h2>
   <div class="cta-tagline">
-    Inspect the production chain records in <code style="font-size:12px;color:var(--accent2)">SNAPSHOT_LOG/</code>.<br>
+    Inspect the production chain records in <code style="font-size:12px;color:var(--accent2)">samples/</code>.<br>
     Recompute the Chain Tip from raw RPU JSON.<br>
     <strong>Do not trust the claim — verify the record.</strong><br>
     <span style="font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.06em;">// Chain Tip: 3fa890300b41871f...572c52 · Internal Proof ALL PASS · 2026-03-22</span>
@@ -641,6 +774,9 @@ python3 reference-verifier/src/verifier.py \
     <a class="btn-primary" href="https://github.com/choizinsa-coder/arss-protocol">View on GitHub</a>
     <a class="btn-secondary" href="https://github.com/choizinsa-coder/arss-protocol/blob/main/DESIGN.md">Read DESIGN.md</a>
     <a class="btn-secondary" href="https://github.com/choizinsa-coder/arss-protocol/issues">Open an Issue</a>
+  </div>
+  <div class="cta-warning">
+    <strong>Do not trust this page. Recompute the chain.</strong>
   </div>
 </div>
 
@@ -654,6 +790,171 @@ python3 reference-verifier/src/verifier.py \
 </footer>
 
 <script>
+// ── Production Chain Data (pre-committed, embedded before publish) ──
+const PROD_CHAIN = [
+  {
+    rpu_id: 'RPU-0004',
+    event_type: 'GOVERNANCE_EVENT',
+    payload: {"actor_id":"AIBA-DIRECTOR-BEO-001","event_type":"GOVERNANCE_EVENT","governance_context":{"authority_root":"AIBA-GLOBAL","jurisdiction":"AIBA-INTERNAL","policy_id":"AIBA-GOV-POLICY-v1.0"},"sequence_label":"STATE-001/RPU-0004","timestamp":"2026-03-22T04:53:59Z","title":"AIBA OS v0.1 Production Chain Genesis — Governance Event","version":"rpu/1.0"},
+    expected_payload_hash: '3a8a01cbaefb890c55735a7178be3b1eb8f25dfbf8e8f416c64a09008e0a8248',
+    expected_chain_hash:   'dcb3b378afdd5a41902798d3d47e599e5ddf702251df51673fb38f80643fd7b4',
+    prev_hash:             '8ddb89162eb621a9d1f9391eff812d7afd4d3c28a06009db4712cae499cb8908'
+  },
+  {
+    rpu_id: 'RPU-0005',
+    event_type: 'DECISION',
+    payload: {"actor_id":"AIBA-DIRECTOR-BEO-001","decision":{"description":"Canonical Schema v1.0 LOCK 기준 Production Chain 전환 결정","effective_from":"2026-03-22T04:53:59Z","ref_rpu":"RPU-0004"},"event_type":"DECISION","governance_context":{"authority_root":"AIBA-GLOBAL","jurisdiction":"AIBA-INTERNAL","policy_id":"AIBA-GOV-POLICY-v1.0"},"sequence_label":"STATE-001/RPU-0005","timestamp":"2026-03-22T04:53:59Z","title":"Production Chain Transition Decision","version":"rpu/1.0"},
+    expected_payload_hash: 'a21d0c6f18e9f9bc08a223fa9a9530a57ba44fa62fa8124287468c3193a1c666',
+    expected_chain_hash:   'db273fa39267a93ca6da6e91ba8ba0a1a70ed416788835ec675628b23010ff42',
+    prev_hash:             'dcb3b378afdd5a41902798d3d47e599e5ddf702251df51673fb38f80643fd7b4'
+  },
+  {
+    rpu_id: 'RPU-0006',
+    event_type: 'APPROVAL',
+    payload: {"actor_id":"AIBA-DIRECTOR-BEO-001","event_type":"APPROVAL","external_ref":{"description":"AIBA OS v0.1 Genesis — Production Chain 공식 가동 승인","ref_id":"AIBA-EXEC-ORDER-20260322-001","source":"AIBA-DIRECTOR"},"governance_context":{"authority_root":"AIBA-GLOBAL","jurisdiction":"AIBA-INTERNAL","policy_id":"AIBA-GOV-POLICY-v1.0"},"sequence_label":"STATE-001/RPU-0006","state_transition":{"is_current":true,"state_id":"STATE-001","state_name":"Genesis State"},"timestamp":"2026-03-22T04:53:59Z","title":"AIBA OS v0.1 Production Chain Official Approval","version":"rpu/1.0"},
+    expected_payload_hash: 'd9b17f6af3ce41b2ef344db4a115d1f88deb7d0aa078746db511e5e38e1b1fc4',
+    expected_chain_hash:   'ad0a2fdf6fe2f3e2c94aec9153cd02f55491e3986b92689a80519d1cd6990300',
+    prev_hash:             'db273fa39267a93ca6da6e91ba8ba0a1a70ed416788835ec675628b23010ff42'
+  },
+  {
+    rpu_id: 'RPU-0007',
+    event_type: 'EXECUTION',
+    payload: {"actor_id":"AIBA-DIRECTOR-BEO-001","event_type":"EXECUTION","execution":{"action":"AIBA_OS_v0.1_OPERATIONAL_START","basis":"Internal Proof Mode ALL PASS — Generator v1.0 Determinism/JCS/ChainIntegrity/LedgerIntegrity 4그룹 10개 테스트 전항목 PASS","executed_by":"CADDY-CLAUDE-EXECUTOR","ref_state":"STATE-001","scope":"AIBA OS v0.1 Production Chain 운영 공식 개시"},"external_ref":{"description":"AIBA OS v0.1 Internal Proof Mode 검증 완료 보고 — 2026-03-22","ref_id":"AIBA-PROOF-20260322-ALLPASS","source":"CADDY-EXECUTION-REPORT"},"governance_context":{"authority_root":"AIBA-GLOBAL","jurisdiction":"AIBA-INTERNAL","policy_id":"AIBA-GOV-POLICY-v1.0"},"sequence_label":"STATE-002/RPU-0007","timestamp":"2026-03-22T05:08:54Z","title":"AIBA OS v0.1 Operational Execution — Internal Proof Mode PASS","version":"rpu/1.0"},
+    expected_payload_hash: '001a0b898f2d1a0b50895ee430a9d025e1908d5215534286ca3e945f10609223',
+    expected_chain_hash:   '82d6606293e2fe69388648f5611bb6d844c2b28513bfb6a07a7c7432add69e9d',
+    prev_hash:             'ad0a2fdf6fe2f3e2c94aec9153cd02f55491e3986b92689a80519d1cd6990300'
+  },
+  {
+    rpu_id: 'RPU-0008',
+    event_type: 'EVIDENCE',
+    payload: {"actor_id":"AIBA-DIRECTOR-BEO-001","event_type":"EVIDENCE","evidence":{"coverage":"RPU-0004 ~ RPU-0007","findings":{"chain_integrity":"PASS — prev_hash 연속성 완전 확인","determinism":"PASS — 동일 입력 10회 동일 출력 확인","jcs_normalization":"PASS — key순서/whitespace/compact 3종 변형 동일 hash 확인","ledger_integrity":"PASS — is_current 단일성/chain_tip 일치/prev_hash 연속성 감지 확인","tamper_detection":"PASS — payload변조/prev_hash위조/chain_hash위조 전항목 FAIL 정상 감지"},"proof_mode":"Internal Proof Mode v1.0","sealed_chain_tip":"ad0a2fdf6fe2f3e2c94aec9153cd02f55491e3986b92689a80519d1cd6990300","test_count":10,"verdict":"OPERATIONAL_READY"},"external_ref":{"description":"STATE-001 Genesis 체인 전체 봉인 — 운영 진입 근거 증거 레코드","ref_id":"AIBA-EVIDENCE-20260322-STATE001-SEALED","source":"CADDY-EVIDENCE-SEAL"},"governance_context":{"authority_root":"AIBA-GLOBAL","jurisdiction":"AIBA-INTERNAL","policy_id":"AIBA-GOV-POLICY-v1.0"},"sequence_label":"STATE-002/RPU-0008","state_transition":{"is_current":true,"prev_state_id":"STATE-001","state_id":"STATE-002","state_name":"Operational State","transition_type":"REPLACE"},"timestamp":"2026-03-22T05:08:54Z","title":"AIBA OS v0.1 Evidence Seal — STATE-001 Complete, STATE-002 Activated","version":"rpu/1.0"},
+    expected_payload_hash: 'a6d57d5ba37f2959eca3e2020badb54440d9243eb6384415541c4fa4555f2956',
+    expected_chain_hash:   '3fa890300b41871f9e3aa0ed0d6b8463231bb75efba9dd250bccdf3e3e572c52',
+    prev_hash:             '82d6606293e2fe69388648f5611bb6d844c2b28513bfb6a07a7c7432add69e9d'
+  }
+];
+
+const CHAIN_TIP = '3fa890300b41871f9e3aa0ed0d6b8463231bb75efba9dd250bccdf3e3e572c52';
+
+// ── Crypto Utilities ──
+async function sha256hex(data) {
+  const buf = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+  const h = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function canonicalJson(obj) {
+  if (obj === null) return 'null';
+  if (typeof obj === 'boolean') return obj ? 'true' : 'false';
+  if (typeof obj === 'number') return String(obj);
+  if (typeof obj === 'string') return JSON.stringify(obj);
+  if (Array.isArray(obj)) return '[' + obj.map(canonicalJson).join(',') + ']';
+  if (typeof obj === 'object') {
+    const sorted = Object.keys(obj).sort().map(k => JSON.stringify(k) + ':' + canonicalJson(obj[k]));
+    return '{' + sorted.join(',') + '}';
+  }
+  return JSON.stringify(obj);
+}
+
+// ── Production Chain Verifier ──
+let lastVerificationLog = null;
+
+async function verifyProductionChain() {
+  const resultEl = document.getElementById('prod-result');
+  const logEl = document.getElementById('verified-log');
+  const logContent = document.getElementById('log-content');
+
+  resultEl.className = 'prod-result running';
+  resultEl.textContent = 'Recomputing chain hashes... (RPU-0004 → RPU-0008)';
+  logEl.style.display = 'none';
+
+  const log = [];
+  let allPass = true;
+  let prevChainHash = null;
+
+  for (const rpu of PROD_CHAIN) {
+    const c14n = canonicalJson(rpu.payload);
+    const computedPayloadHash = await sha256hex(c14n);
+    const chainInput = rpu.prev_hash + ':' + computedPayloadHash;
+    const computedChainHash = await sha256hex(chainInput);
+
+    const payloadOk = computedPayloadHash === rpu.expected_payload_hash;
+    const chainOk   = computedChainHash === rpu.expected_chain_hash;
+    const prevOk    = prevChainHash === null || rpu.prev_hash === prevChainHash;
+    const pass      = payloadOk && chainOk && prevOk;
+
+    if (!pass) allPass = false;
+
+    log.push({
+      rpu_id: rpu.rpu_id,
+      event_type: rpu.event_type,
+      payload_hash: { computed: computedPayloadHash, expected: rpu.expected_payload_hash, match: payloadOk },
+      chain_hash:   { computed: computedChainHash,   expected: rpu.expected_chain_hash,   match: chainOk },
+      prev_hash_continuity: prevOk,
+      verdict: pass ? 'PASS' : 'FAIL'
+    });
+
+    prevChainHash = computedChainHash;
+  }
+
+  const ts = new Date().toISOString();
+  const chainTipMatch = prevChainHash === CHAIN_TIP;
+
+  const verificationRecord = {
+    verified_at: ts,
+    chain_tip_expected: CHAIN_TIP,
+    chain_tip_computed: prevChainHash,
+    chain_tip_match: chainTipMatch,
+    overall_verdict: allPass && chainTipMatch ? 'PASS' : 'FAIL',
+    rpu_results: log
+  };
+
+  lastVerificationLog = verificationRecord;
+
+  if (allPass && chainTipMatch) {
+    resultEl.className = 'prod-result pass';
+    resultEl.innerHTML =
+      'PRODUCTION CHAIN VERIFIED\n\n' +
+      'chain_tip:\n' + prevChainHash + '\n\n' +
+      'verdict: ALL PASS (' + PROD_CHAIN.length + '/' + PROD_CHAIN.length + ' RPUs)\n' +
+      'timestamp: ' + ts + '\n\n' +
+      log.map(r => r.rpu_id + ' · ' + r.event_type + ' → PASS').join('\n');
+
+    logContent.innerHTML = log.map(r =>
+      '<span style="color:var(--accent)">' + r.rpu_id + ' [' + r.verdict + ']</span>\n' +
+      '  payload_hash: ' + r.payload_hash.computed.slice(0,16) + '... ' + (r.payload_hash.match ? '✓' : '✗') + '\n' +
+      '  chain_hash:   ' + r.chain_hash.computed.slice(0,16) + '... ' + (r.chain_hash.match ? '✓' : '✗') + '\n'
+    ).join('\n');
+
+    logEl.style.display = 'block';
+    document.getElementById('local-status').textContent = 'PASS';
+    document.getElementById('local-status').style.color = 'var(--accent)';
+    document.getElementById('local-ts').textContent = 'timestamp: ' + ts;
+  } else {
+    resultEl.className = 'prod-result fail';
+    resultEl.innerHTML =
+      'VERIFICATION FAILED\n\n' +
+      log.map(r => r.rpu_id + ' → ' + r.verdict).join('\n') + '\n\n' +
+      'chain_tip_match: ' + chainTipMatch;
+
+    document.getElementById('local-status').textContent = 'FAIL';
+    document.getElementById('local-status').style.color = 'var(--red)';
+    document.getElementById('local-ts').textContent = 'timestamp: ' + ts;
+  }
+}
+
+function downloadVerificationLog() {
+  if (!lastVerificationLog) return;
+  const blob = new Blob([JSON.stringify(lastVerificationLog, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'arss-verification-' + new Date().toISOString().slice(0,19).replace(/:/g,'-') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Educational Demo ──
 const EXPECTED = {
   genesis: 'c004ef9cf1c3840c9241627de41f42f8b67e542cd4addad51966ff6be6ecd93c',
   rpu1:    'd6dd1c03d298b391ed2a95adf007c7ac84057eba8a91fc22195687f16fb3d70a',
@@ -663,7 +964,8 @@ const GENESIS_PREV    = '0000000000000000000000000000000000000000000000000000000
 const GENESIS_PAYLOAD = '{"jurisdiction":"global","version":"rpu/1.0"}';
 const ORIG_P1 = '{"actor":"governance_board","decision":"model_v2_approved","risk_level":"medium"}';
 const ORIG_P2 = '{"actor":"external_auditor","decision":"audit_completed","finding":"no_violations"}';
-async function sha256hex(buf) {
+
+async function sha256hex_demo(buf) {
   const h = await crypto.subtle.digest('SHA-256', buf);
   return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
@@ -685,7 +987,7 @@ async function chainHash(prevHex, payloadStr) {
   const payload = new TextEncoder().encode(canon(payloadStr));
   const buf     = new Uint8Array(prev.length + 1 + payload.length);
   buf.set(prev, 0); buf.set(sep, prev.length); buf.set(payload, prev.length + 1);
-  return sha256hex(buf);
+  return sha256hex_demo(buf);
 }
 function short(h) { return h ? h.slice(0,10) + '...' + h.slice(-6) : '—'; }
 function setStatus(id, cls, text) {
@@ -731,7 +1033,6 @@ async function runVerify() {
     setResult('pass',
       'RESULT: ALL PASS<br>' +
       'Both RPUs: computed hash matches pre-committed expected hash · chain integrity confirmed<br>' +
-      'anchor_hash: ' + h2.slice(0,16).toUpperCase() + '...<br>' +
       '<span style="color:var(--text3);font-size:10px;">[PRODUCTION CHAIN OPERATIONAL] · Internal Proof ALL PASS · 2026-03-22 · Chain Tip: 3fa890300b41871f...572c52</span>');
   } else {
     const bp    = !match1 ? 'RPU-001' : 'RPU-002';
