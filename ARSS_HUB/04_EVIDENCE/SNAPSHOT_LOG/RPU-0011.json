@@ -1,0 +1,40 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "RPU-0011",
+  "payload": {
+    "actor_id": "actor_choizinsa_aiba_director",
+    "event_type": "EVIDENCE",
+    "governance_context": {
+      "authority_root": "AIBA_GLOBAL",
+      "jurisdiction": "AIBA_PROJECT",
+      "policy_id": "AIBA-WORKFLOW-V1.1"
+    },
+    "payload_content": {
+      "chain_tip_at_close": "8fd8d5a4ce3293551ea9e638040a1b6b413a74589901bb8feb26927456cf67a9",
+      "evidence_type": "SESSION_CLOSE",
+      "next_session_context": {
+        "base_directory": "/c/ARSS/arss-protocol/",
+        "chain_tip": "TBD_after_generation",
+        "pending": [
+          "LinkedIn Stage 2 Proof 포스트 작성",
+          "SESSION_CLOSE/SESSION_OPEN 전용 타입 설계 (도미, Phase 2)",
+          "Session Chain 자동화 (Phase 2-3)"
+        ],
+        "prev_session_hash": "TBD_after_generation"
+      },
+      "session_date": "2026-03-23",
+      "session_id": "SESSION-001",
+      "session_summary": "Dual-Channel Workflow v1.1 확정. Pre-flight PASS. RPU-0009(DECISION) + RPU-0010(EXECUTION) 생성 완료.",
+      "status": "CLOSED"
+    },
+    "rpu_id": "RPU-0011",
+    "sequence_label": "EVIDENCE-001",
+    "version": "rpu/1.0",
+    "timestamp": "2026-03-23T12:01:51Z"
+  },
+  "chain": {
+    "prev_chain_hash": "8fd8d5a4ce3293551ea9e638040a1b6b413a74589901bb8feb26927456cf67a9",
+    "payload_hash": "577e046496ac354ba8e4ccfe584c3cc556954d68cb266ab01a3681721d982038",
+    "chain_hash": "9d3c6c7da563ba6dbbe7f5a0d31968670f30246b8c2adf4f6849599733bcb6a9"
+  }
+}

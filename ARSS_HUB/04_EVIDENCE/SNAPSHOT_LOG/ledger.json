@@ -1,5 +1,5 @@
 {
-  "chain_tip": "8fd8d5a4ce3293551ea9e638040a1b6b413a74589901bb8feb26927456cf67a9",
+  "chain_tip": "9d3c6c7da563ba6dbbe7f5a0d31968670f30246b8c2adf4f6849599733bcb6a9",
   "entries": [
     {
       "rpu_id": "RPU-0009",
@@ -14,6 +14,13 @@
       "payload_hash": "ba8ed8f295c418b493bc17f11c99b44e689d71637e63dc4444b67265e7f25be8",
       "chain_hash": "8fd8d5a4ce3293551ea9e638040a1b6b413a74589901bb8feb26927456cf67a9",
       "timestamp": "2026-03-23T10:56:55Z"
+    },
+    {
+      "rpu_id": "RPU-0011",
+      "event_type": "EVIDENCE",
+      "payload_hash": "577e046496ac354ba8e4ccfe584c3cc556954d68cb266ab01a3681721d982038",
+      "chain_hash": "9d3c6c7da563ba6dbbe7f5a0d31968670f30246b8c2adf4f6849599733bcb6a9",
+      "timestamp": "2026-03-23T12:01:51Z"
     }
   ]
 }
