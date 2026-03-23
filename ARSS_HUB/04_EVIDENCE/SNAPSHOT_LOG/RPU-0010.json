@@ -1,0 +1,30 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "RPU-0010",
+  "payload": {
+    "actor_id": "actor_choizinsa_aiba_director",
+    "event_type": "EXECUTION",
+    "governance_context": {
+      "authority_root": "AIBA_GLOBAL",
+      "jurisdiction": "AIBA_PROJECT",
+      "policy_id": "AIBA-WORKFLOW-V1.1"
+    },
+    "payload_content": {
+      "arss_hub_path": "ARSS_HUB/04_EVIDENCE/SNAPSHOT_LOG/",
+      "base_directory": "/c/ARSS/arss-protocol/",
+      "execution": "Dual-Channel Workflow v1.1 실행 환경 구축 완료",
+      "preflight_result": "PASS",
+      "reference_decision": "RPU-0009",
+      "status": "COMPLETED"
+    },
+    "rpu_id": "RPU-0010",
+    "sequence_label": "EXECUTION-001",
+    "version": "rpu/1.0",
+    "timestamp": "2026-03-23T10:56:55Z"
+  },
+  "chain": {
+    "prev_chain_hash": "4e03d259a2fc8b5aabf31a461311f920059bb14747c37cd52abed412b62017df",
+    "payload_hash": "ba8ed8f295c418b493bc17f11c99b44e689d71637e63dc4444b67265e7f25be8",
+    "chain_hash": "8fd8d5a4ce3293551ea9e638040a1b6b413a74589901bb8feb26927456cf67a9"
+  }
+}
