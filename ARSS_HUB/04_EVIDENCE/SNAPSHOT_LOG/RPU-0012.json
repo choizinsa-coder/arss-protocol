@@ -1,0 +1,30 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "RPU-0012",
+  "payload": {
+    "actor_id": "actor_choizinsa_aiba_director",
+    "event_type": "EXECUTION",
+    "governance_context": {
+      "authority_root": "AIBA_GLOBAL",
+      "jurisdiction": "AIBA_PROJECT",
+      "policy_id": "AIBA-WORKFLOW-V1.1"
+    },
+    "payload_content": {
+      "event": "EXTERNAL_PROOF_PUBLISHED",
+      "description": "LinkedIn Stage 2 Proof 포스트 발행 완료",
+      "date": "2026-03-24",
+      "post_url": "https://www.linkedin.com/pulse/most-ai-governance-systems-declared-ours-recomputed-byungok-choi-gyhbc",
+      "ledger_ref": "ARSS_HUB/04_EVIDENCE/SNAPSHOT_LOG/ledger.json",
+      "status": "PUBLISHED"
+    },
+    "rpu_id": "RPU-0012",
+    "sequence_label": "EXECUTION-002",
+    "version": "rpu/1.0",
+    "timestamp": "2026-03-24T00:00:00Z"
+  },
+  "chain": {
+    "prev_chain_hash": "9d3c6c7da563ba6dbbe7f5a0d31968670f30246b8c2adf4f6849599733bcb6a9",
+    "payload_hash": "20b4c831314dbf2f46f0b1095053fdee251ca375495f93f8b70db8a32204fd68",
+    "chain_hash": "3a97b31b09c7bdfe7a4c22eb7713459a2c2d25e2e9bca588b9f572a0e9445839"
+  }
+}
