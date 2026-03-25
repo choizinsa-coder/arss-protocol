@@ -333,7 +333,7 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
         Step 2 — Recompute from source<br>
         <div style="display:flex;gap:10px;margin-top:0.75rem;flex-wrap:wrap;">
           <a href="https://raw.githubusercontent.com/choizinsa-coder/arss-protocol/main/samples/rpu-0008.json" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--accent2);border:1px solid var(--border2);padding:7px 14px;text-decoration:none;letter-spacing:0.06em;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border2)'">→ View rpu-0008.json (raw)</a>
-          <a href="https://raw.githubusercontent.com/choizinsa-coder/arss-protocol/main/samples/ledger.json" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--accent2);border:1px solid var(--border2);padding:7px 14px;text-decoration:none;letter-spacing:0.06em;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border2)'">→ View ledger.json (raw)</a>
+          <a href="https://raw.githubusercontent.com/choizinsa-coder/arss-protocol/main/evidence/ledger.json" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--accent2);border:1px solid var(--border2);padding:7px 14px;text-decoration:none;letter-spacing:0.06em;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border2)'">→ View ledger.json (raw)</a>
         </div>
       </div>
     </div>
@@ -670,7 +670,7 @@ git clone https://github.com/choizinsa-coder/arss-protocol
 cd arss-protocol
 
 <span class="c-comment"># Inspect the live production chain</span>
-cat samples/ledger.json
+cat evidence/ledger.json
 cat samples/rpu-0008.json
 
 <span class="c-comment"># Recompute chain_hash manually (Python 3)</span>

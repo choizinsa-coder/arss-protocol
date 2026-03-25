@@ -1,0 +1,38 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "RPU-0009",
+  "payload": {
+    "actor_id": "actor_choizinsa_aiba_director",
+    "event_type": "DECISION",
+    "governance_context": {
+      "authority_root": "AIBA_GLOBAL",
+      "jurisdiction": "AIBA_PROJECT",
+      "policy_id": "AIBA-WORKFLOW-V1.1"
+    },
+    "payload_content": {
+      "decision": "Dual-Channel Workflow v1.1 확정",
+      "dual_channel_structure": {
+        "design_channel": "Claude.ai (캐디)",
+        "execution_channel": "Claude Code"
+      },
+      "key_additions": {
+        "approval_token": "TTL Phase1=5min, Phase2=3min, Phase3=제거. 상태: VALID/USED/EXPIRED. 1회 승인=1회 실행.",
+        "handoff_protocol": "7개 필수 필드. 누락 시 즉시 실행 중단.",
+        "preflight_check": "8개 항목 전체 PASS 필수. 1개 FAIL 시 실행 금지.",
+        "verification": "2단계. Claude Code verifier.py → 캐디 독립 재계산 대조.",
+        "environment_signature": "Ledger 메타필드 분리. Payload 내 포함 금지."
+      },
+      "base_directory": "/c/ARSS/arss-protocol/",
+      "status": "CONFIRMED"
+    },
+    "rpu_id": "RPU-0009",
+    "sequence_label": "DECISION-001",
+    "timestamp": "2026-03-23T14:30:00Z",
+    "version": "rpu/1.0"
+  },
+  "chain": {
+    "prev_chain_hash": "3fa890300b41871f9e3aa0ed0d6b8463231bb75efba9dd250bccdf3e3e572c52",
+    "payload_hash": "8476b84d23639c362b65c7fa0e230a77a8d94ae25153410aba61f545141daa84",
+    "chain_hash": "4e03d259a2fc8b5aabf31a461311f920059bb14747c37cd52abed412b62017df"
+  }
+}
