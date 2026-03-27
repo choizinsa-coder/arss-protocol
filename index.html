@@ -332,7 +332,7 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
       <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text3);line-height:2;">
         Step 2 — Recompute from source<br>
         <div style="display:flex;gap:10px;margin-top:0.75rem;flex-wrap:wrap;">
-          <a href="https://raw.githubusercontent.com/choizinsa-coder/arss-protocol/main/samples/rpu-0008.json" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--accent2);border:1px solid var(--border2);padding:7px 14px;text-decoration:none;letter-spacing:0.06em;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border2)'">→ View rpu-0008.json (raw)</a>
+          <a href="https://raw.githubusercontent.com/choizinsa-coder/arss-protocol/main/evidence/rpu-0012.json" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--accent2);border:1px solid var(--border2);padding:7px 14px;text-decoration:none;letter-spacing:0.06em;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border2)'">→ View rpu-0012.json (raw)</a>
           <a href="https://raw.githubusercontent.com/choizinsa-coder/arss-protocol/main/evidence/ledger.json" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--accent2);border:1px solid var(--border2);padding:7px 14px;text-decoration:none;letter-spacing:0.06em;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border2)'">→ View ledger.json (raw)</a>
         </div>
       </div>
@@ -355,7 +355,7 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
   <div class="prod-verify-inner">
     <div class="section-label">Production Chain · Real Verification</div>
     <h2>Verify the actual production chain.<br>Your browser. No server.</h2>
-    <p class="section-desc">This is not a demo. The hashes below are the actual production chain records (RPU-0004 ~ RPU-0008). Your browser recomputes each chain_hash from the embedded payloads and compares against the pre-committed values.</p>
+    <p class="section-desc">This is not a demo. The hashes below are the actual production chain records (RPU-0009 ~ RPU-0012). Your browser recomputes each chain_hash from the embedded payloads and compares against the pre-committed values.</p>
 
     <!-- Challenge Layer -->
     <div class="challenge-block">
@@ -370,7 +370,7 @@ footer { padding:2rem; border-top:1px solid var(--border); display:flex; justify
         <button class="ctrl-btn primary" onclick="verifyProductionChain()">▶ VERIFY PRODUCTION CHAIN</button>
       </div>
       <div class="prod-result idle" id="prod-result">
-        Press VERIFY PRODUCTION CHAIN — your browser will recompute each chain_hash from RPU-0004 to RPU-0008 and compare against pre-committed values.
+        Press VERIFY PRODUCTION CHAIN — your browser will recompute each chain_hash from RPU-0009 to RPU-0012 and compare against pre-committed values.
       </div>
       <div class="verified-log" id="verified-log">
         <div class="log-label">// Verification Log</div>
@@ -671,7 +671,7 @@ cd arss-protocol
 
 <span class="c-comment"># Inspect the live production chain</span>
 cat evidence/ledger.json
-cat samples/rpu-0008.json
+cat evidence/rpu-0012.json
 
 <span class="c-comment"># Recompute chain_hash manually (Python 3)</span>
 python3 -c "
@@ -689,7 +689,7 @@ def canonical_json(obj):
     if isinstance(obj, (int, float)): return str(obj)
     return json.dumps(obj, ensure_ascii=False)
 
-with open('samples/rpu-0008.json') as f:
+with open('evidence/rpu-0012.json') as f:
     rpu = json.load(f)
 ph = hashlib.sha256(canonical_json(rpu['payload']).encode()).hexdigest()
 ch = hashlib.sha256((rpu['chain']['prev_hash']+':'+ph).encode()).hexdigest()
@@ -702,7 +702,7 @@ print('chain_tip:', ch)
     <div class="dev-desc">
       <h3>What to verify</h3>
       <p>The reference verifier performs three sequential checks: (1) JCS normalization and single-RPU payload hash integrity, (2) chain_hash continuity across all records using <code>SHA256(prev + ":" + payload_hash)</code>, (3) HACS cryptographic signature verification <span style="font-family:var(--mono);font-size:12px;color:var(--text3);border:1px solid var(--border);padding:1px 6px;">v0.2 planned</span>.</p>
-      <p>The production chain (RPU-0004 ~ RPU-0008) is publicly available in <code>samples/</code>. The Chain Tip is independently recomputable from the raw JSON records — no AIBA infrastructure access required.</p>
+      <p>The production chain (RPU-0009 ~ RPU-0012) is publicly available in <code>evidence/</code>. The Chain Tip is independently recomputable from the raw JSON records — no AIBA infrastructure access required.</p>
       <p>Requirements: Python 3, standard library only. SHA-256 + JSON. No external dependencies.</p>
       <div style="margin-top:1rem;padding:0.75rem 1rem;background:var(--bg2);border:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text3);">
         Chain Tip (STATE-002 · 2026-03-22)<br>
