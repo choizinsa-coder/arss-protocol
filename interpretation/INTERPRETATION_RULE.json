@@ -1,0 +1,184 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-03-30",
+  "description": "AIBA Single Source of Interpretation — 동일 SSOT 수신 시 에이전트 해석 분기 방지",
+  "global_policy": {
+    "rule_evaluation_basis": "priority 단일 기준 — 낮은 수치 우선(1>2>3). priority 외 기준 적용 금지.",
+    "on_no_rule": "STOP — 매핑 불가 상태. 비오님 확인 요청 후 작업 중단.",
+    "on_conflict": "STOP — priority 동점. 비오님 확인 요청 후 작업 중단.",
+    "on_invalid_external_ref": "STOP — 참조 대상 미존재 또는 schema 불일치. 비오님 확인 요청 후 작업 중단.",
+    "conflict_priority_rule": "priority 수치 낮을수록 우선(1>2>3). 동점 시 on_conflict 발동.",
+    "fallback_policy": "fallback 금지 — 모든 미정의 상태는 STOP 처리.",
+    "external_ref_validation": {
+      "required_fields": ["id", "schema_version"],
+      "on_missing_field": "STOP — invalid_external_ref 발동",
+      "on_version_mismatch": "STOP — invalid_external_ref 발동"
+    }
+  },
+  "patches": {
+    "IR-NULL-001": {
+      "description": "pending_tasks empty 대응",
+      "condition": "pending_tasks 배열이 비어 있거나 null인 경우",
+      "action": "phase_status → IDLE로 해석. task_priority → N/A. execution_gate → OPEN(blocking 없음).",
+      "note": "STOP 아님 — 정상 상태로 처리",
+      "external_ref": { "id": "DIS-008", "schema_version": "2.6" }
+    }
+  },
+  "domains": {
+    "phase_status": {
+      "description": "현재 시스템 phase 해석",
+      "priority": 1,
+      "rules": [
+        {
+          "priority": 1,
+          "condition": "chain.phase == 'PHASE 1 COMPLETE'",
+          "interpretation": "PHASE_1_COMPLETE",
+          "output_label": "Phase 1 완료 — Phase 2 진입 가능 상태",
+          "external_ref": { "id": "DIS-010", "schema_version": "2.6" }
+        },
+        {
+          "priority": 2,
+          "condition": "chain.phase == 'PHASE 2 ACTIVE'",
+          "interpretation": "PHASE_2_ACTIVE",
+          "output_label": "Phase 2 진행 중",
+          "external_ref": { "id": "DIS-010", "schema_version": "2.6" }
+        },
+        {
+          "priority": 3,
+          "condition": "chain.phase == null || chain.phase == ''",
+          "interpretation": "UNKNOWN",
+          "output_label": "STOP — phase 미정의. 비오님 확인 필요.",
+          "external_ref": { "id": "DIS-010", "schema_version": "2.6" }
+        }
+      ]
+    },
+    "task_priority": {
+      "description": "pending_tasks 우선순위 해석",
+      "priority": 2,
+      "rules": [
+        {
+          "priority": 1,
+          "condition": "pending_tasks[0].status == 'BLOCKED'",
+          "interpretation": "BLOCKED",
+          "output_label": "STOP — blocked_by 해소 전 착수 불가",
+          "external_ref": { "id": "DIS-010", "schema_version": "2.6" }
+        },
+        {
+          "priority": 2,
+          "condition": "pending_tasks is empty or null",
+          "interpretation": "NO_TASK",
+          "output_label": "N/A — IR-NULL-001 적용",
+          "patch_ref": "IR-NULL-001",
+          "external_ref": { "id": "DIS-008", "schema_version": "2.6" }
+        },
+        {
+          "priority": 3,
+          "condition": "pending_tasks[0].priority == 'HIGH'",
+          "interpretation": "HIGH_PRIORITY_ACTIVE",
+          "output_label": "최우선 태스크 존재 — 즉시 착수 필요",
+          "external_ref": { "id": "DIS-010", "schema_version": "2.6" }
+        },
+        {
+          "priority": 4,
+          "condition": "pending_tasks[0].priority == 'MEDIUM'",
+          "interpretation": "MEDIUM_PRIORITY_ACTIVE",
+          "output_label": "중순위 태스크 대기 중",
+          "external_ref": { "id": "DIS-010", "schema_version": "2.6" }
+        }
+      ]
+    },
+    "execution_gate": {
+      "description": "EAG 게이트 상태 해석",
+      "priority": 1,
+      "rules": [
+        {
+          "priority": 1,
+          "condition": "pending_tasks[0].status == 'EAG_PENDING'",
+          "interpretation": "GATE_OPEN_PENDING_EAG",
+          "output_label": "EAG 승인 대기 중 — 비오님 승인 전 실행 불가",
+          "external_ref": { "id": "DIS-010", "schema_version": "2.6" }
+        },
+        {
+          "priority": 2,
+          "condition": "pending_tasks[0].status == 'IN_PROGRESS'",
+          "interpretation": "GATE_OPEN_EXECUTING",
+          "output_label": "실행 진행 중",
+          "external_ref": { "id": "DIS-010", "schema_version": "2.6" }
+        },
+        {
+          "priority": 3,
+          "condition": "pending_tasks[0].status == 'COMPLETED'",
+          "interpretation": "GATE_CLOSED",
+          "output_label": "태스크 완료 — 다음 태스크 확인 필요",
+          "external_ref": { "id": "DIS-010", "schema_version": "2.6" }
+        },
+        {
+          "priority": 4,
+          "condition": "pending_tasks is empty or null",
+          "interpretation": "GATE_OPEN_NO_BLOCK",
+          "output_label": "OPEN — IR-NULL-001 적용",
+          "patch_ref": "IR-NULL-001",
+          "external_ref": { "id": "DIS-008", "schema_version": "2.6" }
+        }
+      ]
+    },
+    "concurrency_control": {
+      "description": "동시 세션 이동 허용 여부 해석",
+      "priority": 1,
+      "rules": [
+        {
+          "priority": 1,
+          "condition": "INTERPRETATION_RULE.json 미완성",
+          "interpretation": "CONCURRENT_BLOCKED",
+          "output_label": "STOP — INTERPRETATION_RULE.json 완성 전 동시 세션 이동 불가",
+          "external_ref": { "id": "DIS-008", "schema_version": "2.6" }
+        },
+        {
+          "priority": 2,
+          "condition": "canonical_rules.concurrent_session_rule contains '금지'",
+          "interpretation": "CONCURRENT_BLOCKED",
+          "output_label": "동시 세션 이동 금지 — DIS-008 적용 중",
+          "external_ref": { "id": "DIS-008", "schema_version": "2.6" }
+        },
+        {
+          "priority": 3,
+          "condition": "INTERPRETATION_RULE.json 완성 AND SESSION_CONTEXT LOCKED",
+          "interpretation": "CONCURRENT_ALLOWED",
+          "output_label": "동시 세션 이동 허용 가능 — 비오님 최종 확인 필요",
+          "external_ref": { "id": "DIS-008", "schema_version": "2.6" }
+        }
+      ]
+    },
+    "system_health_meaning": {
+      "description": "VPS /health 및 /status 응답 해석",
+      "priority": 2,
+      "rules": [
+        {
+          "priority": 1,
+          "condition": "status_server.status == 'RUNNING' AND /health HTTP 200",
+          "interpretation": "HEALTHY",
+          "output_label": "시스템 정상 가동 중",
+          "external_ref": { "id": "DIS-010", "schema_version": "2.6" }
+        },
+        {
+          "priority": 2,
+          "condition": "status_server.status == 'RUNNING' AND /health HTTP != 200",
+          "interpretation": "DEGRADED",
+          "output_label": "WARN — 서비스 등록됨 but 응답 이상. 비오님 고지.",
+          "external_ref": { "id": "DIS-010", "schema_version": "2.6" }
+        },
+        {
+          "priority": 3,
+          "condition": "status_server.status != 'RUNNING'",
+          "interpretation": "DOWN",
+          "output_label": "STOP — VPS 서비스 미가동. 비오님 확인 필요.",
+          "external_ref": { "id": "DIS-010", "schema_version": "2.6" }
+        }
+      ]
+    }
+  },
+  "decision_refs": [
+    { "id": "DIS-008", "schema_version": "2.6", "role": "SSOI 원칙 — 동일 SSOT 수신 시 해석 분기 방지 근거" },
+    { "id": "DIS-010", "schema_version": "2.6", "role": "Design & Execution Package Protocol — 본 파일 설계 절차 근거" }
+  ]
+}
