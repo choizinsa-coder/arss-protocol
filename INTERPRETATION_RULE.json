@@ -1,0 +1,374 @@
+{
+  "decision_refs": [
+    {
+      "id": "DIS-008",
+      "role": "SSOI 원칙 — 동일 SSOT 수신 시 해석 분기 방지 근거",
+      "schema_version": "2.6"
+    },
+    {
+      "id": "DIS-010",
+      "role": "Design & Execution Package Protocol — 본 파일 설계 절차 근거",
+      "schema_version": "2.6"
+    }
+  ],
+  "description": "AIBA Single Source of Interpretation — 동일 SSOT 수신 시 에이전트 해석 분기 방지",
+  "domains": {
+    "concurrency_control": {
+      "description": "동시 세션 이동 허용 여부 해석",
+      "priority": 1,
+      "rules": [
+        {
+          "condition": "INTERPRETATION_RULE.json 미완성",
+          "external_ref": {
+            "id": "DIS-008",
+            "schema_version": "2.6"
+          },
+          "interpretation": "CONCURRENT_BLOCKED",
+          "output_label": "STOP — INTERPRETATION_RULE.json 완성 전 동시 세션 이동 불가",
+          "priority": 1
+        },
+        {
+          "condition": "canonical_rules.concurrent_session_rule contains '금지'",
+          "external_ref": {
+            "id": "DIS-008",
+            "schema_version": "2.6"
+          },
+          "interpretation": "CONCURRENT_BLOCKED",
+          "output_label": "동시 세션 이동 금지 — DIS-008 적용 중",
+          "priority": 2
+        },
+        {
+          "condition": "INTERPRETATION_RULE.json 완성 AND SESSION_CONTEXT LOCKED",
+          "external_ref": {
+            "id": "DIS-008",
+            "schema_version": "2.6"
+          },
+          "interpretation": "CONCURRENT_ALLOWED",
+          "output_label": "동시 세션 이동 허용 가능 — 비오님 최종 확인 필요",
+          "priority": 3
+        }
+      ]
+    },
+    "execution_gate": {
+      "description": "EAG 게이트 상태 해석",
+      "priority": 1,
+      "rules": [
+        {
+          "condition": "pending_tasks[0].status == 'EAG_PENDING'",
+          "external_ref": {
+            "id": "DIS-010",
+            "schema_version": "2.6"
+          },
+          "interpretation": "GATE_OPEN_PENDING_EAG",
+          "output_label": "EAG 승인 대기 중 — 비오님 승인 전 실행 불가",
+          "priority": 1
+        },
+        {
+          "condition": "pending_tasks[0].status == 'IN_PROGRESS'",
+          "external_ref": {
+            "id": "DIS-010",
+            "schema_version": "2.6"
+          },
+          "interpretation": "GATE_OPEN_EXECUTING",
+          "output_label": "실행 진행 중",
+          "priority": 2
+        },
+        {
+          "condition": "pending_tasks[0].status == 'COMPLETED'",
+          "external_ref": {
+            "id": "DIS-010",
+            "schema_version": "2.6"
+          },
+          "interpretation": "GATE_CLOSED",
+          "output_label": "태스크 완료 — 다음 태스크 확인 필요",
+          "priority": 3
+        },
+        {
+          "condition": "pending_tasks is empty or null",
+          "external_ref": {
+            "id": "DIS-008",
+            "schema_version": "2.6"
+          },
+          "interpretation": "GATE_OPEN_NO_BLOCK",
+          "output_label": "OPEN — IR-NULL-001 적용",
+          "patch_ref": "IR-NULL-001",
+          "priority": 4
+        }
+      ]
+    },
+    "phase_status": {
+      "description": "현재 시스템 phase 해석",
+      "priority": 1,
+      "rules": [
+        {
+          "condition": "chain.phase == 'PHASE 1 COMPLETE'",
+          "external_ref": {
+            "id": "DIS-010",
+            "schema_version": "2.6"
+          },
+          "interpretation": "PHASE_1_COMPLETE",
+          "output_label": "Phase 1 완료 — Phase 2 진입 가능 상태",
+          "priority": 1
+        },
+        {
+          "condition": "chain.phase == 'PHASE 2 ACTIVE'",
+          "external_ref": {
+            "id": "DIS-010",
+            "schema_version": "2.6"
+          },
+          "interpretation": "PHASE_2_ACTIVE",
+          "output_label": "Phase 2 진행 중",
+          "priority": 2
+        },
+        {
+          "condition": "chain.phase == null || chain.phase == ''",
+          "external_ref": {
+            "id": "DIS-010",
+            "schema_version": "2.6"
+          },
+          "interpretation": "UNKNOWN",
+          "output_label": "STOP — phase 미정의. 비오님 확인 필요.",
+          "priority": 3
+        }
+      ]
+    },
+    "system_health_meaning": {
+      "description": "VPS /health 및 /status 응답 해석",
+      "priority": 2,
+      "rules": [
+        {
+          "condition": "status_server.status == 'RUNNING' AND /health HTTP 200",
+          "external_ref": {
+            "id": "DIS-010",
+            "schema_version": "2.6"
+          },
+          "interpretation": "HEALTHY",
+          "output_label": "시스템 정상 가동 중",
+          "priority": 1
+        },
+        {
+          "condition": "status_server.status == 'RUNNING' AND /health HTTP != 200",
+          "external_ref": {
+            "id": "DIS-010",
+            "schema_version": "2.6"
+          },
+          "interpretation": "DEGRADED",
+          "output_label": "WARN — 서비스 등록됨 but 응답 이상. 비오님 고지.",
+          "priority": 2
+        },
+        {
+          "condition": "status_server.status != 'RUNNING'",
+          "external_ref": {
+            "id": "DIS-010",
+            "schema_version": "2.6"
+          },
+          "interpretation": "DOWN",
+          "output_label": "STOP — VPS 서비스 미가동. 비오님 확인 필요.",
+          "priority": 3
+        }
+      ]
+    },
+    "task_priority": {
+      "description": "pending_tasks 우선순위 해석",
+      "priority": 2,
+      "rules": [
+        {
+          "condition": "pending_tasks[0].status == 'BLOCKED'",
+          "external_ref": {
+            "id": "DIS-010",
+            "schema_version": "2.6"
+          },
+          "interpretation": "BLOCKED",
+          "output_label": "STOP — blocked_by 해소 전 착수 불가",
+          "priority": 1
+        },
+        {
+          "condition": "pending_tasks is empty or null",
+          "external_ref": {
+            "id": "DIS-008",
+            "schema_version": "2.6"
+          },
+          "interpretation": "NO_TASK",
+          "output_label": "N/A — IR-NULL-001 적용",
+          "patch_ref": "IR-NULL-001",
+          "priority": 2
+        },
+        {
+          "condition": "pending_tasks[0].priority == 'HIGH'",
+          "external_ref": {
+            "id": "DIS-010",
+            "schema_version": "2.6"
+          },
+          "interpretation": "HIGH_PRIORITY_ACTIVE",
+          "output_label": "최우선 태스크 존재 — 즉시 착수 필요",
+          "priority": 3
+        },
+        {
+          "condition": "pending_tasks[0].priority == 'MEDIUM'",
+          "external_ref": {
+            "id": "DIS-010",
+            "schema_version": "2.6"
+          },
+          "interpretation": "MEDIUM_PRIORITY_ACTIVE",
+          "output_label": "중순위 태스크 대기 중",
+          "priority": 4
+        }
+      ]
+    }
+  },
+  "generated_at": "2026-03-30",
+  "global_policy": {
+    "conflict_priority_rule": "priority 수치 낮을수록 우선(1>2>3). 동점 시 on_conflict 발동.",
+    "external_ref_validation": {
+      "on_missing_field": "STOP — invalid_external_ref 발동",
+      "on_version_mismatch": "STOP — invalid_external_ref 발동",
+      "required_fields": [
+        "id",
+        "schema_version"
+      ]
+    },
+    "fallback_policy": "fallback 금지 — 모든 미정의 상태는 STOP 처리.",
+    "on_conflict": "STOP — priority 동점. 비오님 확인 요청 후 작업 중단.",
+    "on_invalid_external_ref": "STOP — 참조 대상 미존재 또는 schema 불일치. 비오님 확인 요청 후 작업 중단.",
+    "on_no_rule": "STOP — 매핑 불가 상태. 비오님 확인 요청 후 작업 중단.",
+    "rule_evaluation_basis": "priority 단일 기준 — 낮은 수치 우선(1>2>3). priority 외 기준 적용 금지."
+  },
+  "patches": {
+    "IR-NULL-001": {
+      "action": "phase_status → IDLE로 해석. task_priority → N/A. execution_gate → OPEN(blocking 없음).",
+      "condition": "pending_tasks 배열이 비어 있거나 null인 경우",
+      "description": "pending_tasks empty 대응",
+      "external_ref": {
+        "id": "DIS-008",
+        "schema_version": "2.6"
+      },
+      "note": "STOP 아님 — 정상 상태로 처리"
+    }
+  },
+  "schema_version": "1.0",
+  "score_rules": {
+    "authoritative": "full_rules",
+    "compact_scoring_table": [
+      {
+        "base_score": 2,
+        "description": "신규 LESSON 등재",
+        "event_type": "lesson_added"
+      },
+      {
+        "base_score": 2,
+        "description": "LESSON 실전 적용",
+        "event_type": "lesson_applied"
+      },
+      {
+        "base_score": 3,
+        "description": "태스크 실행적 완료",
+        "event_type": "task_completed"
+      },
+      {
+        "base_score": 1,
+        "description": "DIS 결정 등재",
+        "event_type": "decision_recorded"
+      },
+      {
+        "base_score": 0,
+        "description": "아키텍처 채택",
+        "event_type": "architecture_adopted"
+      },
+      {
+        "base_score": 2,
+        "description": "외부 증명 발행",
+        "event_type": "external_proof_published"
+      },
+      {
+        "base_score": 3,
+        "description": "Phase 완료",
+        "event_type": "phase_completed"
+      },
+      {
+        "base_score": 1,
+        "description": "거버넌스 이슈 해소",
+        "event_type": "governance_resolved"
+      },
+      {
+        "base_score": 0,
+        "description": "문서 승인",
+        "event_type": "document_approved"
+      },
+      {
+        "base_score": 2,
+        "description": "문서 잠금 확정",
+        "event_type": "document_locked"
+      },
+      {
+        "base_score": 0,
+        "description": "상태 업그레이드",
+        "event_type": "state_upgraded"
+      },
+      {
+        "base_score": 0,
+        "description": "거버넌스 지시",
+        "event_type": "governance_directive"
+      },
+      {
+        "base_score": 1,
+        "description": "RPU 생성",
+        "event_type": "rpu_created"
+      }
+    ],
+    "consistency_rule": "compact_scoring_table과 full_rules 불일치 시 전체 FAIL",
+    "full_rules": {
+      "architecture_adopted": {
+        "base_score": 0,
+        "description": "아키텍처 채택 (점수 없음)"
+      },
+      "decision_recorded": {
+        "base_score": 1,
+        "description": "DIS 결정 등재"
+      },
+      "document_approved": {
+        "base_score": 0,
+        "description": "문서 승인 (점수 없음)"
+      },
+      "document_locked": {
+        "base_score": 2,
+        "description": "문서 잠금 확정"
+      },
+      "external_proof_published": {
+        "base_score": 2,
+        "description": "외부 증명 발행"
+      },
+      "governance_directive": {
+        "base_score": 0,
+        "description": "거버넌스 지시 (점수 없음)"
+      },
+      "governance_resolved": {
+        "base_score": 1,
+        "description": "거버넌스 이슈 해소"
+      },
+      "lesson_added": {
+        "base_score": 2,
+        "description": "신규 LESSON 등재"
+      },
+      "lesson_applied": {
+        "base_score": 2,
+        "description": "LESSON 실전 적용"
+      },
+      "phase_completed": {
+        "base_score": 3,
+        "description": "Phase 완료"
+      },
+      "rpu_created": {
+        "base_score": 1,
+        "description": "RPU 생성"
+      },
+      "state_upgraded": {
+        "base_score": 0,
+        "description": "상태 업그레이드 (점수 없음)"
+      },
+      "task_completed": {
+        "base_score": 3,
+        "description": "태스크 실행적 완료"
+      }
+    }
+  }
+}
