@@ -1,3 +1,8 @@
+boot_version: v1.0
+constitution_ref: Constitution_v1_0_Patch_RevA_SC
+last_updated_reason: 최초 배포 (2026-04-04)
+scope: Domi — Design Authority 전용
+
 # AIBA SESSION BOOT — DOMI
 ref: Constitution_v1_0_Patch_RevA_SC
 
