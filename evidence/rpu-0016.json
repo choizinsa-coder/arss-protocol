@@ -1,0 +1,30 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "RPU-0016",
+  "payload": {
+    "actor_id": "actor_choizinsa_aiba_director",
+    "event_type": "HUMAN_APPROVAL_RECORDED",
+    "governance_context": {
+      "authority_root": "AIBA_GLOBAL",
+      "jurisdiction": "AIBA_PROJECT",
+      "policy_id": "AIBA-GOVERNANCE-V1.0"
+    },
+    "payload_content": {
+      "description": "Boot Template GitHub 배포 EAG-3 승인 완료 — domi_boot.md v1.0 + jeni_boot.md v1.0. commit c296033 + 9ba5f03. DIS-014 확정.",
+      "eag_stage": "EAG-3",
+      "dis_id": "DIS-014",
+      "date": "2026-04-04",
+      "approved_by": "비오(Joshua)",
+      "status": "APPROVED"
+    },
+    "rpu_id": "RPU-0016",
+    "sequence_label": "GOVERNANCE-004",
+    "timestamp": "2026-04-04T00:00:00Z",
+    "version": "rpu/1.0"
+  },
+  "chain": {
+    "prev_chain_hash": "9136807ff08775573d3182067d972b7f2ee9256b2d44a3dad44f5a30500e5108",
+    "payload_hash": "e638341a950257f3f5a16c7b7d5746049df9ddbaf9a0f20292da5c53b992327a",
+    "chain_hash": "299b05a5ff422c1b734a78ca8915e7b955a91e7ca3ee92f6cdcc57e167ff63db"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "RPU-0015",
+  "payload": {
+    "actor_id": "actor_choizinsa_aiba_director",
+    "event_type": "PHASE_TRANSITION",
+    "governance_context": {
+      "authority_root": "AIBA_GLOBAL",
+      "jurisdiction": "AIBA_PROJECT",
+      "policy_id": "AIBA-WORKFLOW-V1.1"
+    },
+    "payload_content": {
+      "description": "Phase 2-A Step 2 완료 — WF-01/02/03 전체 Published. n8n v2.8.4. 5분 간격 폴링 자동 실행 시작. EAG-3 승인 완료.",
+      "phase": "Phase 2-A",
+      "step": "Step 2",
+      "date": "2026-04-04",
+      "approved_by": "비오(Joshua)",
+      "status": "COMPLETE"
+    },
+    "rpu_id": "RPU-0015",
+    "sequence_label": "GOVERNANCE-003",
+    "timestamp": "2026-04-04T00:00:00Z",
+    "version": "rpu/1.0"
+  },
+  "chain": {
+    "prev_chain_hash": "da2c4340ccd9840ed2cd32783084de13d902b6fea0bafd28203c33f66daf301e",
+    "payload_hash": "395cdbb0117b46eb321277eced3e741ba94f6986ea396974508f88e8a7e2d111",
+    "chain_hash": "9136807ff08775573d3182067d972b7f2ee9256b2d44a3dad44f5a30500e5108"
+  }
+}

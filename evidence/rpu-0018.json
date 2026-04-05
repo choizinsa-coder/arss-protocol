@@ -1,0 +1,30 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "RPU-0018",
+  "payload": {
+    "actor_id": "actor_choizinsa_aiba_director",
+    "event_type": "HUMAN_APPROVAL_RECORDED",
+    "governance_context": {
+      "authority_root": "AIBA_GLOBAL",
+      "jurisdiction": "AIBA_PROJECT",
+      "policy_id": "AIBA-WORKFLOW-V1.1"
+    },
+    "payload_content": {
+      "description": "WF-03 Propagation 수정 EAG-3 승인 완료 — Prepare Binary File 노드 추가, Upload to Google Drive 오류 해결. SESSION_CONTEXT.json Google Drive 업로드 성공 확인. DIS-018 등재.",
+      "eag_stage": "EAG-3",
+      "dis_id": "DIS-018",
+      "date": "2026-04-04",
+      "approved_by": "비오(Joshua)",
+      "status": "APPROVED"
+    },
+    "rpu_id": "RPU-0018",
+    "sequence_label": "GOVERNANCE-006",
+    "timestamp": "2026-04-04T00:00:00Z",
+    "version": "rpu/1.0"
+  },
+  "chain": {
+    "prev_chain_hash": "c78ad95ee6a49233586f29451bf24ca41a361affa411253e43d0453a3f6e8336",
+    "payload_hash": "0431d8f69d908fbf23237c4a61eaae14d74938cc1eff7a7832243871447ea368",
+    "chain_hash": "fc5e8690b256fcfeb6fbf87510d15425313de4d0749566332e8f0486023bb489"
+  }
+}

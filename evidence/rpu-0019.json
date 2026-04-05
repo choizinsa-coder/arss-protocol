@@ -1,0 +1,33 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "RPU-0019",
+  "payload": {
+    "actor_id": "actor_choizinsa_aiba_director",
+    "event_type": "VERIFICATION_CONFIRMED",
+    "governance_context": {
+      "authority_root": "AIBA_GLOBAL",
+      "jurisdiction": "AIBA_PROJECT",
+      "policy_id": "AIBA-GOVERNANCE-V1.0"
+    },
+    "payload_content": {
+      "description": "LESSON-007/008/009 IMMUTABLE 확정 — LESSON-007: Claude Code /mnt 경로 접근 불가, LESSON-008: n8n Code 노드 fs/crypto 차단, LESSON-009: n8n Execute Workflow 노드 전수 교체 필수",
+      "lesson_ids": [
+        "LESSON-007",
+        "LESSON-008",
+        "LESSON-009"
+      ],
+      "date": "2026-04-05",
+      "approved_by": "비오(Joshua)",
+      "status": "IMMUTABLE"
+    },
+    "rpu_id": "RPU-0019",
+    "sequence_label": "GOVERNANCE-007",
+    "timestamp": "2026-04-05T00:00:00Z",
+    "version": "rpu/1.0"
+  },
+  "chain": {
+    "prev_chain_hash": "fc5e8690b256fcfeb6fbf87510d15425313de4d0749566332e8f0486023bb489",
+    "payload_hash": "5c49fbf5c33001ea333e998595c14e0c61c97c279f0d6a08319104817b9a5106",
+    "chain_hash": "3ec9aa5b3e7c2311a1f426baebacccbe8bcb437decc1498dbfcc2845637a7523"
+  }
+}

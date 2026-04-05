@@ -1,0 +1,29 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "RPU-0013",
+  "payload": {
+    "actor_id": "actor_choizinsa_aiba_director",
+    "event_type": "POLICY_APPROVED",
+    "governance_context": {
+      "authority_root": "AIBA_GLOBAL",
+      "jurisdiction": "AIBA_PROJECT",
+      "policy_id": "AIBA-GOVERNANCE-V1.0"
+    },
+    "payload_content": {
+      "description": "DIS-011 Hard Enforcement Layer 확정 — [DESIGN]+[SELF-CRITIQUE] 강제, Hard Rejection, Pre-Output Guard 3단계 구조 채택",
+      "dis_id": "DIS-011",
+      "date": "2026-03-31",
+      "approved_by": "비오(Joshua)",
+      "status": "APPROVED"
+    },
+    "rpu_id": "RPU-0013",
+    "sequence_label": "GOVERNANCE-001",
+    "timestamp": "2026-03-31T00:00:00Z",
+    "version": "rpu/1.0"
+  },
+  "chain": {
+    "prev_chain_hash": "3a97b31b09c7bdfe7a4c22eb7713459a2c2d25e2e9bca588b9f572a0e9445839",
+    "payload_hash": "3ee72d226bff91fc332307453e29c5ecacaff6fc8cfac1016af5ca72064ecfbb",
+    "chain_hash": "cc524a20ecaca1dfa425b12cbafbc9686adfc590b128bc37bc25fe1b1b8eb0c3"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "RPU-0014",
+  "payload": {
+    "actor_id": "actor_choizinsa_aiba_director",
+    "event_type": "POLICY_APPROVED",
+    "governance_context": {
+      "authority_root": "AIBA_GLOBAL",
+      "jurisdiction": "AIBA_PROJECT",
+      "policy_id": "AIBA-GOVERNANCE-V1.0"
+    },
+    "payload_content": {
+      "description": "DIS-012 Session Sync Layer Phase 2 방향 확정 — Trigger B안(Webhook), 인증 B안(서비스 계정), Validation B안+증분검증, 단계적 진입",
+      "dis_id": "DIS-012",
+      "date": "2026-03-31",
+      "approved_by": "비오(Joshua)",
+      "status": "APPROVED"
+    },
+    "rpu_id": "RPU-0014",
+    "sequence_label": "GOVERNANCE-002",
+    "timestamp": "2026-03-31T00:00:00Z",
+    "version": "rpu/1.0"
+  },
+  "chain": {
+    "prev_chain_hash": "cc524a20ecaca1dfa425b12cbafbc9686adfc590b128bc37bc25fe1b1b8eb0c3",
+    "payload_hash": "cdb7c1b0e1164f9aceba8328d1a7801bf2bc053ed728d2f4e7527098afe71461",
+    "chain_hash": "da2c4340ccd9840ed2cd32783084de13d902b6fea0bafd28203c33f66daf301e"
+  }
+}

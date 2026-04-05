@@ -1,0 +1,29 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "RPU-0020",
+  "payload": {
+    "actor_id": "actor_choizinsa_aiba_director",
+    "event_type": "POLICY_APPROVED",
+    "governance_context": {
+      "authority_root": "AIBA_GLOBAL",
+      "jurisdiction": "AIBA_PROJECT",
+      "policy_id": "AIBA-GOVERNANCE-V1.0"
+    },
+    "payload_content": {
+      "description": "DIS-019 세션 단절 문제 근본 원인 분석 및 해결 방향 확정 — 수동 4회 구조 확인. 단기: session_close_rules 강화, 중기: GDrive 자동 push(Phase 2-B), 장기: Claude API 자동 갱신(Phase 2-C)",
+      "dis_id": "DIS-019",
+      "date": "2026-04-05",
+      "approved_by": "비오(Joshua)",
+      "status": "APPROVED"
+    },
+    "rpu_id": "RPU-0020",
+    "sequence_label": "GOVERNANCE-008",
+    "timestamp": "2026-04-05T00:00:00Z",
+    "version": "rpu/1.0"
+  },
+  "chain": {
+    "prev_chain_hash": "3ec9aa5b3e7c2311a1f426baebacccbe8bcb437decc1498dbfcc2845637a7523",
+    "payload_hash": "4a2012f200ae1d3abb9b9b137ea1afed1a67327fa209831caac430baa72389aa",
+    "chain_hash": "73630f71d4f853c559e73759e2b23cc34cdf307f89146e731757b42370d22182"
+  }
+}

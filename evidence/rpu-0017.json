@@ -1,0 +1,33 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "RPU-0017",
+  "payload": {
+    "actor_id": "actor_choizinsa_aiba_director",
+    "event_type": "POLICY_APPROVED",
+    "governance_context": {
+      "authority_root": "AIBA_GLOBAL",
+      "jurisdiction": "AIBA_PROJECT",
+      "policy_id": "AIBA-GOVERNANCE-V1.0"
+    },
+    "payload_content": {
+      "description": "DIS-015/016/017 Boot 갱신 거버넌스 확정 — 트리거 T-1~T-4 정의, 표준 Notice 포맷, 캐디 세션 시작 시 Boot 일관성 점검 의무화",
+      "dis_ids": [
+        "DIS-015",
+        "DIS-016",
+        "DIS-017"
+      ],
+      "date": "2026-04-04",
+      "approved_by": "비오(Joshua)",
+      "status": "APPROVED"
+    },
+    "rpu_id": "RPU-0017",
+    "sequence_label": "GOVERNANCE-005",
+    "timestamp": "2026-04-04T00:00:00Z",
+    "version": "rpu/1.0"
+  },
+  "chain": {
+    "prev_chain_hash": "299b05a5ff422c1b734a78ca8915e7b955a91e7ca3ee92f6cdcc57e167ff63db",
+    "payload_hash": "ec5a29c662e25618809c28ab8380b1f064e3cf600129fd615f166ca00ccc5611",
+    "chain_hash": "c78ad95ee6a49233586f29451bf24ca41a361affa411253e43d0453a3f6e8336"
+  }
+}
