@@ -1,0 +1,33 @@
+{
+  "_migration_note": "chain_hash_ref='pre-ledger'는 scoring_ledger 도입 이전 이벤트를 의미. 감사자에게 명시 고지.",
+  "chain_tip": "3a97b31b09c7bdfe7a4c22eb7713459a2c2d25e2e9bca588b9f572a0e9445839",
+  "event_count": 1,
+  "events": [
+    {
+      "chain_hash_ref": "genesis",
+      "event_id": "EVT-0001",
+      "event_type": "lesson_added",
+      "evidence": [
+        {
+          "availability": "public",
+          "hash_or_id": "LESSON-001",
+          "type": "session_record",
+          "uri": "https://raw.githubusercontent.com/choizinsa-coder/arss-protocol/main/AIBA_STATUS.md"
+        }
+      ],
+      "notes": "LESSON-001 등재 — Chain 형식 모방 사건. POC 이벤트.",
+      "rule_ref": {
+        "rule_hash": "610e2d19...3b60"
+      },
+      "score_delta": 2,
+      "timestamp": "2026-03-18T00:00:00Z"
+    }
+  ],
+  "evolution_score_recomputed": 66,
+  "generated_at": "2026-03-31T00:00:00Z",
+  "rule_ref": {
+    "rule_hash": "610e2d19...3b60",
+    "rule_version": "1.0"
+  },
+  "schema_version": "1.0"
+}

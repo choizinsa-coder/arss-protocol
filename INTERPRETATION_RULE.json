@@ -216,7 +216,7 @@
       ]
     }
   },
-  "generated_at": "2026-03-30",
+  "generated_at": "2026-04-06",
   "global_policy": {
     "conflict_priority_rule": "priority 수치 낮을수록 우선(1>2>3). 동점 시 on_conflict 발동.",
     "external_ref_validation": {
@@ -245,7 +245,7 @@
       "note": "STOP 아님 — 정상 상태로 처리"
     }
   },
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "score_rules": {
     "authoritative": "full_rules",
     "compact_scoring_table": [
@@ -310,9 +310,14 @@
         "event_type": "governance_directive"
       },
       {
-        "base_score": 1,
-        "description": "RPU 생성",
+        "base_score": 0,
+        "description": "RPU 생성 (점수 없음 — 작업 결과물)",
         "event_type": "rpu_created"
+      },
+      {
+        "base_score": 2,
+        "description": "기존 LESSON IMMUTABLE 등 최종 확정",
+        "event_type": "lesson_confirmed"
       }
     ],
     "consistency_rule": "compact_scoring_table과 full_rules 불일치 시 전체 FAIL",
@@ -358,8 +363,8 @@
         "description": "Phase 완료"
       },
       "rpu_created": {
-        "base_score": 1,
-        "description": "RPU 생성"
+        "base_score": 0,
+        "description": "RPU 생성 (점수 없음 — 작업 결과물)"
       },
       "state_upgraded": {
         "base_score": 0,
@@ -368,7 +373,20 @@
       "task_completed": {
         "base_score": 3,
         "description": "태스크 실행적 완료"
+      },
+      "lesson_confirmed": {
+        "base_score": 2,
+        "description": "기존 LESSON을 IMMUTABLE 등 최종 확정 상태로 잠그는 이벤트. lesson_added와 별개 단계.",
+        "eligibility_rule": "대상 LESSON이 state_events 또는 lessons 블록에 선행 존재해야 함",
+        "duplicate_rule": "동일 LESSON / 동일 확정 상태에 대한 중복 confirmed 금지",
+        "validation_rule": "lesson id, confirmed_status, approved_by 필드 존재 확인"
       }
+    },
+    "new_event_type_policy": {
+      "rule": "새 event_type은 INTERPRETATION_RULE.json 등재 및 EAG 승인 완료 전 scoring_ledger / state_events 사용 금지",
+      "violation": "ERR-005 invalid_event_type → TRS FAIL",
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-04-06"
     }
   }
 }
