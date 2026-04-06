@@ -1,2 +1,14 @@
 __pycache__/
 *.pyc
+.env\nadd_file_*\nSESSION_CONTEXT_v2_6_backup.json
+.env
+add_file_*
+SESSION_CONTEXT_v2_6_backup.json
+SESSION_CONTEXT.json
+aiba_status_server*.py
+logs/
+n8n/
+venv/
+index.html.bak.*
+status_cache.json
+status_state.json

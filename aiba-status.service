@@ -1,0 +1,14 @@
+[Unit]
+Description=AIBA /status Server (State Injection Interface v0.5)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/arss/engine/arss-protocol
+ExecStart=/usr/bin/python3 /opt/arss/engine/arss-protocol/aiba_status_server.py
+Restart=always
+RestartSec=3
+EnvironmentFile=/opt/arss/engine/arss-protocol/.env
+
+[Install]
+WantedBy=multi-user.target

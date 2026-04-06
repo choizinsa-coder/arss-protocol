@@ -1,0 +1,25 @@
+{
+  "fallback_mode": false,
+  "identity_marker": "personal_account",
+  "last_error": null,
+  "last_successful_sync_at": null,
+  "last_synced_source_hash": null,
+  "last_validation_anchor": {
+    "canonical_core_valid": null,
+    "chain_tip_matched": null,
+    "schema_version_matched": null,
+    "ssoi_status": null
+  },
+  "schema_version": "1.0",
+  "sync_count": 1,
+  "sync_mode": "polling",
+  "transition_mode": false,
+  "last_attempt_at": "2026-04-06T05:02:00.083Z",
+  "last_success_at": "2026-04-06T05:02:00.083Z",
+  "last_file_id": "19GpehBrsq7jDmaQRNcQOgWmNnaf9csx6",
+  "last_success_hash": "a003d3509f947934564bac3fb5437eef8f83f3bbe4d07fbec3ab1479322f2fac",
+  "last_result": "success",
+  "last_failure_code": null,
+  "consecutive_success": 1,
+  "is_canonical_update": true
+}
