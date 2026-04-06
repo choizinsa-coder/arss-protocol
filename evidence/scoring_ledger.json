@@ -9,7 +9,7 @@
     "chain_tip": "73630f71d4f853c559e73759e2b23cc34cdf307f89146e731757b42370d22182",
     "last_rpu": "RPU-0020"
   },
-  "chain_tip": "73630f71d4f853c559e73759e2b23cc34cdf307f89146e731757b42370d22182",
+  "chain_tip": "eace12170e3cca78b3dc2381b0e41fb7ea41fe4e3de76e70ac2a3683a97143ca",
   "coverage_status": "current",
   "coverage_until_rpu": "RPU-0020",
   "evt_migration_policy": "score_delta=0 only, TRS sum excluded by natural zero",
