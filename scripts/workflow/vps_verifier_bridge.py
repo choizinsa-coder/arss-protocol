@@ -172,7 +172,7 @@ def verify_production_chain(chain_dir: Path) -> dict:
     try:
         rpu_files = sorted(
             [f for f in chain_dir.iterdir()
-             if f.name.startswith("RPU-") and f.name.endswith(".json")
+             if f.name.upper().startswith("RPU-") and f.name.endswith(".json")
              and f.name != "RPU-ledger.json"],
             key=lambda f: int(f.stem.split("-")[1])
         )

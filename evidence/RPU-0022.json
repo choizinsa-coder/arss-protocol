@@ -1,0 +1,22 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "RPU-0022",
+  "payload": {
+    "actor_id": "caddy-claude-aiba",
+    "event_type": "HUMAN_APPROVAL_RECORDED",
+    "governance_context": {
+      "policy_id": "AIBA-Constitution-v1.0-Patch-RevA-SC",
+      "authority_root": "Joshua(비오)",
+      "jurisdiction": "AIBA-OS"
+    },
+    "payload_content": "WF-04 GDrive Sync 첫 실행 성공 EAG-3 완료. 전체 노드 ALL GREEN. Google Drive 06 SESSION_CONTEXT/ 업로드 성공. 비오(Joshua) 최종 승인.",
+    "rpu_id": "RPU-0022",
+    "timestamp": "2026-04-06T09:41:28.510Z",
+    "version": "rpu/1.0"
+  },
+  "chain": {
+    "prev_chain_hash": "61422eba37fe664c7216a41aa2e64ff55e08549f3b914c0041c248ad8621a85d",
+    "payload_hash": "b0186cd20e1ba1b40625cc6cfa33f881f544135fd6dde69390ee733cca34cda4",
+    "chain_hash": "8ac00616bcc1131c9044c38eaed8efb83d487a77f83b63d9f94de72e07e792b4"
+  }
+}

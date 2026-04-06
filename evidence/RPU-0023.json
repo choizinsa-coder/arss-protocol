@@ -1,0 +1,22 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "RPU-0023",
+  "payload": {
+    "actor_id": "caddy-claude-aiba",
+    "event_type": "VERIFICATION_CONFIRMED",
+    "governance_context": {
+      "policy_id": "AIBA-Constitution-v1.0-Patch-RevA-SC",
+      "authority_root": "Joshua(비오)",
+      "jurisdiction": "AIBA-OS"
+    },
+    "payload_content": "WF-01 인증 수정 및 정상 복구 EAG-3 완료. HTTP Request1 URL 159.203.125.1 수정 + Bearer 인증 추가. Exec 1205/1206/1207 연속 Success 확인. 비오(Joshua) 최종 승인.",
+    "rpu_id": "RPU-0023",
+    "timestamp": "2026-04-06T09:42:49.379Z",
+    "version": "rpu/1.0"
+  },
+  "chain": {
+    "prev_chain_hash": "8ac00616bcc1131c9044c38eaed8efb83d487a77f83b63d9f94de72e07e792b4",
+    "payload_hash": "969c344c8e9b06ca75830feaca328ed018b19ef9fecce0a2e88d24d7a93a543d",
+    "chain_hash": "eace12170e3cca78b3dc2381b0e41fb7ea41fe4e3de76e70ac2a3683a97143ca"
+  }
+}
