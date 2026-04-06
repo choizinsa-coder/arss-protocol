@@ -12,3 +12,5 @@ venv/
 index.html.bak.*
 status_cache.json
 status_state.json
+.approval_token
+scripts/workflow/.approval_token
