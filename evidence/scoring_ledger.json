@@ -9,7 +9,7 @@
     "chain_tip": "73630f71d4f853c559e73759e2b23cc34cdf307f89146e731757b42370d22182",
     "last_rpu": "RPU-0020"
   },
-  "chain_tip": "1a2f514a00b6265e5e81267a0bbd00628f2f400e674dc4cfeadbac2158843a78",
+  "chain_tip": "161f8ed004dbd3348fc8d53ea6bd8b35b29de931d15eef32371a5649aa6698a6",
   "coverage_status": "current",
   "coverage_until_rpu": "RPU-0020",
   "evt_migration_policy": "score_delta=0 only, TRS sum excluded by natural zero",
@@ -959,5 +959,5 @@
     "confirmed_by": "비오(Joshua)",
     "confirmed_date": "2026-04-06"
   },
-  "last_rpu": "RPU-0025"
+  "last_rpu": "RPU-0026"
 }

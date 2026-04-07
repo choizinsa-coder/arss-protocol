@@ -1,0 +1,15 @@
+{
+  "rpu_id": "019d67df-1535-71fc-bdf4-fa93073518a1",
+  "rpu_seq": "RPU-0026",
+  "event_type": "task_completed",
+  "actor_id": "caddy",
+  "approved_by": "비오(Joshua)",
+  "ref": "INTERPRETATION_RULE v1.3",
+  "description": "INTERPRETATION_RULE level_mapping L0-L9 추가 + event_types 13종 등재. schema_version v1.3. EAG-1/2/3 완료. commit a3d79bd.",
+  "score_delta": 2,
+  "prev_hash": "1a2f514a00b6265e5e81267a0bbd00628f2f400e674dc4cfeadbac2158843a78",
+  "payload_hash": "9ecb27cea6be2c5c8b56b0e3c5b91ca65df330695cf358b1c41a2c620041e3ff",
+  "chain_hash": "161f8ed004dbd3348fc8d53ea6bd8b35b29de931d15eef32371a5649aa6698a6",
+  "persistence_allowed": true,
+  "saved_at": "2026-04-07T12:17:37.001345+00:00"
+}
