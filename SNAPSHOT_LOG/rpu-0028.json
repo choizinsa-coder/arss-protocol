@@ -1,0 +1,13 @@
+{
+  "rpu_id": "019d67eb-1302-7665-bcd3-987662ff0e41",
+  "rpu_seq": "RPU-0028",
+  "event_type": "task_completed",
+  "ref": "RPU-0024 \uc800\uc7a5 + chain_tip \uac31\uc2e0",
+  "summary": "RPU-0024 \uc800\uc7a5 \uc644\ub8cc. chain_tip \uac31\uc2e0. scoring_ledger \uc5c5\ub370\uc774\ud2b8. EAG-2/3 \uc644\ub8cc. commit b8c613b.",
+  "score_delta": 2,
+  "actor_id": "caddy",
+  "approved_by": "\ube44\uc624(Joshua)",
+  "payload_hash": "2aca6b950b0b4b1971dfe26f609bad3202fabed819b0f2ef9f72a26438e4d4f2",
+  "prev_chain_hash": "6927df7099f5af6e02fd0b1e0091c386e04e127fb9f19a44462b2481f068692f",
+  "chain_hash": "17ba68a16aaab0b3e953fcdbf4598f5343b52328aa500738a30205fd7c43bb1a"
+}
