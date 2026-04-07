@@ -1,0 +1,13 @@
+{
+  "rpu_id": "019d67ed-af07-71a3-9d36-eb1bc4e91439",
+  "rpu_seq": "RPU-0029",
+  "event_type": "governance_directive",
+  "ref": "DIS-027",
+  "summary": "DIS-027 \ud504\ub85c\ub355\uc158 RPU \uccb4\uc778 \uacc4\ubcf4 \uacf5\uc2dd\ud654. scoring_ledger chain_tip \uae30\uc900 \uacf5\uc2dd \uc6b4\uc601 \uccb4\uc778 \ud655\uc815. rpu-0007/0008 \ub808\uac70\uc2dc \ubcf4\uc874. \uc18c\ubb38\uc790 \uc800\uc7a5 \uaddc\uce59 \uace0\uc815. \ube44\uc624(Joshua) EAG-3 \uc2b9\uc778.",
+  "score_delta": 5,
+  "actor_id": "caddy",
+  "approved_by": "\ube44\uc624(Joshua)",
+  "payload_hash": "3d2e33c3b0af2077356c6998d6abc6e7a30f222d6feb803e354299b578a6f547",
+  "prev_chain_hash": "17ba68a16aaab0b3e953fcdbf4598f5343b52328aa500738a30205fd7c43bb1a",
+  "chain_hash": "00865b97abc4fac03583fd56541be87271f9cbc69e0fad1bb19b1f34ec01aae1"
+}
