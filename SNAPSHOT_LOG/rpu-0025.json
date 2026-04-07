@@ -1,0 +1,15 @@
+{
+  "rpu_id": "019d67da-268e-74ea-b49c-54a8bb148f11",
+  "rpu_seq": "RPU-0025",
+  "event_type": "governance_directive",
+  "actor_id": "caddy",
+  "approved_by": "비오(Joshua)",
+  "ref": "DIS-026",
+  "description": "SSOI 단일 소스 루트 경로 확정. interpretation/ 구버전 삭제. 루트 경로 INTERPRETATION_RULE.json 단일화.",
+  "score_delta": 2,
+  "prev_hash": "84ff1b508e9f53e794fad69ab486b34198bb88d76925fb29dc6ddc0fcfcd4585",
+  "payload_hash": "96f00913c500ffdc5867943b1deae9df1de86ca421a1a4b9c1328d00f516b291",
+  "chain_hash": "1a2f514a00b6265e5e81267a0bbd00628f2f400e674dc4cfeadbac2158843a78",
+  "persistence_allowed": true,
+  "saved_at": "2026-04-07T12:14:06.753977+00:00"
+}
