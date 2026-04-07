@@ -50,7 +50,7 @@ from datetime import datetime, timezone
 # ─────────────────────────────────────────────
 
 DEFAULT_CHAIN_DIR = "/opt/arss/engine/arss-protocol/ARSS_HUB/04_EVIDENCE/SNAPSHOT_LOG"
-BRIDGE_VERSION = "0.2"
+BRIDGE_VERSION = "0.3"
 PRODUCTION_SCHEMA = "ARSS-RPU-1.0"
 
 
@@ -343,7 +343,7 @@ def print_result(result: dict):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="ARSS VPS Production Chain Verifier — Bridge v0.2"
+        description="ARSS VPS Production Chain Verifier — Bridge v0.3"
     )
     parser.add_argument(
         "--chain-dir",
@@ -351,11 +351,57 @@ def main():
         help=f"Path to SNAPSHOT_LOG directory (default: {DEFAULT_CHAIN_DIR})"
     )
     parser.add_argument(
+        "--single",
+        metavar="FILE",
+        help="Verify a single candidate RPU JSON file (generator precheck only)"
+    )
+    parser.add_argument(
         "--output-json",
         action="store_true",
         help="Output result as JSON instead of human-readable format"
     )
     args = parser.parse_args()
+
+
+    # --single 모드: single candidate precheck (generator 연동용)
+    # full chain verification 아님 — prev_hash 연결 검증 skip
+    # payload_hash + chain_hash 재계산만 수행
+    if args.single:
+        single_path = Path(args.single)
+        if not single_path.exists():
+            print(json.dumps({"ok": False, "errors": [f"File not found: {args.single}"]}))
+            sys.exit(1)
+        try:
+            candidate = load_json(single_path)
+            errors = []
+
+            # 후보 RPU 구조: payload_hash/chain_hash는 chain 블록 안에 위치
+            chain_block = candidate.get("chain", {})
+            payload_obj = candidate.get("payload", candidate)
+
+            computed_payload = compute_payload_hash(payload_obj)
+            declared_ph = chain_block.get("payload_hash")
+            if computed_payload != declared_ph:
+                errors.append("payload_hash mismatch: expected " + computed_payload + ", got " + str(declared_ph))
+
+            prev_hash = chain_block.get("prev_chain_hash", "")
+            computed_chain = compute_chain_hash(prev_hash, computed_payload)
+            declared_ch = chain_block.get("chain_hash")
+            if computed_chain != declared_ch:
+                errors.append("chain_hash mismatch: expected " + computed_chain + ", got " + str(declared_ch))
+
+            result = {
+                "ok": len(errors) == 0,
+                "mode": "single_candidate_precheck",
+                "note": "prev_hash chain continuity not verified — generator precheck only",
+                "errors": errors
+            }
+            print(json.dumps(result))
+            sys.exit(0 if result["ok"] else 1)
+
+        except Exception as e:
+            print(json.dumps({"ok": False, "mode": "single_candidate_precheck", "errors": [str(e)]}))
+            sys.exit(1)
 
     chain_dir = Path(args.chain_dir)
     if not chain_dir.is_dir():
