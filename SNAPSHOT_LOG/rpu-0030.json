@@ -1,0 +1,13 @@
+{
+  "rpu_id": "019d67f3-5f79-77f4-a881-3b87997e15a3",
+  "rpu_seq": "RPU-0030",
+  "event_type": "governance_directive",
+  "ref": "DIS-028",
+  "summary": "DIS-028 pending_tasks \u2194 state_events \uad50\ucc28 \uac80\uc99d \uc758\ubb34\ud654. \uc138\uc158 \uc2dc\uc791 \uc2dc \ubd88\uc77c\uce58 \ud0d0\uc9c0 \ud6c4 \ube44\uc624 \ubcf4\uace0. \uc138\uc158 \uc885\ub8cc \uc2dc \uc815\uc815 \uc804 \ube44\uc624 \uc2b9\uc778 \ud655\ubcf4. force_correction \uae08\uc9c0. \uce90\ub514 \ud310\ub2e8 \uae30\ubc18 \ub9e4\ud551. EAG-1/2 \uc2b9\uc778.",
+  "score_delta": 2,
+  "actor_id": "caddy",
+  "approved_by": "\ube44\uc624(Joshua)",
+  "payload_hash": "7b9c2e292237f1fd2326b2d9fa3cc53e772ede41c11e573aeeb60a76be161ec4",
+  "prev_chain_hash": "00865b97abc4fac03583fd56541be87271f9cbc69e0fad1bb19b1f34ec01aae1",
+  "chain_hash": "d77c38f473a3aab7c95ef0c3cdc445c0e84aad929db0b55555e2c6efc34d522c"
+}

@@ -9,7 +9,7 @@
     "chain_tip": "73630f71d4f853c559e73759e2b23cc34cdf307f89146e731757b42370d22182",
     "last_rpu": "RPU-0020"
   },
-  "chain_tip": "00865b97abc4fac03583fd56541be87271f9cbc69e0fad1bb19b1f34ec01aae1",
+  "chain_tip": "d77c38f473a3aab7c95ef0c3cdc445c0e84aad929db0b55555e2c6efc34d522c",
   "coverage_status": "current",
   "coverage_until_rpu": "RPU-0020",
   "evt_migration_policy": "score_delta=0 only, TRS sum excluded by natural zero",
@@ -959,5 +959,5 @@
     "confirmed_by": "\ube44\uc624(Joshua)",
     "confirmed_date": "2026-04-06"
   },
-  "last_rpu": "RPU-0029"
+  "last_rpu": "RPU-0030"
 }
