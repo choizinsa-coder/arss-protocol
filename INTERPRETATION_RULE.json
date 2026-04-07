@@ -245,7 +245,7 @@
       "note": "STOP 아님 — 정상 상태로 처리"
     }
   },
-  "schema_version": "1.1",
+  "schema_version": "v1.2",
   "score_rules": {
     "authoritative": "full_rules",
     "compact_scoring_table": [
@@ -387,6 +387,72 @@
       "violation": "ERR-005 invalid_event_type → TRS FAIL",
       "confirmed_by": "비오(Joshua)",
       "confirmed_date": "2026-04-06"
+    },
+    "level_mapping": [
+      {
+        "level": "L0",
+        "level_name": "Uninitialized",
+        "score_min": 0,
+        "score_max": 9
+      },
+      {
+        "level": "L1",
+        "level_name": "Concept Defined",
+        "score_min": 10,
+        "score_max": 24
+      },
+      {
+        "level": "L2",
+        "level_name": "Structurally Framed",
+        "score_min": 25,
+        "score_max": 44
+      },
+      {
+        "level": "L3",
+        "level_name": "Traceability Established",
+        "score_min": 45,
+        "score_max": 69
+      },
+      {
+        "level": "L4",
+        "level_name": "Governance Structured",
+        "score_min": 70,
+        "score_max": 94
+      },
+      {
+        "level": "L5",
+        "level_name": "Externally Verifiable",
+        "score_min": 95,
+        "score_max": 109
+      },
+      {
+        "level": "L6",
+        "level_name": "Operationally Reliable",
+        "score_min": 110,
+        "score_max": 126
+      },
+      {
+        "level": "L7",
+        "level_name": "Operationally Reliable+",
+        "score_min": 127,
+        "score_max": 149
+      },
+      {
+        "level": "L8",
+        "level_name": "Interpretation Locked",
+        "score_min": 150,
+        "score_max": 199
+      },
+      {
+        "level": "L9",
+        "level_name": "Autonomous Sync Ready",
+        "score_min": 200,
+        "score_max": 999
+      }
+    ],
+    "history_reinterpretation_policy": {
+      "ref": "EAG-1 조건 2 — 비오(Joshua) 2026-04-07",
+      "rule": "L5 구간 변경(95~126 → 95~109)에 따른 과거 이력(state_events/scoring_ledger)의 레벨 재해석 허용. 수치 자체는 불변. 레벨 표기만 현행 level_mapping 기준으로 재적용."
     }
   }
 }
