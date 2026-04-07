@@ -1,0 +1,11 @@
+{
+  "rpu_id": "019d67e2-1c81-7aa7-a6cb-6bc3fefb9d0f",
+  "rpu_seq": "RPU-0027",
+  "event_type": "task_completed",
+  "ref": "vps_verifier_bridge v0.3",
+  "summary": "vps_verifier_bridge v0.3 --single precheck \ubaa8\ub4dc \ucd94\uac00. generator \uc5f0\ub3d9\uc6a9. prev_hash \uc5f0\uacb0 \uac80\uc99d skip. EAG-2/3 \uc644\ub8cc. commit 3759061.",
+  "score_delta": 2,
+  "payload_hash": "5f2e818f53590bddab5c2fc09e939e388e5efdd72d0a088a393c310a07bc2bcf",
+  "prev_chain_hash": "161f8ed004dbd3348fc8d53ea6bd8b35b29de931d15eef32371a5649aa6698a6",
+  "chain_hash": "6927df7099f5af6e02fd0b1e0091c386e04e127fb9f19a44462b2481f068692f"
+}
