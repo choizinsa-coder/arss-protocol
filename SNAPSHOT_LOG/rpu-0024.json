@@ -1,0 +1,14 @@
+{
+  "rpu_id": "019d6763-75d0-7fbf-b97d-40ddbda2e95b",
+  "rpu_seq": "RPU-0024",
+  "event_type": "task_completed",
+  "actor_id": "caddy",
+  "approved_by": "비오(Joshua)",
+  "description": "event_types 13종 INTERPRETATION_RULE.json 등재 완료. schema_version v1.3. EAG-1/2 승인 2026-04-07.",
+  "prev_hash": "eace12170e3cca78b3dc2381b0e41fb7ea41fe4e3de76e70ac2a3683a97143ca",
+  "payload_hash": "34837ec91586dee72217a783ff560cda117b1dd08011696792451b3af1b156dd",
+  "chain_hash": "84ff1b508e9f53e794fad69ab486b34198bb88d76925fb29dc6ddc0fcfcd4585",
+  "persistence_allowed": true,
+  "chain_note": "scoring_ledger chain 기준 연속 (eace1217...). rpu-0007/0008은 레거시 독립 체인으로 보존.",
+  "saved_at": "2026-04-07T10:28:50.669493+00:00"
+}
