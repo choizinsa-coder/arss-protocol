@@ -1,0 +1,20 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "019d70fc-fead-7a55-86f9-f39f13be1fa8",
+  "timestamp": "2026-04-09T06:45:21.709607Z",
+  "actor_id": "caddy",
+  "payload": {
+    "event_type": "governance_directive",
+    "content": "[CHAIN RESUMPTION DECLARATION — RPU-0031]\n\nCANONICAL CHAIN RESUME POINT:\n- prev_chain_tip: eace12170e3cca78b3dc2381b0e41fb7ea41fe4e3de76e70ac2a3683a97143ca (RPU-0023)\n- resume_date: 2026-04-09\n- declared_by: caddy\n- approved_by: 비오(Joshua) EAG-2 (2026-04-09)\n\nGAP DECLARATION (RPU-0024~0030):\n- status: legacy flat schema / SNAPSHOT_LOG frozen branch\n- location: /opt/arss/engine/arss-protocol/SNAPSHOT_LOG/\n- canonical chain 미편입 사유: vps_verifier_bridge.py nested schema 전용\n  flat schema (chain 블록 없음) 처리 불가 — verifier incompatibility\n- schema: flat (pre-ARSS-RPU-1.0)\n- hash integrity: 보존됨 (파일 변경 없음)\n- decision basis: DIS-031, DIS-032, DIS-033, DIS-034, DIS-035\n  (2026-04-08, EAG-1 승인 완료)\n- hard cut decision: B-2 (2026-04-09, EAG-2 승인 완료)\n\nCHAIN CONTINUITY NOTE:\n- RPU-0009~0023: evidence/ canonical chain (verifier ALL PASS)\n- RPU-0024~0030: SNAPSHOT_LOG frozen (legacy, non-canonical)\n  scoring_ledger 프로덕션 SSOT에서 제외 완료 (2026-04-09)\n- RPU-0031~: evidence/ canonical chain resumes (nested schema ARSS-RPU-1.0)\n\nFUTURE RESOLUTION PATH:\n- legacy flat schema verifier 설계: 도미 담당 (OS 레벨 과제 분리)\n- 목적: RPU-0024~0030 사후 canonical 편입 가능성 보존\n- 현재 상태: PLANNED (별도 EAG 필요)\n\nSESSION REFERENCES:\n- AIBA_Daily_Session_Report_2026-04-08_Integrated.docx\n- AIBA_Structure_Realignment_Debate_Record_20260409.docx\n- SESSION_CONTEXT.json schema_version 4.0 / Evolution Score 247\n- DIS-029~035 (2026-04-08), DIS-036 Hard Cut B-2 (2026-04-09)"
+  },
+  "chain": {
+    "payload_hash": "78809743e45f712147596333e01dd6a0e4da8c9b1dc21000388a6a90dea7d87d",
+    "prev_chain_hash": "eace12170e3cca78b3dc2381b0e41fb7ea41fe4e3de76e70ac2a3683a97143ca",
+    "chain_hash": "e28fc6666b6481d02b95660734b984e7653c22c82e84569605fc287c1168b095"
+  },
+  "governance_context": {
+    "policy_id": "ARSS_HUB_PROTOCOL_v1.2",
+    "authority_root": "Beo",
+    "jurisdiction": "AIBA_GLOBAL"
+  }
+}

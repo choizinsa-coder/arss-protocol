@@ -1,6 +1,6 @@
 {
   "schema_version": "ARSS-RPU-1.0",
-  "chain_tip": "eace12170e3cca78b3dc2381b0e41fb7ea41fe4e3de76e70ac2a3683a97143ca",
+  "chain_tip": "e28fc6666b6481d02b95660734b984e7653c22c82e84569605fc287c1168b095",
   "entries": [
     {
       "rpu_id": "RPU-0009",
@@ -91,6 +91,12 @@
       "event_type": "VERIFICATION_CONFIRMED",
       "timestamp": "2026-04-06T09:42:49.379Z",
       "chain_hash": "eace12170e3cca78b3dc2381b0e41fb7ea41fe4e3de76e70ac2a3683a97143ca"
+    },
+    {
+      "rpu_id": "RPU-0031",
+      "event_type": "governance_directive",
+      "timestamp": "2026-04-09T06:45:21.709607Z",
+      "chain_hash": "e28fc6666b6481d02b95660734b984e7653c22c82e84569605fc287c1168b095"
     }
   ]
 }
