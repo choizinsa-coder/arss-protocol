@@ -186,7 +186,8 @@ def step2_dual_source() -> str:
 # =============================================================================
 
 def step3_generator(actor_id: str, content: str, prev_chain_hash: str,
-                    approval_token: str, dry_run: bool) -> dict:
+                    approval_token: str, dry_run: bool,
+                    event_type: str = "governance_event") -> dict:
     log("Step 3: Generator Call")
 
     if dry_run:
@@ -197,7 +198,7 @@ def step3_generator(actor_id: str, content: str, prev_chain_hash: str,
             "timestamp": now_iso(),
             "actor_id": actor_id,
             "payload": {
-                "event_type": "dry_run_test",
+                "event_type": event_type,
                 "content": content
             },
             "chain": {
@@ -211,6 +212,7 @@ def step3_generator(actor_id: str, content: str, prev_chain_hash: str,
 
     body = json.dumps({
         "actor_id": actor_id,
+        "event_type": event_type,
         "content": content,
         "prev_chain_hash": prev_chain_hash
     }).encode("utf-8")
@@ -702,7 +704,8 @@ def main():
         step1_eag(args.approval_token)
         prev_hash = step2_dual_source()
         rpu       = step3_generator(args.actor_id, content,
-                                     prev_hash, args.approval_token, dry_run)
+                                     prev_hash, args.approval_token, dry_run,
+                                     event_type=event.get("event_type", "governance_event"))
         step4_schema_gate(rpu, prev_hash, dry_run)
         pec = step5_machine_pec(rpu, prev_hash, args.event_file, dry_run)
 
