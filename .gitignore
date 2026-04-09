@@ -14,3 +14,12 @@ status_cache.json
 status_state.json
 .approval_token
 scripts/workflow/.approval_token
+
+# 백업 및 임시 파일
+*.bak
+*.bak_*
+failed/
+evidence/*.bak*
+evidence/*.bak_*
+evidence/scoring_ledger_BACKUP_*.json
+evidence/scoring_ledger_legacy_*.json
