@@ -9,9 +9,9 @@
     "chain_tip": "73630f71d4f853c559e73759e2b23cc34cdf307f89146e731757b42370d22182",
     "last_rpu": "RPU-0020"
   },
-  "chain_tip": "e28fc6666b6481d02b95660734b984e7653c22c82e84569605fc287c1168b095",
+  "chain_tip": "b98ab3cb811db4974ff3bce2f111d1a20fd8d7372b4d4afc99372c614b32b2db",
   "coverage_status": "current",
-  "coverage_until_rpu": "RPU-0031",
+  "coverage_until_rpu": "RPU-0032",
   "evt_migration_policy": "score_delta=0 only, TRS sum excluded by natural zero",
   "fail_closed_policy": {
     "ERR-001": "chain_anchor_ref / governance_ref 누락 → STOP",
@@ -959,7 +959,7 @@
     "confirmed_by": "비오(Joshua)",
     "confirmed_date": "2026-04-06"
   },
-  "last_rpu": "RPU-0031",
+  "last_rpu": "RPU-0032",
   "legacy_branch": {
     "rpu_range": "RPU-0024~RPU-0030",
     "location": "SNAPSHOT_LOG/",
