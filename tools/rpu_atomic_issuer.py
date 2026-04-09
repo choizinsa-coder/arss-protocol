@@ -229,9 +229,20 @@ def step3_generator(actor_id: str, content: str, prev_chain_hash: str,
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             raw = resp.read().decode("utf-8")
-            rpu = json.loads(raw)
+            response = json.loads(raw)
     except Exception as e:
         stop("GENERATOR_CALL_FAILED", str(e))
+
+    # generator 응답 구조: {"status": "PASS", "candidate_rpu": {...}}
+    if isinstance(response, dict) and "candidate_rpu" in response:
+        if response.get("status") != "PASS":
+            stop("GENERATOR_STATUS_FAIL",
+                 f"status={response.get('status')}")
+        if not response.get("persistence_allowed", False):
+            stop("GENERATOR_PERSISTENCE_DENIED", "persistence_allowed=false")
+        rpu = response["candidate_rpu"]
+    else:
+        rpu = response
 
     log(f"Step 3: PASS | rpu_id={rpu.get('rpu_id','?')}")
     return rpu
