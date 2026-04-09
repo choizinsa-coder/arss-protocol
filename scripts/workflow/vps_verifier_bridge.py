@@ -418,5 +418,173 @@ def main():
     sys.exit(0 if result["all_pass"] else 1)
 
 
+
+
+# =============================================================================
+# BRIDGE-MODE EXTENSION v1.0 — Candidate State Verification
+# Added: 2026-04-09 | EAG-2 Approved
+# Purpose: Verify candidate RPU in memory without touching evidence/ directly
+# =============================================================================
+
+import argparse as _argparse
+import json as _json
+import sys as _sys
+
+def verify_with_candidate(
+    chain_dir: Path,
+    candidate_rpu_path: Path,
+    candidate_ledger_path: Path
+) -> dict:
+    """
+    Bridge-Mode: 기존 체인 + candidate RPU를 메모리상 가상 결합하여 검증.
+    evidence/ 파일에 대한 쓰기 없음 (Zero-Trust Validation).
+
+    출력 계약:
+    {
+        "status": "PASS|FAIL",
+        "all_pass": bool,
+        "ledger_tip_match": bool,
+        "schema_valid": bool,
+        "chain_continuity": bool,
+        "checked_rpu_count": int,
+        "candidate_rpu": str,
+        "error": str | null
+    }
+    """
+    result = {
+        "status": "FAIL",
+        "all_pass": False,
+        "ledger_tip_match": False,
+        "schema_valid": False,
+        "chain_continuity": False,
+        "checked_rpu_count": 0,
+        "candidate_rpu": None,
+        "error": None
+    }
+
+    try:
+        # Step 1: candidate RPU 로드
+        candidate_rpu = load_json(candidate_rpu_path)
+        result["candidate_rpu"] = candidate_rpu.get("rpu_id", str(candidate_rpu_path))
+
+        # Step 2: candidate ledger 로드
+        candidate_ledger = load_json(candidate_ledger_path)
+
+        # Step 3: 기존 체인 전체 검증 (production chain 실측)
+        base_result = verify_production_chain(chain_dir)
+        if not base_result.get("all_pass"):
+            result["error"] = "BASE_CHAIN_VERIFICATION_FAILED"
+            return result
+
+        base_final_hash = base_result.get("final_chain_hash")
+        base_rpu_count = len(base_result.get("rpus", []))
+
+        # Step 4: candidate schema 검증
+        schema_ver = candidate_rpu.get("schema_version", "")
+        if schema_ver != PRODUCTION_SCHEMA:
+            result["error"] = f"SCHEMA_MISMATCH: {schema_ver}"
+            return result
+
+        chain_block = candidate_rpu.get("chain")
+        if not chain_block:
+            result["error"] = "CANDIDATE_MISSING_CHAIN_BLOCK"
+            return result
+
+        declared_ph = chain_block.get("payload_hash", "")
+        declared_prev = chain_block.get("prev_chain_hash", "")
+        declared_ch = chain_block.get("chain_hash", "")
+
+        if len(declared_ph) != 64 or len(declared_prev) != 64 or len(declared_ch) != 64:
+            result["error"] = "CANDIDATE_HASH_LENGTH_INVALID"
+            return result
+
+        # flat schema 흔적 검사
+        forbidden_flat_keys = {"payload_hash", "prev_chain_hash", "chain_hash",
+                               "event_type", "content"}
+        top_keys = set(candidate_rpu.keys())
+        flat_leakage = top_keys & forbidden_flat_keys
+        if flat_leakage:
+            result["error"] = f"FLAT_SCHEMA_DETECTED: {flat_leakage}"
+            return result
+
+        result["schema_valid"] = True
+
+        # Step 5: prev_chain_hash continuity 검증
+        # candidate.prev_chain_hash == 기존 체인 final hash
+        if declared_prev != base_final_hash:
+            result["error"] = (
+                f"CHAIN_CONTINUITY_BROKEN: "
+                f"candidate.prev={declared_prev[:16]}... "
+                f"base_final={base_final_hash[:16] if base_final_hash else 'None'}..."
+            )
+            return result
+
+        result["chain_continuity"] = True
+
+        # Step 6: candidate payload_hash 재계산
+        payload = candidate_rpu.get("payload")
+        if payload is None:
+            result["error"] = "CANDIDATE_MISSING_PAYLOAD"
+            return result
+
+        recomputed_ph = compute_payload_hash(payload)
+        if recomputed_ph != declared_ph:
+            result["error"] = "CANDIDATE_PAYLOAD_HASH_MISMATCH"
+            return result
+
+        # Step 7: candidate chain_hash 재계산
+        recomputed_ch = compute_chain_hash(declared_prev, recomputed_ph, is_genesis=False)
+        if recomputed_ch != declared_ch:
+            result["error"] = "CANDIDATE_CHAIN_HASH_MISMATCH"
+            return result
+
+        # Step 8: candidate ledger chain_tip 검증
+        candidate_tip = candidate_ledger.get("chain_tip")
+        if candidate_tip != declared_ch:
+            result["error"] = (
+                f"LEDGER_TIP_MISMATCH: "
+                f"ledger={candidate_tip[:16] if candidate_tip else 'None'}... "
+                f"candidate_ch={declared_ch[:16]}..."
+            )
+            return result
+
+        result["ledger_tip_match"] = True
+        result["checked_rpu_count"] = base_rpu_count + 1
+        result["all_pass"] = True
+        result["status"] = "PASS"
+
+    except Exception as e:
+        result["error"] = f"EXCEPTION: {str(e)}"
+
+    return result
+
+
+def _bridge_mode_main():
+    """Bridge-Mode CLI 진입점 (--candidate-rpu, --candidate-ledger)"""
+    parser = _argparse.ArgumentParser(description="ARSS Verifier Bridge-Mode")
+    parser.add_argument("--candidate-rpu", required=True,
+                        help="candidate RPU .tmp 파일 경로")
+    parser.add_argument("--candidate-ledger", required=True,
+                        help="candidate ledger .tmp 파일 경로")
+    parser.add_argument("--chain-dir", default=DEFAULT_CHAIN_DIR,
+                        help="production chain 디렉토리 (기본: evidence/)")
+    args = parser.parse_args()
+
+    result = verify_with_candidate(
+        chain_dir=Path(args.chain_dir),
+        candidate_rpu_path=Path(args.candidate_rpu),
+        candidate_ledger_path=Path(args.candidate_ledger)
+    )
+
+    print(_json.dumps(result, ensure_ascii=False, indent=2))
+    _sys.exit(0 if result["status"] == "PASS" else 1)
+
+
+# Bridge-Mode 진입 감지: --candidate-rpu 인자 존재 시 bridge mode 실행
+
 if __name__ == "__main__":
-    main()
+    import sys as _entry_check
+    if "--candidate-rpu" in _entry_check.argv:
+        _bridge_mode_main()
+    else:
+        main()
