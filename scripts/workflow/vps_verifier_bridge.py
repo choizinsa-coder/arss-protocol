@@ -49,7 +49,7 @@ from datetime import datetime, timezone
 # Constants
 # ─────────────────────────────────────────────
 
-DEFAULT_CHAIN_DIR = "/opt/arss/engine/arss-protocol/ARSS_HUB/04_EVIDENCE/SNAPSHOT_LOG"
+DEFAULT_CHAIN_DIR = "/opt/arss/engine/arss-protocol/evidence"
 BRIDGE_VERSION = "0.3"
 PRODUCTION_SCHEMA = "ARSS-RPU-1.0"
 

@@ -135,7 +135,7 @@ def build_rpu(req: dict, allowed_event_types: set) -> dict:
     chain_hash = compute_chain_hash(req["prev_chain_hash"], payload_hash)
 
     return {
-        "version": RPU_VERSION,
+        "schema_version": "ARSS-RPU-1.0",
         "rpu_id": generate_uuidv7(),
         "timestamp": utc_timestamp_microseconds(),
         "actor_id": req["actor_id"],
