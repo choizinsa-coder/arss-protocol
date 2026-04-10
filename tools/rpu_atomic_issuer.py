@@ -361,6 +361,29 @@ def step5_machine_pec(rpu: dict, prev_chain_hash: str,
         pec["verdict"] = "FAIL"
 
     if pec["verdict"] != "PASS":
+        try:
+            import datetime as _dt
+            _fail_dir = BASE_DIR / "logs" / "pec_failures"
+            _fail_dir.mkdir(parents=True, exist_ok=True)
+            _ts = _dt.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+            _fail_path = _fail_dir / f"PEC_FAIL_{_ts}.json"
+            _log_payload = {
+                "timestamp": _ts,
+                "reason": "MACHINE_PEC_FAIL",
+                "missing_fields": [
+                    k for k in ["dual_source_prev_hash_check", "structure_check"]
+                    if not pec.get(k, {}).get("matched", True)
+                    or not pec.get(k, {}).get("hash_lengths_ok", True)
+                    or not pec.get(k, {}).get("nested_schema_ok", True)
+                ],
+                "input_hash": __import__("hashlib").sha256(
+                    __import__("json").dumps(pec, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+                ).hexdigest()
+            }
+            with open(_fail_path, "w") as _f:
+                __import__("json").dump(_log_payload, _f, indent=2, ensure_ascii=False)
+        except Exception as _e:
+            log(f"[WARN] PEC failure log write failed: {_e}")
         stop("MACHINE_PEC_FAIL", json.dumps(pec, ensure_ascii=False))
 
     log(f"Step 5: PASS | candidate={candidate_rpu_id}")

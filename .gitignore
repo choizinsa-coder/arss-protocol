@@ -7,6 +7,7 @@ SESSION_CONTEXT_v2_6_backup.json
 SESSION_CONTEXT.json
 aiba_status_server*.py
 logs/
+!logs/pec_failures/.gitkeep
 n8n/
 venv/
 index.html.bak.*
