@@ -13,5 +13,6 @@
     "trend": "INIT"
   },
   "records": [],
-  "chain_tip": "73630f71d4f853c559e73759e2b23cc34cdf307f89146e731757b42370d22182"
+  "chain_tip": "b98ab3cb811db4974ff3bce2f111d1a20fd8d7372b4d4afc99372c614b32b2db",
+  "last_rpu": "RPU-0032"
 }
