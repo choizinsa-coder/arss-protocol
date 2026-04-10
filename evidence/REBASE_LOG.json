@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "rebase_id": "REBASE-2026-04-10-001",
+  "applied_at": "2026-04-10T22:00:00Z",
+  "previous_score_system": "Evolution Score v1",
+  "previous_score_value": 329,
+  "new_score_system": "Evolution Score v2.1",
+  "rebased_start_score": 10.0,
+  "reason": "Inflation control and trust scarcity enforcement",
+  "approved_by": "비오(Joshua)",
+  "basis": [
+    "LESSON-013",
+    "LESSON-014",
+    "Phase 3 Governance Lock complete"
+  ],
+  "note": "Historical score archived; active trust score restarted under hard-cap 100 model."
+}

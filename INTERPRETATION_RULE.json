@@ -245,8 +245,8 @@
       "note": "STOP 아님 — 정상 상태로 처리"
     }
   },
-  "schema_version": "v1.3",
-  "score_rules": {
+  "schema_version": "v2.0",
+  "score_rules_v1": {
     "authoritative": "full_rules",
     "compact_scoring_table": [
       {
@@ -553,6 +553,140 @@
         "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
         "description": "작업 완료"
       }
+    },
+    "_status": "ARCHIVED — v1 체계. v2.1 전환 후 비활성.",
+    "_archived_at": "2026-04-10"
+  },
+  "score_rules_v2_1": {
+    "_status": "ACTIVE",
+    "_activated_at": "2026-04-10",
+    "_approved_by": "비오(Joshua)",
+    "_rebase_ref": "REBASE-2026-04-10-001",
+    "score_cap": 100.0,
+    "base_delta_max": 0.5,
+    "base_delta_table": {
+      "governance_directive": 0.5,
+      "lesson_added": 0.3,
+      "task_completed": 0.2,
+      "document_approved": 0.15,
+      "rpu_issued": 0.1
+    },
+    "verification_levels": {
+      "V1": {
+        "multiplier": 1.0,
+        "requires_package": false
+      },
+      "V2": {
+        "multiplier": 1.5,
+        "requires_package": true
+      },
+      "V3": {
+        "multiplier": 2.0,
+        "requires_package": true,
+        "requires_verifier_pass": true
+      }
+    },
+    "difficulty_factor_table": [
+      {
+        "range": [
+          0.0,
+          20.0
+        ],
+        "factor": 1.0
+      },
+      {
+        "range": [
+          20.0,
+          40.0
+        ],
+        "factor": 0.7
+      },
+      {
+        "range": [
+          40.0,
+          60.0
+        ],
+        "factor": 0.5
+      },
+      {
+        "range": [
+          60.0,
+          80.0
+        ],
+        "factor": 0.3
+      },
+      {
+        "range": [
+          80.0,
+          90.0
+        ],
+        "factor": 0.15
+      },
+      {
+        "range": [
+          90.0,
+          100.0
+        ],
+        "factor": 0.05
+      }
+    ],
+    "v1_session_cap": 0.5,
+    "trust_tiers": [
+      {
+        "range": [
+          0,
+          20
+        ],
+        "tier": "T0",
+        "label": "Bootstrapped"
+      },
+      {
+        "range": [
+          20,
+          40
+        ],
+        "tier": "T1",
+        "label": "Structured"
+      },
+      {
+        "range": [
+          40,
+          60
+        ],
+        "tier": "T2",
+        "label": "Reliable"
+      },
+      {
+        "range": [
+          60,
+          80
+        ],
+        "tier": "T3",
+        "label": "Verified"
+      },
+      {
+        "range": [
+          80,
+          90
+        ],
+        "tier": "T4",
+        "label": "Highly Verified"
+      },
+      {
+        "range": [
+          90,
+          100
+        ],
+        "tier": "T5",
+        "label": "Institutional Grade"
+      }
+    ],
+    "tier_score_reward": false,
+    "new_event_type_policy": {
+      "rule": "새 event_type은 INTERPRETATION_RULE.json 등재 및 EAG 승인 완료 전 사용 금지",
+      "violation": "ERR-005 invalid_event_type → TRS FAIL"
     }
-  }
+  },
+  "updated_at": "2026-04-10",
+  "update_reason": "Evolution Score v2.1 전환 — score_rules_v1 archived, score_rules_v2_1 activated"
 }
