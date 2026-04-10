@@ -12,5 +12,6 @@
     "last_7d_delta": 0.0,
     "trend": "INIT"
   },
-  "records": []
+  "records": [],
+  "chain_tip": "73630f71d4f853c559e73759e2b23cc34cdf307f89146e731757b42370d22182"
 }

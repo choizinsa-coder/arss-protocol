@@ -685,6 +685,106 @@
     "new_event_type_policy": {
       "rule": "새 event_type은 INTERPRETATION_RULE.json 등재 및 EAG 승인 완료 전 사용 금지",
       "violation": "ERR-005 invalid_event_type → TRS FAIL"
+    },
+    "event_types": {
+      "_version": "1.0",
+      "_policy": {
+        "unregistered_event": "REJECT",
+        "require_explicit_registration": true,
+        "reference": "DIS-024",
+        "retroactive_registration_note": "13종은 scoring_ledger 실사용 기준 사후 등재. 성격: retroactive registration for canonicalization — 정합성 회복 작업. 비오(Joshua) EAG-1 승인 2026-04-07."
+      },
+      "architecture_adopted": {
+        "score": 5,
+        "category": "architecture",
+        "requires_eag": true,
+        "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
+        "description": "아키텍처 채택 결정"
+      },
+      "decision_recorded": {
+        "score": 3,
+        "category": "governance",
+        "requires_eag": false,
+        "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
+        "description": "의사결정 기록"
+      },
+      "document_approved": {
+        "score": 4,
+        "category": "document",
+        "requires_eag": true,
+        "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
+        "description": "문서 승인"
+      },
+      "document_locked": {
+        "score": 4,
+        "category": "document",
+        "requires_eag": true,
+        "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
+        "description": "문서 잠금"
+      },
+      "external_proof_published": {
+        "score": 6,
+        "category": "external",
+        "requires_eag": true,
+        "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
+        "description": "외부 검증 증거 공개"
+      },
+      "governance_directive": {
+        "score": 5,
+        "category": "governance",
+        "requires_eag": true,
+        "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
+        "description": "거버넌스 지시"
+      },
+      "governance_resolved": {
+        "score": 5,
+        "category": "governance",
+        "requires_eag": true,
+        "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
+        "description": "거버넌스 이슈 해결"
+      },
+      "lesson_added": {
+        "score": 2,
+        "category": "learning",
+        "requires_eag": false,
+        "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
+        "description": "lesson 추가"
+      },
+      "lesson_applied": {
+        "score": 3,
+        "category": "learning",
+        "requires_eag": false,
+        "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
+        "description": "lesson 적용"
+      },
+      "lesson_confirmed": {
+        "score": 4,
+        "category": "learning",
+        "requires_eag": true,
+        "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
+        "description": "lesson 검증 완료"
+      },
+      "phase_completed": {
+        "score": 6,
+        "category": "milestone",
+        "requires_eag": true,
+        "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
+        "description": "Phase 완료"
+      },
+      "rpu_created": {
+        "score": 0,
+        "category": "system",
+        "requires_eag": false,
+        "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
+        "description": "RPU 생성 (점수 없음 — DIS-023)"
+      },
+      "task_completed": {
+        "score": 2,
+        "category": "execution",
+        "requires_eag": false,
+        "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
+        "description": "작업 완료"
+      }
     }
   },
   "updated_at": "2026-04-10",
