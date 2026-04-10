@@ -1,0 +1,17 @@
+{
+  "issued_at": "2026-04-09T12:45:57Z",
+  "candidate_rpu": "RPU-0032",
+  "push_failed": false,
+  "verifier_result": {
+    "status": "PASS",
+    "all_pass": true,
+    "ledger_tip_match": true,
+    "schema_valid": true,
+    "chain_continuity": true,
+    "checked_rpu_count": 17,
+    "candidate_rpu": "019d7247-1d56-742f-a278-ac2c92445ef8",
+    "error": null
+  },
+  "commit_hash": "0b51d17",
+  "snap_dir": "/opt/arss/engine/arss-protocol/evidence/.txn/current/txn_20260409T124556Z"
+}
