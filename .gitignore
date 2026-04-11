@@ -23,3 +23,5 @@ evidence/*.bak*
 evidence/*.bak_*
 evidence/scoring_ledger_BACKUP_*.json
 evidence/scoring_ledger_legacy_*.json
+aiba_status_server_v05_backup.py
+aiba_status_server_v0_7_backup.py
