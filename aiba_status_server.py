@@ -110,6 +110,25 @@ def health():
     })
 
 
+
+
+
+@app.route("/v1/system/time", methods=["GET"])
+def get_system_time():
+    """인증 없음 — KST 현재 시각 반환 (UTS v1.0-Rev.A)"""
+    from datetime import datetime, timezone, timedelta
+    KST = timezone(timedelta(hours=9))
+    now_kst = datetime.now(KST)
+    now_utc = datetime.now(timezone.utc)
+    return jsonify({
+        "current_kst": now_kst.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+        "current_utc": now_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "timezone": "Asia/Seoul",
+        "utc_offset": "+09:00",
+        "unix_timestamp": int(now_utc.timestamp()),
+        "source": "server_clock"
+    })
+
 @app.route('/status', methods=['GET'])
 @require_auth()
 def get_status():
