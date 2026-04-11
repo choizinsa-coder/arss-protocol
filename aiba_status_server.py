@@ -30,6 +30,7 @@ SESSION_CONTEXT_PATH = os.path.join(BASE_DIR, 'SESSION_CONTEXT.json')
 SYNC_METADATA_PATH   = os.path.join(BASE_DIR, 'sync_metadata.json')
 INTERPRETATION_RULE_PATH = os.path.join(BASE_DIR, 'INTERPRETATION_RULE.json')
 ISSUER_PATH          = os.path.join(BASE_DIR, 'tools', 'rpu_atomic_issuer.py')
+TOKEN_PATH           = os.path.join(BASE_DIR, ".approval_token")
 VERIFIER_PATH        = os.path.join(BASE_DIR, 'vps_verifier_bridge.py')
 EVIDENCE_DIR         = os.path.join(BASE_DIR, 'evidence')
 SCORING_LEDGER_PATH  = os.path.join(EVIDENCE_DIR, 'scoring_ledger.json')
@@ -385,10 +386,17 @@ def rpu_issue():
         _json.dump(event_payload, tmp_event, ensure_ascii=False)
         tmp_event.flush()
         tmp_event.close()
-        approval_token_val = os.environ.get('AIBA_TOKEN_CADDY', '')
+        # session_count: SESSION_CONTEXT.json에서 로드
+        try:
+            with open(SESSION_CONTEXT_PATH, 'r', encoding='utf-8') as _sc:
+                _sc_data = json.load(_sc)
+            _session_count = int(_sc_data.get('session_count', 0))
+        except Exception as e:
+            return jsonify({"status": "error", "reason": f"SESSION_COUNT_LOAD_FAILED: {e}"}), 500
         cmd = ['python3', ISSUER_PATH,
                '--event-file',     tmp_event.name,
-               '--approval-token', approval_token_val,
+               '--approval-token', TOKEN_PATH,
+               '--session-count',  str(_session_count),
                '--actor-id',       actor_id]
         if dry_run:
             cmd += ['--dry-run']

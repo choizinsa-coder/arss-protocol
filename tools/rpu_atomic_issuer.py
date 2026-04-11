@@ -129,12 +129,19 @@ def step0_precondition(dry_run: bool):
 # Step 1 — EAG Approval Token 검증
 # =============================================================================
 
-def step1_eag(approval_token: str):
-    log("Step 1: EAG Approval Token 검증")
-    env_token = os.environ.get("AIBA_TOKEN_CADDY", "")
-    if not approval_token or approval_token != env_token:
-        stop("EAG_TOKEN_INVALID", "approval token 불일치")
-    log("Step 1: PASS")
+def step1_eag(event_file_path: str, approval_token_path: str, session_count: int):
+    log("Step 1: EAG Approval Token 검증 (v2.0)")
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).parent))
+    from arss_gatekeeper import validate as gk_validate
+    result = gk_validate(
+        event_file_path=event_file_path,
+        approval_token_path=approval_token_path,
+        session_count=session_count
+    )
+    if not result.approved:
+        stop("EAG_TOKEN_INVALID", f"gatekeeper REJECT: {result.reason} | receipt: {result.receipt_path}")
+    log(f"Step 1: PASS | receipt: {result.receipt_path}")
 
 
 # =============================================================================
@@ -713,7 +720,8 @@ def rollback(snap_dir: Path, candidate_rpu_id: str,
 def main():
     parser = argparse.ArgumentParser(description=ISSUER_VERSION)
     parser.add_argument("--event-file",      required=True)
-    parser.add_argument("--approval-token",  required=True)
+    parser.add_argument("--approval-token", required=True, help="approval_token JSON 파일 경로")
+    parser.add_argument("--session-count", type=int, required=True, help="SESSION_CONTEXT.session_count")
     parser.add_argument("--actor-id",        default="caddy")
     parser.add_argument("--dry-run",         action="store_true")
     args = parser.parse_args()
@@ -735,7 +743,7 @@ def main():
 
     try:
         step0_precondition(dry_run)
-        step1_eag(args.approval_token)
+        step1_eag(args.event_file, args.approval_token, args.session_count)
         prev_hash = step2_dual_source()
         rpu       = step3_generator(args.actor_id, content,
                                      prev_hash, args.approval_token, dry_run,
