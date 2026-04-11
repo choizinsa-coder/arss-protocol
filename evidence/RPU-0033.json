@@ -1,0 +1,20 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "019d7ae7-5eaa-7ff0-a35b-eca3b16933ce",
+  "timestamp": "2026-04-11T04:57:56.650610Z",
+  "actor_id": "caddy",
+  "payload": {
+    "event_type": "task_completed",
+    "content": "WF-05 RPU Issue test"
+  },
+  "chain": {
+    "payload_hash": "3b1a77cbf73325add9bdd6f0a0e6f84f0d2690d9641cee2aeb46b6d0b1a0a696",
+    "prev_chain_hash": "b98ab3cb811db4974ff3bce2f111d1a20fd8d7372b4d4afc99372c614b32b2db",
+    "chain_hash": "f3b29fda4544c16ff61af3135a5c60aa03135014060d57e7ac702d37d0b9a102"
+  },
+  "governance_context": {
+    "policy_id": "ARSS_HUB_PROTOCOL_v1.2",
+    "authority_root": "Beo",
+    "jurisdiction": "AIBA_GLOBAL"
+  }
+}
