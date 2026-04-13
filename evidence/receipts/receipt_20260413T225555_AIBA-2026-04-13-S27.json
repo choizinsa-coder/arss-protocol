@@ -1,9 +1,0 @@
-{
-  "timestamp_kst": "2026-04-13T22:55:55.592343+09:00",
-  "session_id": "AIBA-2026-04-13-S27",
-  "approved": true,
-  "reason": "EAG_APPROVED",
-  "gatekeeper_version": "v3.0",
-  "token_hash": "sha256:560ad69e453c51636a523b4fe1a7ad553e55c9e69eb7fb12fbad9d71bf5c03c8",
-  "approval_hash": "sha256:71e12cc000d21d2eeb60f8ab00e30338deedf049a8d871c59eafd919d8a7927f"
-}

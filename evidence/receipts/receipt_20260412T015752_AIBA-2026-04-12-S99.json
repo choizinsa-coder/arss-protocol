@@ -1,9 +1,0 @@
-{
-  "timestamp_kst": "2026-04-12T01:57:52.326029+09:00",
-  "session_id": "AIBA-2026-04-12-S99",
-  "approved": false,
-  "reason": "APPROVAL_TOKEN_SESSION_ID_MISMATCH",
-  "gatekeeper_version": "v3.0",
-  "expected": "AIBA-2026-04-12-S99",
-  "actual": "AIBA-2026-04-12-S20"
-}
