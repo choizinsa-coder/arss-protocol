@@ -86,8 +86,8 @@
       "ref": "DIS-041 프로젝트 파일 구조 재편 확정"
     }
   ],
-  "chain_tip": "f3b29fda4544c16ff61af3135a5c60aa03135014060d57e7ac702d37d0b9a102",
-  "last_rpu": "RPU-0033",
-  "coverage_until_rpu": "RPU-0033",
+  "chain_tip": "f0db31fffbbd90ab700b49a15f67f17339f9f216293994a90187026f83b290e6",
+  "last_rpu": "RPU-0034",
+  "coverage_until_rpu": "RPU-0034",
   "last_updated": "2026-04-13T19:32:38+09:00"
 }

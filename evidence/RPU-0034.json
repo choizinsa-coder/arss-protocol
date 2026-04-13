@@ -1,0 +1,20 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "019d8730-cace-7fb1-b0db-fdc7ea9fba54",
+  "timestamp": "2026-04-13T14:13:35.054133Z",
+  "actor_id": "caddy",
+  "payload": {
+    "event_type": "governance_directive",
+    "content": "WF-05 reactivation smoke test"
+  },
+  "chain": {
+    "payload_hash": "af5a92bd6902979b78bdbdd4cb61753e4cb2d7fe3ed049b16be13f79aea9e0b0",
+    "prev_chain_hash": "f3b29fda4544c16ff61af3135a5c60aa03135014060d57e7ac702d37d0b9a102",
+    "chain_hash": "f0db31fffbbd90ab700b49a15f67f17339f9f216293994a90187026f83b290e6"
+  },
+  "governance_context": {
+    "policy_id": "ARSS_HUB_PROTOCOL_v1.2",
+    "authority_root": "Beo",
+    "jurisdiction": "AIBA_GLOBAL"
+  }
+}
