@@ -746,7 +746,7 @@ def main():
         step1_eag(args.event_file, args.approval_token, args.session_count)
         prev_hash = step2_dual_source()
         rpu       = step3_generator(args.actor_id, content,
-                                     prev_hash, args.approval_token, dry_run,
+                                     prev_hash, os.environ.get("AIBA_TOKEN_CADDY", ""), dry_run,
                                      event_type=event.get("event_type", "governance_event"))
         step4_schema_gate(rpu, prev_hash, dry_run)
         pec = step5_machine_pec(rpu, prev_hash, args.event_file, dry_run)
