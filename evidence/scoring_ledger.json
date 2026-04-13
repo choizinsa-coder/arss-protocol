@@ -7,13 +7,87 @@
     "rebased_start_score": 10.0,
     "rebase_ref": "REBASE-2026-04-10-001"
   },
-  "current_score": 10.0,
+  "current_score": 15.15,
   "score_velocity": {
     "last_7d_delta": 0.0,
     "trend": "INIT"
   },
-  "records": [],
+  "records": [
+    {
+      "session_date": "2026-04-12",
+      "event_type": "governance_directive",
+      "delta": 0.75,
+      "score_after": 10.75,
+      "verification_level": "V2",
+      "ref": "DIS-037 stable_days 계산 규칙 강제화"
+    },
+    {
+      "session_date": "2026-04-12",
+      "event_type": "governance_directive",
+      "delta": 0.75,
+      "score_after": 11.5,
+      "verification_level": "V2",
+      "ref": "DIS-038 Phase 2-A->2-B 전환 선언"
+    },
+    {
+      "session_date": "2026-04-12",
+      "event_type": "governance_directive",
+      "delta": 0.75,
+      "score_after": 12.25,
+      "verification_level": "V2",
+      "ref": "/rpu/issue EAG 강제화 설계 의뢰"
+    },
+    {
+      "session_date": "2026-04-12",
+      "event_type": "task_completed",
+      "delta": 0.2,
+      "score_after": 12.45,
+      "verification_level": "V1",
+      "ref": "EAG 강제화 v3.0 배포 완료"
+    },
+    {
+      "session_date": "2026-04-12",
+      "event_type": "lesson_added",
+      "delta": 0.3,
+      "score_after": 12.75,
+      "verification_level": "V1",
+      "ref": "LESSON-015 IMMUTABLE 확정"
+    },
+    {
+      "session_date": "2026-04-12",
+      "event_type": "governance_directive",
+      "delta": 0.75,
+      "score_after": 13.5,
+      "verification_level": "V2",
+      "ref": "WF-05 재활성화 설계 의뢰 확정"
+    },
+    {
+      "session_date": "2026-04-13",
+      "event_type": "governance_directive",
+      "delta": 0.75,
+      "score_after": 14.25,
+      "verification_level": "V2",
+      "ref": "DIS-040 AIBA Knowledge Architecture v1.1"
+    },
+    {
+      "session_date": "2026-04-13",
+      "event_type": "document_approved",
+      "delta": 0.15,
+      "score_after": 14.4,
+      "verification_level": "V1",
+      "ref": "Core 3문서 생성 완료"
+    },
+    {
+      "session_date": "2026-04-13",
+      "event_type": "governance_directive",
+      "delta": 0.75,
+      "score_after": 15.15,
+      "verification_level": "V2",
+      "ref": "DIS-041 프로젝트 파일 구조 재편 확정"
+    }
+  ],
   "chain_tip": "f3b29fda4544c16ff61af3135a5c60aa03135014060d57e7ac702d37d0b9a102",
   "last_rpu": "RPU-0033",
-  "coverage_until_rpu": "RPU-0033"
+  "coverage_until_rpu": "RPU-0033",
+  "last_updated": "2026-04-13T19:32:38+09:00"
 }
