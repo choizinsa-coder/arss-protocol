@@ -1,0 +1,9 @@
+{
+  "timestamp_kst": "2026-04-13T22:46:03.191129+09:00",
+  "session_id": "AIBA-2026-04-13-S27",
+  "approved": false,
+  "reason": "APPROVAL_TOKEN_EVENT_HASH_MISMATCH",
+  "gatekeeper_version": "v3.0",
+  "expected": "sha256:2e55e0f4c1164fe726dcf822cfbd0912eb5605deb1a77a87bf11c9636e98f531",
+  "actual": "sha256:1357d255ef7b8e27aa8ae0b6503080268892bd749c99c0a813083a3181150eba"
+}
