@@ -287,6 +287,78 @@ def rpu_issue():
         'reason': None,
     }
 
+    # ── Revalidation Contract R1~R4 ──────────────────────────────────
+    approval_id = data.get('approval_id') if 'data' in dir() else None
+    _data = request.get_json(silent=True) or {}
+    approval_id = _data.get('approval_id')
+
+    if approval_id:
+        import glob as _glob
+
+        # R1: 존재 증명 — approval_id → eag_approvals/ record 존재 확인
+        approval_files = _glob.glob(
+            os.path.join(BASE_DIR, 'evidence', 'eag_approvals', '*.json')
+        )
+        approval_record = None
+        for af in approval_files:
+            try:
+                with open(af) as f:
+                    rec = json.load(f)
+                    if rec.get('approval_id') == approval_id:
+                        approval_record = rec
+                        break
+            except Exception:
+                pass
+
+        if not approval_record:
+            pec_log['failed_at_step'] = 'R1_EXISTENCE'
+            pec_log['reason'] = f'approval_id {approval_id} not found in eag_approvals/'
+            _save_pec_log(pec_log)
+            return jsonify({'status': 'FAILED_CLOSED', 'stage': 'R1_EXISTENCE',
+                            'reason': pec_log['reason']}), 403
+
+        # R2: 결속 증명 — approval record ↔ .approval_token hash binding
+        token_path = os.path.join(BASE_DIR, TOKEN_PATH)
+        try:
+            with open(token_path) as f:
+                token_data = json.load(f)
+            if token_data.get('approval_hash') != approval_record.get('approval_hash'):
+                raise ValueError('approval_hash mismatch')
+        except Exception as e:
+            pec_log['failed_at_step'] = 'R2_BINDING'
+            pec_log['reason'] = str(e)
+            _save_pec_log(pec_log)
+            return jsonify({'status': 'FAILED_CLOSED', 'stage': 'R2_BINDING',
+                            'reason': pec_log['reason']}), 403
+
+        # R3: 범위 증명 — 요청 event_type → approval source_ref 범위 확인
+        req_event_type = _data.get('event_type', '')
+        approved_source_ref = approval_record.get('source_ref', '')
+        # source_ref 미존재 시 패스 (하위 호환)
+        if approved_source_ref and req_event_type not in approved_source_ref:
+            pec_log['failed_at_step'] = 'R3_SCOPE'
+            pec_log['reason'] = f'event_type {req_event_type} out of approval scope {approved_source_ref}'
+            _save_pec_log(pec_log)
+            return jsonify({'status': 'FAILED_CLOSED', 'stage': 'R3_SCOPE',
+                            'reason': pec_log['reason']}), 403
+
+        # R4: 무결성 증명 — 요청 payload event_hash 확인
+        import hashlib as _hashlib
+        payload_str = json.dumps({
+            'event_type': _data.get('event_type', ''),
+            'content': _data.get('content', ''),
+            'actor_id': _data.get('actor_id', ''),
+        }, sort_keys=True, ensure_ascii=False)
+        payload_hash = 'sha256:' + _hashlib.sha256(payload_str.encode()).hexdigest()
+        if token_data.get('event_hash') and payload_hash != token_data.get('event_hash'):
+            pec_log['failed_at_step'] = 'R4_INTEGRITY'
+            pec_log['reason'] = f'payload hash {payload_hash} != token event_hash'
+            _save_pec_log(pec_log)
+            return jsonify({'status': 'FAILED_CLOSED', 'stage': 'R4_INTEGRITY',
+                            'reason': pec_log['reason']}), 403
+
+        pec_log['revalidation'] = 'R1~R4 ALL PASS'
+
     # ── Step 1: 입력 필드 완결성 검사 ────────────────────────────────────────
     try:
         body = request.get_json(force=True)

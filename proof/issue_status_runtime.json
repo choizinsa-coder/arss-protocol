@@ -1,6 +1,6 @@
 {
-  "issued_at": "2026-04-11T04:57:57Z",
-  "candidate_rpu": "RPU-0033",
+  "issued_at": "2026-04-11T05:01:59Z",
+  "candidate_rpu": "RPU-0034",
   "push_failed": false,
   "verifier_result": {
     "status": "PASS",
@@ -8,10 +8,10 @@
     "ledger_tip_match": true,
     "schema_valid": true,
     "chain_continuity": true,
-    "checked_rpu_count": 18,
-    "candidate_rpu": "019d7ae7-5eaa-7ff0-a35b-eca3b16933ce",
+    "checked_rpu_count": 19,
+    "candidate_rpu": "019d7aeb-11b4-7593-82ec-259d16beca6e",
     "error": null
   },
-  "commit_hash": "569225f",
-  "snap_dir": "/opt/arss/engine/arss-protocol/evidence/.txn/current/txn_20260411T045756Z"
+  "commit_hash": "7f122a1",
+  "snap_dir": "/opt/arss/engine/arss-protocol/evidence/.txn/current/txn_20260411T050159Z"
 }
