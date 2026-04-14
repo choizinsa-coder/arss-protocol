@@ -26,3 +26,6 @@ evidence/scoring_ledger_legacy_*.json
 aiba_status_server_v05_backup.py
 aiba_status_server_v0_7_backup.py
 evidence/receipts/
+event_file.json
+event_file_r4.json
+aiba_status_server_s29_backup.py

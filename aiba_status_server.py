@@ -313,7 +313,7 @@ def rpu_issue():
         if not approval_record:
             pec_log['failed_at_step'] = 'R1_EXISTENCE'
             pec_log['reason'] = f'approval_id {approval_id} not found in eag_approvals/'
-            _save_pec_log(pec_log)
+            _save_pec_failure(pec_log)
             return jsonify({'status': 'FAILED_CLOSED', 'stage': 'R1_EXISTENCE',
                             'reason': pec_log['reason']}), 403
 
@@ -327,7 +327,7 @@ def rpu_issue():
         except Exception as e:
             pec_log['failed_at_step'] = 'R2_BINDING'
             pec_log['reason'] = str(e)
-            _save_pec_log(pec_log)
+            _save_pec_failure(pec_log)
             return jsonify({'status': 'FAILED_CLOSED', 'stage': 'R2_BINDING',
                             'reason': pec_log['reason']}), 403
 
@@ -338,7 +338,7 @@ def rpu_issue():
         if approved_source_ref and req_event_type not in approved_source_ref:
             pec_log['failed_at_step'] = 'R3_SCOPE'
             pec_log['reason'] = f'event_type {req_event_type} out of approval scope {approved_source_ref}'
-            _save_pec_log(pec_log)
+            _save_pec_failure(pec_log)
             return jsonify({'status': 'FAILED_CLOSED', 'stage': 'R3_SCOPE',
                             'reason': pec_log['reason']}), 403
 
@@ -353,7 +353,7 @@ def rpu_issue():
         if token_data.get('event_hash') and payload_hash != token_data.get('event_hash'):
             pec_log['failed_at_step'] = 'R4_INTEGRITY'
             pec_log['reason'] = f'payload hash {payload_hash} != token event_hash'
-            _save_pec_log(pec_log)
+            _save_pec_failure(pec_log)
             return jsonify({'status': 'FAILED_CLOSED', 'stage': 'R4_INTEGRITY',
                             'reason': pec_log['reason']}), 403
 

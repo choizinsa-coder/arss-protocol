@@ -1,5 +1,5 @@
 {
-  "issued_at": "2026-04-11T05:01:59Z",
+  "issued_at": "2026-04-13T14:13:35Z",
   "candidate_rpu": "RPU-0034",
   "push_failed": false,
   "verifier_result": {
@@ -9,9 +9,9 @@
     "schema_valid": true,
     "chain_continuity": true,
     "checked_rpu_count": 19,
-    "candidate_rpu": "019d7aeb-11b4-7593-82ec-259d16beca6e",
+    "candidate_rpu": "019d8730-cace-7fb1-b0db-fdc7ea9fba54",
     "error": null
   },
-  "commit_hash": "7f122a1",
-  "snap_dir": "/opt/arss/engine/arss-protocol/evidence/.txn/current/txn_20260411T050159Z"
+  "commit_hash": "e43e4bc",
+  "snap_dir": "/opt/arss/engine/arss-protocol/evidence/.txn/current/txn_20260413T141335Z"
 }
