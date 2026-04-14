@@ -7,7 +7,7 @@
     "rebased_start_score": 10.0,
     "rebase_ref": "REBASE-2026-04-10-001"
   },
-  "current_score": 15.15,
+  "current_score": 20.56,
   "score_velocity": {
     "last_7d_delta": 0.0,
     "trend": "INIT"
@@ -84,10 +84,132 @@
       "score_after": 15.15,
       "verification_level": "V2",
       "ref": "DIS-041 프로젝트 파일 구조 재편 확정"
+    },
+    {
+      "session_date": "2026-04-13",
+      "event_type": "task_completed",
+      "verification_level": "V1",
+      "ref": "WF-03 복구 완료 — SESSION_CONTEXT.json VPS SCP 배포",
+      "delta": 0.2,
+      "score_before": 15.15,
+      "score_after": 15.35,
+      "settled_at": "2026-04-14T20:34:47.407114+09:00"
+    },
+    {
+      "session_date": "2026-04-13",
+      "event_type": "task_completed",
+      "verification_level": "V2",
+      "ref": "WF-05 R1~R4 Revalidation Contract 구현 + RPU-0034 발행",
+      "delta": 0.3,
+      "score_before": 15.35,
+      "score_after": 15.65,
+      "settled_at": "2026-04-14T20:34:47.407114+09:00"
+    },
+    {
+      "session_date": "2026-04-13",
+      "event_type": "governance_directive",
+      "verification_level": "V1",
+      "ref": "receipts/ gitignore 처리 — worktree dirty 영구 해소",
+      "delta": 0.5,
+      "score_before": 15.65,
+      "score_after": 16.15,
+      "settled_at": "2026-04-14T20:34:47.407114+09:00"
+    },
+    {
+      "session_date": "2026-04-14",
+      "event_type": "task_completed",
+      "verification_level": "V1",
+      "ref": "WF-03 복구 완료 — Apr 14 자동 실행 확인",
+      "delta": 0.2,
+      "score_before": 16.15,
+      "score_after": 16.35,
+      "settled_at": "2026-04-14T20:34:47.407114+09:00"
+    },
+    {
+      "session_date": "2026-04-14",
+      "event_type": "governance_directive",
+      "verification_level": "V1",
+      "ref": "Project Instructions 재구성 — Core 3문서 고정 + SESSION_CONTEXT.json 단독 파일",
+      "delta": 0.5,
+      "score_before": 16.35,
+      "score_after": 16.85,
+      "settled_at": "2026-04-14T20:34:47.407114+09:00"
+    },
+    {
+      "session_date": "2026-04-14",
+      "event_type": "governance_directive",
+      "verification_level": "V1",
+      "ref": "세션 종료 자동화 정책 확정 — SESSION_CONTEXT_S{n}.json + Report S{n}.md 동시 생성",
+      "delta": 0.5,
+      "score_before": 16.85,
+      "score_after": 17.35,
+      "settled_at": "2026-04-14T20:34:47.407114+09:00"
+    },
+    {
+      "session_date": "2026-04-14",
+      "event_type": "governance_directive",
+      "verification_level": "V1",
+      "ref": "WF-05 403 원인 확정 — R4 payload hash 불일치",
+      "delta": 0.5,
+      "score_before": 17.35,
+      "score_after": 17.85,
+      "settled_at": "2026-04-14T20:34:47.407114+09:00"
+    },
+    {
+      "session_date": "2026-04-14",
+      "event_type": "governance_directive",
+      "verification_level": "V1",
+      "ref": "Claude 서브에이전트 통합 설계 의제 등재",
+      "delta": 0.5,
+      "score_before": 17.85,
+      "score_after": 18.35,
+      "settled_at": "2026-04-14T20:34:47.407114+09:00"
+    },
+    {
+      "session_date": "2026-04-14",
+      "event_type": "governance_directive",
+      "verification_level": "V2",
+      "ref": "aiba-n8n.service TZ=Asia/Seoul 적용 완료",
+      "delta": 0.75,
+      "score_before": 18.35,
+      "score_after": 19.1,
+      "settled_at": "2026-04-14T20:34:47.407114+09:00"
+    },
+    {
+      "session_date": "2026-04-14",
+      "event_type": "governance_directive",
+      "verification_level": "V2",
+      "ref": "WF-05 재활성화 EAG-1 완료 — 도미 설계 PASS (payload-first approval locking)",
+      "delta": 0.75,
+      "score_before": 19.1,
+      "score_after": 19.85,
+      "settled_at": "2026-04-14T20:34:47.407114+09:00"
+    },
+    {
+      "session_date": "2026-04-14",
+      "event_type": "governance_directive",
+      "verification_level": "V1",
+      "ref": "DIS-043 — hash 계산 불일치 확정 등재",
+      "delta": 0.5,
+      "score_before": 19.85,
+      "score_after": 20.35,
+      "settled_at": "2026-04-14T20:34:47.407114+09:00"
+    },
+    {
+      "session_date": "2026-04-14",
+      "event_type": "lesson_added",
+      "verification_level": "V1",
+      "ref": "LESSON-016 IMMUTABLE",
+      "delta": 0.21,
+      "score_before": 20.35,
+      "score_after": 20.56,
+      "settled_at": "2026-04-14T20:34:47.407114+09:00"
     }
   ],
   "chain_tip": "f0db31fffbbd90ab700b49a15f67f17339f9f216293994a90187026f83b290e6",
   "last_rpu": "RPU-0034",
   "coverage_until_rpu": "RPU-0034",
-  "last_updated": "2026-04-13T19:32:38+09:00"
+  "last_updated": "2026-04-13T19:32:38+09:00",
+  "last_settled_session": "S29",
+  "last_settled_at": "2026-04-14T20:34:47.407114+09:00"
 }
