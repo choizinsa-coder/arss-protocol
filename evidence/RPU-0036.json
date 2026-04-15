@@ -1,0 +1,20 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "019d9118-a2d0-7815-964d-ac67ec1322fe",
+  "timestamp": "2026-04-15T12:23:24.112695Z",
+  "actor_id": "caddy",
+  "payload": {
+    "event_type": "task_completed",
+    "content": "WF-05 n8n 노드 재구성 완료 — Approval Pool 연동 live test 성공"
+  },
+  "chain": {
+    "payload_hash": "3ccc2c882985c99e96d5f3a3317fd6ab0e3e1f123709f28721f48f259ca18f5d",
+    "prev_chain_hash": "a4d4037f985fd510e41bbb798cdd4ca097bb5fe59a4e7dd63eb8fe5e68a7d476",
+    "chain_hash": "413f2a23ac4e03d2f901ff8b3b72727f38aae9d92c443d4f3c2b38ae20894cb8"
+  },
+  "governance_context": {
+    "policy_id": "ARSS_HUB_PROTOCOL_v1.2",
+    "authority_root": "Beo",
+    "jurisdiction": "AIBA_GLOBAL"
+  }
+}
