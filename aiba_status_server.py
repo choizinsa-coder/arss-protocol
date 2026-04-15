@@ -12,6 +12,7 @@ Changes from v0.8:
 """
 
 import os
+import glob
 import json
 import time
 import hmac
@@ -610,6 +611,84 @@ def rpu_issue():
         'pec_captured_at':   pec_log['pec']['captured_at'],
         'dry_run':           dry_run,
     }), 200
+
+
+# === APPROVAL POOL ENDPOINTS ===
+
+@app.route('/approval-pool/ready', methods=['GET'])
+
+@app.route('/approval-pool/ready', methods=['GET'])
+def approval_pool_ready():
+    auth = request.headers.get('Authorization', '')
+    if auth != f'Bearer {TOKENS["caddy"]}':
+        return jsonify({"error": "unauthorized"}), 403
+
+    pool_dir = os.path.join(BASE_DIR, 'evidence', 'eag_approvals')
+    files = sorted(glob.glob(os.path.join(pool_dir, '*.json')))
+
+    for f in files:
+        try:
+            with open(f, 'r', encoding='utf-8') as fp:
+                d = json.load(fp)
+            if d.get('status') == 'READY':
+                return jsonify({
+                    "status": "READY",
+                    "approval_id": d.get('approval_id'),
+                    "event_hash": d.get('event_hash'),
+                    "payload": {
+                        "actor_id": d.get('actor_id'),
+                        "content": d.get('content'),
+                        "event_type": d.get('event_type'),
+                        "session_id": d.get('session_id')
+                    }
+                }), 200
+        except Exception:
+            continue
+
+    return jsonify({"status": "POOL_EMPTY"}), 200
+
+
+@app.route('/approval-pool/consume', methods=['POST'])
+def approval_pool_consume():
+    auth = request.headers.get('Authorization', '')
+    if auth != f'Bearer {TOKENS["caddy"]}':
+        return jsonify({"error": "unauthorized"}), 403
+
+    data = request.get_json(force=True)
+    approval_id = data.get('approval_id')
+    if not approval_id:
+        return jsonify({"error": "approval_id required"}), 400
+
+    pool_dir = os.path.join(BASE_DIR, 'evidence', 'eag_approvals')
+    files = glob.glob(os.path.join(pool_dir, '*.json'))
+
+    for f in files:
+        try:
+            with open(f, 'r', encoding='utf-8') as fp:
+                d = json.load(fp)
+            if d.get('approval_id') != approval_id:
+                continue
+            if d.get('status') != 'READY':
+                return jsonify({
+                    "error": "not consumable",
+                    "current_status": d.get('status')
+                }), 409
+            from datetime import datetime
+            import pytz
+            kst = pytz.timezone('Asia/Seoul')
+            d['status'] = 'CONSUMED'
+            d['consumed_at_kst'] = datetime.now(kst).isoformat()
+            with open(f, 'w', encoding='utf-8') as fp:
+                json.dump(d, fp, indent=2, ensure_ascii=False)
+            return jsonify({
+                "status": "CONSUMED",
+                "approval_id": approval_id,
+                "consumed_at_kst": d['consumed_at_kst']
+            }), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    return jsonify({"error": "approval_id not found"}), 404
 
 
 # ── 실행 ──────────────────────────────────────────────────────────────────────
