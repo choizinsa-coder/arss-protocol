@@ -1,0 +1,16 @@
+{
+  "type": "eag_approval",
+  "stage": "EAG-2",
+  "approval_id": "eag-b2bf0192-d1f8-46e7-bc5b-adc8e1020b84",
+  "approved_by": "Beo",
+  "approved_at_kst": "2026-04-15T18:48:02.492931+09:00",
+  "session_id": "AIBA-2026-04-15-S33",
+  "actor_id": "caddy",
+  "content": "WF-05 재구축 — Approval Pool 구조 전환 완료",
+  "event_type": "task_completed",
+  "event_hash": "sha256:feb2080d4ad054a4edeaef188f1cef4c0625e76c23ce13ed22766a4c0fec2e7f",
+  "issuer_path": "/opt/arss/engine/arss-protocol/tools/rpu_atomic_issuer.py",
+  "approval_hash": "sha256:3bb8f0ac8fd2a2572f2c6ec1640a3ae5a30d4bda355cb5ab2c7bfc780fd285de",
+  "status": "CONSUMED",
+  "consumed_at_kst": "2026-04-15T19:37:52.744536+09:00"
+}

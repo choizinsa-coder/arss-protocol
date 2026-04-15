@@ -319,7 +319,7 @@ def rpu_issue():
 
     # ── Revalidation Contract R1~R4 ──────────────────────────────────
     approval_id = data.get('approval_id') if 'data' in dir() else None
-    _data = request.get_json(silent=True) or {}
+    _data = request.get_json(force=True, silent=True) or {}
     approval_id = _data.get('approval_id')
 
     if approval_id:
@@ -391,7 +391,9 @@ def rpu_issue():
 
     # ── Step 1: 입력 필드 완결성 검사 ────────────────────────────────────────
     try:
-        body = request.get_json(force=True)
+        body = _data
+        if body is None:
+            raise ValueError('JSON body 없음')
         if body is None:
             raise ValueError('JSON body 없음')
     except Exception as e:

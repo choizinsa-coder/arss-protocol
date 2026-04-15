@@ -34,3 +34,4 @@ tools/*_backup_s31.py
 tools/*_before_fix_s31.py
 tools/patch_*.py
 trs_settle_*.py
+aiba_status_server_backup_s*.py
