@@ -1,0 +1,15 @@
+{
+  "type": "eag_approval",
+  "stage": "EAG-2",
+  "approval_id": "eag-9f7bff30-d008-4c04-89e1-6fea88f731e3",
+  "approved_by": "Beo",
+  "approved_at_kst": "2026-04-15T21:20:58.823093+09:00",
+  "session_id": "AIBA-2026-04-15-S33",
+  "actor_id": "caddy",
+  "content": "WF-05 n8n 노드 재구성 완료 — Approval Pool 연동 live test 성공",
+  "event_type": "task_completed",
+  "event_hash": "sha256:30b69c850615bebd79f690cdbadd036ab1641208d01e3d4fd4c9d3ac19ba4c09",
+  "issuer_path": "/opt/arss/engine/arss-protocol/tools/rpu_atomic_issuer.py",
+  "approval_hash": "sha256:298ed11909752e3e46365eb74cc00075f1aebc73e3d2a0006bb1b9503003fc4d",
+  "status": "READY"
+}
