@@ -130,6 +130,35 @@ def get_system_time():
         "source": "server_clock"
     })
 
+
+@app.route('/approval-token', methods=['GET'])
+def get_approval_token():
+    auth = request.headers.get('Authorization', '')
+    if auth != f"Bearer {TOKENS['caddy']}":
+        return jsonify({'error': 'unauthorized'}), 401
+
+    if not os.path.exists(TOKEN_PATH):
+        return jsonify({'error': 'token not found'}), 404
+
+    with open(TOKEN_PATH, 'r', encoding='utf-8') as f:
+        token_data = json.load(f)
+
+    from zoneinfo import ZoneInfo
+    from datetime import datetime
+    expires_str = token_data.get('expires_at_kst')
+    if not expires_str:
+        return jsonify({'error': 'token missing expiry'}), 422
+
+    expires_dt = datetime.fromisoformat(expires_str)
+    now_kst = datetime.now(ZoneInfo('Asia/Seoul'))
+    if expires_dt.tzinfo is None:
+        expires_dt = expires_dt.replace(tzinfo=ZoneInfo('Asia/Seoul'))
+
+    if now_kst > expires_dt:
+        return jsonify({'error': 'token expired', 'expired_at': expires_str}), 410
+
+    return jsonify(token_data), 200
+
 @app.route('/status', methods=['GET'])
 @require_auth()
 def get_status():
