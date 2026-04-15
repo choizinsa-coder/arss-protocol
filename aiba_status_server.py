@@ -616,8 +616,6 @@ def rpu_issue():
 # === APPROVAL POOL ENDPOINTS ===
 
 @app.route('/approval-pool/ready', methods=['GET'])
-
-@app.route('/approval-pool/ready', methods=['GET'])
 def approval_pool_ready():
     auth = request.headers.get('Authorization', '')
     if auth != f'Bearer {TOKENS["caddy"]}':
@@ -647,6 +645,49 @@ def approval_pool_ready():
 
     return jsonify({"status": "POOL_EMPTY"}), 200
 
+
+
+@app.route('/approval-pool/add', methods=['POST'])
+def approval_pool_add():
+    auth = request.headers.get('Authorization', '')
+    if auth != f'Bearer {TOKENS["caddy"]}':
+        return jsonify({"error": "unauthorized"}), 403
+
+    data = request.get_json(silent=True) or {}
+    session_id = data.get('session_id')
+    if not session_id:
+        return jsonify({"error": "session_id required"}), 400
+
+    pool_dir = os.path.join(BASE_DIR, 'evidence', 'eag_approvals')
+    files = sorted(glob.glob(os.path.join(pool_dir, '*.json')))
+
+    target = None
+    for f in files:
+        if session_id in f:
+            target = f
+            break
+
+    if not target:
+        return jsonify({"error": "approval not found", "session_id": session_id}), 404
+
+    with open(target, 'r') as f:
+        approval_data = json.load(f)
+
+    if approval_data.get('status') == 'READY':
+        return jsonify({"error": "already READY", "file": os.path.basename(target)}), 409
+
+    if approval_data.get('status') == 'CONSUMED':
+        return jsonify({"error": "already CONSUMED", "file": os.path.basename(target)}), 409
+
+    approval_data['status'] = 'READY'
+    with open(target, 'w') as f:
+        json.dump(approval_data, f, ensure_ascii=False, indent=2)
+
+    return jsonify({
+        "status": "registered",
+        "session_id": session_id,
+        "file": os.path.basename(target)
+    }), 200
 
 @app.route('/approval-pool/consume', methods=['POST'])
 def approval_pool_consume():
