@@ -1,0 +1,20 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "019d8fce-7326-7830-b7cb-8cb3d8f19172",
+  "timestamp": "2026-04-15T06:22:45.031004Z",
+  "actor_id": "caddy",
+  "payload": {
+    "event_type": "task_completed",
+    "content": "WF-05 canonical contract independent validation — Session 32"
+  },
+  "chain": {
+    "payload_hash": "d467141956217d9f4ed33864081c754b19dfca05a90eb423c29ae230904f64f5",
+    "prev_chain_hash": "f0db31fffbbd90ab700b49a15f67f17339f9f216293994a90187026f83b290e6",
+    "chain_hash": "a4d4037f985fd510e41bbb798cdd4ca097bb5fe59a4e7dd63eb8fe5e68a7d476"
+  },
+  "governance_context": {
+    "policy_id": "ARSS_HUB_PROTOCOL_v1.2",
+    "authority_root": "Beo",
+    "jurisdiction": "AIBA_GLOBAL"
+  }
+}
