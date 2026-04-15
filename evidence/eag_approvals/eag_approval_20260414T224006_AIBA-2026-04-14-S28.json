@@ -1,0 +1,14 @@
+{
+  "type": "eag_approval",
+  "stage": "EAG-2",
+  "approval_id": "eag-264afbf8-e2be-405e-afff-2baf52eece9c",
+  "approved_by": "Beo",
+  "approved_at_kst": "2026-04-14T22:40:06.692767+09:00",
+  "session_id": "AIBA-2026-04-14-S28",
+  "actor_id": "caddy",
+  "content": "WF-05 재활성화 완료 — payload-first approval locking 구조 적용",
+  "event_type": "task_completed",
+  "event_hash": "sha256:58876943d420fadbca85816b74ca14afddf41aa751bd78030b89250a035e9adf",
+  "issuer_path": "tools/rpu_atomic_issuer.py",
+  "approval_hash": "sha256:38d306074fa8f82a7862943003b8cf51c89b12bf992679d9c4669bb601e2993e"
+}

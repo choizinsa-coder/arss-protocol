@@ -318,7 +318,7 @@ def rpu_issue():
                             'reason': pec_log['reason']}), 403
 
         # R2: 결속 증명 — approval record ↔ .approval_token hash binding
-        token_path = os.path.join(BASE_DIR, TOKEN_PATH)
+        token_path = TOKEN_PATH
         try:
             with open(token_path) as f:
                 token_data = json.load(f)
@@ -331,23 +331,23 @@ def rpu_issue():
             return jsonify({'status': 'FAILED_CLOSED', 'stage': 'R2_BINDING',
                             'reason': pec_log['reason']}), 403
 
-        # R3: 범위 증명 — 요청 event_type → approval source_ref 범위 확인
-        req_event_type = _data.get('event_type', '')
+        # R3: 범위 증명 — approval record 기준 event_type → approval source_ref 범위 확인
+        req_event_type = approval_record.get('event_type', '')
         approved_source_ref = approval_record.get('source_ref', '')
         # source_ref 미존재 시 패스 (하위 호환)
-        if approved_source_ref and req_event_type not in approved_source_ref:
+        if approved_source_ref and req_event_type and req_event_type not in approved_source_ref:
             pec_log['failed_at_step'] = 'R3_SCOPE'
             pec_log['reason'] = f'event_type {req_event_type} out of approval scope {approved_source_ref}'
             _save_pec_failure(pec_log)
             return jsonify({'status': 'FAILED_CLOSED', 'stage': 'R3_SCOPE',
                             'reason': pec_log['reason']}), 403
 
-        # R4: 무결성 증명 — 요청 payload event_hash 확인
+        # R4: 무결성 증명 — approval record 기준 canonical payload hash 확인
         import hashlib as _hashlib
         payload_str = json.dumps({
-            'event_type': _data.get('event_type', ''),
-            'content': _data.get('content', ''),
-            'actor_id': _data.get('actor_id', ''),
+            'event_type': approval_record.get('event_type', ''),
+            'content': approval_record.get('content', ''),
+            'actor_id': approval_record.get('actor_id', ''),
         }, sort_keys=True, ensure_ascii=False)
         payload_hash = 'sha256:' + _hashlib.sha256(payload_str.encode()).hexdigest()
         if token_data.get('event_hash') and payload_hash != token_data.get('event_hash'):

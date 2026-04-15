@@ -57,8 +57,14 @@ def main():
     session_id = now_kst.strftime(f"AIBA-%Y-%m-%d-S{args.session_count}")
 
     # event_hash 계산
-    event_hash = "sha256:" + hashlib.sha256(
-        open(args.event_file, "rb").read()).hexdigest()
+    with open(args.event_file, 'r', encoding='utf-8') as _ef:
+        _ev = json.load(_ef)
+    _payload_str = json.dumps({
+        'actor_id':   _ev.get('actor_id', ''),
+        'content':    _ev.get('content', ''),
+        'event_type': _ev.get('event_type', ''),
+    }, sort_keys=True, ensure_ascii=False)
+    event_hash = 'sha256:' + hashlib.sha256(_payload_str.encode()).hexdigest()
 
     rec = load_eag_approval(session_id, event_hash, args.issuer_path)
     if rec is None:

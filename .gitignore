@@ -29,3 +29,8 @@ evidence/receipts/
 event_file.json
 event_file_r4.json
 aiba_status_server_s29_backup.py
+aiba_status_server_before_*.py
+tools/*_backup_s31.py
+tools/*_before_fix_s31.py
+tools/patch_*.py
+trs_settle_*.py

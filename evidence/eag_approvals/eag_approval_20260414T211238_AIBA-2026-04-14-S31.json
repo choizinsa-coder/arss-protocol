@@ -1,0 +1,11 @@
+{
+  "type": "eag_approval",
+  "stage": "EAG-2",
+  "approval_id": "eag-87d0386b-7382-4109-bff9-beed12f9b6ea",
+  "approved_by": "Beo",
+  "approved_at_kst": "2026-04-14T21:12:38.912711+09:00",
+  "session_id": "AIBA-2026-04-14-S31",
+  "event_hash": "sha256:aa336a6276fd7d8853fbe7d06d66e8f30f2650799c837c0b24ecbf58ca9dce7d",
+  "issuer_path": "/opt/arss/engine/arss-protocol/tools/rpu_atomic_issuer.py",
+  "approval_hash": "sha256:dae2fa51ba833c3b90f7f34a516ad5b48b10eeb725e52b4c405841e78d8fa58e"
+}
