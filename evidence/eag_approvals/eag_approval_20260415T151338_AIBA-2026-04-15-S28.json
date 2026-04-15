@@ -1,0 +1,14 @@
+{
+  "type": "eag_approval",
+  "stage": "EAG-2",
+  "approval_id": "eag-1f89f05c-197a-4517-9971-f8d5507c98d8",
+  "approved_by": "Beo",
+  "approved_at_kst": "2026-04-15T15:13:38.325445+09:00",
+  "session_id": "AIBA-2026-04-15-S28",
+  "actor_id": "caddy",
+  "content": "WF-05 canonical contract independent validation — Session 32",
+  "event_type": "task_completed",
+  "event_hash": "sha256:70c991d00a5ef0577ab6e0fd37782f0d2d5bd09a27bc5e80fe59ad1e2771dbdf",
+  "issuer_path": "/opt/arss/engine/arss-protocol/tools/rpu_atomic_issuer.py",
+  "approval_hash": "sha256:1fb67671d85f63575508db56034d6f2826f634e375f8021687615ec54d1325a4"
+}

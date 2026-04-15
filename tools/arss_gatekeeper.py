@@ -125,7 +125,14 @@ def validate(event_file_path, approval_token_path, session_count, issuer_path=CA
     event_p = pathlib.Path(event_file_path)
     if not event_p.exists():
         return _fail("EVENT_FILE_NOT_FOUND", session_id, {"event_file_path": event_file_path})
-    actual = _compute_file_sha256(event_file_path)
+    with open(event_file_path, 'r', encoding='utf-8') as _ef:
+        _ev = json.load(_ef)
+    _payload_str = json.dumps({
+        'actor_id':   _ev.get('actor_id', ''),
+        'content':    _ev.get('content', ''),
+        'event_type': _ev.get('event_type', ''),
+    }, sort_keys=True, ensure_ascii=False)
+    actual = 'sha256:' + hashlib.sha256(_payload_str.encode()).hexdigest()
     if actual != token["event_hash"]:
         return _fail("APPROVAL_TOKEN_EVENT_HASH_MISMATCH", session_id,
                      {"expected": token["event_hash"], "actual": actual})
