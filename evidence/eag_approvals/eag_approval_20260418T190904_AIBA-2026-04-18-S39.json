@@ -1,0 +1,15 @@
+{
+  "type": "eag_approval",
+  "stage": "EAG-2",
+  "approval_id": "eag-e0d940b8-3d19-48ba-8761-c66b0d98ff6b",
+  "approved_by": "Beo",
+  "approved_at_kst": "2026-04-18T19:09:04.587311+09:00",
+  "session_id": "AIBA-2026-04-18-S39",
+  "actor_id": "",
+  "content": "S39 WF-05 live test approval",
+  "event_type": "HUMAN_APPROVAL_RECORDED",
+  "event_hash": "sha256:111fbd2b82c2d22c9836ffe07b948e2399d3f2dd95df628bb644914936e700aa",
+  "issuer_path": "/opt/arss/engine/arss-protocol/tools/rpu_atomic_issuer.py",
+  "approval_hash": "sha256:aeffa13bffe5fcc447bdddbc93a826fd07ac204bd3fc566c558be4df0da9720f",
+  "status": "READY"
+}

@@ -11,5 +11,6 @@
   "event_hash": "sha256:30b69c850615bebd79f690cdbadd036ab1641208d01e3d4fd4c9d3ac19ba4c09",
   "issuer_path": "/opt/arss/engine/arss-protocol/tools/rpu_atomic_issuer.py",
   "approval_hash": "sha256:424053c56569cb92e5f0a0dbf7b9c342df7b946923d1f43380cb8f6d2cec8255",
-  "status": "READY"
+  "status": "CONSUMED",
+  "consumed_at_kst": "2026-04-18T20:15:38.599023+09:00"
 }
