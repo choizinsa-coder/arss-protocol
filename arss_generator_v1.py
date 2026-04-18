@@ -44,8 +44,10 @@ def load_allowed_event_types(path: str) -> set:
     """SSOI 기준 허용 event_type 목록 로딩. 기동 시 1회, 재기동 시 갱신."""
     with open(path, "r", encoding="utf-8") as f:
         rule = json.load(f)
-    event_types = rule.get("score_rules", {}).get("event_types", {})
-    return set(event_types.keys())
+    # score_rules_v2_1 우선, 없으면 score_rules_v1 fallback (score_rules 키 제거됨)
+    active = rule.get("score_rules_v2_1") or rule.get("score_rules_v1") or rule.get("score_rules", {})
+    event_types = active.get("event_types", {})
+    return set(k for k in event_types.keys() if not k.startswith("_"))
 
 
 # ── 해싱 알고리즘 (IMMUTABLE — LESSON-005) ───────────────────────
