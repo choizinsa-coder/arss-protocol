@@ -107,12 +107,15 @@ class VerificationError(GeneratorError):
 
 
 def validate_request(req: dict, allowed_event_types: set):
-    required = ["event_type", "actor_id", "content", "prev_chain_hash"]
+    required = ["event_type", "content", "prev_chain_hash"]
     for field in required:
         if field not in req:
             raise ValidationError(f"Missing field: {field}")
         if not isinstance(req[field], str) or not req[field].strip():
             raise ValidationError(f"Empty or invalid field: {field}")
+    # actor_id: 존재 확인만 (빈 문자열 허용 — WF-05 자동화 시나리오)
+    if "actor_id" not in req:
+        raise ValidationError("Missing field: actor_id")
 
     pch = req["prev_chain_hash"]
     if len(pch) != 64 or not all(c in "0123456789abcdef" for c in pch):
