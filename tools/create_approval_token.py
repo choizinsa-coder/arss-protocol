@@ -73,9 +73,9 @@ def main():
         print(f"  event_hash: {event_hash}")
         sys.exit(1)
 
-    approved_at  = rec["approved_at_kst"]
+    approved_at  = now_kst.isoformat()  # 재발급 시 현재 시각 기준
     approval_hash = rec["approval_hash"]
-    expires_at   = (datetime.fromisoformat(approved_at) +
+    expires_at   = (now_kst +
                     timedelta(seconds=args.ttl)).isoformat()
 
     token = {
