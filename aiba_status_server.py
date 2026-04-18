@@ -160,6 +160,22 @@ def get_approval_token():
 
     return jsonify(token_data), 200
 
+@app.route('/session/current', methods=['GET'])
+@require_auth()
+def get_session_current():
+    """session_count runtime 반환 — /status 대체 경량 엔드포인트 (Option A-2)"""
+    try:
+        with open(SESSION_CONTEXT_PATH, 'r', encoding='utf-8') as f:
+            ctx = json.load(f)
+        session_count = ctx.get('session_count', None)
+        if session_count is None:
+            return jsonify({'status': 'error', 'message': 'session_count not found'}), 500
+        return jsonify({'status': 'ok', 'session_count': int(session_count)})
+    except FileNotFoundError:
+        return jsonify({'status': 'error', 'message': 'SESSION_CONTEXT.json not found'}), 404
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @app.route('/status', methods=['GET'])
 @require_auth()
 def get_status():
