@@ -1,0 +1,20 @@
+{
+  "schema_version": "ARSS-RPU-1.0",
+  "rpu_id": "019da06e-1615-7024-8def-909899e709aa",
+  "timestamp": "2026-04-18T11:51:02.421956Z",
+  "actor_id": "",
+  "payload": {
+    "event_type": "HUMAN_APPROVAL_RECORDED",
+    "content": "S39 WF-05 live test approval"
+  },
+  "chain": {
+    "payload_hash": "154e68221271f331be6fa7ea3f472f52703fbd65449ebde7916fba6a531ba530",
+    "prev_chain_hash": "c3f8770a2e2ab095dfb9d5e9d20b61c7ebcf1ffaf3977880986a9692072e4332",
+    "chain_hash": "d1ffc2bf6bfc889bd26cacdb372f066011165c1298d5d5ddf58391a36919703a"
+  },
+  "governance_context": {
+    "policy_id": "ARSS_HUB_PROTOCOL_v1.2",
+    "authority_root": "Beo",
+    "jurisdiction": "AIBA_GLOBAL"
+  }
+}
