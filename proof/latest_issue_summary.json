@@ -1,11 +1,11 @@
 {
-  "issued_at": "2026-04-18T11:51:03Z",
-  "last_rpu": "RPU-0040",
-  "chain_tip": "d1ffc2bf6bfc889bd26cacdb372f066011165c1298d5d5ddf58391a36919703a",
-  "previous_rpu": "c3f8770a...",
+  "issued_at": "2026-04-18T11:51:39Z",
+  "last_rpu": "RPU-0041",
+  "chain_tip": "bf8dcc8e6f91a187c406ff105ac36621aa5f865937aad19784507b90ded5decf",
+  "previous_rpu": "d1ffc2bf...",
   "schema_version": "ARSS-RPU-1.0",
   "verifier_result": "ALL PASS",
-  "git_commit": "7bfa9ea",
+  "git_commit": "1b15453",
   "public_status": "SUCCESS",
   "out_of_sync": false
 }
