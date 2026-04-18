@@ -632,6 +632,18 @@ def step12_proof_hook(rpu: dict, candidate_rpu_id: str,
 
     log(f"Step 12: PASS | public_status={summary['public_status']}")
 
+    # proof/ 파일 git commit — Step 11 이후 write된 파일 정리 (WORKTREE_CLEAN 유지)
+    for _pf in [str(PROOF_SUMMARY_PATH), str(PROOF_RUNTIME_PATH)]:
+        if Path(_pf).exists():
+            run_cmd(["git", "-C", str(BASE_DIR), "add", _pf])
+    _rc, _out, _err = run_cmd(["git", "-C", str(BASE_DIR), "commit",
+                               "-m", f"chore: proof snapshot {candidate_rpu_id}"])
+    if _rc == 0:
+        run_cmd(["git", "-C", str(BASE_DIR), "push"])
+        log("Step 12: proof/ committed & pushed")
+    else:
+        log("Step 12: proof/ 변경 없음 (skip commit)")
+
 
 # =============================================================================
 # Step 13 — Session Delta Output
