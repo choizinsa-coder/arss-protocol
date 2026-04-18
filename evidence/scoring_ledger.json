@@ -206,9 +206,9 @@
       "settled_at": "2026-04-14T20:34:47.407114+09:00"
     }
   ],
-  "chain_tip": "d1ffc2bf6bfc889bd26cacdb372f066011165c1298d5d5ddf58391a36919703a",
-  "last_rpu": "RPU-0040",
-  "coverage_until_rpu": "RPU-0040",
+  "chain_tip": "bf8dcc8e6f91a187c406ff105ac36621aa5f865937aad19784507b90ded5decf",
+  "last_rpu": "RPU-0041",
+  "coverage_until_rpu": "RPU-0041",
   "last_updated": "2026-04-13T19:32:38+09:00",
   "last_settled_session": "S29",
   "last_settled_at": "2026-04-14T20:34:47.407114+09:00"
