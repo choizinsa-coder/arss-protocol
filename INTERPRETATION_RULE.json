@@ -552,6 +552,12 @@
         "requires_eag": false,
         "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
         "description": "작업 완료"
+      },
+      "HUMAN_APPROVAL_RECORDED": {
+        "score": 5,
+        "category": "governance",
+        "requires_eag": true,
+        "description": "비오(Joshua) 직접 승인 기록 — WF-05 n8n 오케스트레이션 연동"
       }
     },
     "_status": "ARCHIVED — v1 체계. v2.1 전환 후 비활성.",
@@ -784,6 +790,12 @@
         "requires_eag": false,
         "requires_eag_note": "정책 선언용 메타데이터 — enforcement 로직 미적용 (EAG-1 조건 3)",
         "description": "작업 완료"
+      },
+      "HUMAN_APPROVAL_RECORDED": {
+        "score": 5,
+        "category": "governance",
+        "requires_eag": true,
+        "description": "비오(Joshua) 직접 승인 기록 — WF-05 n8n 오케스트레이션 연동"
       }
     }
   },

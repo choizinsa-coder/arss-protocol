@@ -293,9 +293,12 @@ def _get_allowed_event_types():
     """INTERPRETATION_RULE.json에서 허용 event_type 목록 취득 (LESSON-013)"""
     with open(INTERPRETATION_RULE_PATH, 'r', encoding='utf-8') as f:
         rule = json.load(f)
-    # score_rules_v2_1 ACTIVE 기준
+    # score_rules_v2_1 우선, 없으면 score_rules_v1 fallback
     active_rules = rule.get('score_rules_v2_1') or rule.get('score_rules', {})
-    event_types = active_rules.get('event_types', [])
+    event_types = active_rules.get('event_types', {})
+    if not event_types:
+        active_rules = rule.get('score_rules_v1', {})
+        event_types = active_rules.get('event_types', {})
     if not event_types:
         raise ValueError('INTERPRETATION_RULE에서 허용 event_types 로딩 실패')
     return event_types
@@ -418,7 +421,7 @@ def rpu_issue():
         return jsonify({'status': 'FAIL', 'failed_at_step': 'Step 1',
                         'reason': pec_log['reason']}), 400
 
-    required_fields = ['actor_id', 'content', 'event_type', 'session_id']
+    required_fields = ['content', 'event_type', 'session_id']
     missing = [f for f in required_fields if not body.get(f)]
     if missing:
         pec_log.update({'failed_at_step': 'Step 1', 'reason': f'필수 필드 누락: {missing}'})
