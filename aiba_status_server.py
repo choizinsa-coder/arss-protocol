@@ -511,9 +511,15 @@ def rpu_issue():
         tmp_event.close()
         # session_count: SESSION_CONTEXT.json에서 로드
         try:
-            with open(SESSION_CONTEXT_PATH, 'r', encoding='utf-8') as _sc:
-                _sc_data = json.load(_sc)
-            _session_count = int(_sc_data.get('session_count', 0))
+            # approval_token session_id에서 session_count 파싱 (SESSION_CONTEXT 대신)
+            with open(TOKEN_PATH, 'r', encoding='utf-8') as _tk:
+                _tk_data = json.load(_tk)
+            _token_sid = _tk_data.get('session_id', '')
+            import re as _re
+            _m = _re.search(r'S(\d+)$', _token_sid)
+            if not _m:
+                raise ValueError(f'session_id 파싱 실패: {_token_sid}')
+            _session_count = int(_m.group(1))
         except Exception as e:
             return jsonify({"status": "error", "reason": f"SESSION_COUNT_LOAD_FAILED: {e}"}), 500
         cmd = ['python3', ISSUER_PATH,
