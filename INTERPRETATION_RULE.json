@@ -561,7 +561,10 @@
       }
     },
     "_status": "ARCHIVED — v1 체계. v2.1 전환 후 비활성.",
-    "_archived_at": "2026-04-10"
+    "_archived_at": "2026-04-10",
+    "status": "DISABLED",
+    "disabled_reason": "evolution_score SOFT_KILL DIS-049",
+    "disabled_date": "2026-04-20"
   },
   "score_rules_v2_1": {
     "_status": "ACTIVE",
@@ -797,8 +800,11 @@
         "requires_eag": true,
         "description": "비오(Joshua) 직접 승인 기록 — WF-05 n8n 오케스트레이션 연동"
       }
-    }
+    },
+    "status": "DISABLED",
+    "disabled_reason": "evolution_score SOFT_KILL DIS-049",
+    "disabled_date": "2026-04-20"
   },
-  "updated_at": "2026-04-10",
-  "update_reason": "Evolution Score v2.1 전환 — score_rules_v1 archived, score_rules_v2_1 activated"
+  "updated_at": "2026-04-21",
+  "update_reason": "DIS-049 Evolution Score Soft Kill — score_rules 전면 비활성화 (2026-04-20 Session 46)"
 }
