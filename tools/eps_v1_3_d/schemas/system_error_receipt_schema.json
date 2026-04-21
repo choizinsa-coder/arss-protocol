@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SystemErrorReceipt",
+  "type": "object",
+  "required": [
+    "receipt_type",
+    "receipt_version",
+    "receipt_id",
+    "job_id",
+    "error_stage",
+    "error_message",
+    "timestamp_kst",
+    "hash"
+  ],
+  "properties": {
+    "receipt_type": {
+      "type": "string",
+      "const": "system_error"
+    },
+    "receipt_version": {
+      "type": "string"
+    },
+    "receipt_id": {
+      "type": "string"
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "error_stage": {
+      "type": "string",
+      "enum": [
+        "execution",
+        "verification",
+        "gate",
+        "promote",
+        "unknown"
+      ]
+    },
+    "error_message": {
+      "type": "string"
+    },
+    "timestamp_kst": {
+      "type": "string"
+    },
+    "hash": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
