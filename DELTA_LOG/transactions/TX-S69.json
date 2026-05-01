@@ -1,0 +1,21 @@
+{
+  "committed_by": "caddy",
+  "generated_at": "2026-05-01T12:51:20.559+09:00",
+  "included_deltas": [
+    {
+      "content_hash": "658ad40cd7cf7d96dfaaf535cc37c451cb097f9906fa12715115efbe816e57ba",
+      "delta_id": "DELTA-S69-AGENT_FOCUS-0001",
+      "domain": "agent_focus",
+      "sequence_number": 1
+    }
+  ],
+  "incomplete_reason": "FIX-2 VIOLATION: TX-S69 존재하나 COMMIT-S69 미존재. 세션 종료 HARD STOP. TX/delta INCOMPLETE/PENDING_VOID 마킹 필요. 비오님 보고 필수.",
+  "session_number": 69,
+  "status": "VOID",
+  "transaction_hash": "d283e88f8303e65d6e67be1bf6a5fb5db219b1925345874d003841315c0414bf",
+  "tx_id": "TX-S69",
+  "original_status": "INCOMPLETE",
+  "void_reason": "IMPORT_ERROR_DELTA_WRITER",
+  "voided_at": "2026-05-01T14:21:34.791297+09:00",
+  "integrity": "UNVERIFIED_PARTIAL_WRITE"
+}

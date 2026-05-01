@@ -1,0 +1,34 @@
+{
+  "domains": {
+    "agent_focus": {
+      "delta_count": 1,
+      "latest_content_hash": "658ad40cd7cf7d96dfaaf535cc37c451cb097f9906fa12715115efbe816e57ba",
+      "latest_delta_id": "DELTA-S69-AGENT_FOCUS-0001",
+      "latest_summary": {
+        "event_type": "agent_focus_updated",
+        "generated_at": "2026-05-01T12:51:20.559+09:00",
+        "target_key": "agent_focus"
+      },
+      "sessions": {
+        "S69": [
+          {
+            "content_hash": "658ad40cd7cf7d96dfaaf535cc37c451cb097f9906fa12715115efbe816e57ba",
+            "delta_id": "DELTA-S69-AGENT_FOCUS-0001",
+            "event_type": "agent_focus_updated",
+            "generated_at": "2026-05-01T12:51:20.559+09:00",
+            "sequence_number": 1,
+            "target_key": "agent_focus"
+          }
+        ]
+      }
+    }
+  },
+  "last_updated": "2026-05-01T12:51:20.559+09:00",
+  "schema_version": "1.0",
+  "transactions": [
+    {
+      "tx_id": "TX-S69",
+      "status": "VOID"
+    }
+  ]
+}
