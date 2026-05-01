@@ -211,12 +211,17 @@ def update_status():
 def file_hash():
     """파일 SHA256 해시 조회"""
     file_path = request.args.get('path', SESSION_CONTEXT_PATH)
+    include_content = request.args.get('content', 'false').lower() == 'true'
     if not os.path.abspath(file_path).startswith(BASE_DIR):
         return jsonify({'status': 'error', 'message': 'Forbidden path'}), 403
     try:
         with open(file_path, 'rb') as f:
-            digest = hashlib.sha256(f.read()).hexdigest()
-        return jsonify({'status': 'ok', 'path': file_path, 'sha256': digest})
+            raw_bytes = f.read()
+        digest = hashlib.sha256(raw_bytes).hexdigest()
+        result = {'status': 'ok', 'path': file_path, 'sha256': digest}
+        if include_content:
+            result['content'] = json.loads(raw_bytes.decode('utf-8'))
+        return jsonify(result)
     except FileNotFoundError:
         return jsonify({'status': 'error', 'message': 'File not found'}), 404
     except Exception as e:
