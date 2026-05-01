@@ -1,12 +1,12 @@
 {
   "domains": {
     "agent_focus": {
-      "delta_count": 1,
-      "latest_content_hash": "658ad40cd7cf7d96dfaaf535cc37c451cb097f9906fa12715115efbe816e57ba",
-      "latest_delta_id": "DELTA-S69-AGENT_FOCUS-0001",
+      "delta_count": 2,
+      "latest_content_hash": "236dd8905965b61d9b988281cac36bceaee5ecab7a64655d54b5f2c90d623975",
+      "latest_delta_id": "DELTA-S71-AGENT_FOCUS-0002",
       "latest_summary": {
         "event_type": "agent_focus_updated",
-        "generated_at": "2026-05-01T12:51:20.559+09:00",
+        "generated_at": "2026-05-01T15:46:45.019+09:00",
         "target_key": "agent_focus"
       },
       "sessions": {
@@ -19,16 +19,65 @@
             "sequence_number": 1,
             "target_key": "agent_focus"
           }
+        ],
+        "S71": [
+          {
+            "content_hash": "236dd8905965b61d9b988281cac36bceaee5ecab7a64655d54b5f2c90d623975",
+            "delta_id": "DELTA-S71-AGENT_FOCUS-0002",
+            "event_type": "agent_focus_updated",
+            "generated_at": "2026-05-01T15:46:45.019+09:00",
+            "sequence_number": 2,
+            "target_key": "agent_focus",
+            "status": "QUARANTINED",
+            "quarantine_reason": "DEFECT_INDUCED_CASE_B",
+            "quarantine_path": "SNAPSHOT_LOG/quarantine/defect_induced_s71/"
+          }
         ]
       }
+    },
+    "tasks": {
+      "delta_count": 1,
+      "latest_content_hash": "5853df0166e26040ab9e805d619341dd48e31b935d07bcb53657a4bd3a4956d1",
+      "latest_delta_id": "DELTA-S71-TASKS-0001",
+      "latest_summary": {
+        "event_type": "task_completed",
+        "generated_at": "2026-05-01T15:46:45.018+09:00",
+        "target_key": "status"
+      },
+      "sessions": {
+        "S71": [
+          {
+            "content_hash": "5853df0166e26040ab9e805d619341dd48e31b935d07bcb53657a4bd3a4956d1",
+            "delta_id": "DELTA-S71-TASKS-0001",
+            "event_type": "task_completed",
+            "generated_at": "2026-05-01T15:46:45.018+09:00",
+            "sequence_number": 1,
+            "target_key": "status",
+            "status": "QUARANTINED",
+            "quarantine_reason": "DEFECT_INDUCED_CASE_B",
+            "quarantine_path": "SNAPSHOT_LOG/quarantine/defect_induced_s71/"
+          }
+        ]
+      }
+    },
+    "test_s71": {
+      "delta_count": 4,
+      "latest_content_hash": "193e42f4364b763cac8c6ae1b25b9c1f057be2a2862ff74d39247c1f2115172f",
+      "latest_delta_id": "DELTA-S9006-TEST_S71-0001",
+      "latest_summary": {
+        "event_type": "agent_focus_updated",
+        "generated_at": "2026-05-01T21:51:05.593+09:00",
+        "target_key": "agent_focus"
+      },
+      "sessions": {}
     }
   },
-  "last_updated": "2026-05-01T12:51:20.559+09:00",
+  "last_updated": "2026-05-01T21:56:46.146583+09:00",
   "schema_version": "1.0",
   "transactions": [
     {
-      "tx_id": "TX-S69",
-      "status": "VOID"
+      "status": "VOID",
+      "tx_id": "TX-S69"
     }
   ]
 }
