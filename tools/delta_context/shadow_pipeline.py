@@ -20,6 +20,9 @@ from delta_context.readiness_tracker import record_session
 
 KST = timezone(timedelta(hours=9))
 
+DELTA_LOG_BASE   = "/opt/arss/engine/arss-protocol/DELTA_LOG"
+TX_BASE_PATH     = "/opt/arss/engine/arss-protocol/DELTA_LOG/transactions"
+COMMIT_BASE_PATH = "/opt/arss/engine/arss-protocol/DELTA_LOG/commits"
 
 def _kst_now() -> str:
     now = datetime.now(KST)
@@ -63,6 +66,31 @@ def run_shadow_pipeline(
     committed_by = "caddy"
     generated_at = _kst_now()
     written_deltas = []
+
+    # ── Stage 0: PRE_DELTA_IDEMPOTENCY_GATE ───────────────────────────────────────
+    domains = list({req["domain"] for req in delta_requests})
+    delta_exists = any(
+        os.path.isdir(os.path.join(DELTA_LOG_BASE, domain, f"S{session_number}"))
+        for domain in domains
+    )
+    if delta_exists:
+        tx_path      = os.path.join(TX_BASE_PATH,     f"TX-S{session_number}.json")
+        commit_path  = os.path.join(COMMIT_BASE_PATH, f"COMMIT-S{session_number}.json")
+        tx_exists     = os.path.exists(tx_path)
+        commit_exists = os.path.exists(commit_path)
+        if tx_exists and commit_exists:
+            return {
+                "success": True,
+                "reason":  "ALREADY_COMPLETED",
+                "stage":   "PRE_DELTA_IDEMPOTENCY_GATE",
+            }
+        else:
+            return {
+                "success":   False,
+                "hard_stop": True,
+                "reason":    "PARTIAL_STATE_DETECTED",
+                "stage":     "PRE_DELTA_IDEMPOTENCY_GATE",
+            }
 
     # ── Stage 1: delta_writer (각 domain) ──────────────────────────────────────
     for req in delta_requests:
@@ -125,19 +153,7 @@ def run_shadow_pipeline(
 
     tx_id = tx_result["tx_id"]
     transaction_hash = tx_result["transaction_hash"]
-
-    # ── Stage 4: COMMIT 존재 확인 gate (FIX-2 1차 방어선) ────────────────────
-    pre_commit_check = verify_commit_exists(session_number)
-    if pre_commit_check.get("hard_stop"):
-        mark_incomplete(session_number, pre_commit_check["reason"])
-        return {
-            "success":   False,
-            "hard_stop": True,
-            "reason":    pre_commit_check["reason"],
-            "stage":     "PRE_COMMIT_GATE",
-        }
-
-    # ── Stage 5: COMMIT 생성 ──────────────────────────────────────────────────
+    # ── Stage 4: COMMIT 생성 ──────────────────────────────────────────
     commit_result = create_commit(
         session_number=session_number,
         tx_id=tx_id,
@@ -155,7 +171,18 @@ def run_shadow_pipeline(
             "stage":     "COMMIT_CREATE",
         }
 
-    # ── Stage 6: COMMIT 존재 최종 확인 (FIX-2 확인) ──────────────────────────
+    # ── Stage 5: PRE_COMMIT_GATE (FIX-2 — 생성 완료 후 정합성 검증) ────────
+    pre_commit_check = verify_commit_exists(session_number)
+    if pre_commit_check.get("hard_stop"):
+        mark_incomplete(session_number, pre_commit_check["reason"])
+        return {
+            "success":   False,
+            "hard_stop": True,
+            "reason":    pre_commit_check["reason"],
+            "stage":     "PRE_COMMIT_GATE",
+        }
+
+    # ── Stage 6: COMMIT 존재 최종 확인 (POST_COMMIT_VERIFY) ────────────────
     final_check = verify_commit_exists(session_number)
     if not final_check["exists"]:
         return {
