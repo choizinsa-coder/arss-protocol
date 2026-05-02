@@ -24,7 +24,8 @@ DELTA_LOG_BASE   = "/opt/arss/engine/arss-protocol/DELTA_LOG"
 TX_BASE_PATH     = "/opt/arss/engine/arss-protocol/DELTA_LOG/transactions"
 COMMIT_BASE_PATH = "/opt/arss/engine/arss-protocol/DELTA_LOG/commits"
 
-def _kst_now() -> str:
+# diagnostic/log timestamp 전용 — generated_at source로 사용 금지
+def _runtime_observed_at() -> str:
     now = datetime.now(KST)
     ms = now.strftime("%f")[:3]
     return now.strftime(f"%Y-%m-%dT%H:%M:%S.{ms}+09:00")
@@ -33,6 +34,7 @@ def _kst_now() -> str:
 def run_shadow_pipeline(
     session_number: int,
     delta_requests: list[dict],
+    generated_at: str,
 ) -> dict:
     """
     Shadow Mode 세션 종료 파이프라인.
@@ -55,6 +57,24 @@ def run_shadow_pipeline(
         {"success": True, "commit_id": str, "delta_count": int}
         {"success": False, "hard_stop": True, "reason": str, "stage": str}
     """
+    # ── PRECONDITION: generated_at 검증 ──────────────────────────────────────
+    if not isinstance(generated_at, str) or not generated_at:
+        return {
+            "success":   False,
+            "hard_stop": True,
+            "reason":    "generated_at 누락 또는 빈 값 — SESSION_CONTEXT.generated_at 주입 필수",
+            "stage":     "PRECONDITION_GATE",
+        }
+    try:
+        datetime.fromisoformat(generated_at)
+    except ValueError:
+        return {
+            "success":   False,
+            "hard_stop": True,
+            "reason":    f"generated_at ISO8601 파싱 실패: {generated_at!r}",
+            "stage":     "PRECONDITION_GATE",
+        }
+
     if not delta_requests:
         return {
             "success":    False,
@@ -64,7 +84,6 @@ def run_shadow_pipeline(
         }
 
     committed_by = "caddy"
-    generated_at = _kst_now()
     written_deltas = []
 
     # ── Stage 0: PRE_DELTA_IDEMPOTENCY_GATE ───────────────────────────────────────
@@ -193,15 +212,20 @@ def run_shadow_pipeline(
         }
 
     # ── Stage 7: Phase 2 Validator ──────────────────────────────────────────────
+    candidate_payload = {d["target_key"]: d["new_value"] for d in written_deltas}
+    candidate_payload["generated_at"] = generated_at
+
+    ssot_payload = {d["target_key"]: d["new_value"] for d in written_deltas}
+    ssot_payload["generated_at"] = generated_at
+
     phase2_ctx = {
         "shadow_mode": True,
         "index_loaded": True,
         "delta_count": len(written_deltas),
         "session_number": session_number,
-        "candidate_payload": {d["target_key"]: d["new_value"] for d in written_deltas},
-        "ssot_payload": {d["target_key"]: d["new_value"] for d in written_deltas},
+        "candidate_payload": candidate_payload,
+        "ssot_payload": ssot_payload,
         "phase1_complete": True,
-        "generated_at": generated_at,
     }
     phase2_result = validate_phase2(phase2_ctx)
     contract = phase2_result.get("contract") or {}

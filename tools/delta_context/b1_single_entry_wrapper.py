@@ -11,7 +11,7 @@ from delta_context.shadow_pipeline import run_shadow_pipeline
 from delta_context.atomic_sync import final_ack
 
 
-def execute(session_number: int, delta_requests: list[dict]) -> dict:
+def execute(session_number: int, delta_requests: list[dict], generated_at: str) -> dict:
     """
     비오님 단일 진입점.
 
@@ -26,6 +26,7 @@ def execute(session_number: int, delta_requests: list[dict]) -> dict:
     pipeline_result = run_shadow_pipeline(
         session_number=session_number,
         delta_requests=delta_requests,
+        generated_at=generated_at,
     )
 
     if not pipeline_result["success"]:

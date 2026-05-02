@@ -34,7 +34,7 @@ def _cidx(s, dom="test_s71"):
 def test_tc1_normal_flow():
     s = 9001; _cleanup(s); _cidx(s)
     try:
-        r = run_shadow_pipeline(session_number=s, delta_requests=_req())
+        r = run_shadow_pipeline(session_number=s, delta_requests=_req(), generated_at="2026-05-01T00:00:00.000+09:00")
         assert r["success"] is True, f"TC-1 FAIL: {r}"
         assert r["commit_id"] == f"COMMIT-S{s}"
     finally:
@@ -79,7 +79,7 @@ def test_tc5_partial_state():
     try:
         d = os.path.join(DLB, dom, f"S{s}"); os.makedirs(d, exist_ok=True)
         with open(os.path.join(d, "dummy.json"), "w") as f: json.dump({"id": "x"}, f)
-        r = run_shadow_pipeline(session_number=s, delta_requests=_req(dom))
+        r = run_shadow_pipeline(session_number=s, delta_requests=_req(dom), generated_at="2026-05-01T00:00:00.000+09:00")
         assert r["success"] is False, f"TC-5: {r}"
         assert r.get("hard_stop") is True, f"TC-5 hard_stop: {r}"
         assert r.get("reason") == "PARTIAL_STATE_DETECTED", f"TC-5 reason: {r}"
@@ -92,7 +92,7 @@ def test_tc6_no_delta_pass():
     s = 9006; dom = "test_s71"; _cleanup(s, dom); _cidx(s, dom)
     assert not os.path.exists(os.path.join(DLB, dom, f"S{s}")), "precondition fail"
     try:
-        r = run_shadow_pipeline(session_number=s, delta_requests=_req(dom))
+        r = run_shadow_pipeline(session_number=s, delta_requests=_req(dom), generated_at="2026-05-01T00:00:00.000+09:00")
         assert r.get("stage") != "PRE_DELTA_IDEMPOTENCY_GATE", f"TC-6 blocked: {r}"
         assert r["success"] is True, f"TC-6 FAIL: {r}"
     finally:
