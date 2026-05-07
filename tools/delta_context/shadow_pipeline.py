@@ -235,13 +235,8 @@ def run_shadow_pipeline(
     candidate_payload["generated_at"] = generated_at
 
     if ssot_payload_provider is None:
-        return {
-            "success":   False,
-            "hard_stop": True,
-            "reason":    "SSOT_PAYLOAD_PROVIDER_MISSING",
-            "stage":     "PHASE2_VALIDATION",
-        }
-
+        from tools.delta_context.ssot_time_payload_provider import provide as _default_provider
+        ssot_payload_provider = _default_provider
     try:
         ssot_payload = ssot_payload_provider(
             session_number=session_number,
@@ -252,9 +247,53 @@ def run_shadow_pipeline(
         return {
             "success":   False,
             "hard_stop": True,
-            "reason":    "SSOT_PAYLOAD_LOAD_FAILED",
+            "reason":    "SSOT_PAYLOAD_PROVIDER_EXCEPTION",
             "stage":     "PHASE2_VALIDATION",
             "error":     str(e),
+        }
+    if ssot_payload is None or not isinstance(ssot_payload, dict):
+        return {
+            "success":   False,
+            "hard_stop": True,
+            "reason":    "SSOT_PAYLOAD_PROVIDER_INVALID_RETURN",
+            "stage":     "PHASE2_VALIDATION",
+        }
+    stl = ssot_payload.get("session_time_lock")
+    if stl is None or not isinstance(stl, dict):
+        return {
+            "success":   False,
+            "hard_stop": True,
+            "reason":    "SSOT_PAYLOAD_FIELD_MISSING",
+            "stage":     "PHASE2_VALIDATION",
+            "missing":   "session_time_lock",
+        }
+    for _field in ("source", "timezone", "generated_at", "observed_at"):
+        if not stl.get(_field) or not isinstance(stl[_field], str):
+            return {
+                "success":   False,
+                "hard_stop": True,
+                "reason":    "SSOT_PAYLOAD_FIELD_MISSING",
+                "stage":     "PHASE2_VALIDATION",
+                "missing":   f"session_time_lock.{_field}",
+            }
+    import re as _re
+    _ISO8601_RE = _re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
+    for _ts_field in ("generated_at", "observed_at"):
+        if not _ISO8601_RE.match(stl[_ts_field]):
+            return {
+                "success":   False,
+                "hard_stop": True,
+                "reason":    "SSOT_PAYLOAD_TIMESTAMP_INVALID",
+                "stage":     "PHASE2_VALIDATION",
+                "field":     f"session_time_lock.{_ts_field}",
+            }
+    if not isinstance(stl.get("epoch_ms"), int):
+        return {
+            "success":   False,
+            "hard_stop": True,
+            "reason":    "SSOT_PAYLOAD_FIELD_TYPE_INVALID",
+            "stage":     "PHASE2_VALIDATION",
+            "field":     "session_time_lock.epoch_ms",
         }
 
     phase2_ctx = {
