@@ -1,22 +1,25 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 # tools/delta_context/shadow_pipeline.py
 # AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2
-# Shadow sidecar 진입점 — SESSION_CONTEXT.json은 여전히 SSOT
-# CORE+DELTA는 non-canonical shadow 구조
+# Shadow sidecar -- SESSION_CONTEXT.json is still SSOT
+# CORE+DELTA is non-canonical shadow structure
 
 import os
+import json
 import sys
 from datetime import datetime, timezone, timedelta
 from typing import Any
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from delta_context.delta_writer import write_delta
-from delta_context.index_updater import update_index
-from delta_context.session_transaction_manager import create_transaction, mark_incomplete
-from delta_context.commit_marker_manager import create_commit, verify_commit_exists
-from delta_context.phase2_validator import validate_phase2
-from delta_context.divergence_recorder import record_divergence, get_divergence_summary
-from delta_context.readiness_tracker import record_session
+from tools.delta_context.delta_writer import write_delta
+from tools.delta_context.index_updater import update_index
+from tools.delta_context.session_transaction_manager import mutate_create_transaction, mark_incomplete
+from tools.delta_context.commit_marker_manager import create_commit, verify_commit_exists
+from tools.delta_context.phase2_validator import run_with_collapse_gate
+from tools.delta_context.divergence_recorder import record_divergence, get_divergence_summary
+from tools.delta_context.readiness_tracker import record_session
 
 KST = timezone(timedelta(hours=9))
 
@@ -24,45 +27,32 @@ DELTA_LOG_BASE   = "/opt/arss/engine/arss-protocol/DELTA_LOG"
 TX_BASE_PATH     = "/opt/arss/engine/arss-protocol/DELTA_LOG/transactions"
 COMMIT_BASE_PATH = "/opt/arss/engine/arss-protocol/DELTA_LOG/commits"
 
-# diagnostic/log timestamp 전용 — generated_at source로 사용 금지
-def _runtime_observed_at() -> str:
+# diagnostic/log timestamp only -- do not use as generated_at source
+def _runtime_observed_at():
     now = datetime.now(KST)
     ms = now.strftime("%f")[:3]
     return now.strftime(f"%Y-%m-%dT%H:%M:%S.{ms}+09:00")
 
 
 def run_shadow_pipeline(
-    session_number: int,
-    delta_requests: list[dict],
-    generated_at: str,
-) -> dict:
+    session_number,
+    delta_requests,
+    generated_at,
+    ssot_payload_provider=None,
+):
     """
-    Shadow Mode 세션 종료 파이프라인.
-
-    delta_requests: [
-        {
-            "domain": str,
-            "sequence_number": int,
-            "event_type": str,
-            "target_key": str,
-            "new_value": Any,
-            "cross_ref": str,
-            "prev_delta_id": str,
-            "prev_content_hash": str,
-        },
-        ...
-    ]
+    Shadow Mode session close pipeline.
 
     Returns:
         {"success": True, "commit_id": str, "delta_count": int}
         {"success": False, "hard_stop": True, "reason": str, "stage": str}
     """
-    # ── PRECONDITION: generated_at 검증 ──────────────────────────────────────
+    # PRECONDITION: generated_at validation
     if not isinstance(generated_at, str) or not generated_at:
         return {
             "success":   False,
             "hard_stop": True,
-            "reason":    "generated_at 누락 또는 빈 값 — SESSION_CONTEXT.generated_at 주입 필수",
+            "reason":    "generated_at missing or empty",
             "stage":     "PRECONDITION_GATE",
         }
     try:
@@ -71,22 +61,22 @@ def run_shadow_pipeline(
         return {
             "success":   False,
             "hard_stop": True,
-            "reason":    f"generated_at ISO8601 파싱 실패: {generated_at!r}",
+            "reason":    f"generated_at ISO8601 parse failed: {repr(generated_at)}",
             "stage":     "PRECONDITION_GATE",
         }
 
     if not delta_requests:
         return {
-            "success":    False,
-            "hard_stop":  True,
-            "reason":     "delta_requests 비어 있음 — shadow pipeline 진입 불가",
-            "stage":      "PRE_CHECK",
+            "success":   False,
+            "hard_stop": True,
+            "reason":    "delta_requests empty",
+            "stage":     "PRE_CHECK",
         }
 
     committed_by = "caddy"
     written_deltas = []
 
-    # ── Stage 0: PRE_DELTA_IDEMPOTENCY_GATE ───────────────────────────────────────
+    # Stage 0: PRE_DELTA_IDEMPOTENCY_GATE
     domains = list({req["domain"] for req in delta_requests})
     delta_exists = any(
         os.path.isdir(os.path.join(DELTA_LOG_BASE, domain, f"S{session_number}"))
@@ -111,7 +101,7 @@ def run_shadow_pipeline(
                 "stage":     "PRE_DELTA_IDEMPOTENCY_GATE",
             }
 
-    # ── Stage 1: delta_writer (각 domain) ──────────────────────────────────────
+    # Stage 1+2: DELTA_WRITE + INDEX_UPDATE
     for req in delta_requests:
         write_result = write_delta(
             domain=req["domain"],
@@ -124,55 +114,46 @@ def run_shadow_pipeline(
             prev_delta_id=req["prev_delta_id"],
             prev_content_hash=req["prev_content_hash"],
         )
-
         if not write_result["success"]:
             return {
-                "success":   False,
-                "hard_stop": True,
-                "reason":    f"delta_writer 실패: {write_result.get('reason')}",
-                "stage":     "DELTA_WRITE",
+                "success":    False,
+                "hard_stop":  True,
+                "reason":     f"delta_writer failed: {write_result.get(chr(39)+'reason'+chr(39))}",
+                "stage":      "DELTA_WRITE",
                 "failed_req": req,
             }
-
         delta = write_result["delta"]
         delta_path = write_result["path"]
-
-        # ── Stage 2: index_updater (FIX-1 적용) ──────────────────────────────
         index_result = update_index(delta, delta_path)
-
         if not index_result["success"]:
-            # FIX-1: index_updater 실패 → delta 이미 QUARANTINED
-            # TX/COMMIT 생성 진입 금지
             return {
-                "success":   False,
-                "hard_stop": True,
-                "reason":    index_result["reason"],
-                "stage":     "INDEX_UPDATE",
+                "success":    False,
+                "hard_stop":  True,
+                "reason":     index_result["reason"],
+                "stage":      "INDEX_UPDATE",
                 "quarantine": index_result.get("quarantine"),
-                "message":   index_result.get("message"),
+                "message":    index_result.get("message"),
             }
-
         written_deltas.append(delta)
 
-    # ── Stage 3: session_transaction_manager TX 생성 ──────────────────────────
-    tx_result = create_transaction(
+    # Stage 3: TX_CREATE
+    tx_result = mutate_create_transaction(
         session_number=session_number,
         committed_by=committed_by,
         included_deltas=written_deltas,
         generated_at=generated_at,
     )
-
     if not tx_result["success"]:
         return {
             "success":   False,
             "hard_stop": True,
-            "reason":    f"TX 생성 실패: {tx_result.get('reason')}",
+            "reason":    f"TX create failed: {tx_result.get(chr(39)+'reason'+chr(39))}",
             "stage":     "TX_CREATE",
         }
-
     tx_id = tx_result["tx_id"]
     transaction_hash = tx_result["transaction_hash"]
-    # ── Stage 4: COMMIT 생성 ──────────────────────────────────────────
+
+    # Stage 4: COMMIT_CREATE
     commit_result = create_commit(
         session_number=session_number,
         tx_id=tx_id,
@@ -180,17 +161,16 @@ def run_shadow_pipeline(
         committed_by=committed_by,
         generated_at=generated_at,
     )
-
     if not commit_result["success"]:
-        mark_incomplete(session_number, f"COMMIT 생성 실패: {commit_result.get('reason')}")
+        mark_incomplete(session_number, f"COMMIT create failed: {commit_result.get(chr(39)+'reason'+chr(39))}")
         return {
             "success":   False,
             "hard_stop": True,
-            "reason":    f"COMMIT 생성 실패: {commit_result.get('reason')}",
+            "reason":    f"COMMIT create failed: {commit_result.get(chr(39)+'reason'+chr(39))}",
             "stage":     "COMMIT_CREATE",
         }
 
-    # ── Stage 5: PRE_COMMIT_GATE (FIX-2 — 생성 완료 후 정합성 검증) ────────
+    # Stage 5: PRE_COMMIT_GATE
     pre_commit_check = verify_commit_exists(session_number)
     if pre_commit_check.get("hard_stop"):
         mark_incomplete(session_number, pre_commit_check["reason"])
@@ -201,33 +181,94 @@ def run_shadow_pipeline(
             "stage":     "PRE_COMMIT_GATE",
         }
 
-    # ── Stage 6: COMMIT 존재 최종 확인 (POST_COMMIT_VERIFY) ────────────────
+    # Stage 6: POST_COMMIT_VERIFY
     final_check = verify_commit_exists(session_number)
     if not final_check["exists"]:
         return {
             "success":   False,
             "hard_stop": True,
-            "reason":    "COMMIT 생성 후 존재 확인 실패 — HARD STOP",
+            "reason":    "COMMIT existence check failed after creation",
             "stage":     "POST_COMMIT_VERIFY",
         }
 
-    # ── Stage 7: Phase 2 Validator ──────────────────────────────────────────────
+    # Stage 6.5: TX COMMITTED update
+    try:
+        tx_file_path = os.path.join(TX_BASE_PATH, f"{tx_id}.json")
+        with open(tx_file_path, "r", encoding="utf-8") as f:
+            tx_data = json.load(f)
+        tx_data["status"] = "COMMITTED"
+        with open(tx_file_path, "w", encoding="utf-8") as f:
+            json.dump(tx_data, f, sort_keys=True, ensure_ascii=True, separators=(",", ":"), indent=2)
+    except Exception as e:
+        return {
+            "success":   False,
+            "hard_stop": True,
+            "reason":    "TX_COMMIT_UPDATE_FAILED",
+            "stage":     "TX_COMMIT_UPDATE",
+            "error":     str(e),
+        }
+
+    # Stage 6.5: INDEX transaction registration
+    try:
+        index_path = os.path.join(DELTA_LOG_BASE, "INDEX.json")
+        with open(index_path, "r", encoding="utf-8") as f:
+            index_data = json.load(f)
+        if "transactions" not in index_data:
+            index_data["transactions"] = []
+        if not any(t.get("tx_id") == tx_id for t in index_data["transactions"]):
+            index_data["transactions"].append({"tx_id": tx_id, "status": "COMMITTED"})
+        with open(index_path, "w", encoding="utf-8") as f:
+            json.dump(index_data, f, sort_keys=True, ensure_ascii=True, separators=(",", ":"), indent=2)
+    except Exception as e:
+        return {
+            "success":   False,
+            "hard_stop": True,
+            "reason":    "INDEX_TRANSACTION_REGISTER_FAILED",
+            "stage":     "INDEX_TRANSACTION_REGISTER",
+            "error":     str(e),
+        }
+
+    # Stage 7: Phase 2 Validator
     candidate_payload = {d["target_key"]: d["new_value"] for d in written_deltas}
     candidate_payload["generated_at"] = generated_at
 
-    ssot_payload = {d["target_key"]: d["new_value"] for d in written_deltas}
-    ssot_payload["generated_at"] = generated_at
+    if ssot_payload_provider is None:
+        return {
+            "success":   False,
+            "hard_stop": True,
+            "reason":    "SSOT_PAYLOAD_PROVIDER_MISSING",
+            "stage":     "PHASE2_VALIDATION",
+        }
+
+    try:
+        ssot_payload = ssot_payload_provider(
+            session_number=session_number,
+            written_deltas=written_deltas,
+            generated_at=generated_at,
+        )
+    except Exception as e:
+        return {
+            "success":   False,
+            "hard_stop": True,
+            "reason":    "SSOT_PAYLOAD_LOAD_FAILED",
+            "stage":     "PHASE2_VALIDATION",
+            "error":     str(e),
+        }
 
     phase2_ctx = {
-        "shadow_mode": True,
-        "index_loaded": True,
-        "delta_count": len(written_deltas),
-        "session_number": session_number,
+        "shadow_mode":       True,
+        "index_loaded":      True,
+        "delta_count":       len(written_deltas),
+        "session_number":    session_number,
+        "phase1_complete":   True,
         "candidate_payload": candidate_payload,
-        "ssot_payload": ssot_payload,
-        "phase1_complete": True,
+        "ssot_payload":      ssot_payload,
+        "source": {
+            "candidate": "written_deltas",
+            "ssot":      "ssot_payload_provider",
+        },
     }
-    phase2_result = validate_phase2(phase2_ctx)
+    phase2_result = run_with_collapse_gate(phase2_ctx)
     contract = phase2_result.get("contract") or {}
     contract_result = contract.get("contract", "PASS")
 
@@ -249,13 +290,13 @@ def run_shadow_pipeline(
     )
 
     return {
-        "success":          True,
-        "commit_id":        commit_result["commit_id"],
-        "tx_id":            tx_id,
-        "delta_count":      len(written_deltas),
-        "generated_at":     generated_at,
-        "phase2_valid":     phase2_result["phase2_valid"],
-        "phase2_contract":  contract_result,
-        "divergence_id":    divergence_id,
-        "phase3_blocked":   phase3_blocked,
+        "success":         True,
+        "commit_id":       commit_result["commit_id"],
+        "tx_id":           tx_id,
+        "delta_count":     len(written_deltas),
+        "generated_at":    generated_at,
+        "phase2_valid":    phase2_result["phase2_valid"],
+        "phase2_contract": contract_result,
+        "divergence_id":   divergence_id,
+        "phase3_blocked":  phase3_blocked,
     }

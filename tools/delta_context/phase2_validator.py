@@ -1,9 +1,13 @@
+ACTIVE_VERSION = "1.2.0"
+VERSION_STATUS = "active"
 # tools/delta_context/phase2_validator.py
 # AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2
 # PT-S66-001: Shadow Mode Phase 2 — Trigger Precondition + Comparison Contract
+# PT-S73-002: Source Collapse Detection Gate (S91 STABILIZATION)
 
 import hashlib
 import json
+import os
 from datetime import datetime, timezone, timedelta
 from typing import Any
 
@@ -14,6 +18,21 @@ COMPARISON_CONTRACT_FAIL = "FAIL"
 COMPARISON_CONTRACT_BLOCKED = "BLOCKED_VALIDATION"
 
 TIMESTAMP_WINDOW_SECONDS = 300  # 5분
+
+# ── Source Collapse 판정 상수 ──────────────────────────────────────────────────
+
+COLLAPSE_VERDICT_FAIL = "FAIL"
+COLLAPSE_VERDICT_PASS = "PASS"
+
+COLLAPSE_REASON_PATH_MATCH = "PATH_MATCH"
+COLLAPSE_REASON_HASH_MATCH = "HASH_MATCH"
+COLLAPSE_REASON_INODE_MATCH = "INODE_MATCH"
+COLLAPSE_REASON_INVALID_HASH_FORMAT = "INVALID_HASH_FORMAT"
+COLLAPSE_REASON_INVALID_HASH_INTEGRITY = "INVALID_HASH_INTEGRITY"
+COLLAPSE_REASON_UNKNOWN = "UNKNOWN"
+COLLAPSE_REASON_NONE = "NONE"
+
+SHA256_HEX_LENGTH = 64
 
 
 def _canonical_dumps(obj: Any) -> str:
@@ -26,6 +45,120 @@ def _canonical_dumps(obj: Any) -> str:
 def compute_normalized_payload_hash(payload: dict) -> str:
     raw = _canonical_dumps(payload).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
+
+
+def _compute_file_sha256(path: str) -> str:
+    """파일 내용 기준 SHA256 full 64자리 반환. 실패 시 예외 전파."""
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+# ── Source Collapse Detection Gate ────────────────────────────────────────────
+
+def check_source_collapse(ctx: dict) -> dict:
+    """
+    Source collapse 사전 차단 게이트.
+    validate_phase2() 진입 전에 반드시 실행해야 한다.
+
+    판정 입력 (ctx 최상위 키):
+        REQUIRED:
+            candidate_source_path (str)
+            ssot_source_path      (str)
+            candidate_source_hash (str)  — SHA256 full 64자리
+            ssot_source_hash      (str)  — SHA256 full 64자리
+        OPTIONAL:
+            candidate_source_inode (int)
+            ssot_source_inode      (int)
+
+    반환:
+        {
+            "collapse": bool,
+            "reason":  "PATH_MATCH | HASH_MATCH | INODE_MATCH |
+                        INVALID_HASH_FORMAT | INVALID_HASH_INTEGRITY |
+                        UNKNOWN | NONE",
+            "verdict": "FAIL | PASS"
+        }
+
+    PASS 조건:
+        collapse == False AND reason == "NONE" AND verdict == "PASS"
+    그 외 모든 조합 = FAIL.
+
+    FAIL-CLOSED:
+        내부에서 발생하는 모든 Exception은 PASS로 전환될 수 없다.
+        → collapse=True, reason="UNKNOWN", verdict="FAIL"
+    """
+    def _fail(reason: str) -> dict:
+        return {"collapse": True, "reason": reason, "verdict": COLLAPSE_VERDICT_FAIL}
+
+    try:
+        # ── 필드 존재 확인 ──────────────────────────────────────────────────
+        candidate_path = ctx.get("candidate_source_path")
+        ssot_path = ctx.get("ssot_source_path")
+        candidate_hash_provided = ctx.get("candidate_source_hash")
+        ssot_hash_provided = ctx.get("ssot_source_hash")
+
+        if not candidate_path:
+            return _fail(COLLAPSE_REASON_UNKNOWN)
+        if not ssot_path:
+            return _fail(COLLAPSE_REASON_UNKNOWN)
+        if not candidate_hash_provided:
+            return _fail(COLLAPSE_REASON_UNKNOWN)
+        if not ssot_hash_provided:
+            return _fail(COLLAPSE_REASON_UNKNOWN)
+
+        # ── PATH_EXISTENCE_CHECK ────────────────────────────────────────────
+        if not os.path.exists(candidate_path):
+            return _fail(COLLAPSE_REASON_UNKNOWN)
+        if not os.path.exists(ssot_path):
+            return _fail(COLLAPSE_REASON_UNKNOWN)
+
+        # ── HASH_FORMAT_CHECK — SHA256 full 64자리 강제 ─────────────────────
+        if len(candidate_hash_provided) != SHA256_HEX_LENGTH:
+            return _fail(COLLAPSE_REASON_INVALID_HASH_FORMAT)
+        if len(ssot_hash_provided) != SHA256_HEX_LENGTH:
+            return _fail(COLLAPSE_REASON_INVALID_HASH_FORMAT)
+
+        # ── HASH_INTEGRITY_CHECK — 실제 파일 재계산 ─────────────────────────
+        try:
+            candidate_hash_actual = _compute_file_sha256(candidate_path)
+        except Exception:
+            return _fail(COLLAPSE_REASON_UNKNOWN)
+
+        try:
+            ssot_hash_actual = _compute_file_sha256(ssot_path)
+        except Exception:
+            return _fail(COLLAPSE_REASON_UNKNOWN)
+
+        if candidate_hash_provided != candidate_hash_actual:
+            return _fail(COLLAPSE_REASON_INVALID_HASH_INTEGRITY)
+        if ssot_hash_provided != ssot_hash_actual:
+            return _fail(COLLAPSE_REASON_INVALID_HASH_INTEGRITY)
+
+        # ── PATH_MATCH — 정규화 경로 비교 ───────────────────────────────────
+        if os.path.abspath(candidate_path) == os.path.abspath(ssot_path):
+            return _fail(COLLAPSE_REASON_PATH_MATCH)
+
+        # ── HASH_MATCH — 검증 완료된 hash 비교 ──────────────────────────────
+        if candidate_hash_actual == ssot_hash_actual:
+            return _fail(COLLAPSE_REASON_HASH_MATCH)
+
+        # ── INODE_MATCH (optional) ───────────────────────────────────────────
+        candidate_inode = ctx.get("candidate_source_inode")
+        ssot_inode = ctx.get("ssot_source_inode")
+        if candidate_inode is not None and ssot_inode is not None:
+            if candidate_inode == ssot_inode:
+                return _fail(COLLAPSE_REASON_INODE_MATCH)
+
+        # ── PASS ─────────────────────────────────────────────────────────────
+        return {
+            "collapse": False,
+            "reason": COLLAPSE_REASON_NONE,
+            "verdict": COLLAPSE_VERDICT_PASS,
+        }
+
+    except Exception:
+        # FAIL-CLOSED: 예외 발생 시 무조건 FAIL
+        return _fail(COLLAPSE_REASON_UNKNOWN)
 
 
 # ── Trigger Precondition 7가지 ────────────────────────────────────────────────
@@ -215,3 +348,29 @@ def validate_phase2(ctx: dict) -> dict:
         "preconditions": pre,
         "contract": contract,
     }
+
+
+# ── 통합 게이트 진입점 ─────────────────────────────────────────────────────────
+
+def run_with_collapse_gate(ctx: dict) -> dict:
+    """
+    Source collapse gate → Phase 2 validator 순서를 보장하는 통합 진입점.
+    shadow_pipeline.py는 validate_phase2() 대신 이 함수를 호출해야 한다.
+
+    실행 순서:
+        1. check_source_collapse(ctx)
+        2. collapse_result["verdict"] == "FAIL"  →  즉시 collapse_result 반환
+                                                     (validate_phase2 호출 금지)
+        3. collapse PASS  →  validate_phase2(ctx) 실행 후 결과 반환
+
+    Returns:
+        collapse FAIL 시:
+            {"collapse": True, "reason": str, "verdict": "FAIL"}
+        collapse PASS 시:
+            validate_phase2() 반환값 그대로
+            {"phase2_valid": bool, "preconditions": dict, "contract": dict|None}
+    """
+    collapse_result = check_source_collapse(ctx)
+    if collapse_result["verdict"] == COLLAPSE_VERDICT_FAIL:
+        return collapse_result
+    return validate_phase2(ctx)
