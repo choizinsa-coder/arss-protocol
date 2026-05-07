@@ -24,6 +24,48 @@ VALID_DELTA_REQUEST = {
 
 
 # TC-1: generated_at 미전달(빈 문자열) → PRECONDITION_GATE fail-closed
+def _make_open_mock():
+    import json as _json
+    from unittest.mock import mock_open as _mock_open
+    _tx_json = _json.dumps({"id": "TX-S72", "session": 72, "status": "PENDING"})
+    _index_json = _json.dumps({"transactions": []})
+    _original_open = open
+    def _patched_open(file, mode="r", *args, **kwargs):
+        if "TX-S72" in str(file):
+            if "r" in mode:
+                return _mock_open(read_data=_tx_json)()
+            else:
+                return _mock_open()()
+        if "INDEX.json" in str(file):
+            if "r" in mode:
+                return _mock_open(read_data=_index_json)()
+            else:
+                return _mock_open()()
+        return _original_open(file, mode, *args, **kwargs)
+    return _patched_open
+
+
+def _make_open_mock():
+    import json as _json
+    from unittest.mock import mock_open as _mock_open
+    _tx_json = _json.dumps({"id": "TX-S72", "session": 72, "status": "PENDING"})
+    _index_json = _json.dumps({"transactions": []})
+    _original_open = open
+    def _patched_open(file, mode="r", *args, **kwargs):
+        if "TX-S72" in str(file):
+            if "r" in mode:
+                return _mock_open(read_data=_tx_json)()
+            else:
+                return _mock_open()()
+        if "INDEX.json" in str(file):
+            if "r" in mode:
+                return _mock_open(read_data=_index_json)()
+            else:
+                return _mock_open()()
+        return _original_open(file, mode, *args, **kwargs)
+    return _patched_open
+
+
 def test_tc1_generated_at_empty_fail_closed():
     result = run_shadow_pipeline(
         session_number=72,
@@ -76,6 +118,14 @@ def test_tc4_valid_generated_at_passes_precondition():
 def test_tc5_candidate_payload_has_generated_at():
     captured = {}
 
+
+    def mock_ssot_payload_provider(**kwargs):
+        return {
+            "session_number": kwargs.get("session_number"),
+            "written_deltas": kwargs.get("written_deltas"),
+            "generated_at": kwargs.get("generated_at"),
+            "source": "mock_ssot_payload_provider",
+        }
     def mock_validate(ctx):
         captured["ctx"] = ctx
         return {
@@ -86,10 +136,18 @@ def test_tc5_candidate_payload_has_generated_at():
 
     with patch("tools.delta_context.shadow_pipeline.write_delta") as mock_wd, \
          patch("tools.delta_context.shadow_pipeline.update_index") as mock_ui, \
-         patch("tools.delta_context.shadow_pipeline.create_transaction") as mock_tx, \
+         patch("tools.delta_context.shadow_pipeline.mutate_create_transaction") as mock_tx, \
          patch("tools.delta_context.shadow_pipeline.create_commit") as mock_cc, \
          patch("tools.delta_context.shadow_pipeline.verify_commit_exists") as mock_vc, \
-         patch("tools.delta_context.shadow_pipeline.validate_phase2", side_effect=mock_validate), \
+         patch("builtins.open", side_effect=_make_open_mock()), \
+         patch("builtins.open", side_effect=_make_open_mock()), \
+         patch("tools.delta_context.shadow_pipeline.classify_stage0", return_value={
+             "state": "NOT_STARTED",
+             "gate": "ALLOW_NEW_EXECUTION",
+             "reason": "TEST_STAGE0_BYPASS",
+             "metadata": {"test_only": True}
+         }), \
+         patch("tools.delta_context.shadow_pipeline.run_with_collapse_gate", side_effect=mock_validate), \
          patch("tools.delta_context.shadow_pipeline.record_divergence"), \
          patch("tools.delta_context.shadow_pipeline.get_divergence_summary", return_value={}), \
          patch("tools.delta_context.shadow_pipeline.record_session"), \
@@ -109,6 +167,7 @@ def test_tc5_candidate_payload_has_generated_at():
             session_number=72,
             delta_requests=[VALID_DELTA_REQUEST],
             generated_at=VALID_GENERATED_AT,
+            ssot_payload_provider=mock_ssot_payload_provider,
         )
 
     assert "candidate_payload" in captured["ctx"]
@@ -119,6 +178,14 @@ def test_tc5_candidate_payload_has_generated_at():
 def test_tc6_ssot_payload_has_generated_at():
     captured = {}
 
+
+    def mock_ssot_payload_provider(**kwargs):
+        return {
+            "session_number": kwargs.get("session_number"),
+            "written_deltas": kwargs.get("written_deltas"),
+            "generated_at": kwargs.get("generated_at"),
+            "source": "mock_ssot_payload_provider",
+        }
     def mock_validate(ctx):
         captured["ctx"] = ctx
         return {
@@ -129,10 +196,18 @@ def test_tc6_ssot_payload_has_generated_at():
 
     with patch("tools.delta_context.shadow_pipeline.write_delta") as mock_wd, \
          patch("tools.delta_context.shadow_pipeline.update_index") as mock_ui, \
-         patch("tools.delta_context.shadow_pipeline.create_transaction") as mock_tx, \
+         patch("tools.delta_context.shadow_pipeline.mutate_create_transaction") as mock_tx, \
          patch("tools.delta_context.shadow_pipeline.create_commit") as mock_cc, \
          patch("tools.delta_context.shadow_pipeline.verify_commit_exists") as mock_vc, \
-         patch("tools.delta_context.shadow_pipeline.validate_phase2", side_effect=mock_validate), \
+         patch("builtins.open", side_effect=_make_open_mock()), \
+         patch("builtins.open", side_effect=_make_open_mock()), \
+         patch("tools.delta_context.shadow_pipeline.classify_stage0", return_value={
+             "state": "NOT_STARTED",
+             "gate": "ALLOW_NEW_EXECUTION",
+             "reason": "TEST_STAGE0_BYPASS",
+             "metadata": {"test_only": True}
+         }), \
+         patch("tools.delta_context.shadow_pipeline.run_with_collapse_gate", side_effect=mock_validate), \
          patch("tools.delta_context.shadow_pipeline.record_divergence"), \
          patch("tools.delta_context.shadow_pipeline.get_divergence_summary", return_value={}), \
          patch("tools.delta_context.shadow_pipeline.record_session"), \
@@ -152,6 +227,7 @@ def test_tc6_ssot_payload_has_generated_at():
             session_number=72,
             delta_requests=[VALID_DELTA_REQUEST],
             generated_at=VALID_GENERATED_AT,
+            ssot_payload_provider=mock_ssot_payload_provider,
         )
 
     assert "ssot_payload" in captured["ctx"]
@@ -162,6 +238,14 @@ def test_tc6_ssot_payload_has_generated_at():
 def test_tc7_candidate_ssot_generated_at_identical():
     captured = {}
 
+
+    def mock_ssot_payload_provider(**kwargs):
+        return {
+            "session_number": kwargs.get("session_number"),
+            "written_deltas": kwargs.get("written_deltas"),
+            "generated_at": kwargs.get("generated_at"),
+            "source": "mock_ssot_payload_provider",
+        }
     def mock_validate(ctx):
         captured["ctx"] = ctx
         return {
@@ -172,10 +256,18 @@ def test_tc7_candidate_ssot_generated_at_identical():
 
     with patch("tools.delta_context.shadow_pipeline.write_delta") as mock_wd, \
          patch("tools.delta_context.shadow_pipeline.update_index") as mock_ui, \
-         patch("tools.delta_context.shadow_pipeline.create_transaction") as mock_tx, \
+         patch("tools.delta_context.shadow_pipeline.mutate_create_transaction") as mock_tx, \
          patch("tools.delta_context.shadow_pipeline.create_commit") as mock_cc, \
          patch("tools.delta_context.shadow_pipeline.verify_commit_exists") as mock_vc, \
-         patch("tools.delta_context.shadow_pipeline.validate_phase2", side_effect=mock_validate), \
+         patch("builtins.open", side_effect=_make_open_mock()), \
+         patch("builtins.open", side_effect=_make_open_mock()), \
+         patch("tools.delta_context.shadow_pipeline.classify_stage0", return_value={
+             "state": "NOT_STARTED",
+             "gate": "ALLOW_NEW_EXECUTION",
+             "reason": "TEST_STAGE0_BYPASS",
+             "metadata": {"test_only": True}
+         }), \
+         patch("tools.delta_context.shadow_pipeline.run_with_collapse_gate", side_effect=mock_validate), \
          patch("tools.delta_context.shadow_pipeline.record_divergence"), \
          patch("tools.delta_context.shadow_pipeline.get_divergence_summary", return_value={}), \
          patch("tools.delta_context.shadow_pipeline.record_session"), \
@@ -195,6 +287,7 @@ def test_tc7_candidate_ssot_generated_at_identical():
             session_number=72,
             delta_requests=[VALID_DELTA_REQUEST],
             generated_at=VALID_GENERATED_AT,
+            ssot_payload_provider=mock_ssot_payload_provider,
         )
 
     c_ts = captured["ctx"]["candidate_payload"].get("generated_at")
