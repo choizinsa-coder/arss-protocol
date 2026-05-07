@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 index_validator.py
 ==================
@@ -24,7 +26,6 @@ HARD CONSTRAINTS:
 승인: 비오(Joshua) EAG — S65
 """
 
-from __future__ import annotations
 
 import json
 import os
