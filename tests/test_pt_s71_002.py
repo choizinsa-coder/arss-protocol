@@ -4,7 +4,7 @@ import json, os, shutil, pytest, sys
 sys.path.insert(0, "/opt/arss/engine/arss-protocol")
 from tools.delta_context.shadow_pipeline import run_shadow_pipeline
 from tools.delta_context.commit_marker_manager import verify_commit_exists
-from tools.delta_context.session_transaction_manager import create_transaction
+from tools.delta_context.session_transaction_manager import mutate_create_transaction
 
 DLB = "/opt/arss/engine/arss-protocol/DELTA_LOG"
 TXP = "/opt/arss/engine/arss-protocol/DELTA_LOG/transactions"
@@ -68,7 +68,7 @@ def test_tc3_commit_no_tx():
 
 # TC-4: included_deltas 비어 있음 -> TX 생성 실패 (BK-5 CASE-C)
 def test_tc4_empty_deltas():
-    r = create_transaction(session_number=9004, committed_by="caddy", included_deltas=[],
+    r = mutate_create_transaction(session_number=9004, committed_by="caddy", included_deltas=[],
                            generated_at="2026-05-01T00:00:00.000+09:00")
     assert r["success"] is False, f"TC-4 FAIL: {r}"
     assert "비어" in r.get("reason", "") or "BK-5" in r.get("reason", ""), f"TC-4: {r}"
@@ -82,7 +82,7 @@ def test_tc5_partial_state():
         r = run_shadow_pipeline(session_number=s, delta_requests=_req(dom), generated_at="2026-05-01T00:00:00.000+09:00")
         assert r["success"] is False, f"TC-5: {r}"
         assert r.get("hard_stop") is True, f"TC-5 hard_stop: {r}"
-        assert r.get("reason") == "PARTIAL_STATE_DETECTED", f"TC-5 reason: {r}"
+        assert r.get("state") == "UNKNOWN", f"TC-5 state: {r}"
         assert r.get("stage") == "PRE_DELTA_IDEMPOTENCY_GATE"
     finally:
         _cleanup(s, dom)
