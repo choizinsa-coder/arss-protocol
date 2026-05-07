@@ -18,6 +18,7 @@ from tools.delta_context.index_updater import update_index
 from tools.delta_context.session_transaction_manager import mutate_create_transaction, mark_incomplete
 from tools.delta_context.commit_marker_manager import create_commit, verify_commit_exists
 from tools.delta_context.phase2_validator import run_with_collapse_gate
+from tools.delta_context.stage0_idempotency_classifier import classify_stage0
 from tools.delta_context.divergence_recorder import record_divergence, get_divergence_summary
 from tools.delta_context.readiness_tracker import record_session
 
@@ -78,28 +79,29 @@ def run_shadow_pipeline(
 
     # Stage 0: PRE_DELTA_IDEMPOTENCY_GATE
     domains = list({req["domain"] for req in delta_requests})
-    delta_exists = any(
-        os.path.isdir(os.path.join(DELTA_LOG_BASE, domain, f"S{session_number}"))
-        for domain in domains
+    stage0_result = classify_stage0(
+        session_number=session_number,
+        domains=domains,
+        delta_log_base=DELTA_LOG_BASE,
+        tx_base_path=TX_BASE_PATH,
+        commit_base_path=COMMIT_BASE_PATH,
     )
-    if delta_exists:
-        tx_path      = os.path.join(TX_BASE_PATH,     f"TX-S{session_number}.json")
-        commit_path  = os.path.join(COMMIT_BASE_PATH, f"COMMIT-S{session_number}.json")
-        tx_exists     = os.path.exists(tx_path)
-        commit_exists = os.path.exists(commit_path)
-        if tx_exists and commit_exists:
-            return {
-                "success": True,
-                "reason":  "ALREADY_COMPLETED",
-                "stage":   "PRE_DELTA_IDEMPOTENCY_GATE",
-            }
-        else:
-            return {
-                "success":   False,
-                "hard_stop": True,
-                "reason":    "PARTIAL_STATE_DETECTED",
-                "stage":     "PRE_DELTA_IDEMPOTENCY_GATE",
-            }
+    if stage0_result["gate"] == "ALLOW_ALREADY_COMPLETED":
+        return {
+            "success": True,
+            "reason":  "ALREADY_COMPLETED",
+            "stage":   "PRE_DELTA_IDEMPOTENCY_GATE",
+        }
+    if stage0_result["gate"] == "FAIL_CLOSED":
+        return {
+            "success":    False,
+            "hard_stop":  True,
+            "reason":     stage0_result["reason"],
+            "state":      stage0_result["state"],
+            "hash_check": stage0_result.get("hash_check", {}),
+            "stage":      "PRE_DELTA_IDEMPOTENCY_GATE",
+        }
+    # gate == "ALLOW_NEW_RUN" -> fall-through to Stage 1+
 
     # Stage 1+2: DELTA_WRITE + INDEX_UPDATE
     for req in delta_requests:
