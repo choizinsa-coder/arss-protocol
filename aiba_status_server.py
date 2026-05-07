@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 AIBA Status Server v0.9
 Changes from v0.8:
@@ -117,18 +119,27 @@ def health():
 
 @app.route("/v1/system/time", methods=["GET"])
 def get_system_time():
-    """인증 없음 — KST 현재 시각 반환 (UTS v1.0-Rev.A)"""
+    """인증 없음 — KST 현재 시각 반환 (UTS v1.0-Rev.A)
+    A안: 기존 필드 유지 + PT-S71-001 계약 필드 추가 (S95)
+    계약 필드: ok / source / timestamp / epoch_ms
+    레거시 필드: current_kst / current_utc / utc_offset / unix_timestamp (하위 호환 유지)
+    """
     from datetime import datetime, timezone, timedelta
     KST = timezone(timedelta(hours=9))
     now_kst = datetime.now(KST)
     now_utc = datetime.now(timezone.utc)
+    ms = now_kst.strftime("%f")[:3]
+    timestamp_iso = now_kst.strftime(f"%Y-%m-%dT%H:%M:%S.{ms}+09:00")
     return jsonify({
+        "ok": True,
+        "source": "AIBA_STATUS_SERVER_CLOCK",
+        "timezone": "Asia/Seoul",
+        "timestamp": timestamp_iso,
+        "epoch_ms": int(now_utc.timestamp() * 1000),
         "current_kst": now_kst.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
         "current_utc": now_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "timezone": "Asia/Seoul",
         "utc_offset": "+09:00",
         "unix_timestamp": int(now_utc.timestamp()),
-        "source": "server_clock"
     })
 
 
@@ -317,8 +328,8 @@ def _save_pec_failure(pec_data: dict):
     try:
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(pec_data, f, ensure_ascii=False, indent=2)
-    except Exception:
-        pass  # 로그 저장 실패는 주 흐름에 영향 없음
+    except Exception as _e:
+        import logging; logging.warning("PEC log save failed: %s", _e)
     return path
 
 
@@ -361,8 +372,8 @@ def rpu_issue():
                     if rec.get('approval_id') == approval_id:
                         approval_record = rec
                         break
-            except Exception:
-                pass
+            except Exception as _e:
+                import logging; logging.warning("approval_record parse failed: %s", _e)
 
         if not approval_record:
             pec_log['failed_at_step'] = 'R1_EXISTENCE'
@@ -567,15 +578,15 @@ def rpu_issue():
             if 'rpu_id' in line.lower():
                 try:
                     rpu_id = line.split(':', 1)[1].strip().strip('"').strip("'").strip(',')
-                except Exception:
-                    pass
+                except Exception as _e:
+                    import logging; logging.debug("rpu_id parse skip: %s", _e)
             if 'chain_tip' in line.lower() or 'chain_hash' in line.lower():
                 try:
                     candidate = line.split(':', 1)[1].strip().strip('"').strip("'").strip(',')
                     if len(candidate) == 64:  # LESSON-011: 64자 full hash 확인
                         new_chain_tip = candidate
-                except Exception:
-                    pass
+                except Exception as _e:
+                    import logging; logging.debug("chain_tip parse skip: %s", _e)
 
     except subprocess.TimeoutExpired:
         pec_log.update({'failed_at_step': 'Step 4', 'reason': 'issuer subprocess timeout (60s)'})
@@ -672,8 +683,8 @@ def approval_pool_ready():
                         "session_id": d.get('session_id')
                     }
                 }), 200
-        except Exception:
-            continue
+        except Exception as _e:
+            import logging; logging.warning("pool entry skip: %s", _e)
 
     return jsonify({"status": "POOL_EMPTY"}), 200
 
