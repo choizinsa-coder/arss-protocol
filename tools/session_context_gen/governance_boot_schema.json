@@ -1,0 +1,219 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "governance_boot_schema.json",
+  "title": "GOVERNANCE_BOOT Digest Schema",
+  "description": "GOVSYNC-S102-DIGEST-001 v1.1 EAG-2_LOCKED. Governance Awareness Digest Layer ONLY. NOT a registry replication mechanism.",
+  "spec_id": "GOVSYNC-S102-DIGEST-001",
+  "spec_version": "v1.1",
+  "type": "object",
+  "required": [
+    "boot_id",
+    "schema_version",
+    "generated_session",
+    "generated_at",
+    "digest_scope",
+    "governance_state",
+    "registry_digest",
+    "trust_digest",
+    "stale_digest",
+    "alert_digest",
+    "sync_anchor"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "boot_id": {
+      "type": "string",
+      "description": "Unique identifier for this GOVERNANCE_BOOT artifact."
+    },
+    "schema_version": {
+      "type": "string",
+      "description": "Version of this schema definition.",
+      "const": "1.1"
+    },
+    "generated_session": {
+      "type": "integer",
+      "description": "Session number at generation time. Dynamic binding — NOT hardcoded.",
+      "minimum": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO8601 timestamp of digest generation."
+    },
+    "digest_scope": {
+      "type": "string",
+      "description": "Scope declaration. MUST be AWARENESS_ONLY.",
+      "const": "AWARENESS_ONLY"
+    },
+    "governance_state": {
+      "type": "string",
+      "description": "Overall governance state at time of digest generation.",
+      "enum": ["OBSERVABLE", "SYNCING", "DEGRADED"]
+    },
+    "registry_digest": {
+      "type": "array",
+      "description": "Registry existence awareness. One entry per registry. Source: VPS canonical registry.",
+      "items": {
+        "type": "object",
+        "required": ["registry_id", "registry_type", "registry_status", "latest_hash", "version"],
+        "additionalProperties": false,
+        "properties": {
+          "registry_id": {
+            "type": "string",
+            "description": "Registry identifier. Source: VPS canonical registry."
+          },
+          "registry_type": {
+            "type": "string",
+            "description": "Registry type classification. Source: Registry Lifecycle Layer.",
+            "enum": ["governance", "dependency"]
+          },
+          "registry_status": {
+            "type": "string",
+            "description": "Current lifecycle status. Source: Registry Lifecycle Layer.",
+            "enum": ["DRAFT", "EAG_APPROVED", "LOCKED", "DEPRECATED", "ARCHIVED"]
+          },
+          "latest_hash": {
+            "type": "string",
+            "description": "SHA256 hash of registry at VPS canonical. Source: Canonical Hash Layer.",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "version": {
+            "type": "string",
+            "description": "Registry version string. Source: Registry Metadata Layer."
+          },
+          "approval_ref_summary": {
+            "type": ["string", "null"],
+            "description": "Approval reference summary ONLY. Source: Approval Awareness Layer. FORBIDDEN: approval chain body / decision rationale / voting detail / audit trace.",
+            "examples": ["EAG-1_LOCKED", "S102_APPROVED"]
+          }
+        }
+      }
+    },
+    "trust_digest": {
+      "type": "object",
+      "description": "Trust awareness projection. Source: Trust Evaluation Layer.",
+      "required": ["trust_state", "oracle_candidate", "degraded_source_count"],
+      "additionalProperties": false,
+      "properties": {
+        "trust_state": {
+          "type": "string",
+          "description": "Current trust state. Source: Trust Evaluation Layer.",
+          "enum": ["TRUST_FULL", "TRUST_DEGRADED", "TRUST_ORACLE_OVERRIDE"]
+        },
+        "oracle_candidate": {
+          "type": "boolean",
+          "description": "Whether an ORACLE_CANDIDATE override is pending. Source: ORACLE_CANDIDATE Layer."
+        },
+        "trust_transition_ref": {
+          "type": ["string", "null"],
+          "description": "Trust transition reference summary ONLY. Source: Trust Transition Awareness Layer. FORBIDDEN: forensic detail / full trust analysis / remediation logic.",
+          "examples": ["LOCKED_HASH_MISMATCH", "STALE_REVIEW_TRIGGERED"]
+        },
+        "degraded_source_count": {
+          "type": "integer",
+          "description": "Number of degraded sources contributing to trust evaluation. Source: Trust Evaluation Layer.",
+          "minimum": 0
+        }
+      }
+    },
+    "stale_digest": {
+      "type": "object",
+      "description": "Deterministic stale awareness. Source: Stale Policy Layer.",
+      "required": ["stale_state", "stale_policy_status"],
+      "additionalProperties": false,
+      "properties": {
+        "stale_state": {
+          "type": "string",
+          "description": "Current stale state. Source: Stale Policy Layer.",
+          "enum": ["FRESH", "STALE_WARNING", "STALE_REVIEW", "STALE_DEGRADED"]
+        },
+        "warning_threshold": {
+          "type": ["integer", "null"],
+          "description": "Session number at which STALE_WARNING triggers. Derived: expiry_session_limit - warning_window(default=2). Source: Stale Transition Layer.",
+          "minimum": 1
+        },
+        "expiry_session_limit": {
+          "type": ["integer", "null"],
+          "description": "Session number at which registry expires. Source: Stale Policy Layer.",
+          "minimum": 1
+        },
+        "stale_trigger": {
+          "type": ["string", "null"],
+          "description": "Deterministic trigger identifier ONLY. Source: Stale Transition Awareness Layer. FORBIDDEN: arbitrary stale reasoning / subjective escalation.",
+          "enum": ["EXPIRY_THRESHOLD_REACHED", "HASH_DRIFT_DETECTED", "SESSION_LIMIT_EXCEEDED", null]
+        },
+        "stale_policy_status": {
+          "type": "string",
+          "description": "Whether stale policy has been formally locked. Source: Policy Governance Layer.",
+          "enum": ["LOCKED", "POLICY_NOT_LOCKED"]
+        }
+      }
+    },
+    "alert_digest": {
+      "type": "array",
+      "description": "Awareness attention signals. Source: Awareness Alert Layer.",
+      "items": {
+        "type": "object",
+        "required": ["alert_id", "severity", "affected_registry", "trust_state", "stale_state", "summary_message"],
+        "additionalProperties": false,
+        "properties": {
+          "alert_id": {
+            "type": "string",
+            "description": "Unique alert identifier. Source: Awareness Alert Layer."
+          },
+          "severity": {
+            "type": "string",
+            "description": "Alert severity. Mapped to Fail-Closed Tier: WARNING=T0 / REVIEW=T1 / FAIL=T2+T3. Source: Fail-Closed Tier Layer.",
+            "enum": ["WARNING", "REVIEW", "FAIL"]
+          },
+          "affected_registry": {
+            "type": "string",
+            "description": "Registry ID affected by this alert. Source: Registry Awareness Layer."
+          },
+          "trust_state": {
+            "type": "string",
+            "description": "Trust state at time of alert. Source: Trust Awareness Layer.",
+            "enum": ["TRUST_FULL", "TRUST_DEGRADED", "TRUST_ORACLE_OVERRIDE"]
+          },
+          "stale_state": {
+            "type": "string",
+            "description": "Stale state at time of alert. Source: Stale Awareness Layer.",
+            "enum": ["FRESH", "STALE_WARNING", "STALE_REVIEW", "STALE_DEGRADED"]
+          },
+          "summary_message": {
+            "type": "string",
+            "description": "Lightweight awareness summary ONLY. Source: Awareness Summary Layer. FORBIDDEN: executable remediation / deployment recovery / mutation instruction / registry body detail.",
+            "maxLength": 256
+          }
+        }
+      }
+    },
+    "sync_anchor": {
+      "type": "object",
+      "description": "Canonical synchronization awareness. Source: Canonical Hash Layer.",
+      "required": ["canonical_hash", "sync_basis", "mismatch_flag", "generated_session"],
+      "additionalProperties": false,
+      "properties": {
+        "canonical_hash": {
+          "type": "string",
+          "description": "SHA256 reference to canonical governance state. Reference ONLY — FORBIDDEN: registry payload embedding / runtime replication. Source: Canonical Hash Layer.",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "sync_basis": {
+          "type": "string",
+          "description": "The hash type used as synchronization basis. Source: Sync Policy Layer.",
+          "enum": ["REGISTRY_HASH", "TRUST_HASH", "STALE_HASH", "DIGEST_HASH"]
+        },
+        "mismatch_flag": {
+          "type": "boolean",
+          "description": "True if sync_anchor hash does not match expected canonical. Source: Sync Validation Layer."
+        },
+        "generated_session": {
+          "type": "integer",
+          "description": "Session number when sync_anchor was last computed. Dynamic binding — NOT hardcoded. Source: SESSION_CONTEXT.",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}
