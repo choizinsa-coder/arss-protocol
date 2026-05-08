@@ -1,0 +1,169 @@
+{
+  "contract_meta": {
+    "contract_id": "BOOT_RUNTIME_CONTRACT_V1",
+    "contract_version": "1.0.0",
+    "created_session": 101,
+    "created_date": "2026-05-08",
+    "authority": "도미 설계 / 캐디 구현 / 제니 검증 / 비오 EAG",
+    "ssot_ref": "Sub-Phase 3A 재구성 설계 — S101",
+    "fail_closed": true
+  },
+  "contracts": {
+    "BOOT": {
+      "contract_id": "BOOT_CONTRACT_V1",
+      "contract_version": "1.0.0",
+      "domain": "BOOT",
+      "governance_role": "continuity",
+      "receipt_scope": "R2",
+      "required_fields": [
+        "session_count",
+        "chain",
+        "boot_meta",
+        "canonical_rules",
+        "lessons",
+        "pending_tasks",
+        "state_events",
+        "decisions"
+      ],
+      "required_boot_meta_fields": [
+        "boot_is_ssot",
+        "ssot_ref",
+        "conflict_resolution",
+        "generated_from_sha256",
+        "boot_generated_at",
+        "runtime_pair_hash",
+        "runtime_pair_rule"
+      ],
+      "forbidden_fields": [
+        "boot_hash",
+        "boot_ref",
+        "boot_pair_hash",
+        "reverse_boot_reference"
+      ],
+      "hash_inputs": [
+        "session_count",
+        "chain",
+        "boot_meta"
+      ],
+      "hash_input_properties": {
+        "explicit": true,
+        "ordered": true,
+        "deterministic": true,
+        "reproducible": true,
+        "validator_visible": true
+      },
+      "validation_rules": [
+        "boot_meta.boot_is_ssot must be false",
+        "boot_meta.runtime_pair_rule must equal BOOT_REFERENCES_RUNTIME_ONLY",
+        "boot_meta.runtime_pair_hash must be non-empty string",
+        "session_count must be positive integer",
+        "chain.tip must be non-empty string"
+      ],
+      "fail_closed_conditions": [
+        "required_field_missing",
+        "required_boot_meta_field_missing",
+        "forbidden_field_present",
+        "boot_is_ssot_true",
+        "runtime_pair_rule_invalid",
+        "runtime_pair_hash_empty"
+      ]
+    },
+    "RUNTIME": {
+      "contract_id": "RUNTIME_CONTRACT_V1",
+      "contract_version": "1.0.0",
+      "domain": "RUNTIME",
+      "governance_role": "runtime_reference",
+      "receipt_scope": "R2",
+      "required_fields": [
+        "session_count",
+        "chain"
+      ],
+      "forbidden_fields": [
+        "boot_hash",
+        "boot_ref",
+        "boot_pair_hash",
+        "runtime_pair_hash",
+        "reverse_boot_reference"
+      ],
+      "hash_inputs": [
+        "session_count",
+        "chain"
+      ],
+      "hash_input_properties": {
+        "explicit": true,
+        "ordered": true,
+        "deterministic": true,
+        "reproducible": true,
+        "validator_visible": true
+      },
+      "validation_rules": [
+        "session_count must be positive integer",
+        "chain.tip must be non-empty string",
+        "no forbidden reverse-reference fields allowed"
+      ],
+      "fail_closed_conditions": [
+        "required_field_missing",
+        "forbidden_field_present",
+        "session_count_missing",
+        "chain_tip_missing"
+      ]
+    },
+    "PAIR": {
+      "contract_id": "PAIR_CONTRACT_V1",
+      "contract_version": "1.0.0",
+      "domain": "PAIR",
+      "governance_role": "pair_integrity",
+      "receipt_scope": "R3",
+      "hash_direction": "RUNTIME -> BOOT (one-way only)",
+      "pair_conditions": [
+        "boot.session_count == runtime.session_count",
+        "boot.chain.tip == runtime.chain.tip",
+        "boot.boot_meta.runtime_pair_hash == hash(runtime)",
+        "boot.boot_meta.runtime_pair_rule == BOOT_REFERENCES_RUNTIME_ONLY",
+        "runtime must not contain forbidden reverse-reference fields"
+      ],
+      "hash_inputs": [
+        "runtime canonical content (full runtime dict)"
+      ],
+      "hash_input_properties": {
+        "explicit": true,
+        "ordered": true,
+        "deterministic": true,
+        "reproducible": true,
+        "validator_visible": true
+      },
+      "validation_rules": [
+        "session_count must match between BOOT and RUNTIME",
+        "chain.tip must match between BOOT and RUNTIME",
+        "runtime_pair_hash must equal compute_hash(runtime)",
+        "runtime_pair_rule must equal BOOT_REFERENCES_RUNTIME_ONLY",
+        "runtime must not contain any forbidden reverse-reference fields"
+      ],
+      "fail_closed_conditions": [
+        "session_count_mismatch",
+        "chain_tip_mismatch",
+        "runtime_pair_hash_mismatch",
+        "runtime_pair_rule_invalid",
+        "forbidden_field_in_runtime",
+        "runtime_hash_computation_failed",
+        "boot_hash_computation_failed"
+      ]
+    }
+  },
+  "stop_conditions": {
+    "S3A-STOP-1": "BOOT/RUNTIME contract 필수 필드 불명확",
+    "S3A-STOP-2": "hash input field 미확정",
+    "S3A-STOP-3": "fixture가 production contract와 불일치",
+    "S3A-STOP-4": "validation이 false PASS 가능성을 가짐",
+    "S3A-STOP-5": "ACTIVE_CLAIM을 ACTIVE_RUNTIME으로 오판",
+    "S3A-STOP-6": "Sub-Phase 3A 결과가 Governance Sync formalization 입력으로 부적합"
+  },
+  "s3a_stop6_fail_criteria": [
+    "runtime classification confidence unresolved",
+    "contract hash boundary unresolved",
+    "validation trust ambiguity 존재",
+    "stale/orphan contamination unresolved",
+    "awareness handoff integrity 불명확",
+    "governance propagation risk unresolved"
+  ]
+}
