@@ -1,9 +1,7 @@
 {
-  "chain": {
-    "chain_hash": "db273fa39267a93ca6da6e91ba8ba0a1a70ed416788835ec675628b23010ff42",
-    "payload_hash": "a21d0c6f18e9f9bc08a223fa9a9530a57ba44fa62fa8124287468c3193a1c666",
-    "prev_hash": "dcb3b378afdd5a41902798d3d47e599e5ddf702251df51673fb38f80643fd7b4"
-  },
+  "rpu_id": "RPU-0005",
+  "event_type": "DECISION",
+  "version": "rpu/1.0",
   "payload": {
     "actor_id": "AIBA-DIRECTOR-BEO-001",
     "decision": {
@@ -22,6 +20,7 @@
     "title": "Production Chain Transition Decision",
     "version": "rpu/1.0"
   },
-  "rpu_id": "RPU-0005",
-  "version": "rpu/1.0"
+  "payload_hash": "a21d0c6f18e9f9bc08a223fa9a9530a57ba44fa62fa8124287468c3193a1c666",
+  "prev_hash": "ec7103c2e091cd041661e37665c43d16eccca8f5fd0e7d9b0e929b78a5b08551",
+  "chain_hash": "eed42520188b7bb0071badc22836ba6a5145714650be357d38b8bada5ce93e73"
 }

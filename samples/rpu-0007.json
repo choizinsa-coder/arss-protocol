@@ -1,9 +1,7 @@
 {
-  "chain": {
-    "chain_hash": "82d6606293e2fe69388648f5611bb6d844c2b28513bfb6a07a7c7432add69e9d",
-    "payload_hash": "001a0b898f2d1a0b50895ee430a9d025e1908d5215534286ca3e945f10609223",
-    "prev_hash": "ad0a2fdf6fe2f3e2c94aec9153cd02f55491e3986b92689a80519d1cd6990300"
-  },
+  "rpu_id": "RPU-0007",
+  "event_type": "EXECUTION",
+  "version": "rpu/1.0",
   "payload": {
     "actor_id": "AIBA-DIRECTOR-BEO-001",
     "event_type": "EXECUTION",
@@ -29,6 +27,7 @@
     "title": "AIBA OS v0.1 Operational Execution — Internal Proof Mode PASS",
     "version": "rpu/1.0"
   },
-  "rpu_id": "RPU-0007",
-  "version": "rpu/1.0"
+  "payload_hash": "001a0b898f2d1a0b50895ee430a9d025e1908d5215534286ca3e945f10609223",
+  "prev_hash": "5206668eea681311dd34f128c17bd619a5a5270b1ba2702ee555b82c86a0e25f",
+  "chain_hash": "f9961be677b18b3ac1c03a3dd35bafdaf256560018220b99ebb09531c7d3d85a"
 }

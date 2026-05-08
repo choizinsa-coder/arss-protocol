@@ -18,7 +18,7 @@ from verifier import (
 
 SAMPLES_DIR = os.path.join(os.path.dirname(__file__), "../../samples")
 EXPECTED_HASH_FILE = os.path.join(os.path.dirname(__file__), "../../tests/expected-chain-hash.txt")
-EXPECTED_FINAL_HASH = "3de51ae75318d7493fe7850046df41920e92362630a50a1a63af951adadf7763"
+EXPECTED_FINAL_HASH = "eb337942d91510f39fdf959ff47aa09205543bad87ab04be2440f3f77e5d1c6c"
 
 
 # ── Unit Tests ────────────────────────────────────────

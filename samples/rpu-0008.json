@@ -1,9 +1,7 @@
 {
-  "chain": {
-    "chain_hash": "3fa890300b41871f9e3aa0ed0d6b8463231bb75efba9dd250bccdf3e3e572c52",
-    "payload_hash": "a6d57d5ba37f2959eca3e2020badb54440d9243eb6384415541c4fa4555f2956",
-    "prev_hash": "82d6606293e2fe69388648f5611bb6d844c2b28513bfb6a07a7c7432add69e9d"
-  },
+  "rpu_id": "RPU-0008",
+  "event_type": "EVIDENCE",
+  "version": "rpu/1.0",
   "payload": {
     "actor_id": "AIBA-DIRECTOR-BEO-001",
     "event_type": "EVIDENCE",
@@ -43,6 +41,7 @@
     "title": "AIBA OS v0.1 Evidence Seal — STATE-001 Complete, STATE-002 Activated",
     "version": "rpu/1.0"
   },
-  "rpu_id": "RPU-0008",
-  "version": "rpu/1.0"
+  "payload_hash": "a6d57d5ba37f2959eca3e2020badb54440d9243eb6384415541c4fa4555f2956",
+  "prev_hash": "f9961be677b18b3ac1c03a3dd35bafdaf256560018220b99ebb09531c7d3d85a",
+  "chain_hash": "eb337942d91510f39fdf959ff47aa09205543bad87ab04be2440f3f77e5d1c6c"
 }

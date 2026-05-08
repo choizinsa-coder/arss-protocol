@@ -1,9 +1,7 @@
 {
-  "chain": {
-    "chain_hash": "ad0a2fdf6fe2f3e2c94aec9153cd02f55491e3986b92689a80519d1cd6990300",
-    "payload_hash": "d9b17f6af3ce41b2ef344db4a115d1f88deb7d0aa078746db511e5e38e1b1fc4",
-    "prev_hash": "db273fa39267a93ca6da6e91ba8ba0a1a70ed416788835ec675628b23010ff42"
-  },
+  "rpu_id": "RPU-0006",
+  "event_type": "APPROVAL",
+  "version": "rpu/1.0",
   "payload": {
     "actor_id": "AIBA-DIRECTOR-BEO-001",
     "event_type": "APPROVAL",
@@ -27,6 +25,7 @@
     "title": "AIBA OS v0.1 Production Chain Official Approval",
     "version": "rpu/1.0"
   },
-  "rpu_id": "RPU-0006",
-  "version": "rpu/1.0"
+  "payload_hash": "d9b17f6af3ce41b2ef344db4a115d1f88deb7d0aa078746db511e5e38e1b1fc4",
+  "prev_hash": "eed42520188b7bb0071badc22836ba6a5145714650be357d38b8bada5ce93e73",
+  "chain_hash": "5206668eea681311dd34f128c17bd619a5a5270b1ba2702ee555b82c86a0e25f"
 }

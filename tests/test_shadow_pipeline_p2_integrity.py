@@ -125,6 +125,14 @@ def test_tc5_candidate_payload_has_generated_at():
             "written_deltas": kwargs.get("written_deltas"),
             "generated_at": kwargs.get("generated_at"),
             "source": "mock_ssot_payload_provider",
+            "session_time_lock": {
+                "source": "mock",
+                "timezone": "Asia/Seoul",
+                "generated_at": "2026-05-01T00:00:00.000+09:00",
+                "observed_at": "2026-05-01T00:00:00.000+09:00",
+                "timestamp": "2026-05-01T00:00:00.000+09:00",
+                "epoch_ms": 1746028800000
+            },
         }
     def mock_validate(ctx):
         captured["ctx"] = ctx
@@ -139,7 +147,6 @@ def test_tc5_candidate_payload_has_generated_at():
          patch("tools.delta_context.shadow_pipeline.mutate_create_transaction") as mock_tx, \
          patch("tools.delta_context.shadow_pipeline.create_commit") as mock_cc, \
          patch("tools.delta_context.shadow_pipeline.verify_commit_exists") as mock_vc, \
-         patch("builtins.open", side_effect=_make_open_mock()), \
          patch("builtins.open", side_effect=_make_open_mock()), \
          patch("tools.delta_context.shadow_pipeline.classify_stage0", return_value={
              "state": "NOT_STARTED",
@@ -185,6 +192,14 @@ def test_tc6_ssot_payload_has_generated_at():
             "written_deltas": kwargs.get("written_deltas"),
             "generated_at": kwargs.get("generated_at"),
             "source": "mock_ssot_payload_provider",
+            "session_time_lock": {
+                "source": "mock",
+                "timezone": "Asia/Seoul",
+                "generated_at": "2026-05-01T00:00:00.000+09:00",
+                "observed_at": "2026-05-01T00:00:00.000+09:00",
+                "timestamp": "2026-05-01T00:00:00.000+09:00",
+                "epoch_ms": 1746028800000
+            },
         }
     def mock_validate(ctx):
         captured["ctx"] = ctx
@@ -199,7 +214,6 @@ def test_tc6_ssot_payload_has_generated_at():
          patch("tools.delta_context.shadow_pipeline.mutate_create_transaction") as mock_tx, \
          patch("tools.delta_context.shadow_pipeline.create_commit") as mock_cc, \
          patch("tools.delta_context.shadow_pipeline.verify_commit_exists") as mock_vc, \
-         patch("builtins.open", side_effect=_make_open_mock()), \
          patch("builtins.open", side_effect=_make_open_mock()), \
          patch("tools.delta_context.shadow_pipeline.classify_stage0", return_value={
              "state": "NOT_STARTED",
@@ -245,6 +259,14 @@ def test_tc7_candidate_ssot_generated_at_identical():
             "written_deltas": kwargs.get("written_deltas"),
             "generated_at": kwargs.get("generated_at"),
             "source": "mock_ssot_payload_provider",
+            "session_time_lock": {
+                "source": "mock",
+                "timezone": "Asia/Seoul",
+                "generated_at": "2026-05-01T00:00:00.000+09:00",
+                "observed_at": "2026-05-01T00:00:00.000+09:00",
+                "timestamp": "2026-05-01T00:00:00.000+09:00",
+                "epoch_ms": 1746028800000
+            },
         }
     def mock_validate(ctx):
         captured["ctx"] = ctx
@@ -259,7 +281,6 @@ def test_tc7_candidate_ssot_generated_at_identical():
          patch("tools.delta_context.shadow_pipeline.mutate_create_transaction") as mock_tx, \
          patch("tools.delta_context.shadow_pipeline.create_commit") as mock_cc, \
          patch("tools.delta_context.shadow_pipeline.verify_commit_exists") as mock_vc, \
-         patch("builtins.open", side_effect=_make_open_mock()), \
          patch("builtins.open", side_effect=_make_open_mock()), \
          patch("tools.delta_context.shadow_pipeline.classify_stage0", return_value={
              "state": "NOT_STARTED",

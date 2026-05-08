@@ -1,9 +1,7 @@
 {
-  "chain": {
-    "chain_hash": "dcb3b378afdd5a41902798d3d47e599e5ddf702251df51673fb38f80643fd7b4",
-    "payload_hash": "3a8a01cbaefb890c55735a7178be3b1eb8f25dfbf8e8f416c64a09008e0a8248",
-    "prev_hash": "8ddb89162eb621a9d1f9391eff812d7afd4d3c28a06009db4712cae499cb8908"
-  },
+  "rpu_id": "RPU-0004",
+  "event_type": "GOVERNANCE_EVENT",
+  "version": "rpu/1.0",
   "payload": {
     "actor_id": "AIBA-DIRECTOR-BEO-001",
     "event_type": "GOVERNANCE_EVENT",
@@ -17,6 +15,7 @@
     "title": "AIBA OS v0.1 Production Chain Genesis — Governance Event",
     "version": "rpu/1.0"
   },
-  "rpu_id": "RPU-0004",
-  "version": "rpu/1.0"
+  "payload_hash": "3a8a01cbaefb890c55735a7178be3b1eb8f25dfbf8e8f416c64a09008e0a8248",
+  "prev_hash": "28aac7f47104e3c5b1ec764615a3991c4c5758862ce84f5de93a22fddef78686",
+  "chain_hash": "ec7103c2e091cd041661e37665c43d16eccca8f5fd0e7d9b0e929b78a5b08551"
 }
