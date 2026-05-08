@@ -12,6 +12,12 @@ pytest validation for GOVERNANCE_BOOT Digest Generator.
   [SM-5] Dynamic Binding — generated_session 하드코딩 아님
 """
 
+import sys
+import os
+
+# VPS importlib 모드 대응: tools/session_context_gen/ 경로 주입
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools", "session_context_gen"))
+
 import hashlib
 import json
 import pytest
