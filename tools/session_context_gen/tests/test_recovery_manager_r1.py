@@ -1,6 +1,6 @@
 import sys, os, pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from recovery_manager import build_recovery_package_r1, validate_r1_package_integrity
+from tools.session_context_gen.recovery_manager import build_recovery_package_r1, validate_r1_package_integrity
 
 VALID_TRIGGER = {"trigger_reason":"manual_recovery","trigger_event_ref":"EVT-001","requested_by":"beo","recovery_mode":"LKG_STRICT_REPLAY"}
 VALID_SELECTOR = {"lkg_receipt_id":"receipt-s49-001","lkg_receipt_hash":"aaaa"*16,"lkg_artifact_hash":"bbbb"*16,"lkg_session_count":49,"lkg_generated_at":"2026-04-21T10:00:00+00:00","lkg_selection_basis":"chain_valid_receipt","lkg_selection_verdict":"SELECTED"}

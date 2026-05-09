@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 import json, glob, sys
 from datetime import datetime
 

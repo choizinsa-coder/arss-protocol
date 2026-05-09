@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 trs_v1.py — Transparent Recomputation Script v1.0
 AIBA Evidence-Linked Scoring Ledger

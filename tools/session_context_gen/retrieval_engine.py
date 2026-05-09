@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 retrieval_engine.py — SESSION_CONTEXT Section Retrieval Engine
 PT-S56-001 | AIBA Global Project

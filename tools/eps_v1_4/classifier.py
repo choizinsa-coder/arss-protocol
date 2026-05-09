@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 from dataclasses import dataclass
 from typing import Literal
 from .patterns import (

@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 PT-S69-002: TX-S69 INCOMPLETE Recovery (CASE-B: PENDING_VOID)
 EAG-1/2 비오(Joshua) 승인 완료

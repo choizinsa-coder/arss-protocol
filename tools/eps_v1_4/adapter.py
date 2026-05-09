@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 from datetime import datetime, timezone
 from pathlib import Path
 from .context_schema import CANONICAL_BASE

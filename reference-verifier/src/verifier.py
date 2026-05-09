@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 ARSS Reference Verifier v0.1
 Official reference implementation of the ARSS RPU Specification v0.1

@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 from typing import Dict, Optional, Union
 
 from . import mutation_gate

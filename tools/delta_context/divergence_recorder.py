@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 # tools/delta_context/divergence_recorder.py
 # AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2
 # PT-S66-001: Shadow Mode Phase 2 — Divergence Recorder

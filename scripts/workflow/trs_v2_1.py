@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 trs_v2_1.py — Trust Score Calculator (계산 전용, ledger 쓰기 금지)
 Evolution Score v2.1

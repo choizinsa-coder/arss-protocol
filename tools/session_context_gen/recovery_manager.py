@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 import hashlib
 import json
 from datetime import datetime, timezone
@@ -142,3 +144,10 @@ def validate_receipt_integrity(receipt):
     data = {k: v for k, v in receipt.items() if k != "receipt_integrity_hash"}
     if calculate_canonical_hash(data) != receipt.get("receipt_integrity_hash"):
         raise ValueError("RECEIPT_INTEGRITY_FAIL: Tampering detected")
+
+class RecoveryError(Exception):
+    pass
+
+def recover_baseline(*args, **kwargs):
+    raise RecoveryError('Recovery requires explicit Beo-approved artifact (EAG-1) — Not yet implemented')
+

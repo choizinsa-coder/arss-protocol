@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 PT-S61-001 — AUTO-LOADER v1.1 Production Activation Runner
 EAG-2 APPROVED by 비오(Joshua)

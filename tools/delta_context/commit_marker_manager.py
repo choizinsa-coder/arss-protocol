@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 # tools/delta_context/commit_marker_manager.py
 # AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2
 # FIX-2: TX without COMMIT = 세션 종료 전 HARD STOP

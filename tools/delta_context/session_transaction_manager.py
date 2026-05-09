@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 # tools/delta_context/session_transaction_manager.py
 # AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2
 # TX-S{n}.json 생성 및 관리
@@ -59,7 +61,7 @@ def _atomic_write(path: str, data: dict) -> None:
     os.replace(tmp, path)
 
 
-def create_transaction(
+def mutate_create_transaction(
     session_number: int,
     committed_by: str,
     included_deltas: list[dict],
@@ -67,32 +69,22 @@ def create_transaction(
 ) -> dict:
     """
     TX-S{n}.json 생성.
-
     included_deltas: write_delta() 반환 delta 객체 리스트
     committed_by: "caddy" 고정
-
     Returns:
         {"success": True, "tx_id": str, "path": str, "transaction_hash": str}
         {"success": False, "reason": str}
     """
     if not included_deltas:
-        return {
-            "success": False,
-            "reason": "included_deltas가 비어 있음 — TX 생성 불가 (BK-5 CASE-C 방지)",
-        }
+        return {"success": False, "reason": "included_deltas가 비어 있음 — TX 생성 불가 (BK-5 CASE-C 방지)"}
 
     if committed_by != "caddy":
-        return {
-            "success": False,
-            "reason": f"committed_by must be 'caddy', got {committed_by!r}",
-        }
+        return {"success": False, "reason": f"committed_by must be 'caddy', got {committed_by!r}"}
 
     tx_id = f"TX-S{session_number}"
 
     try:
-        tx_hash = compute_transaction_hash(
-            session_number, committed_by, included_deltas
-        )
+        tx_hash = compute_transaction_hash(session_number, committed_by, included_deltas)
     except Exception as e:
         return {"success": False, "reason": f"transaction_hash 계산 실패: {e}"}
 

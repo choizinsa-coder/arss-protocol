@@ -45,7 +45,9 @@ def _make_receipt_file(path, artifact_path, artifact_hash, prev_chain_hash="0" *
 
 
 def test_pipeline_success(tmp_path):
-    input_data = {"version": "3.1", "state_events": [{"event_id": "e1", "event_type": "TEST"}]}
+    input_data = {"version": "3.1", "state_events": [{"event_id": "e1", "event_type": "TEST"}], "chain": {}, "pending_tasks": [], "lessons": [], "canonical_rules": {}, "decisions": [],
+    "session_count": 1,
+    "chain": {"tip": "abc123"}}
     input_file = tmp_path / "input.json"
     input_file.write_text(json.dumps(input_data), encoding="utf-8")
     input_hash = compute_hash(input_file.read_text(encoding="utf-8"))
@@ -54,8 +56,23 @@ def test_pipeline_success(tmp_path):
     receipts_dir.mkdir()
     _make_receipt_file(str(receipts_dir / "boot.json"), str(input_file), input_hash)
 
+    # runtime fixture — pair_validator 격리용 (S97 STABILITY PATCH)
+    runtime_data = {
+        "schema_version": "1.0",
+        "session_count": 1,
+        "chain": {"tip": "abc123"},
+        "boot_meta": {
+            "runtime_pair_rule": "BOOT_REFERENCES_RUNTIME_ONLY",
+            "runtime_pair_hash": "",
+            "boot_is_ssot": False
+        }
+    }
+    runtime_file = tmp_path / "SESSION_STATE_RUNTIME.json"
+    runtime_file.write_text(json.dumps(runtime_data), encoding="utf-8")
+
     output_dir = tmp_path / "staging"
-    result = run_pipeline(str(input_file), str(receipts_dir), str(output_dir))
+    result = run_pipeline(str(input_file), str(receipts_dir), str(output_dir),
+                          runtime_path=str(runtime_file))
 
     assert result.status == "SUCCESS"
     assert result.output_path is not None

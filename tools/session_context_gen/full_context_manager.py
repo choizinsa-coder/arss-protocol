@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 full_context_manager.py — Full Context Read/Write Manager
 PT-S56-001 | AIBA Global Project

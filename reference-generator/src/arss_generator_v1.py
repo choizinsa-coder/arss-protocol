@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 ARSS Generator v1.0
 Canonical Schema v1.0 기준 구현

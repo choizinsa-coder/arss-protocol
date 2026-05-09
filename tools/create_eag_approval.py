@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 create_eag_approval.py
 EAG-2 승인 직후 비오(Joshua) 직접 실행

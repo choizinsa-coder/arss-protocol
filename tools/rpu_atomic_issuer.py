@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 rpu_atomic_issuer.py — RPU Atomic Issuer v1.0
 Single-Path / Fail-Closed / Atomic-Rollback 기반 프로덕션 RPU 발행

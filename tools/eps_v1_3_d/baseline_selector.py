@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 import json
 import os
 from datetime import datetime, timezone, timedelta

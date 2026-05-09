@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 boot_validator.py — BOOT 파일 무결성 검증기
 검증 실패 시: STOP_SIGNAL ON, FULL fallback 강제
@@ -71,7 +73,7 @@ def stable_event_id(event: dict) -> tuple:
     return ("sha256", hashlib.sha256(canonical.encode()).hexdigest())
 
 
-def validate(full_path: str, boot_path: str) -> dict:
+def validate_and_mutate_state(full_path: str, boot_path: str) -> dict:
     full_p = Path(full_path)
     boot_p = Path(boot_path)
     failures = []
@@ -112,7 +114,6 @@ def validate(full_path: str, boot_path: str) -> dict:
         "boot_count": len(boot_active)
     }
     if not c1:
-        # 누락된 태스크 ID 명시
         full_ids = {t.get("id") for t in full_active}
         boot_ids = {t.get("id") for t in boot_active}
         missing = full_ids - boot_ids
@@ -124,7 +125,6 @@ def validate(full_path: str, boot_path: str) -> dict:
     # CHECK-2: chain.tip 일치 (결함1 수정: chain_tip → chain.tip)
     full_tip = full.get("chain", {}).get("tip")
     boot_tip = boot.get("chain", {}).get("tip")
-    # 키 자체 없으면 FAIL-CLOSED
     if full_tip is None:
         failures.append("CHECK-2 FAIL: FULL chain.tip key missing — FAIL-CLOSED")
         c2 = False
@@ -196,7 +196,7 @@ def validate(full_path: str, boot_path: str) -> dict:
         "failures": failures
     }
 
-    # PASS 시 boot_meta에 결과 기록
+    # PASS 시 boot_meta에 결과 기록 (state mutation)
     if overall_pass:
         boot["boot_meta"]["validator_result"] = "PASS"
         with open(boot_p, "w", encoding="utf-8") as f:
@@ -209,7 +209,7 @@ if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Usage: python boot_validator.py <full_path> <boot_path>")
         sys.exit(1)
-    report = validate(sys.argv[1], sys.argv[2])
+    report = validate_and_mutate_state(sys.argv[1], sys.argv[2])
     print(json.dumps(report, ensure_ascii=False, indent=2))
     if report["stop_signal"]:
         print("\n[STOP_SIGNAL ON] BOOT 파일 거부. FULL 사용 강제. 비오님 확인 필요.")

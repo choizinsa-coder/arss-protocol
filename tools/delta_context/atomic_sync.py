@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 # tools/delta_context/atomic_sync.py
 # AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2
 # Final_Ack + divergence check — silent drift 방지

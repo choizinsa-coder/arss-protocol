@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 import os, shutil, json, hashlib
 from datetime import datetime
 

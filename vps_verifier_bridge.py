@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 vps_verifier_bridge.py
 ARSS VPS Production Chain Verifier — Bridge v0.2

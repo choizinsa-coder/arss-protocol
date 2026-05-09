@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 import os
 import json
 import hashlib
@@ -41,8 +43,8 @@ def _load_candidates(artifact_type: str) -> list:
                 r = json.load(f)
             if r.get("receipt_type") == "verification":
                 candidates.append(r)
-        except Exception:
-            continue
+        except Exception as _e:
+            import logging; logging.warning("receipt entry skip: %s", _e)
     return candidates
 
 

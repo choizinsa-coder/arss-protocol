@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 boot_splitter.py — SESSION_CONTEXT Full/Boot Splitter
 PT-S56-001 | AIBA Global Project
@@ -80,7 +82,7 @@ def _write_json(path: Path, data: dict, dry_run: bool) -> str:
 
 
 # ── 핵심 분리 함수 ─────────────────────────────────────────────────────────────
-def split(
+def mutate_split(
     src_path: Path,
     full_out: Path,
     boot_out: Path,
@@ -152,7 +154,7 @@ def main():
     parser.add_argument("--dry-run",  action="store_true", help="Dry-run (파일 미생성)")
     args = parser.parse_args()
 
-    result = split(
+    result = mutate_split(
         src_path=Path(args.src),
         full_out=Path(args.full_out),
         boot_out=Path(args.boot_out),

@@ -37,11 +37,25 @@ def _mock_ssot_provider(session_number, written_deltas, generated_at):
     """TC-1/TC-6 전용: candidate 구조와 동일한 payload 반환"""
     payload = {d["target_key"]: d["new_value"] for d in written_deltas}
     payload["generated_at"] = generated_at
+    payload["session_time_lock"] = {
+        "source": "mock",
+        "timezone": "Asia/Seoul",
+        "generated_at": "2026-05-01T00:00:00.000+09:00",
+        "observed_at": "2026-05-01T00:00:00.000+09:00",
+        "epoch_ms": 1777561200000
+    }
     return payload
 
 def _mock_collapse_gate(ctx):
     """TC-1/TC-6 전용: in-memory payload는 파일 경로 없음 — collapse gate bypass"""
-    return {"phase2_valid": True, "preconditions": {"passed": True}, "contract": {"contract": "PASS"}}
+    return {
+        "session_time_lock": {
+            "source": "mock",
+            "timezone": "Asia/Seoul",
+            "generated_at": "2026-05-01T00:00:00.000+09:00",
+            "observed_at": "2026-05-01T00:00:00.000+09:00",
+            "epoch_ms": 1777561200000
+        },"phase2_valid": True, "preconditions": {"passed": True}, "contract": {"contract": "PASS"}}
 
 # TC-1: 정상 흐름
 def test_tc1_normal_flow():

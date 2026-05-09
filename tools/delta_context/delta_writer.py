@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 # tools/delta_context/delta_writer.py
 # AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2
 # Gate chain: G1~G8 → atomic write
@@ -13,8 +15,8 @@ from typing import Any
 # 상위 경로 추가 (auto_loader 모듈 접근)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from auto_loader.mutation_gate import evaluate as _mg_evaluate, MutationRequest
-from delta_context.event_type_target_validator import validate as dq003_validate
+from tools.auto_loader.mutation_gate import evaluate as _mg_evaluate, MutationRequest
+from tools.delta_context.event_type_target_validator import validate as dq003_validate
 
 KST = timezone(timedelta(hours=9))
 DELTA_BASE_PATH = "/opt/arss/engine/arss-protocol/DELTA_LOG"

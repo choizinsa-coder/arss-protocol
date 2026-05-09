@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 from .context_schema import has_valid_receipt, normalize_evidence_path
 
 def format_exploration(text: str) -> str:

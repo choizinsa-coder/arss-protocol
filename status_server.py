@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 AIBA VPS /status Server — v0.5
 설계: 도미 v0.3 확정안
@@ -408,7 +410,7 @@ def get_status():
             try:
                 ttl_valid = datetime.now(timezone.utc) < datetime.fromisoformat(expires_str)
             except ValueError:
-                pass
+                ttl_valid = False
             if ok and ttl_valid:
                 cached_payload["_fallback"] = {
                     "active": True,
@@ -442,7 +444,7 @@ def get_status():
                 "mismatch_policy": MISMATCH_POLICY
             }), 503
     except ValueError:
-        pass
+        return jsonify({"error": "invalid_value"}), 400
 
     # signed cache 갱신
     save_cache(payload, payload["integrity"]["payload_hash"])

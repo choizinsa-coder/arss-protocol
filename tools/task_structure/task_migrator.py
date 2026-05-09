@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 PT-S58-001 — task_migrator.py
 TASK STRUCTURE REFACTOR v1.0

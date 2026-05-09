@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 # tools/delta_context/b1_single_entry_wrapper.py
 # AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2
 # 비오님 단일 진입점 — shadow pipeline 전체를 1회 호출로 실행
@@ -7,8 +9,8 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from delta_context.shadow_pipeline import run_shadow_pipeline
-from delta_context.atomic_sync import final_ack
+from tools.delta_context.shadow_pipeline import run_shadow_pipeline
+from tools.delta_context.atomic_sync import final_ack
 
 
 def execute(session_number: int, delta_requests: list[dict], generated_at: str) -> dict:

@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 RECEIPT_EXTENSION_NAMESPACE = "extension"
 # Receipt Extension Rules (canonical contract):
 # - Canonical fields MUST NOT be modified or removed

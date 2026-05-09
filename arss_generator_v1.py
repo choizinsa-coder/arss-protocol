@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 arss_generator_v1.py — ARSS 프로덕션 RPU 생성기
 

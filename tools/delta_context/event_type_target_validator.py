@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 # tools/delta_context/event_type_target_validator.py
 # DQ-003 event_type × target_key mapping — HARD CODED
 # 매핑 변경: OS-level EAG 필요

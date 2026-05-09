@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 arss_gatekeeper.py v3.0
 AIBA EAG Enforcement Layer — eag_approval record 기반 검증
@@ -88,8 +90,8 @@ def _load_eag_approval(session_id, event_hash, issuer_path):
                     rec.get("session_id") == session_id and rec.get("event_hash") == event_hash and
                     rec.get("issuer_path") == issuer_path and rec.get("approved_by") == APPROVED_BY):
                 return rec
-        except Exception:
-            continue
+        except Exception as _e:
+            import logging; logging.warning("gatekeeper record skip: %s", _e)
     return None
 
 def validate(event_file_path, approval_token_path, session_count, issuer_path=CANONICAL_ISSUER):

@@ -1,12 +1,12 @@
 {
   "domains": {
     "agent_focus": {
-      "delta_count": 2,
-      "latest_content_hash": "236dd8905965b61d9b988281cac36bceaee5ecab7a64655d54b5f2c90d623975",
+      "delta_count": 5,
+      "latest_content_hash": "137914aa5d6611ca809ef1a88aaad94b0246d4925a6ce0c0c50fae272949b2bb",
       "latest_delta_id": "DELTA-S71-AGENT_FOCUS-0002",
       "latest_summary": {
         "event_type": "agent_focus_updated",
-        "generated_at": "2026-05-01T15:46:45.019+09:00",
+        "generated_at": "2026-05-01T21:58:18.294+09:00",
         "target_key": "agent_focus"
       },
       "sessions": {
@@ -26,22 +26,48 @@
             "delta_id": "DELTA-S71-AGENT_FOCUS-0002",
             "event_type": "agent_focus_updated",
             "generated_at": "2026-05-01T15:46:45.019+09:00",
-            "sequence_number": 2,
-            "target_key": "agent_focus",
-            "status": "QUARANTINED",
+            "quarantine_path": "SNAPSHOT_LOG/quarantine/defect_induced_s71/",
             "quarantine_reason": "DEFECT_INDUCED_CASE_B",
-            "quarantine_path": "SNAPSHOT_LOG/quarantine/defect_induced_s71/"
+            "sequence_number": 2,
+            "status": "QUARANTINED",
+            "target_key": "agent_focus"
+          },
+          {
+            "content_hash": "137914aa5d6611ca809ef1a88aaad94b0246d4925a6ce0c0c50fae272949b2bb",
+            "delta_id": "DELTA-S71-AGENT_FOCUS-0002",
+            "event_type": "agent_focus_updated",
+            "generated_at": "2026-05-01T21:58:18.294+09:00",
+            "sequence_number": 2,
+            "target_key": "agent_focus"
+          }
+        ],
+        "S72": [
+          {
+            "content_hash": "6ac1740a2d41fa2432ab40379466d5471977fadfa33a3139a61ce5163cf0db49",
+            "delta_id": "DELTA-S72-AGENT_FOCUS-0003",
+            "event_type": "agent_focus_updated",
+            "generated_at": "2026-05-02T20:12:32.531+09:00",
+            "sequence_number": 3,
+            "target_key": "agent_focus"
+          },
+          {
+            "content_hash": "6ac1740a2d41fa2432ab40379466d5471977fadfa33a3139a61ce5163cf0db49",
+            "delta_id": "DELTA-S72-AGENT_FOCUS-0003",
+            "event_type": "agent_focus_updated",
+            "generated_at": "2026-05-02T20:40:16.227+09:00",
+            "sequence_number": 3,
+            "target_key": "agent_focus"
           }
         ]
       }
     },
     "tasks": {
-      "delta_count": 1,
+      "delta_count": 4,
       "latest_content_hash": "5853df0166e26040ab9e805d619341dd48e31b935d07bcb53657a4bd3a4956d1",
       "latest_delta_id": "DELTA-S71-TASKS-0001",
       "latest_summary": {
         "event_type": "task_completed",
-        "generated_at": "2026-05-01T15:46:45.018+09:00",
+        "generated_at": "2026-05-01T21:58:18.291+09:00",
         "target_key": "status"
       },
       "sessions": {
@@ -51,28 +77,54 @@
             "delta_id": "DELTA-S71-TASKS-0001",
             "event_type": "task_completed",
             "generated_at": "2026-05-01T15:46:45.018+09:00",
-            "sequence_number": 1,
-            "target_key": "status",
-            "status": "QUARANTINED",
+            "quarantine_path": "SNAPSHOT_LOG/quarantine/defect_induced_s71/",
             "quarantine_reason": "DEFECT_INDUCED_CASE_B",
-            "quarantine_path": "SNAPSHOT_LOG/quarantine/defect_induced_s71/"
+            "sequence_number": 1,
+            "status": "QUARANTINED",
+            "target_key": "status"
+          },
+          {
+            "content_hash": "5853df0166e26040ab9e805d619341dd48e31b935d07bcb53657a4bd3a4956d1",
+            "delta_id": "DELTA-S71-TASKS-0001",
+            "event_type": "task_completed",
+            "generated_at": "2026-05-01T21:58:18.291+09:00",
+            "sequence_number": 1,
+            "target_key": "status"
+          }
+        ],
+        "S72": [
+          {
+            "content_hash": "f94096a246c9fe2133666e1ce4bdda45bc403873cec9120b0052e582fcb854e4",
+            "delta_id": "DELTA-S72-TASKS-0003",
+            "event_type": "task_completed",
+            "generated_at": "2026-05-02T20:12:32.529+09:00",
+            "sequence_number": 3,
+            "target_key": "status"
+          },
+          {
+            "content_hash": "f94096a246c9fe2133666e1ce4bdda45bc403873cec9120b0052e582fcb854e4",
+            "delta_id": "DELTA-S72-TASKS-0003",
+            "event_type": "task_completed",
+            "generated_at": "2026-05-02T20:40:16.225+09:00",
+            "sequence_number": 3,
+            "target_key": "status"
           }
         ]
       }
     },
     "test_s71": {
-      "delta_count": 4,
+      "delta_count": 62,
       "latest_content_hash": "193e42f4364b763cac8c6ae1b25b9c1f057be2a2862ff74d39247c1f2115172f",
       "latest_delta_id": "DELTA-S9006-TEST_S71-0001",
       "latest_summary": {
         "event_type": "agent_focus_updated",
-        "generated_at": "2026-05-01T21:51:05.593+09:00",
+        "generated_at": "2026-05-09T11:54:50.107+09:00",
         "target_key": "agent_focus"
       },
       "sessions": {}
     }
   },
-  "last_updated": "2026-05-01T21:56:46.146583+09:00",
+  "last_updated": "2026-05-09T11:54:50.107+09:00",
   "schema_version": "1.0",
   "transactions": [
     {

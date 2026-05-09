@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from migration_validator import validate, STATUS_STANDARD
+from tools.task_structure.migration_validator import validate, STATUS_STANDARD
 
 SSOT_PATH = "/opt/arss/engine/arss-protocol/SESSION_CONTEXT.json"
 

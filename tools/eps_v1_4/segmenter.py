@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 import re
 from .patterns import NEXT_ACTION_RE
 

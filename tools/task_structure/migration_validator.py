@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 PT-S58-001 — migration_validator.py
 TASK STRUCTURE REFACTOR v1.0

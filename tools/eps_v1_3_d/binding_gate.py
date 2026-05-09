@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 import json, os, sys, argparse
 
 from tools.eps_v1_3_d.system_error_receipt import write_system_error_receipt

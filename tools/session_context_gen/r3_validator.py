@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 r3_validator.py — PT-S52-001 R3 Post-Recovery Validation Gate
 LOCKED SCOPE: verification-only / no evidence write / no chain mutation

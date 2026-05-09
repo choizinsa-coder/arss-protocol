@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 # tools/delta_context/readiness_tracker.py
 # AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2
 # PT-S66-001: Shadow Mode Phase 2 — Phase 2 Readiness Tracker

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.1"
+VERSION_STATUS = "active"
 """
 boot_generator.py — SESSION_BOOT_S{n}.json 생성기
 BOOT는 SSOT가 아님. FULL의 검증된 파생본.
@@ -121,7 +123,6 @@ def minify_session_reentry(reentry) -> dict:
     """session_reentry: 핵심 체크리스트 항목만 유지"""
     if not isinstance(reentry, dict):
         return reentry
-    # 핵심 키만 보존
     KEEP_KEYS = {"checklist", "ssot_ref", "priority_order", "chain_verify"}
     return {k: v for k, v in reentry.items() if k in KEEP_KEYS}
 
@@ -134,7 +135,7 @@ def minify_wf_structure(wf) -> dict:
     return {k: v for k, v in wf.items() if k in KEEP_KEYS}
 
 
-def generate(full_path: str, boot_path: str) -> dict:
+def generate(full_path: str, boot_path: str, runtime_pair_hash: str = "") -> dict:
     full_p = Path(full_path)
     boot_p = Path(boot_path)
 
@@ -160,7 +161,9 @@ def generate(full_path: str, boot_path: str) -> dict:
         "conflict_resolution": "FULL wins. BOOT invalid if conflict.",
         "generated_from_sha256": full_sha256,
         "boot_generated_at": datetime.now(KST).isoformat(),
-        "validator_result": "PENDING"
+        "validator_result": "PENDING",
+        "runtime_pair_hash": runtime_pair_hash,
+        "runtime_pair_rule": "BOOT_REFERENCES_RUNTIME_ONLY",
     }
 
     # 기본 메타
@@ -169,7 +172,7 @@ def generate(full_path: str, boot_path: str) -> dict:
         if key in full:
             boot[key] = full[key]
 
-    # chain 전량 (결함1 수정: chain.tip 사용)
+    # chain 전량
     boot["chain"] = full["chain"]
 
     # canonical_rules (minified — 3개 키 제거 + 장문 필드 제거 + whitelist 추가)
@@ -185,7 +188,6 @@ def generate(full_path: str, boot_path: str) -> dict:
     active_tasks = [t for t in tasks if is_active_task(t)]
     inactive_count = len([t for t in tasks if not is_active_task(t)])
     boot["pending_tasks"] = active_tasks
-    # 비활성 태스크는 archive_refs에 카운트만 기록 (상세 제거)
 
     # state_events 필터링
     boot["state_events"] = filter_state_events(full.get("state_events", []))

@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 # tools/delta_context/switch_readiness_tracker.py
 # AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2
 # BK-4: Canonical Switch GATE-1~6 자동 점검

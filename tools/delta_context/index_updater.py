@@ -1,3 +1,5 @@
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 # tools/delta_context/index_updater.py
 # AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2
 # FIX-1: index_updater 실패 시 delta 즉시 QUARANTINED — half-valid state 금지

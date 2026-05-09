@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 flat_verifier.py — AIBA Flat Schema Verifier
 대상: SNAPSHOT_LOG/rpu-0024.json ~ rpu-0030.json

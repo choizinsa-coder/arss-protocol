@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+ACTIVE_VERSION = "1.0.0"
+VERSION_STATUS = "active"
 """
 create_approval_token.py
 EAG-2 승인 직후 eag_approval record 기반 approval_token v3.0 생성
@@ -40,8 +42,8 @@ def load_eag_approval(session_id, event_hash, issuer_path):
                     rec.get("issuer_path") == issuer_path and
                     rec.get("approved_by") == "Beo"):
                 return rec
-        except Exception:
-            continue
+        except Exception as _e:
+            import logging; logging.warning("token record skip: %s", _e)
     return None
 
 def main():

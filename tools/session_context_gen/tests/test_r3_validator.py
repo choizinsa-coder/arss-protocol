@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-import r3_validator as r3
+from tools.session_context_gen import r3_validator as r3
 
 
 class TestR3Validator(unittest.TestCase):
