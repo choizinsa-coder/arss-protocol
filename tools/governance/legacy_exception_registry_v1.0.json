@@ -1,0 +1,418 @@
+{
+  "registry_id": "LEGACY_EXCEPTION_REGISTRY_v1.0",
+  "status": "EAG_1_APPROVED",
+  "created_session": 100,
+  "created_date": "2026-05-08",
+  "approved_by": "비오(Joshua)",
+  "approved_session": 103,
+  "approved_date": "2026-05-09",
+  "eag_stage": "EAG-1_COMPLETE",
+  "schema_version": "v1.0",
+  "schema_change_from_v01": [
+    "DELETE_CANDIDATE → DELETION_REVIEW 재정의 (분류 ≠ 삭제 권한)",
+    "provenance 필드 6개 추가: classification_reason / runtime_witness / ownership_status / archive_linkage / migration_state / evidence_source",
+    "delete_ready 조건 3항 명시: review_complete + archive_receipt_exists + external_verification_pass",
+    "ACTIVE_CLAIM 개념 도입: 경로 기반 잠정 분류 명시"
+  ],
+  "critical_principles": {
+    "classification_is_not_deletion_authority": true,
+    "delete_ready_requires": [
+      "DELETION_REVIEW complete",
+      "Archive Receipt exists",
+      "External archive verification PASS"
+    ],
+    "active_claim_note": "현재 ACTIVE 분류는 path-based preliminary classification (ACTIVE_CLAIM). runtime witness 미검증. governance_checker 구현 이전 단계.",
+    "provenance_rule": "Without provenance: classification must NOT gain deletion authority."
+  },
+  "entries": [
+    {
+      "exception_id": "LEX-001",
+      "module_or_file": "99_LEGACY/aiba_status_server_backup_s33.py",
+      "violated_rule": "RULE-5 (Single Domain Boundary), RULE-6 (Evidence-Aware Minimal I/O)",
+      "reason": "S33 백업 파일 — 현재 미사용.",
+      "risk_level": "LOW",
+      "classification": "DELETION_REVIEW",
+      "delete_ready": false,
+      "delete_ready_conditions": {
+        "review_complete": false,
+        "archive_receipt_exists": false,
+        "external_verification_pass": false
+      },
+      "provenance": {
+        "classification_reason": "99_LEGACY 경로 소속 + 백업 파일명 패턴 + 현재 import/reference 없음(미검증)",
+        "runtime_witness": "NOT_VERIFIED",
+        "ownership_status": "LEGACY_UNOWNED",
+        "archive_linkage": null,
+        "migration_state": "PENDING_REVIEW",
+        "evidence_source": "S100 path-based preliminary classification"
+      },
+      "migration_target_session": "S101",
+      "owner": "캐디",
+      "approved_by": null,
+      "approved_session": null,
+      "review_status": "PENDING_EAG"
+    },
+    {
+      "exception_id": "LEX-002",
+      "module_or_file": "99_LEGACY/aiba_status_server_before_tokenpath_fix_s31.py",
+      "violated_rule": "RULE-5, RULE-6",
+      "reason": "S31 수정 전 백업 — 현재 미사용.",
+      "risk_level": "LOW",
+      "classification": "DELETION_REVIEW",
+      "delete_ready": false,
+      "delete_ready_conditions": {
+        "review_complete": false,
+        "archive_receipt_exists": false,
+        "external_verification_pass": false
+      },
+      "provenance": {
+        "classification_reason": "99_LEGACY 경로 소속 + 백업 파일명 패턴",
+        "runtime_witness": "NOT_VERIFIED",
+        "ownership_status": "LEGACY_UNOWNED",
+        "archive_linkage": null,
+        "migration_state": "PENDING_REVIEW",
+        "evidence_source": "S100 path-based preliminary classification"
+      },
+      "migration_target_session": "S101",
+      "owner": "캐디",
+      "approved_by": null,
+      "approved_session": null,
+      "review_status": "PENDING_EAG"
+    },
+    {
+      "exception_id": "LEX-003",
+      "module_or_file": "99_LEGACY/aiba_status_server_before_fix_s31.py",
+      "violated_rule": "RULE-5, RULE-6",
+      "reason": "S31 수정 전 백업 — 현재 미사용.",
+      "risk_level": "LOW",
+      "classification": "DELETION_REVIEW",
+      "delete_ready": false,
+      "delete_ready_conditions": {
+        "review_complete": false,
+        "archive_receipt_exists": false,
+        "external_verification_pass": false
+      },
+      "provenance": {
+        "classification_reason": "99_LEGACY 경로 소속 + 백업 파일명 패턴",
+        "runtime_witness": "NOT_VERIFIED",
+        "ownership_status": "LEGACY_UNOWNED",
+        "archive_linkage": null,
+        "migration_state": "PENDING_REVIEW",
+        "evidence_source": "S100 path-based preliminary classification"
+      },
+      "migration_target_session": "S101",
+      "owner": "캐디",
+      "approved_by": null,
+      "approved_session": null,
+      "review_status": "PENDING_EAG"
+    },
+    {
+      "exception_id": "LEX-004",
+      "module_or_file": "99_LEGACY/aiba_status_server_s29_backup.py",
+      "violated_rule": "RULE-5, RULE-6",
+      "reason": "S29 백업 파일 — 현재 미사용.",
+      "risk_level": "LOW",
+      "classification": "DELETION_REVIEW",
+      "delete_ready": false,
+      "delete_ready_conditions": {
+        "review_complete": false,
+        "archive_receipt_exists": false,
+        "external_verification_pass": false
+      },
+      "provenance": {
+        "classification_reason": "99_LEGACY 경로 소속 + 백업 파일명 패턴",
+        "runtime_witness": "NOT_VERIFIED",
+        "ownership_status": "LEGACY_UNOWNED",
+        "archive_linkage": null,
+        "migration_state": "PENDING_REVIEW",
+        "evidence_source": "S100 path-based preliminary classification"
+      },
+      "migration_target_session": "S101",
+      "owner": "캐디",
+      "approved_by": null,
+      "approved_session": null,
+      "review_status": "PENDING_EAG"
+    },
+    {
+      "exception_id": "LEX-005",
+      "module_or_file": "99_LEGACY/aiba_status_server_v0_7_backup.py",
+      "violated_rule": "RULE-5, RULE-6",
+      "reason": "v0.7 백업 파일 — 현재 미사용.",
+      "risk_level": "LOW",
+      "classification": "DELETION_REVIEW",
+      "delete_ready": false,
+      "delete_ready_conditions": {
+        "review_complete": false,
+        "archive_receipt_exists": false,
+        "external_verification_pass": false
+      },
+      "provenance": {
+        "classification_reason": "99_LEGACY 경로 소속 + 백업 파일명 패턴",
+        "runtime_witness": "NOT_VERIFIED",
+        "ownership_status": "LEGACY_UNOWNED",
+        "archive_linkage": null,
+        "migration_state": "PENDING_REVIEW",
+        "evidence_source": "S100 path-based preliminary classification"
+      },
+      "migration_target_session": "S101",
+      "owner": "캐디",
+      "approved_by": null,
+      "approved_session": null,
+      "review_status": "PENDING_EAG"
+    },
+    {
+      "exception_id": "LEX-006",
+      "module_or_file": "99_LEGACY/aiba_status_server_v05_backup.py",
+      "violated_rule": "RULE-5, RULE-6",
+      "reason": "v0.5 백업 파일 — 현재 미사용.",
+      "risk_level": "LOW",
+      "classification": "DELETION_REVIEW",
+      "delete_ready": false,
+      "delete_ready_conditions": {
+        "review_complete": false,
+        "archive_receipt_exists": false,
+        "external_verification_pass": false
+      },
+      "provenance": {
+        "classification_reason": "99_LEGACY 경로 소속 + 백업 파일명 패턴",
+        "runtime_witness": "NOT_VERIFIED",
+        "ownership_status": "LEGACY_UNOWNED",
+        "archive_linkage": null,
+        "migration_state": "PENDING_REVIEW",
+        "evidence_source": "S100 path-based preliminary classification"
+      },
+      "migration_target_session": "S101",
+      "owner": "캐디",
+      "approved_by": null,
+      "approved_session": null,
+      "review_status": "PENDING_EAG"
+    },
+    {
+      "exception_id": "LEX-007",
+      "module_or_file": "99_LEGACY/create_approval_token_backup_s31.py",
+      "violated_rule": "RULE-5, RULE-6",
+      "reason": "S31 approval_token 백업 — 현재 미사용.",
+      "risk_level": "LOW",
+      "classification": "DELETION_REVIEW",
+      "delete_ready": false,
+      "delete_ready_conditions": {
+        "review_complete": false,
+        "archive_receipt_exists": false,
+        "external_verification_pass": false
+      },
+      "provenance": {
+        "classification_reason": "99_LEGACY 경로 소속 + 백업 파일명 패턴",
+        "runtime_witness": "NOT_VERIFIED",
+        "ownership_status": "LEGACY_UNOWNED",
+        "archive_linkage": null,
+        "migration_state": "PENDING_REVIEW",
+        "evidence_source": "S100 path-based preliminary classification"
+      },
+      "migration_target_session": "S101",
+      "owner": "캐디",
+      "approved_by": null,
+      "approved_session": null,
+      "review_status": "PENDING_EAG"
+    },
+    {
+      "exception_id": "LEX-008",
+      "module_or_file": "99_LEGACY/create_eag_approval_backup_s31.py",
+      "violated_rule": "RULE-5, RULE-6",
+      "reason": "S31 eag_approval 백업 — 현재 미사용.",
+      "risk_level": "LOW",
+      "classification": "DELETION_REVIEW",
+      "delete_ready": false,
+      "delete_ready_conditions": {
+        "review_complete": false,
+        "archive_receipt_exists": false,
+        "external_verification_pass": false
+      },
+      "provenance": {
+        "classification_reason": "99_LEGACY 경로 소속 + 백업 파일명 패턴",
+        "runtime_witness": "NOT_VERIFIED",
+        "ownership_status": "LEGACY_UNOWNED",
+        "archive_linkage": null,
+        "migration_state": "PENDING_REVIEW",
+        "evidence_source": "S100 path-based preliminary classification"
+      },
+      "migration_target_session": "S101",
+      "owner": "캐디",
+      "approved_by": null,
+      "approved_session": null,
+      "review_status": "PENDING_EAG"
+    },
+    {
+      "exception_id": "LEX-009",
+      "module_or_file": "99_LEGACY/create_eag_approval_before_fix_s31.py",
+      "violated_rule": "RULE-5, RULE-6",
+      "reason": "S31 수정 전 eag_approval 백업 — 현재 미사용.",
+      "risk_level": "LOW",
+      "classification": "DELETION_REVIEW",
+      "delete_ready": false,
+      "delete_ready_conditions": {
+        "review_complete": false,
+        "archive_receipt_exists": false,
+        "external_verification_pass": false
+      },
+      "provenance": {
+        "classification_reason": "99_LEGACY 경로 소속 + 백업 파일명 패턴",
+        "runtime_witness": "NOT_VERIFIED",
+        "ownership_status": "LEGACY_UNOWNED",
+        "archive_linkage": null,
+        "migration_state": "PENDING_REVIEW",
+        "evidence_source": "S100 path-based preliminary classification"
+      },
+      "migration_target_session": "S101",
+      "owner": "캐디",
+      "approved_by": null,
+      "approved_session": null,
+      "review_status": "PENDING_EAG"
+    },
+    {
+      "exception_id": "LEX-010",
+      "module_or_file": "99_LEGACY/patch_create_eag_approval.py",
+      "violated_rule": "RULE-5, RULE-6",
+      "reason": "patch 파일 — 현재 미사용.",
+      "risk_level": "LOW",
+      "classification": "DELETION_REVIEW",
+      "delete_ready": false,
+      "delete_ready_conditions": {
+        "review_complete": false,
+        "archive_receipt_exists": false,
+        "external_verification_pass": false
+      },
+      "provenance": {
+        "classification_reason": "99_LEGACY 경로 소속 + 패치 파일명 패턴",
+        "runtime_witness": "NOT_VERIFIED",
+        "ownership_status": "LEGACY_UNOWNED",
+        "archive_linkage": null,
+        "migration_state": "PENDING_REVIEW",
+        "evidence_source": "S100 path-based preliminary classification"
+      },
+      "migration_target_session": "S101",
+      "owner": "캐디",
+      "approved_by": null,
+      "approved_session": null,
+      "review_status": "PENDING_EAG"
+    },
+    {
+      "exception_id": "LEX-011",
+      "module_or_file": "status_server.py (root level)",
+      "violated_rule": "RULE-5 (Single Domain Boundary)",
+      "reason": "aiba_status_server.py와 역할 중복 의심. 실제 사용 여부 확인 필요.",
+      "risk_level": "MEDIUM",
+      "classification": "REVIEW",
+      "delete_ready": false,
+      "delete_ready_conditions": {
+        "review_complete": false,
+        "archive_receipt_exists": false,
+        "external_verification_pass": false
+      },
+      "provenance": {
+        "classification_reason": "root level 위치 + aiba_status_server.py와 유사 파일명 + 중복 역할 의심",
+        "runtime_witness": "NOT_VERIFIED — 실사용 여부 미확인",
+        "ownership_status": "UNKNOWN",
+        "archive_linkage": null,
+        "migration_state": "REQUIRES_INVESTIGATION",
+        "evidence_source": "S100 path-based preliminary classification"
+      },
+      "migration_target_session": "S103",
+      "owner": "캐디",
+      "approved_by": null,
+      "approved_session": null,
+      "review_status": "REQUIRES_INVESTIGATION",
+      "notes": "S103 VPS 조사 대상. 운영 중 실사용 여부 확인 후 ACTIVE_CLAIM 또는 DELETION_REVIEW로 재분류 필요."
+    },
+    {
+      "exception_id": "LEX-012",
+      "module_or_file": "apply_stage7_patch.py, patch_test_s71_002.py, patch_test_s71_002_v2.py, patch_test_s71_002_v3.py, patch_test_s71_002_v4.py",
+      "violated_rule": "RULE-6 (orphan artifact)",
+      "reason": "root level 임시 patch 파일들 — 적용 완료 후 미삭제 상태.",
+      "risk_level": "LOW",
+      "classification": "DELETION_REVIEW",
+      "delete_ready": false,
+      "delete_ready_conditions": {
+        "review_complete": false,
+        "archive_receipt_exists": false,
+        "external_verification_pass": false
+      },
+      "provenance": {
+        "classification_reason": "patch 파일명 패턴 + root level 위치 + 적용 완료 이력(S71 등) 확인",
+        "runtime_witness": "NOT_VERIFIED",
+        "ownership_status": "ORPHAN_CANDIDATE",
+        "archive_linkage": null,
+        "migration_state": "PENDING_REVIEW",
+        "evidence_source": "S100 path-based preliminary classification + 파일명 이력 분석"
+      },
+      "migration_target_session": "S101",
+      "owner": "캐디",
+      "approved_by": null,
+      "approved_session": null,
+      "review_status": "PENDING_EAG"
+    },
+    {
+      "exception_id": "LEX-013",
+      "module_or_file": "diag_collapse.py, patch_system_time.py (root level)",
+      "violated_rule": "RULE-6 (orphan artifact)",
+      "reason": "진단/패치 목적 임시 파일 — 적용 완료 후 미삭제 상태 추정.",
+      "risk_level": "LOW",
+      "classification": "REVIEW",
+      "delete_ready": false,
+      "delete_ready_conditions": {
+        "review_complete": false,
+        "archive_receipt_exists": false,
+        "external_verification_pass": false
+      },
+      "provenance": {
+        "classification_reason": "진단/패치 파일명 패턴 + root level 위치",
+        "runtime_witness": "NOT_VERIFIED",
+        "ownership_status": "UNKNOWN",
+        "archive_linkage": null,
+        "migration_state": "REQUIRES_INVESTIGATION",
+        "evidence_source": "S100 path-based preliminary classification"
+      },
+      "migration_target_session": "S103",
+      "owner": "캐디",
+      "approved_by": null,
+      "approved_session": null,
+      "review_status": "REQUIRES_INVESTIGATION"
+    },
+    {
+      "exception_id": "LEX-014",
+      "module_or_file": "tools/rpu_atomic_issuer.py",
+      "violated_rule": "RULE-5 (Single Domain Boundary) — 824라인, 복합 도메인 의심",
+      "reason": "핵심 운영 모듈. 즉시 분리 불가. 복잡도 측정 후 리팩토링 계획 수립 필요.",
+      "risk_level": "MEDIUM",
+      "classification": "ACTIVE_CLAIM_WITH_EXCEPTION",
+      "delete_ready": false,
+      "delete_ready_conditions": {
+        "review_complete": false,
+        "archive_receipt_exists": false,
+        "external_verification_pass": false
+      },
+      "provenance": {
+        "classification_reason": "tools/ 경로 소속 + 핵심 기능명 패턴 (rpu_atomic_issuer) + 824라인 RULE-5 위반 의심",
+        "runtime_witness": "LIKELY_ACTIVE — import scan 미수행, path 기반 추정",
+        "ownership_status": "ACTIVE_CLAIM",
+        "archive_linkage": null,
+        "migration_state": "EXCEPTION_REGISTERED — migration_target S103",
+        "evidence_source": "S100 path-based preliminary classification"
+      },
+      "migration_target_session": "S103",
+      "owner": "도미 → 캐디",
+      "approved_by": null,
+      "approved_session": null,
+      "review_status": "REQUIRES_DOMI_DESIGN",
+      "notes": "cyclomatic complexity 측정 후 분리 여부 결정. GOV-002 대상. runtime witness 검증 필요."
+    }
+  ],
+  "summary": {
+    "total_entries": 14,
+    "deletion_review": 11,
+    "review_required": 2,
+    "active_claim_with_exception": 1,
+    "delete_ready": 0
+  },
+  "classification_maturity_note": "S100 분류는 전체 path-based preliminary classification (ACTIVE_CLAIM 수준). runtime witness 미검증. governance_checker 구현 이전 단계. 분류 자체가 삭제 권한을 부여하지 않음.",
+  "next_action": "EAG-1 승인 완료(S103). LEX-011/013 VPS 조사 (S103). DELETION_REVIEW 항목은 delete_ready 3조건 충족 후에만 삭제 가능."
+}
