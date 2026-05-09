@@ -1,0 +1,71 @@
+{
+  "_schema_meta": {
+    "schema_id": "CRP-HISTORY-LOG-SCHEMA-v1.0",
+    "version": "1.0",
+    "status": "ACTIVE",
+    "created_session": 110,
+    "created_date": "2026-05-09",
+    "created_by": "캐디",
+    "approved_by": "비오(Joshua) EAG-3 (S109)",
+    "storage": "별도 JSON artifact (exceptional_debt_registry와 분리)",
+    "storage_path": "tools/governance/CRP_HISTORY_LOG.json",
+    "nature": "append-only ledger",
+    "note": "S110 신규 생성. enforcement_active=true 전환 시점 기준 초기화. EAG-3 비오(Joshua) 승인(S109) 기반."
+  },
+
+  "_append_only_governance": {
+    "rule": "APPEND-ONLY HARD LOCK",
+    "overwrite_existing_record": "금지 — Evidence tampering 방지",
+    "physical_delete": "금지",
+    "correction_policy": "기존 record 수정 불가. correction 필요 시 신규 correction_record 생성 (is_correction=true, corrects_record_id 참조)",
+    "mutation_history": "모든 변경은 신규 record로 추적 가능 상태 유지",
+    "purpose": "복잡도 감소 주장이 아닌 복잡도 감소 증거 보존"
+  },
+
+  "_log_nature": {
+    "purpose": "치료 이력 감사 증적 (exceptional_debt_registry와 역할 분리)",
+    "registry_role": "current debt state 관리",
+    "history_log_role": "historical remediation evidence 보존",
+    "append_only": true,
+    "physical_delete": false,
+    "initial_mode": "manual/enforcement",
+    "enforcement_activated_session": 109,
+    "enforcement_activated_date": "2026-05-09",
+    "enforcement_activated_by": "비오(Joshua) EAG-3"
+  },
+
+  "_record_field_spec": {
+    "record_id": "고유 식별자 (CRPH-{session}-{seq})",
+    "debt_id": "연결된 exceptional_debt_registry의 debt_id",
+    "function_name": "대상 함수명",
+    "file": "파일 경로",
+    "before_cc": "치료 전 CC",
+    "after_cc": "치료 후 CC (미수행 시 null)",
+    "delta_cc": "after_cc - before_cc (감소 = 음수, 미수행 시 null)",
+    "before_tier": "치료 전 Tier",
+    "after_tier": "치료 후 Tier (미변경 시 null)",
+    "session": "기록 세션",
+    "date": "기록 일자",
+    "owner": "수행 에이전트",
+    "remediation_type": "_remediation_type_enum 중 하나 (단일값 — v1.1 정책)",
+    "registry_status_change": "registry 상태 변화 (예: REVIEW → IN_PROGRESS)",
+    "regression_test_result": "PASS / FAIL / NOT_RUN",
+    "jeni_verification_result": "PASS / FAIL / PENDING / WAIVED",
+    "is_emergency": "true / false (EAG-EMERGENCY 발동 여부)",
+    "emergency_ref": "비오 emergency 승인 참조 (is_emergency=true 시 필수)",
+    "shadow_complexity_check": "CLEAN / DETECTED / ADVISORY",
+    "is_correction": "true / false (기존 record correction 여부)",
+    "corrects_record_id": "correction 대상 record_id (is_correction=true 시 필수)",
+    "is_reactivation": "true / false (DISCHARGED → ACTIVE 재활성화 트리거 여부)",
+    "notes": "자유 기술 메모"
+  },
+
+  "_anti_regression_judgment": {
+    "CC감소_Regression_PASS": "치료 후보 → record 생성",
+    "CC감소_Regression_FAIL": "사고 → HARD STOP / record 생성 필수",
+    "CC감소없음_구조안정성개선": "REVIEW → 캐디+도미+제니+비오 개입 후 record 생성",
+    "CC감소만_기능보증없음": "INVALID → record 생성 / remediation 불인정"
+  },
+
+  "records": []
+}

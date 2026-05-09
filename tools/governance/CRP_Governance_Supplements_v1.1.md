@@ -1,7 +1,7 @@
 # CRP Governance Supplements v1.1 FINAL
 # EAG-EMERGENCY Rule / Automatic Discharge Lifecycle / Advisory→Enforced Transition
 # S106 | 2026-05-09 | 캐디 작성 | 도미 Final Design Directives 반영
-# EAG 미승인
+# S110 | 2026-05-09 | §3 전환 조건 테이블 갱신 — enforcement_active=true (비오 EAG-3 승인, S109)
 
 ---
 
@@ -145,15 +145,17 @@ ESCALATED → HARD STOP candidate (비오 판단)
 
 | # | 조건 | 상태 |
 |---|---|---|
-| 1 | PT-S81-ARCH-001 Phase 3 완료 | ⬜ 미완 |
-| 2 | boot/runtime pair validation 안정화 | ⬜ 미완 |
-| 3 | shadow pipeline 안정화 | ⬜ 미완 |
-| 4 | delta integrity 안정화 | ⬜ 미완 |
-| 5 | fail-closed ordering 검증 완료 | ⬜ 미완 |
-| 6 | exceptional_debt_registry v1.0 확정 | ⬜ 미완 |
-| 7 | CRP_HISTORY_LOG 구조 확정 | ⬜ 미완 |
-| 8 | 제니 TRUST_READY | ⬜ 미완 |
-| 9 | 비오 EAG 승인 | ⬜ 미완 |
+| 1 | PT-S81-ARCH-001 Phase 3 완료 | ✅ 완료 (S107) |
+| 2 | boot/runtime pair validation 안정화 | ✅ 완료 (S90) |
+| 3 | shadow pipeline 안정화 | ✅ 완료 (S98) |
+| 4 | delta integrity 안정화 | ✅ 완료 (S103) |
+| 5 | fail-closed ordering 검증 완료 | ✅ 완료 (S103) |
+| 6 | exceptional_debt_registry v1.0 확정 | ✅ 완료 (S105) |
+| 7 | CRP_HISTORY_LOG 구조 확정 | ✅ 완료 (S106) |
+| 8 | 제니 TRUST_READY | ✅ 완료 (S109) |
+| 9 | 비오 EAG 승인 | ✅ 완료 (S109) |
+
+**전환 완료**: enforcement_active = true | 승인자: 비오(Joshua) EAG-3 | 승인 세션: S109 | 승인 일시: 2026-05-09
 
 ---
 
