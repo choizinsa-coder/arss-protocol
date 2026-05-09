@@ -7,7 +7,7 @@
   "created_date": "2026-05-09",
   "approved_by": null,
   "design_basis": "Complexity Governance Direction v1.1 (도미 S105)",
-  "eag_stage": "EAG-1_LOCKED",
+  "eag_stage": "EAG-2_APPROVED",
   "enforcement_active": false,
   "enforcement_activation": "Phase 3 완료 후",
   "expiry_rule": "비오 실제 개설 세션 3회 기준 / 초과 시 HARD_STOP_CANDIDATE 자동 승격",
@@ -37,16 +37,21 @@
       "owner": "caddy",
       "debt_reason": "AIBA 거버넌스 핵심 경로(RPU 발행) — 누적 분기 49개. 기존 레거시 부채. 즉시 차단 유예(도미 원칙: 기존 부채 처벌 유예). 제니 1순위 추적 대상 지정.",
       "expiration_session": 108,
-      "status": "REVIEW",
-      "resolution_note": null
+      "status": "RESOLVED",
+      "resolved_session": 108,
+      "resolved_date": "2026-05-09",
+      "resolved_by": "비오(Joshua) EAG-2 승인",
+      "resolution_note": "측정 불일치 / 대상 함수 부재 / 현 코드베이스 기준 CC ≥ 20 함수 없음. S108 PEC 실측 결과: rpu_issue 함수 tools/rpu_atomic_issuer.py 내 미존재. arss_gatekeeper.py F등급 함수 없음. rpu_atomic_issuer.py 전 함수 CC ≤ 15(최고: rollback CC=15). 등재 당시 파일 경로 오기(arss_gatekeeper.py) 및 함수명 오기(rpu_issue) 확인. 실재하지 않는 부채로 판정하여 RESOLVED 처리.",
+      "remeasured_cc": null,
+      "remeasured_session": 108
     }
   ],
   "stats": {
     "total_entries": 1,
     "by_status": {
-      "REVIEW": 1,
+      "REVIEW": 0,
       "HARD_STOP_CANDIDATE": 0,
-      "RESOLVED": 0,
+      "RESOLVED": 1,
       "CLOSED": 0
     },
     "by_grade": {
@@ -56,5 +61,5 @@
       "C": 0
     }
   },
-  "note": "DRAFT 상태. EAG-2(비오 승인) 후 VPS 배포 및 enforcement 활성화 예정. 현재 advisory only."
+  "note": "S108: DEBT-105-001 RESOLVED — 실재하지 않는 부채 확인(PEC 실측). 비오(Joshua) EAG-2 승인."
 }
