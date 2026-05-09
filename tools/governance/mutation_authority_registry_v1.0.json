@@ -1,0 +1,130 @@
+{
+  "_meta": {
+    "schema_version": "1.0",
+    "created_session": 111,
+    "created_date": "2026-05-09",
+    "approved_by": "비오(Joshua) EAG-2",
+    "design_ref": "S101 STATE AUTHORITY ARCHITECTURE REVISION-1",
+    "default_behavior": "DENY",
+    "principle": "explicit allow only — unknown tier/path/tool = DENY"
+  },
+  "tiers": {
+    "T0": {
+      "label": "canonical_root",
+      "description": "chain, evidence, canonical registry — mutation via explicit EAG path only",
+      "fallback_behavior": "HARD_STOP",
+      "requires_eag": true,
+      "requires_hash_match": true,
+      "allowed_tools": ["rpu_atomic_issuer.py", "arss_gatekeeper.py"],
+      "allowed_paths": [
+        "evidence/scoring_ledger.json",
+        "evidence/receipts/",
+        "evidence/eag_approvals/",
+        "tools/governance/mutation_authority_registry_v1.0.json"
+      ],
+      "allowed_mutation_types": ["EAG_APPROVED_WRITE", "CHAIN_APPEND"],
+      "denied_targets": ["chain.tip_direct_edit", "ledger_rollback", "registry_self_mutation_without_eag"],
+      "required_gate": ["arss_gatekeeper_G1_G14", "EAG3_approval_token"]
+    },
+    "T1": {
+      "label": "awareness_sync",
+      "description": "SESSION_CONTEXT awareness reflection — stale repair allowed, canonical overwrite forbidden",
+      "fallback_behavior": "HOLD",
+      "requires_eag": true,
+      "requires_hash_match": true,
+      "allowed_tools": ["shadow_pipeline.py", "generation_pipeline.py", "phase2_commit_gate.py"],
+      "allowed_paths": [
+        "SESSION_CONTEXT.json",
+        "SESSION_BOOT*.json",
+        "SESSION_STATE_RUNTIME.json",
+        "DELTA_LOG/",
+        "tools/session_context_gen/"
+      ],
+      "allowed_mutation_types": ["AWARENESS_SYNC", "STALE_REPAIR", "SESSION_DELTA_WRITE"],
+      "denied_targets": ["chain.tip_overwrite", "enforcement_active_direct_edit", "canonical_field_local_mutation"],
+      "required_gate": ["EAG2_approval", "phase2_commit_gate", "pair_validator"],
+      "hold_release_conditions": ["H1_stale_resolved", "H2_sync_completed", "H3_hash_consistent", "H4_no_active_T0_violation"]
+    },
+    "T2": {
+      "label": "narrative_metadata",
+      "description": "note, detail, summaries — operational hygiene layer",
+      "fallback_behavior": "WARN",
+      "requires_eag": false,
+      "requires_hash_match": false,
+      "allowed_tools": ["session_context_gen/generation_pipeline.py"],
+      "allowed_paths": [
+        "session_reentry.*",
+        "agent_focus.*",
+        "*.note",
+        "*.detail",
+        "*.context_summary"
+      ],
+      "allowed_mutation_types": ["NARRATIVE_UPDATE", "SUMMARY_REFRESH"],
+      "denied_targets": ["status_field_direct_edit", "eag_stage_direct_edit"],
+      "required_gate": ["T2_timeout_check"],
+      "timeout_policy": {
+        "max_unresolved_sessions": 2,
+        "min_validation_cycles": 1,
+        "validation_cycle_types": [
+          "governance_checker_execution",
+          "stale_state_detector_execution",
+          "sync_reconciliation_pass",
+          "eag_review_pass"
+        ],
+        "escalation_target": "T1",
+        "escalation_exceptions": [
+          "active_recovery_in_progress",
+          "explicit_beo_override",
+          "mirror_propagation_delay",
+          "validator_ambiguity_false_positive"
+        ]
+      }
+    },
+    "T3": {
+      "label": "observation_only",
+      "description": "read-only — logging and observation, no mutation allowed",
+      "fallback_behavior": "LOG",
+      "requires_eag": false,
+      "requires_hash_match": false,
+      "allowed_tools": ["governance_checker.py", "stale_state_detector.py"],
+      "allowed_paths": [
+        "logs/",
+        "SNAPSHOT_LOG/",
+        "evidence/receipts/"
+      ],
+      "allowed_mutation_types": ["LOG_APPEND"],
+      "denied_targets": ["*_direct_write_outside_log"],
+      "required_gate": []
+    }
+  },
+  "unknown_handling": {
+    "unknown_tier": "DENY",
+    "unknown_path": "DENY",
+    "unknown_tool": "DENY",
+    "missing_gate": "DENY",
+    "ambiguous_authority": "HOLD"
+  },
+  "cascade_rules": {
+    "T0_violation": {
+      "effect": "ALL_LOWER_TIERS_FREEZE",
+      "scope": ["T1", "T2", "T3"],
+      "auto_release": false,
+      "release_requires": "explicit_beo_eag_approval"
+    },
+    "T1_violation": {
+      "effect": "T1_T2_WRITE_HOLD",
+      "scope": ["T1", "T2"],
+      "auto_release": "recovery_evidence_required",
+      "release_conditions": ["H1_stale_resolved", "H2_sync_completed", "H3_hash_consistent", "H4_no_active_T0_violation"]
+    },
+    "T2_violation": {
+      "effect": "WARNING_ONLY",
+      "escalation_to_T1": "after_timeout",
+      "upward_to_T0": false
+    },
+    "T3_divergence": {
+      "effect": "LOG_ONLY",
+      "escalation": false
+    }
+  }
+}
