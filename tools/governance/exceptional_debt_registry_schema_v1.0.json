@@ -1,0 +1,126 @@
+{
+  "_schema_meta": {
+    "schema_id": "EXCEPTIONAL-DEBT-REGISTRY-SCHEMA-v1.0",
+    "version": "1.0-draft-final",
+    "status": "DRAFT-FINAL",
+    "authored_session": 106,
+    "authored_date": "2026-05-09",
+    "authored_by": "캐디",
+    "based_on": "C_exceptional_debt_registry_v0.1 + Domi Final Design Directives S106",
+    "note": "EAG 미승인. 설계 정리 단계 최종 산출물."
+  },
+
+  "_status_enum": [
+    "ACTIVE",
+    "REVIEW",
+    "IN_PROGRESS",
+    "ESCALATED",
+    "DISCHARGED",
+    "EMERGENCY_OVERRIDE",
+    "DEFERRED",
+    "ARCHIVED"
+  ],
+
+  "_expiry_policy_enum": [
+    "NONE",
+    "SESSION",
+    "DATE",
+    "CONDITION"
+  ],
+
+  "_remediation_type_enum": [
+    "DECOMPOSE",
+    "EXTRACT_HELPER",
+    "MERGE_DUPLICATE",
+    "INLINE_TRIVIAL",
+    "SIMPLIFY_BRANCH",
+    "REMOVE_DEAD_PATH",
+    "NORMALIZE_VALIDATION",
+    "ISOLATE_SIDE_EFFECT",
+    "SPLIT_IO_FROM_LOGIC",
+    "TEST_ONLY_GUARD",
+    "EMERGENCY_PATCH",
+    "DOCUMENTED_EXCEPTION"
+  ],
+
+  "_verification_level_enum": [
+    "MANDATORY",
+    "CONDITIONAL",
+    "ADVISORY"
+  ],
+
+  "_reactivation_policy": {
+    "rule": "discharged 함수 재악화 시 신규 debt_id 발급 금지",
+    "action": "기존 debt_id 재활성화",
+    "status_transition": "DISCHARGED → ACTIVE 또는 ESCALATED",
+    "history_linkage": "CRP_HISTORY_LOG linkage 유지 (기존 history_refs 보존 후 신규 record append)",
+    "purpose": "치료→재발→재치료 lifecycle 추적 유지"
+  },
+
+  "active_debt": [
+    {
+      "_record_schema": "exceptional_debt_registry_record_v1.0",
+      "debt_id": "DEBT-105-001",
+      "function_name": "rpu_issue",
+      "file": "tools/rpu/rpu_issue.py",
+      "complexity_score": 49,
+      "debt_tier": "Tier-1",
+      "status": "REVIEW",
+      "owner": "캐디",
+      "created_session": 105,
+      "created_date": "2026-05-09",
+      "expiry_policy": "SESSION",
+      "expiration_session": 108,
+      "remediation_status": "PENDING",
+      "mitigation_note": "핵심 엔진 함수. Phase 3 완료 전 decomposition 금지. advisory 상태 유지.",
+      "verification_level": "MANDATORY",
+      "jeni_required": true,
+      "jeni_status": "PENDING",
+      "history_refs": [],
+      "last_history_ref": null,
+      "discharge_history_ref": null,
+      "emergency_override_ref": null,
+      "reactivation_count": 0,
+      "_linkage_note": "history_refs 빈 배열은 정합 상태. CRP_HISTORY_LOG example record(CRPH-106-001)는 non-binding sample이며 live linkage 아님. EAG 승인 후 최초 실제 CRP_HISTORY_LOG record 생성 시 history_refs / last_history_ref 반영."
+    }
+  ],
+
+  "discharged_debt": [],
+
+  "_record_field_spec": {
+    "debt_id": "고유 식별자 (DEBT-{session}-{seq}). 재활성화 시 동일 ID 유지.",
+    "function_name": "대상 함수명",
+    "file": "파일 경로",
+    "complexity_score": "현재 CC (radon 기준)",
+    "debt_tier": "Tier-1 / Tier-2 / Tier-3",
+    "status": "_status_enum 중 하나",
+    "owner": "담당 에이전트",
+    "created_session": "최초 등록 세션",
+    "created_date": "최초 등록 일자",
+    "expiry_policy": "_expiry_policy_enum 중 하나",
+    "expiration_session": "만료 세션 (SESSION 정책 또는 EAG-EMERGENCY 필수)",
+    "expiration_date": "만료 일자 (DATE 정책일 때)",
+    "expiration_condition": "만료 조건 서술 (CONDITION 정책일 때)",
+    "remediation_status": "PENDING / IN_PROGRESS / COMPLETE / INVALID",
+    "mitigation_note": "현재 완화 메모",
+    "verification_level": "_verification_level_enum 중 하나",
+    "jeni_required": "true / false",
+    "jeni_status": "PENDING / PASS / FAIL / WAIVED",
+    "history_refs": "CRP_HISTORY_LOG record_id 배열 (append-only linkage)",
+    "last_history_ref": "최근 CRP_HISTORY_LOG record_id",
+    "discharge_history_ref": "퇴원 처리 CRP_HISTORY_LOG record_id",
+    "emergency_override_ref": "EAG-EMERGENCY 발동 시 CRP_HISTORY_LOG record_id",
+    "reactivation_count": "DISCHARGED → ACTIVE 재활성화 횟수 (0부터 시작)"
+  },
+
+  "_v1_0_upgrade_conditions": {
+    "A": "status_enum 확정 — DONE",
+    "B": "expiry_policy 확정 — DONE",
+    "C": "CRP_HISTORY_LOG linkage 필드 확정 — DONE",
+    "D": "Automatic Discharge lifecycle 확정 — DONE (본 schema + Supplements 문서)",
+    "E": "Emergency Override linkage 확정 — DONE",
+    "F": "Jeni verification intensity 필드 확정 — DONE",
+    "G": "Advisory → Enforced transition trigger table 확정 — CRP Master Plan v1.1 FINAL 참조",
+    "승격_판정": "전항목 충족. EAG 승인 후 v1.0 정식 배포 가능."
+  }
+}
