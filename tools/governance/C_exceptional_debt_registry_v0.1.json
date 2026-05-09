@@ -1,0 +1,60 @@
+{
+  "registry_id": "EXCEPTIONAL_DEBT_REGISTRY_v0.1",
+  "registry_type": "COMPLEXITY_DEBT",
+  "status": "DRAFT",
+  "schema_version": "v0.1",
+  "created_session": 105,
+  "created_date": "2026-05-09",
+  "approved_by": null,
+  "design_basis": "Complexity Governance Direction v1.1 (도미 S105)",
+  "eag_stage": "EAG-1_LOCKED",
+  "enforcement_active": false,
+  "enforcement_activation": "Phase 3 완료 후",
+  "expiry_rule": "비오 실제 개설 세션 3회 기준 / 초과 시 HARD_STOP_CANDIDATE 자동 승격",
+  "schema": {
+    "debt_id": "string — 고유 식별자 (DEBT-{session}-{seq} 형식)",
+    "function_name": "string — 대상 함수명",
+    "file_path": "string — VPS 절대 경로",
+    "cc_score": "integer — 등재 시점 CC 점수",
+    "grade": "string — A/B/C/D/E/F",
+    "created_session": "integer — 등재 세션",
+    "created_date": "string — ISO8601 KST",
+    "owner": "string — 책임 에이전트 (caddy/domi/beo)",
+    "debt_reason": "string — 부채 발생 사유",
+    "expiration_session": "integer — 만료 세션 (최대 created_session + 3)",
+    "status": "string — REVIEW / HARD_STOP_CANDIDATE / RESOLVED / CLOSED",
+    "resolution_note": "string | null — 해소 시 기록"
+  },
+  "entries": [
+    {
+      "debt_id": "DEBT-105-001",
+      "function_name": "rpu_issue",
+      "file_path": "/opt/arss/engine/arss-protocol/arss_gatekeeper.py",
+      "cc_score": 49,
+      "grade": "F",
+      "created_session": 105,
+      "created_date": "2026-05-09",
+      "owner": "caddy",
+      "debt_reason": "AIBA 거버넌스 핵심 경로(RPU 발행) — 누적 분기 49개. 기존 레거시 부채. 즉시 차단 유예(도미 원칙: 기존 부채 처벌 유예). 제니 1순위 추적 대상 지정.",
+      "expiration_session": 108,
+      "status": "REVIEW",
+      "resolution_note": null
+    }
+  ],
+  "stats": {
+    "total_entries": 1,
+    "by_status": {
+      "REVIEW": 1,
+      "HARD_STOP_CANDIDATE": 0,
+      "RESOLVED": 0,
+      "CLOSED": 0
+    },
+    "by_grade": {
+      "F": 1,
+      "E": 0,
+      "D": 0,
+      "C": 0
+    }
+  },
+  "note": "DRAFT 상태. EAG-2(비오 승인) 후 VPS 배포 및 enforcement 활성화 예정. 현재 advisory only."
+}
