@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "spec_id": "PT-S99-GOV-003-REV3-FINAL",
+  "created_session": 113,
+  "created_at": "2026-05-10T00:00:00.000000Z",
+  "description": "SESSION_CONTEXT Growth Governance — Tier D recoverable archive layer",
+  "design_principles": [
+    "recoverable reference layer (source_key/source_path/payload_hash_sha256 mandatory)",
+    "NOT a hidden graveyard — all items retrievable",
+    "T2 WARN active items FORBIDDEN",
+    "R3 receipt mandatory on write",
+    "Tier A LOCKED keys FORBIDDEN"
+  ],
+  "total_items": 0,
+  "last_migration_session": null,
+  "last_migration_at": null,
+  "items": []
+}

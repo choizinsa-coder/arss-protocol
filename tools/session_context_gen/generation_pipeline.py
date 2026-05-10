@@ -1,4 +1,4 @@
-ACTIVE_VERSION = "2.0.0"
+ACTIVE_VERSION = "2.1.0"
 VERSION_STATUS = "active"
 import hashlib
 import json
@@ -19,6 +19,7 @@ from .runtime_generator import load_runtime, compute_content_hash
 from .boot_generator import generate as generate_boot
 from .pair_validator import validate_boot_runtime_pair
 from .boundary_enforcement_validator import validate_agent_boundaries
+from .session_context_archive import run_tier_d_migration, ARCHIVE_PATH
 
 _GOVERNANCE_CONTEXT = {
     "policy_id": "ARSS_HUB_PROTOCOL_v1.2",
@@ -55,6 +56,7 @@ class PipelineResult:
     runtime_hash: Optional[str] = None
     runtime_pair_hash: Optional[str] = None
     validator_results: Optional[dict] = None
+    tier_d_result: Optional[dict] = None
 
 
 def _uuidv7() -> str:
@@ -121,8 +123,18 @@ def _build_receipt(
     }
 
 
-def run_pipeline(input_path: str, receipts_dir: str, output_dir: str, runtime_path: str = None, bundle_manifest: dict = None) -> PipelineResult:
+def run_pipeline(
+    input_path: str,
+    receipts_dir: str,
+    output_dir: str,
+    runtime_path: str = None,
+    bundle_manifest: dict = None,
+    session: int = 0,
+    t2_warn_active_ids: set = None,
+    archive_path: Path = None,
+) -> PipelineResult:
     validator_results = {}
+    tier_d_result = None
     stage = "1_load_input"
     if not os.path.exists(input_path):
         raise PipelineError(f"[{stage}] artifact not found: {input_path}")
@@ -150,6 +162,25 @@ def run_pipeline(input_path: str, receipts_dir: str, output_dir: str, runtime_pa
         normalized_events = normalize_events(state_events)
     except StateEventsNormalizerError as e:
         raise PipelineError(f"[{stage}] state_events normalization failure: {e}")
+
+    # ── REV-D: stage 5b_tier_d_migration ──────────────────────────────────────
+    # PT-S99-GOV-003 Rev.3 FINAL
+    # 호출 위치: stage 5_normalize_state_events 완료 이후,
+    #            stage 13_generate_receipt (SESSION_CONTEXT.json 생성) 이전 mandatory.
+    stage = "5b_tier_d_migration"
+    _archive_path = archive_path if archive_path is not None else ARCHIVE_PATH
+    tier_d_result = run_tier_d_migration(
+        session_context=input_data,
+        session=session,
+        archive_path=_archive_path,
+        t2_warn_active_ids=t2_warn_active_ids,
+    )
+    if tier_d_result["status"] == "FAIL":
+        raise PipelineError(
+            f"[{stage}] Tier D migration FAIL: {tier_d_result['errors']}"
+        )
+    # ── REV-D hook 종료 ────────────────────────────────────────────────────────
+
     stage = "6_validate_structure"
     if not isinstance(input_data, dict):
         raise PipelineError(f"[{stage}] schema mismatch")
@@ -196,10 +227,30 @@ def run_pipeline(input_path: str, receipts_dir: str, output_dir: str, runtime_pa
     output_path = os.path.join(output_dir, output_name)
     output_data = dict(input_data)
     output_data["state_events"] = normalized_events
-    output_data["_pipeline_meta"] = {"generated_at": _utc_ts(), "delta_status": delta.status, "pipeline_version": "session_context_gen/2.0", "runtime_first": True, "boot_path": boot_name, "runtime_path": str(rt_path)}
+    output_data["_pipeline_meta"] = {
+        "generated_at": _utc_ts(),
+        "delta_status": delta.status,
+        "pipeline_version": "session_context_gen/2.0",
+        "runtime_first": True,
+        "boot_path": boot_name,
+        "runtime_path": str(rt_path),
+        "tier_d_migration": tier_d_result,
+    }
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(output_data, f, ensure_ascii=False, indent=2)
-    receipt = _build_receipt(prev_chain_hash=prev_chain_hash, artifact_path=output_path, artifact_hash=artifact_hash, prev_artifact_hash=prev_artifact_hash, boot_path=boot_output_path, runtime_path=str(rt_path), boot_hash=boot_hash, runtime_hash=runtime_content_hash, runtime_pair_hash=actual_runtime_pair_hash, validator_results=validator_results, commit_status="READY_FOR_COMMIT")
+    receipt = _build_receipt(
+        prev_chain_hash=prev_chain_hash,
+        artifact_path=output_path,
+        artifact_hash=artifact_hash,
+        prev_artifact_hash=prev_artifact_hash,
+        boot_path=boot_output_path,
+        runtime_path=str(rt_path),
+        boot_hash=boot_hash,
+        runtime_hash=runtime_content_hash,
+        runtime_pair_hash=actual_runtime_pair_hash,
+        validator_results=validator_results,
+        commit_status="READY_FOR_COMMIT",
+    )
     stage = "14_verify_and_promote"
     with open(output_path, "r", encoding="utf-8") as f:
         written = f.read()
@@ -214,4 +265,17 @@ def run_pipeline(input_path: str, receipts_dir: str, output_dir: str, runtime_pa
     receipt_path = os.path.join(output_dir, receipt_name)
     with open(receipt_path, "w", encoding="utf-8") as f:
         json.dump(receipt, f, ensure_ascii=False, indent=2)
-    return PipelineResult(status="SUCCESS", delta=delta, receipt_path=receipt_path, output_path=output_path, stage=stage, boot_path=boot_output_path, runtime_path=str(rt_path), boot_hash=boot_hash, runtime_hash=runtime_content_hash, runtime_pair_hash=actual_runtime_pair_hash, validator_results=validator_results)
+    return PipelineResult(
+        status="SUCCESS",
+        delta=delta,
+        receipt_path=receipt_path,
+        output_path=output_path,
+        stage=stage,
+        boot_path=boot_output_path,
+        runtime_path=str(rt_path),
+        boot_hash=boot_hash,
+        runtime_hash=runtime_content_hash,
+        runtime_pair_hash=actual_runtime_pair_hash,
+        validator_results=validator_results,
+        tier_d_result=tier_d_result,
+    )
