@@ -7,6 +7,7 @@ P-03: Admission Before Generation
 Design basis: SESSION_BOOT vNext Canonical Entry Architecture v0.1 + v0.2 + v0.3
 Task: PT-S115-BOOT-001
 EAG: EAG-2 approved by 비오(Joshua) S122
+EAG-4: admission required_keys 수정 — ssoi_status 제거 (S123, 비오(Joshua) 승인)
 hash_direction_rule: RUNTIME → BOOT (one-way). RUNTIME must NOT reference BOOT hash back.
 """
 
@@ -53,11 +54,12 @@ def _check_admission(session_context: dict) -> dict:
     A-01 Admission Policy check.
     Verifies SESSION_CONTEXT has minimum interpretive inputs for BOOT generation.
     Returns: { "pass": bool, "reason": str }
+    EAG-4 수정 (S123): ssoi_status 제거 — SESSION_CONTEXT 실제 구조와 불일치 확인됨.
     """
     if not isinstance(session_context, dict):
         return {"pass": False, "reason": "session_context must be a dict"}
 
-    required_keys = ["chain", "ssoi_status", "session_count"]
+    required_keys = ["chain", "session_count"]
     missing = [k for k in required_keys if k not in session_context]
     if missing:
         return {
@@ -99,10 +101,10 @@ def _build_boot_draft(
     Serialization domain: C-02 (BOOT_SERIALIZATION_ALLOWED only).
     """
     chain = session_context.get("chain", {})
-    ssoi = session_context.get("ssoi_status", {})
+    ssoi = session_context.get("ssoi_status", {}) or {}
     sat = session_context.get("complexity_ceiling_status", {})
-    retrieval = session_context.get("retrieval_governance_rule", {})
-    archived = session_context.get("archived_tasks", {})
+    retrieval = session_context.get("retrieval_governance_rule", {}) or {}
+    archived = session_context.get("archived_tasks", {}) or {}
 
     boot_draft = {
         "boot_meta": {
