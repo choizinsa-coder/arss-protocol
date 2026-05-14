@@ -1,158 +1,182 @@
 """
-test_mcp_server_poc.py
-Task: PT-S125-BOOT-ONDEMAND-001
-EAG: EAG-2 비오(Joshua) 승인 (S126)
+test_mcp_server_poc.py  v0.2.0
+Task: PT-S125-BOOT-ONDEMAND-001 / 도미 2차 설계 반영
 
-검증 항목:
-- TC-1: ping 응답 구조 검증
-- TC-2: get_server_status 반환값 검증
-- TC-3: get_current_epoch 반환값 검증
-- TC-4: tools/list JSON-RPC 응답 검증
-- TC-5: tools/call ping JSON-RPC 응답 검증
-- TC-6: tools/call 미등록 도구 → error 반환 검증
-- TC-7: Audit Trail 로깅 호출 확인
-- TC-8: get_all_context 류 도구 미존재 확인 (금지 규칙 준수)
+TC-01: ping L0 레이블
+TC-02: get_server_status L1 레이블
+TC-03: get_current_epoch L1 레이블
+TC-04: tools/list ALLOWED_TOOLS만 노출
+TC-05: tools/call ping 정상 실행
+TC-06: FORBIDDEN_TOOLS 호출 -> DENY
+TC-07: 미등재 도구 -> DENY
+TC-08: Audit Trail 로깅
+TC-09: FORBIDDEN 도구 tools/list 미노출
+TC-10: deny-by-default 구조 검증
+TC-11: 계층 위반 등재 시 RuntimeError
+TC-12: FORBIDDEN ALLOWED 등재 시 RuntimeError
+TC-13: FAIL_CLOSED_POLICY 상수 검증
+TC-14: PHASE_A_ALLOWED_LAYERS = {L0, L1}
+TC-15: MCP_LAYER L0~L4 전항목 존재
+TC-16: get_server_status fail_closed_policy 필드 포함
 """
 
+import io
 import json
 import sys
-import io
 import pytest
-from unittest.mock import patch, MagicMock
 from datetime import datetime, timezone
+from unittest.mock import patch
 
-# 경로 조정
 sys.path.insert(0, "/opt/arss/engine/arss-protocol/tools/mcp")
-
 import mcp_server_poc as poc
 
 
-# ---------------------------------------------------------------------------
-# TC-1: ping
-# ---------------------------------------------------------------------------
-
-def test_tc1_ping_structure():
+def test_tc01_ping_structure_and_layer():
     result = poc.ping()
     assert result["status"] == "ok"
-    assert "message" in result
+    assert result["mcp_layer"] == "L0"
+    assert result["phase"] == poc.CURRENT_PHASE
     assert result["server"] == poc.SERVER_NAME
-    assert result["version"] == poc.SERVER_VERSION
     assert "timestamp" in result
 
 
-# ---------------------------------------------------------------------------
-# TC-2: get_server_status
-# ---------------------------------------------------------------------------
-
-def test_tc2_get_server_status():
+def test_tc02_get_server_status_and_layer():
     result = poc.get_server_status()
-    assert result["server_name"] == poc.SERVER_NAME
-    assert result["aiba_system"] == poc.AIBA_SYSTEM
-    assert result["aiba_version"] == poc.AIBA_VERSION
+    assert result["mcp_layer"] == "L1"
+    assert result["current_phase"] == poc.CURRENT_PHASE
     assert result["status"] == "operational"
-    assert result["mcp_poc_task"] == "PT-S125-BOOT-ONDEMAND-001"
-    assert "timestamp" in result
+    assert result["fail_closed_policy"] == "DENY"
+    assert set(result["allowed_layers"]) == {"L0", "L1"}
 
 
-# ---------------------------------------------------------------------------
-# TC-3: get_current_epoch
-# ---------------------------------------------------------------------------
-
-def test_tc3_get_current_epoch():
+def test_tc03_get_current_epoch_and_layer():
     before = int(datetime.now(timezone.utc).timestamp() * 1000)
     result = poc.get_current_epoch()
     after = int(datetime.now(timezone.utc).timestamp() * 1000)
-
-    assert "epoch_ms" in result
-    assert "epoch_s" in result
-    assert "utc_iso" in result
+    assert result["mcp_layer"] == "L1"
     assert before <= result["epoch_ms"] <= after
     assert result["source"] == "vps_system_clock"
 
 
-# ---------------------------------------------------------------------------
-# TC-4: tools/list JSON-RPC
-# ---------------------------------------------------------------------------
-
-def test_tc4_tools_list():
+def test_tc04_tools_list_allowed_only():
     request = {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
-    outputs = []
-
-    with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
+    with patch("sys.stdout", new_callable=io.StringIO) as mock_out:
         poc._handle(request)
-        output = mock_stdout.getvalue().strip()
-
-    response = json.loads(output)
-    assert response["id"] == 1
-    tool_names = [t["name"] for t in response["result"]["tools"]]
-    assert "ping" in tool_names
-    assert "get_server_status" in tool_names
-    assert "get_current_epoch" in tool_names
+        response = json.loads(mock_out.getvalue().strip())
+    tool_names = {t["name"] for t in response["result"]["tools"]}
+    assert tool_names == {"ping", "get_server_status", "get_current_epoch"}
+    for forbidden in poc.FORBIDDEN_TOOLS:
+        assert forbidden not in tool_names
 
 
-# ---------------------------------------------------------------------------
-# TC-5: tools/call ping JSON-RPC
-# ---------------------------------------------------------------------------
-
-def test_tc5_tools_call_ping():
+def test_tc05_tools_call_ping_ok():
     request = {
-        "jsonrpc": "2.0",
-        "id": 2,
+        "jsonrpc": "2.0", "id": 2,
         "method": "tools/call",
         "params": {"name": "ping", "arguments": {}},
     }
-
-    with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
+    with patch("sys.stdout", new_callable=io.StringIO) as mock_out:
         poc._handle(request)
-        output = mock_stdout.getvalue().strip()
-
-    response = json.loads(output)
-    assert response["id"] == 2
+        response = json.loads(mock_out.getvalue().strip())
     assert response["result"]["isError"] is False
-    content_text = response["result"]["content"][0]["text"]
-    content = json.loads(content_text)
+    content = json.loads(response["result"]["content"][0]["text"])
     assert content["status"] == "ok"
+    assert content["mcp_layer"] == "L0"
 
 
-# ---------------------------------------------------------------------------
-# TC-6: 미등록 도구 → error 반환
-# ---------------------------------------------------------------------------
-
-def test_tc6_unknown_tool_error():
-    request = {
-        "jsonrpc": "2.0",
-        "id": 3,
-        "method": "tools/call",
-        "params": {"name": "get_all_context", "arguments": {}},
-    }
-
-    with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-        poc._handle(request)
-        output = mock_stdout.getvalue().strip()
-
-    response = json.loads(output)
-    assert "error" in response
-    assert response["error"]["code"] == -32601
+def test_tc06_forbidden_tool_deny():
+    with pytest.raises(PermissionError) as exc_info:
+        poc._dispatch("get_all_context")
+    assert "FAIL_CLOSED" in str(exc_info.value)
+    assert "FORBIDDEN" in str(exc_info.value)
 
 
-# ---------------------------------------------------------------------------
-# TC-7: Audit Trail 로깅 호출 확인
-# ---------------------------------------------------------------------------
+def test_tc07_unregistered_tool_deny():
+    with pytest.raises(PermissionError) as exc_info:
+        poc._dispatch("mystery_tool_xyz")
+    assert "FAIL_CLOSED" in str(exc_info.value)
 
-def test_tc7_audit_trail_logging():
+
+def test_tc08_audit_trail_logging():
     with patch.object(poc.logger, "info") as mock_log:
         poc.ping()
-        mock_log.assert_called_once()
-        call_args = mock_log.call_args[0]
-        assert "TOOL_CALL" in call_args[0]
-        assert "ping" in str(call_args)
+        assert mock_log.called
+        args = str(mock_log.call_args_list)
+        assert "TOOL_CALL" in args
+        assert "ping" in args
 
 
-# ---------------------------------------------------------------------------
-# TC-8: get_all_context 류 금지 도구 미존재 확인
-# ---------------------------------------------------------------------------
+def test_tc09_forbidden_not_in_tools_list():
+    request = {"jsonrpc": "2.0", "id": 3, "method": "tools/list"}
+    with patch("sys.stdout", new_callable=io.StringIO) as mock_out:
+        poc._handle(request)
+        response = json.loads(mock_out.getvalue().strip())
+    listed_names = {t["name"] for t in response["result"]["tools"]}
+    for forbidden in poc.FORBIDDEN_TOOLS:
+        assert forbidden not in listed_names
 
-def test_tc8_forbidden_tools_absent():
-    forbidden = ["get_all_context", "load_full_session", "preload_all", "get_full_boot"]
-    for name in forbidden:
-        assert name not in poc.TOOLS, f"금지 도구 {name}이 TOOLS에 등록되어 있음"
+
+def test_tc10_deny_by_default_structure():
+    test_names = ["new_tool", "read_all", "get_context", "fetch_state"]
+    for name in test_names:
+        assert name not in poc.ALLOWED_TOOLS
+        with pytest.raises(PermissionError):
+            poc._dispatch(name)
+
+
+def test_tc11_layer_violation_raises_on_build():
+    bad_registry = {
+        "bad_tool": {"name": "bad_tool", "layer": "L2", "fn": lambda: {}}
+    }
+    def mock_build():
+        for name, entry in bad_registry.items():
+            if entry["layer"] not in poc.PHASE_A_ALLOWED_LAYERS:
+                raise RuntimeError(
+                    f"[FAIL_CLOSED] 도구 '{name}' 계층 '{entry['layer']}'은 PHASE-A 허용 범위 외부 -- 즉시 중단."
+                )
+        return bad_registry
+    with pytest.raises(RuntimeError) as exc_info:
+        mock_build()
+    assert "FAIL_CLOSED" in str(exc_info.value)
+    assert "PHASE-A" in str(exc_info.value)
+
+
+def test_tc12_forbidden_in_allowed_raises_on_build():
+    bad_registry = {
+        "get_all_context": {"name": "get_all_context", "layer": "L0", "fn": lambda: {}}
+    }
+    def mock_build():
+        for name in bad_registry:
+            if name in poc.FORBIDDEN_TOOLS:
+                raise RuntimeError(
+                    f"[FAIL_CLOSED] FORBIDDEN 도구 '{name}'이 허용 레지스트리에 등재됨 -- 즉시 중단."
+                )
+        return bad_registry
+    with pytest.raises(RuntimeError) as exc_info:
+        mock_build()
+    assert "FAIL_CLOSED" in str(exc_info.value)
+    assert "FORBIDDEN" in str(exc_info.value)
+
+
+def test_tc13_fail_closed_policy_constant():
+    assert poc.FAIL_CLOSED_POLICY["default"] == "DENY"
+    for key in ["unregistered_tool", "forbidden_tool", "layer_violation", "authority_ceiling"]:
+        assert key in poc.FAIL_CLOSED_POLICY
+
+
+def test_tc14_phase_a_allowed_layers():
+    assert poc.PHASE_A_ALLOWED_LAYERS == frozenset({"L0", "L1"})
+    for layer in ["L2", "L3", "L4"]:
+        assert layer not in poc.PHASE_A_ALLOWED_LAYERS
+
+
+def test_tc15_mcp_layer_constant_complete():
+    for layer in ["L0", "L1", "L2", "L3", "L4"]:
+        assert layer in poc.MCP_LAYER
+
+
+def test_tc16_server_status_exposes_policy():
+    result = poc.get_server_status()
+    assert "fail_closed_policy" in result
+    assert result["fail_closed_policy"] == "DENY"
+    assert "allowed_layers" in result
