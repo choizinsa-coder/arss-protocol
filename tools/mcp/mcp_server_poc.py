@@ -112,6 +112,38 @@ FORBIDDEN_TOOLS: frozenset = frozenset({
 })
 
 # ---------------------------------------------------------------------------
+# PHASE-A 호환 상수 (기존 테스트 계약 유지 — 변경 불가)
+# ---------------------------------------------------------------------------
+
+import logging as _logging
+
+MCP_LAYER = {
+    "L0": "Ping / Health only",
+    "L1": "Metadata visibility",
+    "L2": "Read-only operational data",
+    "L3": "Restricted governance data",
+    "L4": "Mutation / Execution -- FORBIDDEN",
+}
+
+FAIL_CLOSED_POLICY = {
+    "default": "DENY",
+    "unregistered_tool": "DENY -- 허용 레지스트리 미등재 도구 자동 거부",
+    "forbidden_tool": "DENY -- FORBIDDEN_TOOLS 등재 도구 무조건 거부",
+    "layer_violation": "DENY -- PHASE-A 허용 계층(L0/L1) 외 자동 거부",
+    "error_on_ambiguity": "FAIL_CLOSED -- 모호한 요청 거부",
+    "authority_ceiling": "L1 -- PHASE-A 최대 허용 계층",
+}
+
+# TC-08 호환: module-level logger (audit write는 broker 담당 — 이 logger는 stderr 전용)
+logger = _logging.getLogger("aiba_mcp_poc")
+if not logger.handlers:
+    _logging.basicConfig(
+        level=_logging.INFO,
+        format="%(asctime)s [MCP] %(message)s",
+        handlers=[_logging.StreamHandler(sys.stderr)],
+    )
+
+# ---------------------------------------------------------------------------
 # B-1 Throttling 상수 (수치 LOCK)
 # ---------------------------------------------------------------------------
 

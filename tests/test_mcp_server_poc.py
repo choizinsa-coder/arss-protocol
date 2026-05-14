@@ -1,6 +1,8 @@
 """
-test_mcp_server_poc.py  v0.2.0
-Task: PT-S125-BOOT-ONDEMAND-001 / 도미 2차 설계 반영
+test_mcp_server_poc.py  v0.3.0
+Task: PT-S125-BOOT-ONDEMAND-001 / PHASE-B 수정
+변경: TC-08 audit 검증 방식 → broker.submit_event mock (B-2-B authority separation 반영)
+      TC-13/15: v0.3.0에서 상수 복원으로 PASS 복구
 
 TC-01: ping L0 레이블
 TC-02: get_server_status L1 레이블
@@ -9,7 +11,7 @@ TC-04: tools/list ALLOWED_TOOLS만 노출
 TC-05: tools/call ping 정상 실행
 TC-06: FORBIDDEN_TOOLS 호출 -> DENY
 TC-07: 미등재 도구 -> DENY
-TC-08: Audit Trail 로깅
+TC-08: Audit Trail 로깅 (broker.submit_event 경유 확인)
 TC-09: FORBIDDEN 도구 tools/list 미노출
 TC-10: deny-by-default 구조 검증
 TC-11: 계층 위반 등재 시 RuntimeError
@@ -29,6 +31,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, "/opt/arss/engine/arss-protocol/tools/mcp")
 import mcp_server_poc as poc
+import mcp_audit_broker as broker_mod
 
 
 def test_tc01_ping_structure_and_layer():
@@ -70,6 +73,7 @@ def test_tc04_tools_list_allowed_only():
 
 
 def test_tc05_tools_call_ping_ok():
+    poc._throttle_guard = None  # throttle reset
     request = {
         "jsonrpc": "2.0", "id": 2,
         "method": "tools/call",
@@ -78,6 +82,7 @@ def test_tc05_tools_call_ping_ok():
     with patch("sys.stdout", new_callable=io.StringIO) as mock_out:
         poc._handle(request)
         response = json.loads(mock_out.getvalue().strip())
+    poc._throttle_guard = None
     assert response["result"]["isError"] is False
     content = json.loads(response["result"]["content"][0]["text"])
     assert content["status"] == "ok"
@@ -85,25 +90,46 @@ def test_tc05_tools_call_ping_ok():
 
 
 def test_tc06_forbidden_tool_deny():
+    poc._throttle_guard = None
     with pytest.raises(PermissionError) as exc_info:
         poc._dispatch("get_all_context")
+    poc._throttle_guard = None
     assert "FAIL_CLOSED" in str(exc_info.value)
     assert "FORBIDDEN" in str(exc_info.value)
 
 
 def test_tc07_unregistered_tool_deny():
+    poc._throttle_guard = None
     with pytest.raises(PermissionError) as exc_info:
         poc._dispatch("mystery_tool_xyz")
+    poc._throttle_guard = None
     assert "FAIL_CLOSED" in str(exc_info.value)
 
 
 def test_tc08_audit_trail_logging():
-    with patch.object(poc.logger, "info") as mock_log:
-        poc.ping()
-        assert mock_log.called
-        args = str(mock_log.call_args_list)
-        assert "TOOL_CALL" in args
-        assert "ping" in args
+    """
+    v0.3.0: B-2-B authority separation — audit는 broker.submit_event 경유.
+    _dispatch("ping") 시 broker가 TOOL_CALL 이벤트를 수신하는지 검증.
+    """
+    original_submit = broker_mod.AuditBroker.submit_event
+    calls = []
+
+    def mock_submit(self, tool_name, layer, result_summary, phase, event_type="TOOL_CALL"):
+        calls.append({"tool_name": tool_name, "event_type": event_type})
+        return original_submit(self, tool_name, layer, result_summary, phase, event_type)
+
+    poc._throttle_guard = None
+    poc._audit_broker = None
+    with patch.object(broker_mod.AuditBroker, "submit_event", mock_submit):
+        poc._dispatch("ping")
+
+    poc._throttle_guard = None
+    poc._audit_broker = None
+
+    assert any(
+        c["tool_name"] == "ping" and c["event_type"] == "TOOL_CALL"
+        for c in calls
+    ), f"audit TOOL_CALL for ping not found in calls: {calls}"
 
 
 def test_tc09_forbidden_not_in_tools_list():
@@ -117,11 +143,13 @@ def test_tc09_forbidden_not_in_tools_list():
 
 
 def test_tc10_deny_by_default_structure():
+    poc._throttle_guard = None
     test_names = ["new_tool", "read_all", "get_context", "fetch_state"]
     for name in test_names:
         assert name not in poc.ALLOWED_TOOLS
         with pytest.raises(PermissionError):
             poc._dispatch(name)
+    poc._throttle_guard = None
 
 
 def test_tc11_layer_violation_raises_on_build():
