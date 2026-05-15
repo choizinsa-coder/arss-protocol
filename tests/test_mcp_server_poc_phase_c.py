@@ -1,8 +1,14 @@
 """
-AIBA MCP Server POC PHASE-C Test Suite  v3
+AIBA MCP Server POC PHASE-C Test Suite  v3.1
 Task:  PT-S125-BOOT-ONDEMAND-001  PHASE-C
 EAG:   EAG-2 비오(Joshua) 승인 (S128)
 TC-1~16
+
+변경 이력:
+- v3   (S128): 최초 구현 TC-1~16
+- v3.1 (S130): reset fixture에 containment mock 추가
+               (Recovery Governance Layer 추가로 is_active() FAIL_CLOSED 기본값 차단 대응)
+               reset_all_hmac_counters() 추가 (HC-T-01 카운터 오염 방지)
 """
 
 import hashlib
@@ -10,6 +16,7 @@ import hmac
 import os
 import sys
 import time
+from unittest.mock import patch
 
 # sys.path 주입 (importlib_syspath_rule)
 sys.path.insert(0, "/opt/arss/engine/arss-protocol/tools/mcp")
@@ -22,7 +29,7 @@ os.environ["AIBA_MCP_SECRET_CADDY"] = "test-secret-caddy"
 
 from mcp_audit_broker import read_audit_log
 from mcp_nonce_store import clear_nonce_store
-from mcp_server_poc_phase_c import BIND_ADDRESS, handle_retrieval
+from mcp_server_poc_phase_c import BIND_ADDRESS, handle_retrieval, reset_all_hmac_counters
 from mcp_shard_router import get_agent_allowed_shards
 
 
@@ -41,9 +48,18 @@ def _req(agent_id="caddy", shard="active_tasks", secret="test-secret-caddy",
 
 @pytest.fixture(autouse=True)
 def reset():
+    """
+    각 TC 전후 상태 초기화.
+    - containment: is_active() -> False (테스트 환경 격리)
+    - nonce store: clear
+    - HMAC 실패 카운터: reset (HC-T-01 오염 방지)
+    """
     clear_nonce_store()
-    yield
+    reset_all_hmac_counters()
+    with patch("mcp_server_poc_phase_c.is_active", return_value=False):
+        yield
     clear_nonce_store()
+    reset_all_hmac_counters()
 
 
 @pytest.fixture
@@ -71,7 +87,8 @@ def test_tc4_expired_timestamp_deny(log):
 def test_tc5_nonce_reuse_deny(log):
     n = "fixed-nonce-001"
     assert handle_retrieval(_req(nonce=n), log_path=log)["ok"] is True
-    r = handle_retrieval(_req(nonce=n), log_path=log)
+    with patch("mcp_nonce_store.enter_containment"):
+        r = handle_retrieval(_req(nonce=n), log_path=log)
     assert r["ok"] is False and r["reason"] == "NONCE_REUSED"
 
 def test_tc6_allowed_shard(log):
@@ -79,7 +96,8 @@ def test_tc6_allowed_shard(log):
     assert r["ok"] is True and r["shard"] == "active_tasks"
 
 def test_tc7_forbidden_shard_deny(log):
-    r = handle_retrieval(_req(shard="tier_d_raw_archive"), log_path=log)
+    with patch("mcp_shard_router.enter_containment"):
+        r = handle_retrieval(_req(shard="tier_d_raw_archive"), log_path=log)
     assert r["ok"] is False
 
 def test_tc8_get_all_context_deny(log):
