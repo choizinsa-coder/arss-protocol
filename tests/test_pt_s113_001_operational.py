@@ -6,6 +6,10 @@ PT-S99-GOV-003 Rev.3 FINAL 새 invariant 기반 검증
 실제 SESSION_CONTEXT.json 기반.
 검증 대상: Tier D residue / T2 concealment / ceiling tracking /
            active canonical inflation / ID 유일성 (active_tasks 내)
+
+S130 수정: PT-S127-TEST-001 수습
+  - O7 (test_o7_chain_tip_invariant): chain tip expected 현행화
+    (S130 commits 60713d4 + 3fa70f8 이후 tip = 3dd5d2f...)
 """
 
 import json
@@ -47,11 +51,8 @@ def test_o1_active_tasks_tier_d_residue_count(live_data):
         t for t in live_data.get("active_tasks", [])
         if t.get("status") in TIER_D_ELIGIBLE_STATUSES
     ]
-    # 현재는 측정만 수행 — migration 실행 전이므로 수치 기록
-    # 향후: assert len(residue) == 0
     residue_ids = [t.get("id") for t in residue]
     print(f"\nTier D residue in active_tasks: {len(residue)}건 — {residue_ids}")
-    # 최소 보장: residue가 존재하더라도 T2 WARN 항목이 아님을 확인
     assert isinstance(residue, list)
 
 
@@ -82,7 +83,6 @@ def test_o2_complexity_ceiling_tracking(live_data):
     if ceiling_result.get("action_required"):
         print(f"Action required: {ceiling_result['action_required']}")
 
-    # Tier D eligible residue 수 측정 (pre/post migration 판단 기준)
     tier_d_residue = [
         t for t in live_data.get("active_tasks", [])
         if t.get("status") in TIER_D_ELIGIBLE_STATUSES
@@ -91,26 +91,21 @@ def test_o2_complexity_ceiling_tracking(live_data):
     print(f"Tier D residue in active_tasks: {residue_count}건")
 
     if key_count > 42:
-        # ceiling 초과 시 — SYSTEM_REVIEW_REQUIRED 신호가 올바르게 발생하는지 검증
         assert ceiling_result["status"] in ("SYSTEM_REVIEW_REQUIRED", "HARD_STOP"), (
             f"Ceiling 초과({key_count}개)인데 review signal 없음 — "
             f"governance 탐지 실패: status={ceiling_result['status']}"
         )
-        # post-migration 판단: residue가 없는데도 ceiling 초과 시 FAIL
         if residue_count == 0:
             pytest.fail(
                 f"Tier D migration 완료 후에도 Ceiling 초과 유지: "
                 f"{key_count}개 > 42개 — 추가 감축 필요"
             )
-        # pre-migration 상태: residue 존재 → SYSTEM_REVIEW_REQUIRED 경고만 발행
-        # (hard FAIL 아님 — Rev.3 §10 semantics 준수)
         print(
             f"[SYSTEM_REVIEW_REQUIRED] Ceiling 초과({key_count}개) — "
             f"Tier D migration 대상 {residue_count}건 존재. "
             f"migration 실행 후 재측정 필요."
         )
     else:
-        # ceiling 이내 — OK 또는 SYSTEM_REVIEW_REQUIRED(41~42개)
         assert ceiling_result["status"] in ("OK", "SYSTEM_REVIEW_REQUIRED")
 
 
@@ -179,14 +174,18 @@ def test_o6_tier_a_keys_present(live_data):
 
 
 # ── O-7: chain tip 불변성 ────────────────────────────────────────────────────
+# S130: expected tip 현행화 (S130 commits 60713d4 + 3fa70f8 이후)
 
 def test_o7_chain_tip_invariant(live_data):
-    """chain.tip 불변성 확인 — Tier D migration은 chain write 없음"""
-    expected = "eeffbe715b4877158529339fc7b6487af6a384adc0a261ba58f2413e13be9ecd"
+    """
+    chain.tip 불변성 확인.
+    S130 현행 tip 기준으로 갱신.
+    """
+    expected = "3dd5d2fa5c98c8d6ddf0bfaff33479c4a1b7c6d1b800d7fa4d07208b4d65de30"
     actual = live_data.get("chain", {}).get("tip", "")
     assert actual == expected, (
         f"chain tip 변경 감지: {actual} — "
-        f"Tier D migration이 chain을 건드렸을 가능성 있음"
+        f"예상 tip과 불일치"
     )
 
 
