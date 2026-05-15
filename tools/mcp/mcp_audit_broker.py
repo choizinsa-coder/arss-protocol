@@ -1,14 +1,13 @@
 """
-AIBA MCP Audit Broker  v1.1.0
-Task:  PT-S125-BOOT-ONDEMAND-001  PHASE-C
-EAG:   EAG-2 비오(Joshua) 승인 (S128)
-설계:  도미 PHASE-C FINAL ANCHOR (S128)
+AIBA MCP Audit Broker  v1.1.1
+Task:  PT-S125-BOOT-ONDEMAND-001  PHASE-C + Recovery Governance Layer
+EAG:   EAG-2 비오(Joshua) 승인 (S128) / EAG-3 비오(Joshua) 승인 (S130)
 
 변경 이력:
 - v1.0.0 (PHASE-B, S127): AuditBroker / _AppendOnlyLedger / AuditPersistenceError
 - v1.1.0 (PHASE-C, S128): write_audit / write_deny_audit / read_audit_log 추가
-                          nonce_hash 필드 추가 (10개 필드 계약)
-                          PHASE-B 하위 호환 전항목 유지
+- v1.1.1 (S130): HC-T-05 (audit append failure) -> HARD_CONTAINMENT 진입 추가
+                 주의: HC-T-05 탐지 시 containment 진입만 수행, audit 자체는 계속 시도
 """
 
 import hashlib
@@ -16,10 +15,15 @@ import json
 import logging
 import os
 import queue
+import sys
 import threading
 import time
 from datetime import datetime, timezone
 from typing import Optional
+
+_MCP_DIR = os.path.dirname(os.path.abspath(__file__))
+if _MCP_DIR not in sys.path:
+    sys.path.insert(0, _MCP_DIR)
 
 AUDIT_LOG_PATH = "/opt/arss/engine/arss-protocol/tools/mcp/audit_trail.log"
 PHASE_C_AUDIT_LOG_PATH = "/opt/arss/engine/arss-protocol/logs/mcp_audit/mcp_audit.log"
@@ -102,12 +106,22 @@ class AuditBroker:
                 self._logger.error("AUDIT_BROKER_WORKER_ERROR: %s", exc)
 
 
-# PHASE-C 추가 함수
+# ── PHASE-C 함수 ──────────────────────────────────────────────────────────────
 
 def _hash_nonce(nonce):
     if nonce is None:
         return None
     return hashlib.sha256(nonce.encode()).hexdigest()
+
+
+def _trigger_hct05() -> None:
+    """HC-T-05: audit append failure -> HARD_CONTAINMENT 진입."""
+    try:
+        # 순환 import 방지: 런타임 import
+        from mcp_containment_state import enter_containment
+        enter_containment("HC-T-05")
+    except Exception:
+        pass
 
 
 def write_audit(agent_id, requested_shard, returned_scope, decision, reason,
@@ -126,10 +140,15 @@ def write_audit(agent_id, requested_shard, returned_scope, decision, reason,
         "nonce_hash": _hash_nonce(nonce),
     }
     target_path = log_path or PHASE_C_AUDIT_LOG_PATH
-    os.makedirs(os.path.dirname(target_path), exist_ok=True)
-    with _write_lock:
-        with open(target_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    try:
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+        with _write_lock:
+            with open(target_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except (OSError, IOError) as exc:
+        # HC-T-05: audit append 실패 탐지
+        _trigger_hct05()
+        raise
     return record
 
 

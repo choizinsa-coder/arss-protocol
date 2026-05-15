@@ -1,19 +1,30 @@
 """
-AIBA MCP Nonce Store  v1.0.0
-Task:  PT-S125-BOOT-ONDEMAND-001  PHASE-C
-EAG:   EAG-2 비오(Joshua) 승인 (S128)
-설계:  도미 PHASE-C FINAL ANCHOR (S128)
+AIBA MCP Nonce Store  v1.0.1
+Task:  PT-S125-BOOT-ONDEMAND-001  PHASE-C + Recovery Governance Layer
+EAG:   EAG-2 비오(Joshua) 승인 (S128) / EAG-3 비오(Joshua) 승인 (S130)
+
+변경 이력:
+- v1.0.0 (S128): 최초 구현
+- v1.0.1 (S130): HC-T-02 (nonce replay) -> HARD_CONTAINMENT 진입 추가
 
 책임:
 - single-use nonce 관리
 - TTL 15분 기준 만료 처리
 - replay 방지
+- HC-T-02: replay 탐지 시 enter_containment("HC-T-02") 호출
 """
 
+import os
+import sys
 import threading
 import time
 
-# TTL: 15분 (초 단위)
+_MCP_DIR = os.path.dirname(os.path.abspath(__file__))
+if _MCP_DIR not in sys.path:
+    sys.path.insert(0, _MCP_DIR)
+
+from mcp_containment_state import enter_containment
+
 NONCE_TTL_SECONDS = 900
 
 
@@ -21,11 +32,12 @@ class NonceStore:
     """
     in-memory nonce 저장소.
     TTL 내 사용된 nonce를 추적하여 replay 방지.
-    프로세스 재시작 시 초기화됨 — TA-R1 기준 timestamp ±60초 검증으로 보완.
+    프로세스 재시작 시 초기화됨.
+    replay 탐지 시 HC-T-02 -> HARD_CONTAINMENT 진입.
     """
 
     def __init__(self, ttl_seconds: int = NONCE_TTL_SECONDS):
-        self._store: dict[str, float] = {}  # nonce → 등록 시각(epoch)
+        self._store: dict[str, float] = {}
         self._lock = threading.Lock()
         self._ttl = ttl_seconds
 
@@ -38,18 +50,19 @@ class NonceStore:
     def mark_used(self, nonce: str) -> bool:
         """
         nonce를 사용 처리.
-        이미 사용된 경우 False 반환 (replay 감지).
+        이미 사용된 경우: HC-T-02 -> HARD_CONTAINMENT 진입 후 False 반환.
         신규 nonce이면 등록 후 True 반환.
         """
         self._evict_expired()
         with self._lock:
             if nonce in self._store:
+                # HC-T-02: replay attack 탐지
+                _trigger_hct02()
                 return False
             self._store[nonce] = time.time()
             return True
 
     def _evict_expired(self) -> None:
-        """TTL 만료된 nonce 제거."""
         now = time.time()
         with self._lock:
             expired = [n for n, t in self._store.items() if now - t > self._ttl]
@@ -57,15 +70,21 @@ class NonceStore:
                 del self._store[n]
 
     def size(self) -> int:
-        """현재 저장된 nonce 수 (테스트용)."""
         self._evict_expired()
         with self._lock:
             return len(self._store)
 
     def clear(self) -> None:
-        """전체 초기화 (테스트용)."""
         with self._lock:
             self._store.clear()
+
+
+def _trigger_hct02() -> None:
+    """HC-T-02: nonce replay -> HARD_CONTAINMENT 진입."""
+    try:
+        enter_containment("HC-T-02")
+    except Exception:
+        pass
 
 
 # 모듈 레벨 싱글턴
@@ -77,7 +96,7 @@ def is_nonce_used(nonce: str) -> bool:
 
 
 def consume_nonce(nonce: str) -> bool:
-    """nonce 소비. 성공(신규) = True / 실패(재사용) = False."""
+    """nonce 소비. 성공(신규) = True / 실패(재사용) = False. 재사용 시 HC-T-02 발동."""
     return _nonce_store.mark_used(nonce)
 
 
