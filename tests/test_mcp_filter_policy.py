@@ -3,10 +3,15 @@ test_mcp_filter_policy.py
 READ_ONLY_COGNITION_MODE Filter Policy 테스트
 EAG-2 승인: 비오(Joshua) S129
 제니 권고: C-2(HARD_CONTAINMENT) 테스트 케이스 우선 작성
-"""
 
+변경 이력:
+- S133: TC-1/TC-2 테스트 격리 결함 수정
+         _trigger_hct04 mock 추가 — state 파일 오염 방지
+         (이전: mock 없이 실제 enter_containment 호출 → mcp_containment_state.json 오염)
+"""
 import sys
 import os
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools', 'mcp'))
 
@@ -55,19 +60,26 @@ class TestHardContainment:
     """C-2: 반복 경계 위반 시 HARD_CONTAINMENT 전환"""
 
     def test_tc1_containment_triggered_after_threshold(self, policy):
-        """TC-1: 동일 namespace 3회 위반 시 HARD_CONTAINMENT 전환"""
+        """TC-1: 동일 namespace 3회 위반 시 HARD_CONTAINMENT 전환
+        격리: _trigger_hct04 mock — policy 내부 상태(HARD_CONTAINMENT) 검증만.
+              state 파일 write 차단으로 운영 환경 오염 방지.
+        """
         ns = "attack.ns"
-        for _ in range(FilterPolicy.CONTAINMENT_THRESHOLD):
-            policy.evaluate(_req(MetadataCategory.AUTHORITY_METADATA, namespace=ns))
+        with patch("mcp_filter_policy._trigger_hct04"):
+            for _ in range(FilterPolicy.CONTAINMENT_THRESHOLD):
+                policy.evaluate(_req(MetadataCategory.AUTHORITY_METADATA, namespace=ns))
         assert policy.get_mode() == CognitionMode.HARD_CONTAINMENT
 
     def test_tc2_containment_blocks_all_after_trigger(self, policy):
-        """TC-2: HARD_CONTAINMENT 이후 허용 범주 요청도 전면 차단"""
+        """TC-2: HARD_CONTAINMENT 이후 허용 범주 요청도 전면 차단
+        격리: _trigger_hct04 mock — state 파일 write 차단.
+        """
         ns = "attack.ns"
-        for _ in range(FilterPolicy.CONTAINMENT_THRESHOLD):
-            policy.evaluate(_req(MetadataCategory.AUTHORITY_METADATA, namespace=ns))
+        with patch("mcp_filter_policy._trigger_hct04"):
+            for _ in range(FilterPolicy.CONTAINMENT_THRESHOLD):
+                policy.evaluate(_req(MetadataCategory.AUTHORITY_METADATA, namespace=ns))
 
-        result = policy.evaluate(_req(MetadataCategory.LOAD_STATE))
+            result = policy.evaluate(_req(MetadataCategory.LOAD_STATE))
         assert result.verdict == FilterVerdict.DENY
         assert result.containment_triggered is True
 
