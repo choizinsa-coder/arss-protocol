@@ -193,20 +193,19 @@ def _audit(
     shard: str = "read",
     request_id: Optional[str] = None,
 ):
-    event = {
-        "event_id": request_id or str(uuid.uuid4()),
-        "timestamp": time.time(),
-        "actor": actor_id,
-        "connector": connector_identity,
-        "shard": shard,
-        "tool": tool,
-        "path": path,
-        "purpose_category": purpose,
-        "result": result,
-    }
     try:
         from mcp_audit_broker import write_audit
-        write_audit(event)
+        decision = "ALLOW" if result == "ALLOW" else "DENY"
+        write_audit(
+            agent_id=actor_id,
+            requested_shard=shard,
+            returned_scope=path or tool,
+            decision=decision,
+            reason=tool + ":" + purpose + ":" + result,
+            source_hash=request_id or str(uuid.uuid4()),
+            load_state="ACTIVE",
+            retrieval_class="CLASS-B" if decision == "ALLOW" else "CLASS-D",
+        )
     except Exception:
         # audit 실패 시 FAIL-CLOSED
         raise DenyResult("AUDIT_WRITE_FAILED")
