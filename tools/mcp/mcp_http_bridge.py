@@ -1,35 +1,21 @@
 """
-mcp_http_bridge.py v2.0.0
-MCP Streamable HTTP Bridge — PT-S131-MCP-REG-001
-설계: 도미 BRIEFING-DOMI-S131-002 Rev.1 + S133 GAP-A~D 보완
-EAG-1: 비오(Joshua) 승인 (S133)
-제니 TRUST_READY: PASS (S133)
-
-계층 구조:
-  Transport Layer     — GET /mcp (SSE), POST /mcp (JSON-RPC)
-  Governance Adapter  — actor_id 내부 주입, containment 판단, audit
-  AIBA Tool Layer     — allowlist 도구만 노출, full context retrieval 금지
-
-공개 경로:
-  /mcp            canonical MCP endpoint (GET SSE + POST JSON-RPC)
-  /bridge/health  health check only
-
-내부 전용:
-  기존 Phase-C HMAC/nonce/shard 직접 경로 — external 노출 금지
+mcp_http_bridge.py v2.1.0
+MCP Streamable HTTP Bridge — PT-S131-MCP-REG-001 + PT-S134-VPS-OBS-001
 
 변경 이력:
-  v1.0.1 (S131): 최초 배포 — HTTP forwarding bridge
   v2.0.0 (S133): MCP Streamable HTTP endpoint 재정의
-                 Transport/Governance/AIBA Tool 3계층 신설
-                 GET /mcp SSE 지원, POST /mcp JSON-RPC 수신
-                 actor_id 내부 고정 주입
-                 containment JSON-RPC safe denial
-                 ThreadingMixIn 적용 (SSE 블로킹 방지)
+  v2.1.0 (S134): PT-S134-VPS-OBS-001 Phase 1 READ ONLY OBSERVABILITY 통합
+                 ReadOnlyServer 9종 도구 추가
+                 Bridge 내부 HMAC 생성 → ReadOnlyServer 3요소 인증 유지
+                 actor_id arguments 경유 수신 (domi/jeni/caddy 차등 권한)
 """
 
 from __future__ import annotations
 
+import hashlib
+import hmac as hmac_lib
 import json
+import os
 import sys
 import threading
 import time
@@ -44,32 +30,61 @@ if PHASE_C_DIR not in sys.path:
 
 from mcp_audit_broker import write_audit, write_deny_audit
 from mcp_containment_state import is_active as containment_is_active
+from mcp_read_server import ReadOnlyServer, AGENT_ROOT_ALLOWLIST
 
 # ── 상수 ──────────────────────────────────────────────────────────────────────
 
 BRIDGE_HOST = "127.0.0.1"
 BRIDGE_PORT = 8443
-BRIDGE_VERSION = "2.0.0"
+BRIDGE_VERSION = "2.1.0"
 
-# Governance Adapter: 내부 고정 actor (GAP-B)
 INTERNAL_ACTOR_ID = "claude_ai_remote_connector"
 INTERNAL_ACTOR_SOURCE = "claude.ai"
 INTERNAL_CONNECTOR_NAME = "ARSS Protocol"
 EXTERNAL_PAYLOAD_ACTOR_TRUSTED = False
 
-# allowlist 도구 (AIBA Tool Layer)
+# Bridge 내부 HMAC secret (환경변수 필수)
+READ_HMAC_SECRET = os.environ.get("AIBA_READ_HMAC_SECRET", "")
+INTERNAL_CONNECTOR_IDENTITY = "claude.ai-arss-protocol"
+
+# 허용 actor_id (READ 도구용)
+READ_ALLOWED_ACTORS = frozenset(AGENT_ROOT_ALLOWLIST.keys())  # domi, jeni, caddy
+
+# ALLOWED_TOOLS — 기존 2종 + READ 9종
 ALLOWED_TOOLS = frozenset({
     "ping",
     "get_load_state",
+    # Phase 1 READ ONLY OBSERVABILITY
+    "read_file",
+    "list_dir",
+    "grep_scoped",
+    "read_log",
+    "check_service_state",
+    "read_pytest_result",
+    "read_audit_event",
+    "read_metadata",
+    "get_runtime_snapshot",
 })
 
-# JSON-RPC containment error (GAP-D)
+READ_TOOLS = frozenset({
+    "read_file",
+    "list_dir",
+    "grep_scoped",
+    "read_log",
+    "check_service_state",
+    "read_pytest_result",
+    "read_audit_event",
+    "read_metadata",
+    "get_runtime_snapshot",
+})
+
 CONTAINMENT_ERROR_CODE = -32000
 CONTAINMENT_ERROR_MESSAGE = "AIBA containment active"
 CONTAINMENT_ERROR_REASON = "CONTAINMENT_ACTIVE"
-
-# SSE heartbeat 간격 (초)
 SSE_HEARTBEAT_INTERVAL = 15
+
+# ReadOnlyServer 인스턴스 (싱글턴)
+_read_server = ReadOnlyServer()
 
 # ── Bridge 상태 ────────────────────────────────────────────────────────────────
 
@@ -93,7 +108,6 @@ def _set_bridge_state(state: str) -> None:
 # ── Governance Adapter ────────────────────────────────────────────────────────
 
 def _build_governance_context(raw_request: dict) -> dict:
-    """GAP-B: actor_id 내부 고정 주입. 외부 payload 원형 보존."""
     return {
         "actor_id": INTERNAL_ACTOR_ID,
         "source": INTERNAL_ACTOR_SOURCE,
@@ -106,7 +120,6 @@ def _build_governance_context(raw_request: dict) -> dict:
 
 
 def _containment_jsonrpc_error(request_id) -> dict:
-    """GAP-D: containment=true POST request → JSON-RPC error."""
     return {
         "jsonrpc": "2.0",
         "id": request_id,
@@ -142,37 +155,275 @@ def _audit_deny(gov_ctx: dict, reason: str) -> None:
     )
 
 
+# ── READ 도구 내부 HMAC 생성 ──────────────────────────────────────────────────
+
+def _make_internal_hmac(actor_id: str, nonce: str, ts: float, payload: str) -> str:
+    """Bridge 내부 HMAC 생성 — ReadOnlyServer 3요소 인증용."""
+    msg = f"{actor_id}:{INTERNAL_CONNECTOR_IDENTITY}:{nonce}:{ts}:{payload}"
+    return hmac_lib.new(
+        READ_HMAC_SECRET.encode(),
+        msg.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def _build_read_kwargs(actor_id: str, payload: str) -> dict:
+    """ReadOnlyServer 호출용 공통 kwargs 생성."""
+    ts = time.time()
+    nonce = str(uuid.uuid4())
+    return dict(
+        actor_id=actor_id,
+        connector_identity=INTERNAL_CONNECTOR_IDENTITY,
+        hmac_value=_make_internal_hmac(actor_id, nonce, ts, payload),
+        nonce=nonce,
+        timestamp=ts,
+        hmac_secret=READ_HMAC_SECRET,
+    )
+
+
 # ── AIBA Tool Layer ───────────────────────────────────────────────────────────
 
 def _handle_tool_list() -> dict:
-    """allowlist 도구만 반환. full context retrieval 금지."""
-    tools = []
-    if "ping" in ALLOWED_TOOLS:
-        tools.append({
+    tools = [
+        {
             "name": "ping",
             "description": "AIBA bridge connectivity check",
             "inputSchema": {"type": "object", "properties": {}, "required": []},
-        })
-    if "get_load_state" in ALLOWED_TOOLS:
-        tools.append({
+        },
+        {
             "name": "get_load_state",
             "description": "Returns bridge load state (visibility only)",
             "inputSchema": {"type": "object", "properties": {}, "required": []},
-        })
+        },
+        # READ ONLY OBSERVABILITY 도구
+        {
+            "name": "read_file",
+            "description": "[READ] 단일 파일 읽기 (whitelist 경로 전용)",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
+                    "purpose": {"type": "string"},
+                },
+                "required": ["path", "actor_id", "purpose"],
+            },
+        },
+        {
+            "name": "list_dir",
+            "description": "[READ] 디렉토리 목록 (depth=1, recursive 금지)",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
+                    "purpose": {"type": "string"},
+                },
+                "required": ["path", "actor_id", "purpose"],
+            },
+        },
+        {
+            "name": "grep_scoped",
+            "description": "[READ] 허용 경로 내 텍스트 검색 (depth=2)",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "pattern": {"type": "string"},
+                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
+                    "purpose": {"type": "string"},
+                    "max_results": {"type": "integer"},
+                },
+                "required": ["path", "pattern", "actor_id", "purpose"],
+            },
+        },
+        {
+            "name": "read_log",
+            "description": "[READ] 로그 파일 tail 읽기 (최대 200줄)",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "tail_lines": {"type": "integer"},
+                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
+                    "purpose": {"type": "string"},
+                },
+                "required": ["path", "tail_lines", "actor_id", "purpose"],
+            },
+        },
+        {
+            "name": "check_service_state",
+            "description": "[READ] 허용 서비스 상태 확인 (상태 조회만, 제어 금지)",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "service_name": {"type": "string"},
+                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
+                    "purpose": {"type": "string"},
+                },
+                "required": ["service_name", "actor_id", "purpose"],
+            },
+        },
+        {
+            "name": "read_pytest_result",
+            "description": "[READ] pytest result artifact 읽기 (실행 아님)",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "artifact_path": {"type": "string"},
+                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
+                    "purpose": {"type": "string"},
+                },
+                "required": ["artifact_path", "actor_id", "purpose"],
+            },
+        },
+        {
+            "name": "read_audit_event",
+            "description": "[READ] audit event 읽기 (최대 100건, bulk dump 금지)",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "log_path": {"type": "string"},
+                    "event_range": {"type": "integer"},
+                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
+                    "purpose": {"type": "string"},
+                },
+                "required": ["log_path", "event_range", "actor_id", "purpose"],
+            },
+        },
+        {
+            "name": "read_metadata",
+            "description": "[READ] SESSION_CONTEXT / SESSION_BOOT / sync metadata 읽기",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
+                    "purpose": {"type": "string"},
+                },
+                "required": ["path", "actor_id", "purpose"],
+            },
+        },
+        {
+            "name": "get_runtime_snapshot",
+            "description": "[READ] 사전 정의된 read-only snapshot projection",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
+                    "purpose": {"type": "string"},
+                },
+                "required": ["actor_id", "purpose"],
+            },
+        },
+    ]
     return {"tools": tools}
 
 
+def _handle_read_tool(tool_name: str, arguments: dict) -> dict:
+    """READ 도구 실행 — ReadOnlyServer 위임."""
+    if not READ_HMAC_SECRET:
+        return {
+            "isError": True,
+            "content": [{"type": "text", "text": "DENY: READ_HMAC_SECRET not configured"}],
+        }
+
+    actor_id = arguments.get("actor_id", "")
+    purpose = arguments.get("purpose", "")
+
+    if actor_id not in READ_ALLOWED_ACTORS:
+        return {
+            "isError": True,
+            "content": [{"type": "text", "text": f"DENY: unknown actor_id={actor_id}"}],
+        }
+
+    try:
+        if tool_name == "read_file":
+            path = arguments.get("path", "")
+            kwargs = _build_read_kwargs(actor_id, path)
+            result = _read_server.read_file(path, purpose=purpose, **kwargs)
+
+        elif tool_name == "list_dir":
+            path = arguments.get("path", "")
+            kwargs = _build_read_kwargs(actor_id, path)
+            result = _read_server.list_dir(path, purpose=purpose, **kwargs)
+
+        elif tool_name == "grep_scoped":
+            path = arguments.get("path", "")
+            pattern = arguments.get("pattern", "")
+            max_results = arguments.get("max_results", 50)
+            kwargs = _build_read_kwargs(actor_id, f"{path}:{pattern}")
+            result = _read_server.grep_scoped(
+                path, pattern, purpose=purpose,
+                max_results=max_results, **kwargs
+            )
+
+        elif tool_name == "read_log":
+            path = arguments.get("path", "")
+            tail_lines = arguments.get("tail_lines", 50)
+            kwargs = _build_read_kwargs(actor_id, path)
+            result = _read_server.read_log(
+                path, tail_lines=tail_lines, purpose=purpose, **kwargs
+            )
+
+        elif tool_name == "check_service_state":
+            service_name = arguments.get("service_name", "")
+            kwargs = _build_read_kwargs(actor_id, service_name)
+            result = _read_server.check_service_state(
+                service_name, purpose=purpose, **kwargs
+            )
+
+        elif tool_name == "read_pytest_result":
+            artifact_path = arguments.get("artifact_path", "")
+            kwargs = _build_read_kwargs(actor_id, artifact_path)
+            result = _read_server.read_pytest_result(
+                artifact_path, purpose=purpose, **kwargs
+            )
+
+        elif tool_name == "read_audit_event":
+            log_path = arguments.get("log_path", "")
+            event_range = arguments.get("event_range", 10)
+            kwargs = _build_read_kwargs(actor_id, log_path)
+            result = _read_server.read_audit_event(
+                log_path, event_range=event_range, purpose=purpose, **kwargs
+            )
+
+        elif tool_name == "read_metadata":
+            path = arguments.get("path", "")
+            kwargs = _build_read_kwargs(actor_id, path)
+            result = _read_server.read_metadata(path, purpose=purpose, **kwargs)
+
+        elif tool_name == "get_runtime_snapshot":
+            kwargs = _build_read_kwargs(actor_id, "runtime_snapshot")
+            result = _read_server.get_runtime_snapshot(purpose=purpose, **kwargs)
+
+        else:
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": f"DENY: unknown read tool={tool_name}"}],
+            }
+
+        is_error = result.get("status") == "DENY"
+        return {
+            "isError": is_error,
+            "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+        }
+
+    except Exception as e:
+        return {
+            "isError": True,
+            "content": [{"type": "text", "text": f"DENY: internal error={str(e)}"}],
+        }
+
+
 def _handle_tool_call(tool_name: str, arguments: dict) -> dict:
-    """허용된 도구만 실행."""
     if tool_name not in ALLOWED_TOOLS:
         return {
             "isError": True,
             "content": [{"type": "text", "text": f"Tool '{tool_name}' not permitted"}],
         }
     if tool_name == "ping":
-        return {
-            "content": [{"type": "text", "text": "pong"}],
-        }
+        return {"content": [{"type": "text", "text": "pong"}]}
     if tool_name == "get_load_state":
         return {
             "content": [{"type": "text", "text": json.dumps({
@@ -181,6 +432,8 @@ def _handle_tool_call(tool_name: str, arguments: dict) -> dict:
                 "version": BRIDGE_VERSION,
             })}],
         }
+    if tool_name in READ_TOOLS:
+        return _handle_read_tool(tool_name, arguments)
     return {
         "isError": True,
         "content": [{"type": "text", "text": "Unknown tool"}],
@@ -188,27 +441,19 @@ def _handle_tool_call(tool_name: str, arguments: dict) -> dict:
 
 
 def _handle_jsonrpc(body: dict, gov_ctx: dict) -> Optional[dict]:
-    """
-    JSON-RPC 처리.
-    id 없는 notification은 None 반환 (202 Accepted).
-    """
     method = body.get("method", "")
     request_id = body.get("id")
     params = body.get("params", {})
 
-    # notification (id 없음)
     if request_id is None:
-        # containment 상태에서 safe_denied 기록
         if gov_ctx["containment_active"]:
             _audit_deny(gov_ctx, f"CONTAINMENT_NOTIFICATION_DENIED:{method}")
         return None
 
-    # containment=true → JSON-RPC error (GAP-D)
     if gov_ctx["containment_active"]:
         _audit_deny(gov_ctx, f"CONTAINMENT_REQUEST_DENIED:{method}")
         return _containment_jsonrpc_error(request_id)
 
-    # initialize
     if method == "initialize":
         _audit_allow(gov_ctx, "initialize", "MCP_INITIALIZE")
         return {
@@ -224,7 +469,6 @@ def _handle_jsonrpc(body: dict, gov_ctx: dict) -> Optional[dict]:
             },
         }
 
-    # tools/list
     if method == "tools/list":
         _audit_allow(gov_ctx, "tools/list", "MCP_TOOLS_LIST")
         return {
@@ -233,7 +477,6 @@ def _handle_jsonrpc(body: dict, gov_ctx: dict) -> Optional[dict]:
             "result": _handle_tool_list(),
         }
 
-    # tools/call
     if method == "tools/call":
         tool_name = params.get("name", "")
         arguments = params.get("arguments", {})
@@ -242,13 +485,8 @@ def _handle_jsonrpc(body: dict, gov_ctx: dict) -> Optional[dict]:
         else:
             _audit_allow(gov_ctx, f"tool:{tool_name}", "MCP_TOOL_CALL")
         result = _handle_tool_call(tool_name, arguments)
-        return {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "result": result,
-        }
+        return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
-    # 미지원 method
     _audit_deny(gov_ctx, f"UNKNOWN_METHOD:{method}")
     return {
         "jsonrpc": "2.0",
@@ -281,10 +519,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
         _audit_deny(gov_ctx, reason)
         self._send_json(503, {"error": "bridge_unavailable"})
 
-    # ── GET ──────────────────────────────────────────────────────────────────
-
     def do_GET(self):
-        # /bridge/health
         if self.path == "/bridge/health":
             self._send_json(200, {
                 "bridge_state": _get_bridge_state(),
@@ -293,7 +528,6 @@ class BridgeHandler(BaseHTTPRequestHandler):
             })
             return
 
-        # /mcp → SSE stream (GAP-C, T1)
         if self.path == "/mcp":
             bridge_state = _get_bridge_state()
             if bridge_state in ("INACTIVE", "ROLLED_BACK"):
@@ -309,12 +543,10 @@ class BridgeHandler(BaseHTTPRequestHandler):
             self.send_header("Connection", "keep-alive")
             self.end_headers()
 
-            # SSE 연결 등록
             with _sse_clients_lock:
                 _sse_clients.append(self)
 
             try:
-                # 초기 heartbeat
                 self._sse_send_heartbeat()
                 while True:
                     time.sleep(SSE_HEARTBEAT_INTERVAL)
@@ -328,20 +560,15 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 _audit_allow(gov_ctx, "sse_stream", "SSE_STREAM_CLOSE")
             return
 
-        # 그 외 모든 GET — fail-closed (T10)
         self._send_json(403, {"error": "forbidden"})
 
     def _sse_send_heartbeat(self) -> None:
-        """SSE heartbeat — 빈 data로 stream 유지."""
         event_id = str(uuid.uuid4())
         msg = f"id: {event_id}\ndata: \n\n"
         self.wfile.write(msg.encode())
         self.wfile.flush()
 
-    # ── POST ─────────────────────────────────────────────────────────────────
-
     def do_POST(self):
-        # /mcp → JSON-RPC endpoint
         if self.path == "/mcp":
             bridge_state = _get_bridge_state()
             if bridge_state in ("INACTIVE", "ROLLED_BACK"):
@@ -360,7 +587,6 @@ class BridgeHandler(BaseHTTPRequestHandler):
             gov_ctx = _build_governance_context(body)
             result = _handle_jsonrpc(body, gov_ctx)
 
-            # notification (id 없음) → 202 Accepted (T4, T6)
             if result is None:
                 self.send_response(202)
                 self.send_header("Content-Length", "0")
@@ -370,18 +596,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
             self._send_json(200, result)
             return
 
-        # 그 외 모든 POST — fail-closed (T10)
         self._send_json(403, {"error": "forbidden"})
 
 
-# ── Threading Server ───────────────────────────────────────────────────────────
-
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
-    """SSE 블로킹 방지 — 제니 주의 권고 반영."""
     daemon_threads = True
 
-
-# ── Main ───────────────────────────────────────────────────────────────────────
 
 def main():
     import signal
