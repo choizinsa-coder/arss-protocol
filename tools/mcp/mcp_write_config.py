@@ -1,6 +1,8 @@
 """
-mcp_write_config.py — MCP Write Plane 공유 상수 모듈
-PT-S136-MCP-WRITE-GATEKEEPER v1.0.0
+mcp_write_config.py — MCP Write Plane 공유 상수 모듈 v1.1.0
+PT-S136-MCP-WRITE-GATEKEEPER
+
+v1.1.0: RECEIPTS_DIR / BASELINES_DIR / INTAKE_DIR / SOFT_TOKEN_TTL 추가
 """
 
 VPS_BASE = "/opt/arss/engine/arss-protocol"
@@ -9,6 +11,9 @@ REGISTRY_BASE = f"{VPS_BASE}/registry/mcp_write"
 APPROVALS_DIR = f"{REGISTRY_BASE}/approvals"
 AUDIT_DIR = f"{REGISTRY_BASE}/audit"
 SNAPSHOTS_DIR = f"{REGISTRY_BASE}/snapshots"
+RECEIPTS_DIR = f"{REGISTRY_BASE}/receipts"
+BASELINES_DIR = f"{REGISTRY_BASE}/baselines"
+INTAKE_DIR = f"{REGISTRY_BASE}/intake"
 
 ALLOWED_SANDBOX_PATHS = [
     f"{VPS_BASE}/tools/sandbox/",
@@ -31,5 +36,6 @@ FORBIDDEN_PATH_PREFIXES = [
 ALLOWED_EXTENSIONS = {".md", ".json", ".txt"}
 FORBIDDEN_EXTENSIONS = {".py", ".sh", ".env", ".yaml", ".yml", ".service"}
 
-TOKEN_TTL = 600  # 10분 (초)
+TOKEN_TTL = 600       # 10분 HARD limit
+SOFT_TOKEN_TTL = 480  # 8분 SOFT limit (초과 시 FC-T1)
 HASH_ALGORITHM = "sha256"

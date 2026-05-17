@@ -1,11 +1,12 @@
 """
-mcp_write_gatekeeper.py — MCP Write Plane Gatekeeper v1.0.0
+mcp_write_gatekeeper.py — MCP Write Plane Gatekeeper v1.1.0
 PT-S136-MCP-WRITE-GATEKEEPER
 
-설계 기준: MCP Restricted Write Plane v0.4 (도미)
-Fail-Closed: FC-T1 ~ FC-T4 전 구간 적용
-Gatekeeper 역할: Verifier 전담 (Issuer 금지)
-캐디는 토큰을 생성할 수 없음 — Gatekeeper 내부 전담
+v1.1.0 강제 장치 추가:
+  P0: expected_content_hash 강제 검증 (content 조작 물리 차단)
+  P1: write_result_receipt 생성 + unconfirmed 시 다음 write FC-T2 차단
+  P2: TOKEN_SOFT_EXPIRED — 8분 경과 시 FC-T1 ABORT
+  P3: sandbox baseline drift 탐지 — FC-T3 LOCK
 """
 
 import hashlib
@@ -21,18 +22,15 @@ from typing import Optional
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mcp_write_config import (
-    APPROVALS_DIR,
-    AUDIT_DIR,
-    SNAPSHOTS_DIR,
-    ALLOWED_SANDBOX_PATHS,
-    FORBIDDEN_PATH_PREFIXES,
-    ALLOWED_EXTENSIONS,
-    FORBIDDEN_EXTENSIONS,
-    TOKEN_TTL,
+    APPROVALS_DIR, AUDIT_DIR, SNAPSHOTS_DIR,
+    RECEIPTS_DIR, BASELINES_DIR,
+    ALLOWED_SANDBOX_PATHS, FORBIDDEN_PATH_PREFIXES,
+    ALLOWED_EXTENSIONS, FORBIDDEN_EXTENSIONS,
+    TOKEN_TTL, SOFT_TOKEN_TTL,
 )
-from mcp_approval_authority import compute_approval_hash
+from mcp_approval_authority import compute_approval_hash, compute_receipt_hash
 
-GATEKEEPER_VERSION = "1.0.0"
+GATEKEEPER_VERSION = "1.1.0"
 
 
 # ── Enums & Exceptions ────────────────────────────────────────────────
@@ -45,8 +43,6 @@ class WritePlaneState(Enum):
 
 
 class FailClosedError(Exception):
-    """FC-T1 ~ FC-T4 Fail-Closed 오류."""
-
     def __init__(self, tier: str, reason: str):
         self.tier = tier
         self.reason = reason
@@ -56,10 +52,6 @@ class FailClosedError(Exception):
 # ── Gatekeeper ────────────────────────────────────────────────────────
 
 class MCP_WriteGatekeeper:
-    """
-    MCP Write Plane Gatekeeper.
-    모든 쓰기 요청의 단일 진입점.
-    """
 
     def __init__(
         self,
@@ -68,26 +60,22 @@ class MCP_WriteGatekeeper:
         approvals_dir: str = None,
         audit_dir: str = None,
         snapshots_dir: str = None,
+        receipts_dir: str = None,
+        baselines_dir: str = None,
     ):
-        # 경로 (테스트 시 주입 가능)
         self._allowed_paths = allowed_paths or ALLOWED_SANDBOX_PATHS
         self._forbidden_prefixes = forbidden_prefixes or FORBIDDEN_PATH_PREFIXES
         self._approvals_dir = approvals_dir or APPROVALS_DIR
         self._audit_dir = audit_dir or AUDIT_DIR
         self._snapshots_dir = snapshots_dir or SNAPSHOTS_DIR
+        self._receipts_dir = receipts_dir or RECEIPTS_DIR
+        self._baselines_dir = baselines_dir or BASELINES_DIR
 
-        # Write Plane 상태
         self._state = WritePlaneState.NORMAL
         self._state_lock = threading.Lock()
-
-        # 토큰 저장소 (in-memory, single-use)
         self._token_store: dict = {}
         self._token_lock = threading.Lock()
-
-        # 사용된 approval ID 집합
         self._used_approvals: set = set()
-
-        # RECOVERY_MODE 1회 write 추적
         self._recovery_write_used = False
 
     # ── State ─────────────────────────────────────────────────────────
@@ -105,21 +93,17 @@ class MCP_WriteGatekeeper:
         if state == WritePlaneState.LOCKED:
             raise FailClosedError("T3", "Write Plane LOCKED — Beo mandatory review required")
         if state == WritePlaneState.HOLD:
-            raise FailClosedError("T2", "Write Plane HOLD — audit failure, recovery required")
+            raise FailClosedError("T2", "Write Plane HOLD — recovery required")
         if state == WritePlaneState.RECOVERY_MODE and self._recovery_write_used:
-            raise FailClosedError(
-                "T3", "RECOVERY_MODE: 1회 recovery write 소진. Beo recovery-close 승인 필요"
-            )
+            raise FailClosedError("T3", "RECOVERY_MODE: 1회 소진. Beo recovery-close 필요")
 
-    # ── Path & Extension Validation ───────────────────────────────────
+    # ── Path / Extension ──────────────────────────────────────────────
 
     def _validate_path(self, target_path: str) -> bool:
         abs_path = os.path.abspath(target_path)
-        # forbidden 우선 차단
         for forbidden in self._forbidden_prefixes:
             if abs_path.startswith(os.path.abspath(forbidden)):
                 return False
-        # allowed 확인
         for allowed in self._allowed_paths:
             if abs_path.startswith(os.path.abspath(allowed)):
                 return True
@@ -134,35 +118,23 @@ class MCP_WriteGatekeeper:
     # ── Approval Verification ─────────────────────────────────────────
 
     def _load_approval(self, approval_id: str) -> dict:
-        """WRITE_APPROVAL_REGISTRY에서 approval artifact 로드."""
-        approval_file = os.path.join(self._approvals_dir, f"{approval_id}.json")
-        if not os.path.exists(approval_file):
-            raise FailClosedError("T4", f"approval artifact not found: {approval_id}")
-        with open(approval_file, encoding="utf-8") as f:
+        f_path = os.path.join(self._approvals_dir, f"{approval_id}.json")
+        if not os.path.exists(f_path):
+            raise FailClosedError("T4", f"approval not found: {approval_id}")
+        with open(f_path, encoding="utf-8") as f:
             return json.load(f)
 
     def _verify_approval(self, approval: dict, target_path: str, ext: str) -> None:
-        """approval artifact 전항목 검증. 하나라도 실패 시 FC-T4."""
-        # type 확인
         if approval.get("type") != "EAG_WRITE_APPROVAL":
             raise FailClosedError("T4", "approval type mismatch")
-
-        # approved_by 확인
         if approval.get("approved_by") != "Beo":
             raise FailClosedError("T4", "approval not issued by Beo")
-
-        # TTL 확인
         approved_at = datetime.fromisoformat(approval["approved_at"])
         elapsed = (datetime.now(timezone.utc) - approved_at).total_seconds()
         if elapsed > approval.get("ttl_seconds", TOKEN_TTL):
             raise FailClosedError("T4", f"approval expired (elapsed={elapsed:.0f}s)")
-
-        # 재사용 확인
-        approval_id = approval.get("approval_id", "")
-        if approval_id in self._used_approvals:
-            raise FailClosedError("T4", f"approval already used: {approval_id}")
-
-        # scope 확인
+        if approval.get("approval_id", "") in self._used_approvals:
+            raise FailClosedError("T4", "approval already used")
         scope = approval.get("scope", {})
         if os.path.abspath(scope.get("target_path", "")) != os.path.abspath(target_path):
             raise FailClosedError("T4", "approval target_path mismatch")
@@ -170,17 +142,73 @@ class MCP_WriteGatekeeper:
             raise FailClosedError("T4", "approval extension mismatch")
         if scope.get("operation") != "WRITE":
             raise FailClosedError("T4", "approval operation mismatch")
-
-        # approval_hash 무결성
         stored_hash = approval.get("approval_hash")
-        computed_hash = compute_approval_hash(approval)
-        if computed_hash != stored_hash:
-            raise FailClosedError("T4", "approval_hash integrity failure — possible tampering")
+        if compute_approval_hash(approval) != stored_hash:
+            raise FailClosedError("T4", "approval_hash integrity failure")
 
-    # ── Token Management (Gatekeeper 내부 전담) ───────────────────────
+    # ── P1: Unconfirmed Receipt Check ─────────────────────────────────
+
+    def _check_unconfirmed_receipts(self, approval: dict) -> None:
+        """
+        P1: unconfirmed receipt 존재 시 approval의 previous_receipt_confirmation 검증.
+        없으면 FC-T2.
+        """
+        if not os.path.exists(self._receipts_dir):
+            return
+
+        unconfirmed = []
+        for fname in sorted(os.listdir(self._receipts_dir)):
+            if not fname.endswith(".json"):
+                continue
+            fpath = os.path.join(self._receipts_dir, fname)
+            try:
+                with open(fpath, encoding="utf-8") as f:
+                    r = json.load(f)
+                if r.get("status") == "PENDING_BEO_REVIEW":
+                    r["_file_path"] = fpath
+                    unconfirmed.append(r)
+            except Exception:
+                continue
+
+        if not unconfirmed:
+            return
+
+        # unconfirmed 존재 — approval에 confirmation 필요
+        confirmation = approval.get("previous_receipt_confirmation")
+        if not confirmation:
+            raise FailClosedError(
+                "T2",
+                f"unconfirmed receipt exists ({len(unconfirmed)} pending) "
+                "— include previous_receipt_confirmation in approval",
+            )
+
+        if confirmation.get("confirmed_by") != "Beo":
+            raise FailClosedError("T2", "previous_receipt_confirmation.confirmed_by must be Beo")
+
+        prev_id = confirmation.get("previous_receipt_id")
+        prev_hash = confirmation.get("previous_receipt_hash")
+
+        # 해당 receipt 파일 찾기
+        prev_file = os.path.join(self._receipts_dir, f"{prev_id}.json")
+        if not os.path.exists(prev_file):
+            raise FailClosedError("T2", f"previous_receipt_id not found: {prev_id}")
+
+        # hash 검증
+        actual_hash = compute_receipt_hash(prev_file)
+        if actual_hash != prev_hash:
+            raise FailClosedError("T2", "previous_receipt_hash mismatch — confirmation invalid")
+
+        # 여러 unconfirmed 중 하나만 확인된 경우
+        remaining = [r for r in unconfirmed if r["receipt_id"] != prev_id]
+        if remaining:
+            raise FailClosedError(
+                "T2",
+                f"multiple unconfirmed receipts: {len(remaining)} remaining after confirmation",
+            )
+
+    # ── P2: Token Management (Soft TTL) ──────────────────────────────
 
     def _issue_token(self, approval_id: str, target_path: str, ext: str) -> str:
-        """단일 사용 write token 발급. 캐디가 직접 호출 불가 — Gatekeeper 내부 전담."""
         token_id = f"WRITE-TOKEN-{uuid.uuid4().hex.upper()}"
         with self._token_lock:
             self._token_store[token_id] = {
@@ -189,13 +217,13 @@ class MCP_WriteGatekeeper:
                 "target_path": os.path.abspath(target_path),
                 "extension": ext,
                 "issued_at": time.monotonic(),
-                "ttl": TOKEN_TTL,
+                "soft_ttl": SOFT_TOKEN_TTL,  # 8분
+                "ttl": TOKEN_TTL,             # 10분
                 "used": False,
             }
         return token_id
 
     def _consume_token(self, token_id: str, target_path: str) -> dict:
-        """토큰 소비 (single-use 보장). 만료·재사용·경로불일치 시 FC-T4."""
         with self._token_lock:
             token = self._token_store.get(token_id)
             if not token:
@@ -203,17 +231,113 @@ class MCP_WriteGatekeeper:
             if token["used"]:
                 raise FailClosedError("T4", f"token already used: {token_id}")
             elapsed = time.monotonic() - token["issued_at"]
+            # P2: HARD expiry → FC-T4
             if elapsed > token["ttl"]:
-                raise FailClosedError("T4", f"token expired: {token_id}")
+                raise FailClosedError("T4", f"token HARD expired ({elapsed:.0f}s)")
+            # P2: SOFT expiry → FC-T1 (abort, no lock)
+            if elapsed > token["soft_ttl"]:
+                raise FailClosedError(
+                    "T1",
+                    f"TOKEN_SOFT_EXPIRED ({elapsed:.0f}s > {token['soft_ttl']}s) "
+                    "— 작업 중단. 새 approval 요청 필요.",
+                )
             if os.path.abspath(token["target_path"]) != os.path.abspath(target_path):
-                raise FailClosedError("T4", "token path mismatch — FC-T4 Scope Violation")
+                raise FailClosedError("T4", "token path mismatch")
             token["used"] = True
             return token
 
-    # ── Snapshot (WRITE_SNAPSHOT_REGISTRY) ────────────────────────────
+    # ── P3: Sandbox Baseline ──────────────────────────────────────────
+
+    def _scan_sandbox(self) -> dict:
+        """sandbox 전체 파일 해시 스캔. {abs_path: hash} 반환."""
+        result = {}
+        for sandbox_path in self._allowed_paths:
+            abs_sandbox = os.path.abspath(sandbox_path.rstrip("/"))
+            if not os.path.exists(abs_sandbox):
+                continue
+            for fname in os.listdir(abs_sandbox):
+                fpath = os.path.join(abs_sandbox, fname)
+                if os.path.isfile(fpath):
+                    h = hashlib.sha256()
+                    with open(fpath, "rb") as f:
+                        for chunk in iter(lambda: f.read(65536), b""):
+                            h.update(chunk)
+                    result[fpath] = {
+                        "hash": h.hexdigest(),
+                        "size_bytes": os.path.getsize(fpath),
+                    }
+        return result
+
+    def _create_baseline(self) -> dict:
+        """sandbox 현재 상태로 baseline 생성 및 저장."""
+        baseline_id = f"MCP-WRITE-BASELINE-{uuid.uuid4().hex[:12].upper()}"
+        files_data = self._scan_sandbox()
+        files_list = [
+            {
+                "path": p,
+                "hash_algorithm": "SHA-256",
+                "hash": v["hash"],
+                "size_bytes": v["size_bytes"],
+            }
+            for p, v in files_data.items()
+        ]
+        baseline = {
+            "schema": "MCP_WRITE_SANDBOX_BASELINE_v1",
+            "baseline_id": baseline_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "scope": self._allowed_paths,
+            "file_count": len(files_list),
+            "files": files_list,
+        }
+        body = {k: v for k, v in baseline.items() if k != "baseline_hash"}
+        baseline["baseline_hash"] = hashlib.sha256(
+            json.dumps(body, sort_keys=True, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        os.makedirs(self._baselines_dir, exist_ok=True)
+        bl_file = os.path.join(self._baselines_dir, f"{baseline_id}.json")
+        with open(bl_file, "w", encoding="utf-8") as f:
+            json.dump(baseline, f, indent=2, ensure_ascii=False)
+        return baseline
+
+    def _load_latest_baseline(self) -> Optional[dict]:
+        if not os.path.exists(self._baselines_dir):
+            return None
+        baselines = []
+        for fname in os.listdir(self._baselines_dir):
+            if not fname.endswith(".json"):
+                continue
+            with open(os.path.join(self._baselines_dir, fname), encoding="utf-8") as f:
+                baselines.append(json.load(f))
+        if not baselines:
+            return None
+        return max(baselines, key=lambda b: b["created_at"])
+
+    def _check_baseline_drift(self) -> None:
+        """P3: baseline과 현재 sandbox 상태 비교. drift 시 FC-T3."""
+        baseline = self._load_latest_baseline()
+        if baseline is None:
+            # 최초 write — baseline 생성 후 통과
+            self._create_baseline()
+            return
+
+        baseline_files = {f["path"]: f["hash"] for f in baseline.get("files", [])}
+        current_files = self._scan_sandbox()
+
+        # baseline에 있던 파일이 변경/삭제된 경우
+        for fpath, expected_hash in baseline_files.items():
+            if fpath not in current_files:
+                raise FailClosedError("T3", f"baseline drift: file deleted — {fpath}")
+            if current_files[fpath]["hash"] != expected_hash:
+                raise FailClosedError("T3", f"baseline drift: unauthorized modification — {fpath}")
+
+        # baseline에 없던 파일이 추가된 경우 (MCP 외부 접근 탐지)
+        for fpath in current_files:
+            if fpath not in baseline_files:
+                raise FailClosedError("T3", f"baseline drift: unauthorized addition — {fpath}")
+
+    # ── Snapshot ──────────────────────────────────────────────────────
 
     def _sha256_file(self, path: str) -> Optional[str]:
-        """파일의 SHA-256 해시 계산. 파일 없으면 None."""
         if not os.path.exists(path):
             return None
         h = hashlib.sha256()
@@ -223,13 +347,11 @@ class MCP_WriteGatekeeper:
         return h.hexdigest()
 
     def _seal_snapshot(self, target_path: str, approval_id: str, token_id: str) -> dict:
-        """pre-write snapshot 생성 및 WRITE_SNAPSHOT_REGISTRY 저장."""
         hash_before = self._sha256_file(target_path)
-        content_before: Optional[str] = None
+        content_before = None
         if os.path.exists(target_path):
             with open(target_path, "rb") as f:
                 content_before = f.read().decode(errors="replace")
-
         snapshot_id = f"MCP-WRITE-SNAP-{uuid.uuid4().hex[:12].upper()}"
         snapshot = {
             "snapshot_id": snapshot_id,
@@ -241,93 +363,182 @@ class MCP_WriteGatekeeper:
             "approval_id": approval_id,
             "write_token_id": token_id,
         }
-
         os.makedirs(self._snapshots_dir, exist_ok=True)
-        snap_file = os.path.join(self._snapshots_dir, f"{snapshot_id}.json")
-        with open(snap_file, "w", encoding="utf-8") as f:
+        with open(os.path.join(self._snapshots_dir, f"{snapshot_id}.json"), "w", encoding="utf-8") as f:
             json.dump(snapshot, f, indent=2, ensure_ascii=False)
-
         return snapshot
 
-    # ── Audit (WRITE_AUDIT_REGISTRY, append-only) ─────────────────────
+    # ── P0: Content Hash Verification ────────────────────────────────
+
+    def _verify_content_hash(self, target_path: str, expected_hash: Optional[str]) -> str:
+        """
+        P0: 실제 쓰인 content의 SHA-256이 approval의 expected_content_hash와 일치하는지 검증.
+        expected_hash가 None이면 FC-T4 (강제 장치 — hash 없는 approval 거부).
+        """
+        if expected_hash is None:
+            raise FailClosedError(
+                "T4",
+                "expected_content_hash missing in approval — P0 enforcement: hash required",
+            )
+        actual_hash = self._sha256_file(target_path)
+        if actual_hash is None:
+            raise FailClosedError("T4", "file not found after write — content hash verification failed")
+        if actual_hash != expected_hash:
+            raise FailClosedError(
+                "T4",
+                f"content hash mismatch (P0 violation) — "
+                f"expected={expected_hash[:16]}... actual={actual_hash[:16]}...",
+            )
+        return actual_hash
+
+    # ── P1: Receipt ───────────────────────────────────────────────────
+
+    def _seal_receipt(
+        self,
+        event_id: str,
+        approval: dict,
+        token_id: Optional[str],
+        snapshot: Optional[dict],
+        hash_before: Optional[str],
+        hash_after: Optional[str],
+        expected_content_hash: Optional[str],
+        actual_content_hash: Optional[str],
+        result: str,
+        fc_tier: Optional[str],
+        failure_reason: Optional[str],
+    ) -> dict:
+        receipt_id = f"MCP-WRITE-RECEIPT-{uuid.uuid4().hex[:12].upper()}"
+        hash_match = (
+            actual_content_hash == expected_content_hash
+            if (actual_content_hash and expected_content_hash)
+            else False
+        )
+        receipt = {
+            "schema": "MCP_WRITE_RESULT_RECEIPT_v1",
+            "receipt_id": receipt_id,
+            "event_id": event_id,
+            "approval_id": approval.get("approval_id"),
+            "write_token_id": token_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "actor": "caddy",
+            "target_path": approval.get("scope", {}).get("target_path"),
+            "operation": "WRITE",
+            "result": result,
+            "status": "PENDING_BEO_REVIEW",
+            "hash_algorithm": "SHA-256",
+            "expected_content_hash": expected_content_hash,
+            "actual_content_hash": actual_content_hash,
+            "hash_match": hash_match,
+            "hash_before": hash_before,
+            "hash_after": hash_after,
+            "snapshot_id": snapshot["snapshot_id"] if snapshot else None,
+            "audit_event_id": event_id,
+            "fc_tier": fc_tier or "NONE",
+            "failure_reason": failure_reason,
+        }
+        os.makedirs(self._receipts_dir, exist_ok=True)
+        with open(
+            os.path.join(self._receipts_dir, f"{receipt_id}.json"), "w", encoding="utf-8"
+        ) as f:
+            json.dump(receipt, f, indent=2, ensure_ascii=False)
+        return receipt
+
+    # ── Audit ─────────────────────────────────────────────────────────
 
     def _append_audit(self, event: dict) -> None:
-        """audit event append. 실패 시 FC-T2 (Write Plane HOLD)."""
         os.makedirs(self._audit_dir, exist_ok=True)
         audit_file = os.path.join(self._audit_dir, "mcp_write_audit.jsonl")
-        event_str = json.dumps(event, ensure_ascii=False)
         try:
             with open(audit_file, "a", encoding="utf-8") as f:
-                f.write(event_str + "\n")
+                f.write(json.dumps(event, ensure_ascii=False) + "\n")
         except Exception as exc:
             self._set_state(WritePlaneState.HOLD)
-            raise FailClosedError("T2", f"audit append failed — Write Plane HOLD: {exc}")
+            raise FailClosedError("T2", f"audit append failed: {exc}")
 
     # ── Main Write Flow ───────────────────────────────────────────────
 
-    def execute_write(
-        self, approval_id: str, target_path: str, content: str
-    ) -> dict:
-        """
-        MCP Write 실행 메인 플로우.
-        VERIFY → PROOF → EXECUTE 순서 강제.
-        하나라도 실패 시 Fail-Closed.
-        """
+    def execute_write(self, approval_id: str, target_path: str, content: str) -> dict:
         event_id = uuid.uuid4().hex
         _, ext = os.path.splitext(target_path)
         token_id: Optional[str] = None
         snapshot: Optional[dict] = None
+        hash_before: Optional[str] = None
+        hash_after: Optional[str] = None
+        actual_content_hash: Optional[str] = None
+        expected_content_hash: Optional[str] = None
+        fc_tier: Optional[str] = None
+        failure_reason: Optional[str] = None
+        approval: dict = {}
 
         try:
-            # 0. Write Plane 상태 확인
+            # 0. 상태 확인
             self._assert_writable()
 
-            # 1. 경로 whitelist 확인
+            # 1. 경로 검증
             if not self._validate_path(target_path):
                 raise FailClosedError("T4", f"path not in sandbox whitelist: {target_path}")
 
-            # 2. 확장자 확인
+            # 2. 확장자 검증
             if not self._validate_extension(target_path):
                 raise FailClosedError("T4", f"extension not allowed: {ext}")
 
             # 3. approval 로드 및 검증
             approval = self._load_approval(approval_id)
             self._verify_approval(approval, target_path, ext)
+            expected_content_hash = approval.get("scope", {}).get("expected_content_hash")
 
-            # 4. token 발급 (Gatekeeper 내부 전담)
+            # 4. P1: unconfirmed receipt 확인
+            self._check_unconfirmed_receipts(approval)
+
+            # 5. token 발급
             token_id = self._issue_token(approval_id, target_path, ext)
 
-            # 5. pre-write snapshot 봉인
+            # 6. P3: baseline drift 확인
+            self._check_baseline_drift()
+
+            # 7. pre-write snapshot
             snapshot = self._seal_snapshot(target_path, approval_id, token_id)
             hash_before = snapshot["hash_before"]
 
-            # 6. token 소비 (single-use 보장)
+            # 8. P2: token 소비 (soft TTL 포함)
             self._consume_token(token_id, target_path)
 
-            # 7. approval 사용 처리
+            # 9. approval 사용 처리
             self._used_approvals.add(approval_id)
 
-            # 8. 실제 write 실행
+            # 10. 파일 쓰기
             try:
-                parent_dir = os.path.dirname(target_path)
-                if parent_dir:
-                    os.makedirs(parent_dir, exist_ok=True)
+                parent = os.path.dirname(target_path)
+                if parent:
+                    os.makedirs(parent, exist_ok=True)
                 with open(target_path, "w", encoding="utf-8") as f:
                     f.write(content)
             except Exception as exc:
                 raise FailClosedError("T1", f"write failed: {exc}")
 
-            # 9. hash_after 검증
-            hash_after = self._sha256_file(target_path)
-            if hash_after is None:
-                raise FailClosedError("T3", "hash_after is None — file missing after write")
+            # 11. P0: content hash 검증
+            actual_content_hash = self._verify_content_hash(target_path, expected_content_hash)
 
-            # RECOVERY_MODE 추적
+            # 12. hash_after
+            hash_after = self._sha256_file(target_path)
+
+            # 13. RECOVERY_MODE 추적
             if self.get_state() == WritePlaneState.RECOVERY_MODE:
                 self._recovery_write_used = True
 
-            # 10. audit 봉인
-            audit_event = {
+            # 14. P3: baseline 갱신 (PASS 후만)
+            self._create_baseline()
+
+            # 15. P1: receipt 생성
+            receipt = self._seal_receipt(
+                event_id, approval, token_id, snapshot,
+                hash_before, hash_after,
+                expected_content_hash, actual_content_hash,
+                "PASS", None, None,
+            )
+
+            # 16. audit
+            self._append_audit({
                 "event_id": event_id,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "actor": "caddy",
@@ -336,40 +547,56 @@ class MCP_WriteGatekeeper:
                 "extension": ext,
                 "hash_before": hash_before,
                 "hash_after": hash_after,
+                "expected_content_hash": expected_content_hash,
+                "actual_content_hash": actual_content_hash,
+                "hash_match": actual_content_hash == expected_content_hash,
                 "approval_ref": approval_id,
                 "write_token_id": token_id,
                 "snapshot_id": snapshot["snapshot_id"] if snapshot else None,
+                "receipt_id": receipt["receipt_id"],
                 "result": "PASS",
                 "failure_reason": None,
-            }
-            self._append_audit(audit_event)
+            })
 
             return {
                 "result": "PASS",
                 "event_id": event_id,
                 "target_path": os.path.abspath(target_path),
                 "hash_after": hash_after,
+                "receipt_id": receipt["receipt_id"],
             }
 
         except FailClosedError as fc:
-            self._handle_fail_closed(fc, event_id, approval_id, target_path, ext, token_id, snapshot)
+            fc_tier = fc.tier
+            failure_reason = fc.reason
+            self._handle_fail_closed(
+                fc, event_id, approval, approval_id, target_path, ext,
+                token_id, snapshot, hash_before, hash_after,
+                expected_content_hash, actual_content_hash,
+            )
             raise
 
     def _handle_fail_closed(
-        self,
-        fc: FailClosedError,
-        event_id: str,
-        approval_id: str,
-        target_path: str,
-        ext: str,
-        token_id: Optional[str],
-        snapshot: Optional[dict],
-    ) -> None:
-        """FC 발생 시 상태 전이 및 audit 기록."""
+        self, fc, event_id, approval, approval_id, target_path, ext,
+        token_id, snapshot, hash_before, hash_after,
+        expected_content_hash, actual_content_hash,
+    ):
         if fc.tier == "T2":
             self._set_state(WritePlaneState.HOLD)
         elif fc.tier in ("T3", "T4"):
             self._set_state(WritePlaneState.LOCKED)
+
+        # receipt 생성 (FAIL도 항상 생성)
+        if approval:
+            try:
+                self._seal_receipt(
+                    event_id, approval, token_id, snapshot,
+                    hash_before, hash_after,
+                    expected_content_hash, actual_content_hash,
+                    "FAIL", fc.tier, fc.reason,
+                )
+            except Exception:
+                pass
 
         audit_event = {
             "event_id": event_id,
@@ -378,8 +605,8 @@ class MCP_WriteGatekeeper:
             "operation": "WRITE",
             "target_path": os.path.abspath(target_path) if target_path else None,
             "extension": ext,
-            "hash_before": None,
-            "hash_after": None,
+            "hash_before": hash_before,
+            "hash_after": hash_after,
             "approval_ref": approval_id,
             "write_token_id": token_id,
             "snapshot_id": snapshot["snapshot_id"] if snapshot else None,
@@ -389,23 +616,21 @@ class MCP_WriteGatekeeper:
         try:
             self._append_audit(audit_event)
         except FailClosedError:
-            pass  # T2 HOLD은 이미 _append_audit 내부에서 처리됨
+            pass
 
-    # ── Recovery Controls (비오님 전용 호출) ──────────────────────────
+    # ── Recovery (비오님 전용) ─────────────────────────────────────────
 
     def beo_recovery_approve(self) -> None:
-        """비오님 recovery 승인 후 호출. LOCKED/HOLD → RECOVERY_MODE."""
         with self._state_lock:
             if self._state not in (WritePlaneState.LOCKED, WritePlaneState.HOLD):
-                raise ValueError(f"RECOVERY_MODE 진입 불가: 현재 상태={self._state.value}")
+                raise ValueError(f"RECOVERY_MODE 진입 불가: {self._state.value}")
             self._state = WritePlaneState.RECOVERY_MODE
             self._recovery_write_used = False
 
     def beo_recovery_close(self) -> None:
-        """비오님 recovery-close 승인 후 호출. RECOVERY_MODE → NORMAL."""
         with self._state_lock:
             if self._state != WritePlaneState.RECOVERY_MODE:
-                raise ValueError(f"recovery-close 불가: 현재 상태={self._state.value}")
+                raise ValueError(f"recovery-close 불가: {self._state.value}")
             self._state = WritePlaneState.NORMAL
             self._recovery_write_used = False
 
