@@ -1,6 +1,6 @@
 """
-mcp_http_bridge.py v2.1.0
-MCP Streamable HTTP Bridge — PT-S131-MCP-REG-001 + PT-S134-VPS-OBS-001
+mcp_http_bridge.py v2.2.0
+MCP Streamable HTTP Bridge — PT-S131-MCP-REG-001 + PT-S134-VPS-OBS-001 + PT-S139-MCP-WRITE-BRIDGE-001
 
 변경 이력:
   v2.0.0 (S133): MCP Streamable HTTP endpoint 재정의
@@ -8,6 +8,12 @@ MCP Streamable HTTP Bridge — PT-S131-MCP-REG-001 + PT-S134-VPS-OBS-001
                  ReadOnlyServer 9종 도구 추가
                  Bridge 내부 HMAC 생성 → ReadOnlyServer 3요소 인증 유지
                  actor_id arguments 경유 수신 (domi/jeni/caddy 차등 권한)
+  v2.2.0 (S139): PT-S139-MCP-WRITE-BRIDGE-001 Write Plane 브릿지 연결
+                 write_file / get_write_plane_state 추가
+                 Bridge = FORWARD_ONLY (approval 검증은 Write Server 단독 책임)
+                 actor 제한: caddy only
+                 payload size 상한: 65536 bytes
+                 timeout: 30초 NO_RETRY FAIL_CLOSED
 """
 
 from __future__ import annotations
@@ -19,6 +25,8 @@ import os
 import sys
 import threading
 import time
+import urllib.request
+import urllib.error
 import uuid
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
@@ -36,7 +44,7 @@ from mcp_read_server import ReadOnlyServer, AGENT_ROOT_ALLOWLIST
 
 BRIDGE_HOST = "127.0.0.1"
 BRIDGE_PORT = 8443
-BRIDGE_VERSION = "2.1.0"
+BRIDGE_VERSION = "2.2.0"
 
 INTERNAL_ACTOR_ID = "claude_ai_remote_connector"
 INTERNAL_ACTOR_SOURCE = "claude.ai"
@@ -50,7 +58,15 @@ INTERNAL_CONNECTOR_IDENTITY = "claude.ai-arss-protocol"
 # 허용 actor_id (READ 도구용)
 READ_ALLOWED_ACTORS = frozenset(AGENT_ROOT_ALLOWLIST.keys())  # domi, jeni, caddy
 
-# ALLOWED_TOOLS — 기존 2종 + READ 9종
+# Write Plane 상수 (PT-S139-MCP-WRITE-BRIDGE-001)
+WRITE_ALLOWED_ACTOR = "caddy"
+WRITE_SERVER_URL = "http://127.0.0.1:8444/mcp/write"
+WRITE_SERVER_TIMEOUT = 30       # seconds, NO_RETRY
+WRITE_MAX_PAYLOAD_BYTES = 65536 # Write Server MAX_REQUEST_BODY_BYTES와 동일
+
+WRITE_TOOLS = frozenset({"write_file", "get_write_plane_state"})
+
+# ALLOWED_TOOLS — 기존 2종 + READ 9종 + WRITE 2종
 ALLOWED_TOOLS = frozenset({
     "ping",
     "get_load_state",
@@ -64,6 +80,9 @@ ALLOWED_TOOLS = frozenset({
     "read_audit_event",
     "read_metadata",
     "get_runtime_snapshot",
+    # Write Plane (v2.2.0)
+    "write_file",
+    "get_write_plane_state",
 })
 
 READ_TOOLS = frozenset({
@@ -179,6 +198,108 @@ def _build_read_kwargs(actor_id: str, payload: str) -> dict:
         timestamp=ts,
         hmac_secret=READ_HMAC_SECRET,
     )
+
+
+# ── Write 도구 중계 핸들러 (v2.2.0) ──────────────────────────────────────────
+
+# write_file 허용 필드 화이트리스트
+_WRITE_FILE_ALLOWED_FIELDS = frozenset({"approval_id", "target_path", "content"})
+
+def _handle_write_tool(tool_name: str, arguments: dict) -> dict:
+    """
+    Write 도구 실행 — Write Server FORWARD_ONLY.
+    브릿지 책임: actor 확인 + 형식 제한 + 전달 + audit
+    approval 검증: Write Server 단독 책임
+    """
+
+    # actor 검증 (caddy only)
+    actor_id = arguments.get("actor_id", "")
+    if actor_id != WRITE_ALLOWED_ACTOR:
+        return {
+            "isError": True,
+            "content": [{"type": "text", "text": f"DENY: write tool actor must be '{WRITE_ALLOWED_ACTOR}', got '{actor_id}'"}],
+        }
+
+    if tool_name == "write_file":
+        # 필수 필드 존재 확인
+        approval_id = arguments.get("approval_id")
+        target_path = arguments.get("target_path")
+        content = arguments.get("content", "")
+
+        if not approval_id:
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": "DENY: approval_id required"}],
+            }
+        if not target_path:
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": "DENY: target_path required"}],
+            }
+
+        # unknown_field → DENY
+        unknown = set(arguments.keys()) - _WRITE_FILE_ALLOWED_FIELDS - {"actor_id"}
+        if unknown:
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": f"DENY: unknown fields: {sorted(unknown)}"}],
+            }
+
+        forward_params = {
+            "approval_id": approval_id,
+            "target_path": target_path,
+            "content": content,
+        }
+
+    elif tool_name == "get_write_plane_state":
+        forward_params = {}
+
+    else:
+        return {
+            "isError": True,
+            "content": [{"type": "text", "text": f"DENY: unknown write tool: {tool_name}"}],
+        }
+
+    # payload size 검증
+    forward_body = json.dumps({"tool": tool_name, "params": forward_params}).encode("utf-8")
+    if len(forward_body) > WRITE_MAX_PAYLOAD_BYTES:
+        return {
+            "isError": True,
+            "content": [{"type": "text", "text": f"DENY: payload size {len(forward_body)} exceeds limit {WRITE_MAX_PAYLOAD_BYTES}"}],
+        }
+
+    # Write Server HTTP 포워딩 (NO_RETRY, FAIL_CLOSED)
+    try:
+        req = urllib.request.Request(
+            WRITE_SERVER_URL,
+            data=forward_body,
+            headers={"Content-Type": "application/json", "Content-Length": str(len(forward_body))},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=WRITE_SERVER_TIMEOUT) as resp:
+            resp_body = resp.read().decode("utf-8")
+            result = json.loads(resp_body)
+            is_error = not result.get("ok", False)
+            return {
+                "isError": is_error,
+                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+            }
+
+    except urllib.error.URLError as e:
+        return {
+            "isError": True,
+            "content": [{"type": "text", "text": f"FAIL_CLOSED: write server unreachable — {e}"}],
+        }
+    except TimeoutError:
+        return {
+            "isError": True,
+            "content": [{"type": "text", "text": f"FAIL_CLOSED: write server timeout ({WRITE_SERVER_TIMEOUT}s)"}],
+        }
+    except Exception as e:
+        return {
+            "isError": True,
+            "content": [{"type": "text", "text": f"FAIL_CLOSED: unexpected error — {e}"}],
+        }
 
 
 # ── AIBA Tool Layer ───────────────────────────────────────────────────────────
@@ -316,6 +437,32 @@ def _handle_tool_list() -> dict:
                 "required": ["actor_id", "purpose"],
             },
         },
+        # Write Plane 도구 (v2.2.0)
+        {
+            "name": "write_file",
+            "description": "[WRITE] EAG approval 기반 sandbox 파일 쓰기 (caddy only)",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {"type": "string", "enum": [WRITE_ALLOWED_ACTOR]},
+                    "approval_id": {"type": "string"},
+                    "target_path": {"type": "string"},
+                    "content": {"type": "string"},
+                },
+                "required": ["actor_id", "approval_id", "target_path", "content"],
+            },
+        },
+        {
+            "name": "get_write_plane_state",
+            "description": "[WRITE] Write Plane 현재 상태 조회 (caddy only)",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "actor_id": {"type": "string", "enum": [WRITE_ALLOWED_ACTOR]},
+                },
+                "required": ["actor_id"],
+            },
+        },
     ]
     return {"tools": tools}
 
@@ -434,6 +581,8 @@ def _handle_tool_call(tool_name: str, arguments: dict) -> dict:
         }
     if tool_name in READ_TOOLS:
         return _handle_read_tool(tool_name, arguments)
+    if tool_name in WRITE_TOOLS:
+        return _handle_write_tool(tool_name, arguments)
     return {
         "isError": True,
         "content": [{"type": "text", "text": "Unknown tool"}],
