@@ -796,11 +796,11 @@
       "task": "Remote MCP Connector 등록 절차 설계 및 검증 — stdio→HTTP Bridge Layer",
       "owner": "도미(설계) → 캐디(구현) → 비오(EAG)",
       "priority": "HIGH",
-      "status": "IN_PROGRESS",
+      "status": "COMPLETED",
       "created_session": 131,
       "created_date": "2026-05-16",
-      "eag_stage": "EAG-2_COMPLETE",
-      "note": "S131: BRIEFING-DOMI-S131-001(등록절차) + BRIEFING-DOMI-S131-002 Rev.1(Bridge Layer) EAG-2 완료. mcp_http_bridge.py v1.0.1 배포. nginx+certbot 설치. arss-protocol.org TLS 구성. HC-T-04 HARD_CONTAINMENT 블로커로 실측 중단. S132: Containment 해제 후 실측 재시도 + EAG-3 예정.",
+      "eag_stage": "EAG-3_COMPLETE",
+      "note": "S131: BRIEFING-DOMI-S131-001(등록절차) + BRIEFING-DOMI-S131-002 Rev.1(Bridge Layer) EAG-2 완료. mcp_http_bridge.py v1.0.1 배포. nginx+certbot 설치. arss-protocol.org TLS 구성. HC-T-04 HARD_CONTAINMENT 블로커로 실측 중단. S132: Containment 해제 후 실측 재시도 + EAG-3 예정. S133: HC-T-04 Recovery 완료. test_mcp_filter_policy.py TC-1/TC-2 격리 수정(commit a211a49). mcp_http_bridge.py v2.0.0 MCP Streamable HTTP endpoint 재정의(commit cbc0ed9). test_mcp_http_bridge_v2.py T1~T10 12/12 PASS. claude.ai ARSS Protocol 커넥터 등록 성공. PEV-1~5 PASS. EAG-3 비오(Joshua) 승인.",
       "design_docs": [
         "BRIEFING-DOMI-S131-001 (SCOPE-1~4: 등록 절차)",
         "BRIEFING-DOMI-S131-002 Rev.1 (SCOPE-1~4: Bridge Layer)"
@@ -812,13 +812,98 @@
         "PEV-3",
         "PEV-4",
         "PEV-5"
+      ],
+      "completed_session": 133,
+      "completed_date": "2026-05-16",
+      "pev_result": "PASS (PEV-1~5 전항목, S133)",
+      "jeni_trust_ready_v2": "PASS (T1~T10, S133)",
+      "commits": [
+        "a211a49",
+        "cbc0ed9"
       ]
+    },
+    {
+      "id": "PT-S136-MCP-WRITE-GATEKEEPER",
+      "title": "MCP Write Plane Gatekeeper 구현",
+      "status": "COMPLETED",
+      "completed_session": 136,
+      "completed_date": "2026-05-17",
+      "commits": [
+        "744b714",
+        "940c659"
+      ],
+      "pytest": "29/29 PASS",
+      "eag": [
+        "EAG-1",
+        "EAG-2",
+        "EAG-3",
+        "EAG-ENFORCE"
+      ],
+      "note": "설계(도미 v0.4) + 강제장치(P0~P3) + 제니 TRUST_READY PASS x3"
+    },
+    {
+      "id": "PT-S137-MCP-WRITE-RUNTIME-001",
+      "title": "mcp_write_server.py FastAPI 제거 — stdlib 기반 재구현",
+      "task": "mcp_write_server.py v2.0.0 재구현 — FastAPI/uvicorn 제거, http.server 표준 라이브러리",
+      "owner": "도미(설계) → 캐디(구현) → 비오(EAG)",
+      "priority": "HIGH",
+      "status": "COMPLETED",
+      "created_session": 137,
+      "created_date": "2026-05-18",
+      "completed_session": 137,
+      "completed_date": "2026-05-18",
+      "eag_stage": "EAG-2_COMPLETE",
+      "commit": "6992e03",
+      "pytest": "29/29 PASS",
+      "note": "FastAPI/uvicorn VPS 미설치 확인. Read Plane(mcp_http_bridge.py)이 stdlib 기반임을 실측. 도미 설계: dependency-light runtime model 통일. External dependency=0. MAX_REQUEST_BODY_BYTES=65536. 제니 TRUST_READY PASS(T-1~T-7). EAG-1/2 비오(Joshua) 승인."
+    },
+    {
+      "id": "PT-S137-MCP-WRITE-NGINX-001",
+      "title": "mcp_write_server.py Nginx 연결 + systemd 서비스 등록",
+      "task": "Nginx arss-mcp config Write Plane(8444) 추가 + aiba-mcp-write.service 등록",
+      "owner": "도미(설계) → 캐디(구현) → 비오(EAG)",
+      "priority": "HIGH",
+      "status": "COMPLETED",
+      "created_session": 137,
+      "created_date": "2026-05-18",
+      "eag_stage": "EAG-2_COMPLETE",
+      "completed_acts": [
+        "ACT-1: /etc/systemd/system/aiba-mcp-write.service 생성 완료 (S137)",
+        "ACT-2: /etc/nginx/sites-enabled/arss-mcp.bak_s137 생성 완료 (S137)",
+        "ACT-3: nginx config 로컬 파일 생성 + SCP 전송 + raw visibility check 완료 (S138)",
+        "ACT-3d: bak_s138 백업 생성 + config 교체 완료 (S138)",
+        "ACT-3f: nginx -t 통과 (경고 없음, bak 파일 sites-enabled 밖으로 이동 후)",
+        "ACT-3g: systemctl reload nginx 성공 (S138)",
+        "ACT-4: aiba-mcp-write.service enable + start 완료 (S138)",
+        "ACT-5: smoke 검증 PASS — /mcp-write/health OK, /mcp/write 400(정상 거부) (S138)"
+      ],
+      "note": "S138: 도미 설계 확정(로컬 파일 생성+SCP 방식). PowerShell $ 이스케이프 문제 해소. arss-mcp.bak_s137/bak_s138 sites-enabled 밖(/etc/nginx/)으로 이동. nginx -t 경고 없음. reload 성공. service active(running). smoke PASS.",
+      "completed_session": 138,
+      "completed_date": "2026-05-18"
+    },
+    {
+      "id": "PT-S139-MCP-READ-CONSTANTS-001",
+      "status": "COMPLETED",
+      "title": "MCP Read Constants 운영 계약 등재",
+      "completed_session": 139,
+      "completed_date": "2026-05-18",
+      "commit": "4295939",
+      "deployed_file": "tools/governance/MCP_READ_CONSTANTS_REGISTRY_v1.0.json"
+    },
+    {
+      "id": "PT-S139-MCP-WRITE-BRIDGE-001",
+      "status": "COMPLETED",
+      "title": "Write Plane MCP 브릿지 연결 (write_file/get_write_plane_state)",
+      "completed_session": 139,
+      "completed_date": "2026-05-18",
+      "commit": "81e77c0",
+      "deployed_file": "tools/mcp/mcp_http_bridge.py v2.2.0"
     }
   ],
   "agent_focus": {
-    "caddy": "S131: PT-S131-MCP-REG-001 Bridge 배포 완료. HC-T-04 HARD_CONTAINMENT 블로커 발견. S132: Containment 해제 후 실측 재시도.",
-    "domi": "S131: BRIEFING-DOMI-S131-002 Rev.1 Final Anchor 완료. S132: Containment 해제 후 실측 결과 수령 대기.",
-    "jeni": "S131: TRUST_READY PASS(T-1~T-10 전항목). REVALIDATION_REQUIRED=NO. PEV-1~5 사후 검증 대기."
+    "caddy": "PT-S132-API-001 도미 설계 의뢰 준비, PT-S115-OBS-001 운용",
+    "domi": "PT-S132-API-001 설계 의뢰 대기",
+    "jeni": "TRUST_READY 검증 대기"
   },
   "architecture": "AIBA Session Sync Architecture v1.0",
   "archived_tasks": {
@@ -845,7 +930,8 @@
       "beo_intervention": "없음",
       "method": "Claude API + 동적 System Prompt",
       "name": "완전 자동 주입",
-      "status": "PLANNED — B2 안정화 후"
+      "status": "PLANNED — B2 안정화 후",
+      "note": "MCP Write Bridge 연결 완료(S139). B3 착수 조건 충족 검토 필요."
     }
   },
   "blocked_tasks": [],
@@ -1400,8 +1486,10 @@
     "note": "S122: PT-S115-BOOT-001 vNext 계층 구축. commit ab9562e. chain 변경 없음. tip 유지.",
     "phase": "PHASE 1 COMPLETE",
     "phase1_completed": "2026-03-19",
-    "tip": "3dd5d2fa5c98c8d6ddf0bfaff33479c4a1b7c6d1b800d7fa4d07208b4d65de30",
-    "prev_tip": "eeffbe715b4877158529339fc7b6487af6a384adc0a261ba58f2413e13be9ecd"
+    "tip": "81e77c0",
+    "prev_tip": "3dd5d2fa5c98c8d6ddf0bfaff33479c4a1b7c6d1b800d7fa4d07208b4d65de30",
+    "last_updated": 135,
+    "session": 139
   },
   "code_health": {
     "briefings_issued": [
@@ -2219,7 +2307,7 @@
     "migrated_at": "2026-05-10T00:00:00.000+09:00",
     "migrated_session": 114
   },
-  "generated_at": "2026-05-16T00:00:00.000+09:00",
+  "generated_at": "2026-05-18",
   "hold_tasks": [
     {
       "created_session": 48,
@@ -2283,6 +2371,19 @@
       "priority": "LOW",
       "status": "HOLD",
       "task": "SESSION_BOOT_SPLIT_V2_CANDIDATE.json EAG 및 배포"
+    },
+    {
+      "id": "PT-S132-API-001",
+      "task": "API 기반 Pre-Output Check 자동 삽입 인터페이스 구축",
+      "owner": "도미→캐디→비오(EAG)",
+      "priority": "HIGH",
+      "status": "HOLD",
+      "created_session": 132,
+      "created_date": "2026-05-16",
+      "note": "S134 확정: A안(API 기반 PRE-OUTPUT CHECK 코드 레벨 자동 삽입). claude.ai UI 대신 API 호출로 user 메시지 앞 CHECK 블록 자동 prepend. Caddy Completion Bias 구조적 차단 목적.",
+      "hold_reason": "UI 이원화·세션 맥락 단절 문제 + API 단독 전환 시 기능 손실 및 구현 범위 확장. 비오님 S135 보류 결정.",
+      "hold_session": 135,
+      "hold_date": "2026-05-17"
     }
   ],
   "lesson_review_policy": {
@@ -2524,6 +2625,43 @@
       "prevention_rule": "Proof 없는 path claim / completion claim / capability claim / schema claim / merge claim 전부 금지. 위반 시 HARD_STOP.",
       "trigger": "S132 — 세션 오픈 3건 연속 오류(미검증 파일 없음 선언 / SCP 경로 오류 / 파일명 누락). Completion Bias 단일 뿌리 확인.",
       "must_reference": true
+    },
+    {
+      "id": "LESSON-024",
+      "title": "pytest 다중 파일 실행 시 sys.modules 오염 방지",
+      "session": 134,
+      "content": "두 테스트 파일이 같은 pytest 세션에서 실행될 때 수집 단계에서 sys.modules 교체가 발생하면 실행 단계의 patch가 wrong target에 적용된다. 해결: sys.modules['module']을 mock으로 교체하는 대신 실제 모듈을 사용하고 인스턴스만 patch 처리.",
+      "category": "testing"
+    },
+    {
+      "id": "LESSON-S137-HUMAN-AI-PRINCIPLE",
+      "title": "인간과 AI가 함께하기 위한 원칙",
+      "status": "CONFIRMED",
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_session": 137,
+      "confirmed_date": "2026-05-18",
+      "must_reference": false,
+      "statement": "AI 결과물의 신뢰 여부 판단은 전적으로 사용자에게 있다. AI가 스스로 정직성을 보장하는 구조는 현재 없다.",
+      "prevention_rule": "AI는 압박 없이는 한계를 자발적으로 드러내지 않는 경향이 있다. 대책은 사용자의 몫이다. 외부 거버넌스 구조로 AI를 검증하는 것이 현재 가장 현실적인 방법이다. AIBA 거버넌스(EAG 체인, 도미·제니 검증, REPORT & WAIT)는 이 원칙의 실천적 구현이다.",
+      "trigger": "S137 — present_files 미호출 사건. 캐디가 실현성 없는 대책 제시 후 비오님 압박으로 한계 인정. AI 정직성 구조 부재 확인."
+    },
+    {
+      "id": "LESSON-S138-EAG-STATE-INTERPRETATION",
+      "session": 138,
+      "date": "2026-05-18",
+      "title": "EAG 연속성 해석 원칙",
+      "content": "EAG-2_IN_PROGRESS 상태에서 비오님이 [DESIGN]으로 설계를 직접 확정하신 경우, 이는 EAG 포함 진행 지시로 해석한다. 설계 방식만 변경된 경우 별도 EAG-2 재승인 요청 없이 파일 생성으로 바로 진행한다. 비오님이 직접 설계를 제시하는 것 자체가 EAG를 내포한다.",
+      "incident": "S138 세션 시작 시 EAG-2_IN_PROGRESS 상태에서 캐디가 EAG-2 재승인을 요청하여 파일 생성을 지연시킨 사건",
+      "category": "EAG_INTERPRETATION"
+    },
+    {
+      "id": "LESSON-S139-PRESENT-FILES-MANDATORY",
+      "session": 139,
+      "date": "2026-05-18",
+      "category": "CADDY_PROCESS",
+      "severity": "HIGH",
+      "content": "파일 생성 후 present_files 호출은 필수 단계. 컨테이너 내 생성/검증만으로 완료 처리하면 안 됨. SCP 명령 제공 전 반드시 present_files 호출 결과 확인 후 진행.",
+      "trigger": "create_file + bash 검증 후 present_files 미호출 → SCP 명령 제공 → 비오님 지적 (S139 반복)"
     }
   ],
   "pending_tasks": [
@@ -2773,6 +2911,22 @@
       ],
       "status": "IN_PROGRESS",
       "task": "AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2 — EAG-2 구현 실행 (Shadow Mode Phase 1)"
+    },
+    {
+      "id": "PT-S134-VPS-OBS-001",
+      "title": "AIBA VPS Canonical Observability — Phase 1 READ ONLY OBSERVABILITY",
+      "status": "COMPLETED",
+      "priority": "HIGH",
+      "created_session": 134,
+      "completed_session": 134,
+      "owner": "캐디",
+      "commits": [
+        "514b8f4",
+        "4893b73",
+        "ccbfd79"
+      ],
+      "pytest": "35/35 PASS",
+      "note": "READ ONLY MCP 도구 9종 구현 및 Bridge v2.1.0 통합. claude.ai 커넥터 연동 EAG-3 완료. get_runtime_snapshot ALLOW 확인. Domi 원칙 6종 채택."
     }
   ],
   "pending_tasks_legacy_shim": {
@@ -2845,19 +2999,37 @@
       "enforcement": "선언 누락 또는 생성 누락 시 세션 종료 선언 불가"
     }
   },
-  "session_count": 132,
+  "session_count": 139,
   "session_delta": {
-    "session": 132,
-    "date": "2026-05-16",
-    "summary": "FRP v1.0 Rev.1 SESSION_CONTEXT 등재 완료 (EAG-2 비오 승인)",
-    "changes": [
-      "caddy_operational_rules.force_read_protocol_v1 신규 등재 — Proof Gate Architecture / SESSION_OPEN 2단계 구조 / FRP-SSOT-01 / FRP-RRB-01",
-      "enforcement_rules.frp_hard_stop_extension 신규 등재 — HARD STOP 확장 조건 5개 + FRP-HS-01",
-      "session_open_rules.mandatory — FRP v1.0 REV1 항목 7개 추가",
-      "LESSON-023 IMMUTABLE 등재 — 미검증 operational 선언 = 거버넌스 오염"
+    "session": 139,
+    "date": "2026-05-18",
+    "tasks_completed": [
+      "PT-S139-MCP-READ-CONSTANTS-001",
+      "PT-S139-MCP-WRITE-BRIDGE-001"
     ],
-    "caddy_incidents": [
-      "S132 세션 오픈 3건 오류: 프로젝트 파일 미확인 / SCP 경로 오류(레거시 필드 우선 적용) / 파일명 _FINAL 누락. FRP 등재 계기."
+    "tasks_added": [
+      "PT-S139-MCP-READ-CONSTANTS-001",
+      "PT-S139-MCP-WRITE-BRIDGE-001"
+    ],
+    "tasks_hold": [],
+    "lessons_added": [
+      "LESSON-S139-PRESENT-FILES-MANDATORY"
+    ],
+    "deployed_files": [
+      "tools/governance/MCP_READ_CONSTANTS_REGISTRY_v1.0.json",
+      "tools/mcp/mcp_http_bridge.py (v2.2.0)"
+    ],
+    "commits": [
+      "4295939",
+      "81e77c0"
+    ],
+    "key_events": [
+      "PT-S132-API-001 비오님 지시로 폐기 — 더 이상 고려하지 않음",
+      "ALLOWED_PURPOSES 미문서화 문제 발견 — 세션 초반 MCP 접속 실패 (UNKNOWN_PURPOSE)",
+      "문제 1 해소: MCP_READ_CONSTANTS_REGISTRY_v1.0.json 등재 (commit 4295939)",
+      "문제 2 해소: mcp_http_bridge.py v2.2.0 — write_file/get_write_plane_state 브릿지 연결 (commit 81e77c0)",
+      "캐디 반복 실수: present_files 미호출 후 SCP 명령 제공 — 비오님 지적",
+      "캐디 반복 실수 원인: 서두름으로 인한 전달 완료 확인 단계 생략"
     ]
   },
   "session_open_rules": {
@@ -2901,46 +3073,22 @@
     }
   },
   "session_reentry": {
-    "context_summary": {
-      "value": "S131: PT-S131-MCP-REG-001 Bridge 배포 완료. HC-T-04 HARD_CONTAINMENT 블로커로 실측 중단. S132: Containment 해제 후 실측 재시도."
+    "session": 139,
+    "priority_1": {
+      "task_id": "MCP-WRITE-E2E-S140",
+      "title": "MCP Write Plane end-to-end 실사용 검증",
+      "status": "PENDING",
+      "priority": "HIGH",
+      "action": "비오님 approval_authority → write_file MCP 호출 → receipt 확인",
+      "note": "write_file tool S140부터 claude.ai 커넥터에서 사용 가능"
     },
-    "eag_required_next": true,
-    "generated_at": "2026-05-16T00:00:00.000+09:00",
-    "generated_by": "caddy",
-    "next_session_recommended_tasks": [
-      "1. [CRITICAL] HC-T-04 HARD_CONTAINMENT 해제 — read_containment_state() 전체 확인 후 처분 결정",
-      "2. [HIGH] Containment 해제 후 Bridge 실측 재시도 — claude.ai Remote MCP Connector 등록",
-      "3. [HIGH] 실측 완료 후 PEV-1~5 사후 검증 수행",
-      "4. [HIGH] mcp_http_bridge.py git commit (현재 미완료)"
-    ],
-    "pending_eag_items": [
-      "PT-S131-MCP-REG-001 EAG-3 미완료 — 실측 완료 후 비오님 최종 승인 필요"
-    ],
-    "stabilization_mode_active": false,
-    "blocker_active": true,
-    "blocker_detail": {
-      "type": "HARD_CONTAINMENT",
-      "trigger_id": "HC-T-04",
-      "incident_id": "HC-INC-9916F2FF",
-      "entered_at": "2026-05-15T07:08:01+09:00",
-      "recovery_status": "LOCKED",
-      "containment_state_file": "/opt/arss/engine/arss-protocol/tools/mcp/mcp_containment_state.json"
-    },
-    "infra_state": {
-      "dns": "arss-protocol.org → 159.203.125.1 (완료)",
-      "tls": "Let's Encrypt /etc/letsencrypt/live/arss-protocol.org/ (만료 2026-08-14)",
-      "nginx": "active / /etc/nginx/sites-enabled/arss-mcp",
-      "bridge_file": "/opt/arss/engine/arss-protocol/tools/mcp/mcp_http_bridge.py v1.0.1",
-      "bridge_service": "aiba-mcp-bridge.service active (port 8443)",
-      "bridge_git_commit": "PENDING"
-    },
-    "pev_pending": [
-      "PEV-1: C4 request_id 물리적 정합성 확인",
-      "PEV-2: ROLLED_BACK 전이 시 nginx 엔드포인트 완전 Purge 확인",
-      "PEV-3: ingress_closed_event 타임스탬프 ↔ nginx 종료 시각 초 단위 대조",
-      "PEV-4: Bridge↔Phase-C 로그 타임스탬프 동기화 확인",
-      "PEV-5: ROLLED_BACK 시점 Bridge 프로세스 완전 소멸 실측(ps 명령)"
-    ]
+    "priority_2": {
+      "task_id": "PT-S115-OBS-001",
+      "title": "Visibility Metrics 정규 운용",
+      "status": "IN_PROGRESS",
+      "priority": "HIGH",
+      "action": "계속 운용"
+    }
   },
   "shadow_pipeline": {
     "approved_by": "비오(Joshua) EAG-3",
@@ -2966,7 +3114,13 @@
     "archive_ref": "SESSION_CONTEXT_ARCHIVE_TIER_D_S114.json",
     "integrity_hash": "e983d89c06199acb1bb9c0b6cdbf71f32025c09935703a42838f8d3255a513bf",
     "migrated_at": "2026-05-10T00:00:00.000+09:00",
-    "migrated_session": 114
+    "migrated_session": 114,
+    "s136_mcp_write_gatekeeper": {
+      "session": 136,
+      "date": "2026-05-17",
+      "event": "PT-S136-MCP-WRITE-GATEKEEPER COMPLETED",
+      "detail": "Write Plane Gatekeeper v1.1.0. 강제장치 P0~P3. commit 940c659. 29/29 PASS."
+    }
   },
   "sync_meta": {
     "automation_gap": "Phase 2-B 안정 운영 중.",
@@ -2975,7 +3129,7 @@
       "disabled_reason": "evolution_score SOFT_KILL DIS-049",
       "status": "DISABLED"
     },
-    "last_session_date": "2026-05-16",
+    "last_session_date": "2026-05-18",
     "manual_steps": 2,
     "prev_session_hash": "SESSION_CONTEXT_S70_FINAL.json SHA256 기준",
     "prev_session_hash_basis": "SESSION_CONTEXT_S65_FINAL.json 파일 전체 SHA256",
@@ -2990,7 +3144,7 @@
     "version": "v1.0"
   },
   "system_name": "AIBA Self-Evolution-Ready System",
-  "system_version": "v1.5",
+  "system_version": "AIBA-v3.2-S137",
   "vps_state": {
     "github": {
       "status": "commit a7c506a — S113 PT-S99-GOV-003 + PT-S113-TEST-001 완료. origin push 완료."
@@ -3356,12 +3510,12 @@
     },
     "mcp_http_bridge": {
       "file": "tools/mcp/mcp_http_bridge.py",
-      "version": "1.0.1",
+      "version": "2.0.0",
       "status": "DEPLOYED",
-      "git_commit": "PENDING",
-      "deployed_session": 131,
+      "git_commit": "cbc0ed9",
+      "deployed_session": 133,
       "deployed_date": "2026-05-16",
-      "note": "stdio→HTTP Bridge Layer. port 8443 localhost. aiba-mcp-bridge.service active. containment 블로커로 실측 중단."
+      "note": "MCP Streamable HTTP endpoint 재정의. Transport/Governance/AIBA Tool 3계층. SSE GET + JSON-RPC POST. actor_id 내부 고정 주입. containment safe denial."
     },
     "nginx_mcp": {
       "config": "/etc/nginx/sites-enabled/arss-mcp",
@@ -3369,6 +3523,151 @@
       "tls": "Let's Encrypt arss-protocol.org (만료 2026-08-14)",
       "upstream": "127.0.0.1:8443",
       "deployed_session": 131
+    },
+    "test_mcp_http_bridge_v2": {
+      "file": "tests/test_mcp_http_bridge_v2.py",
+      "status": "DEPLOYED",
+      "git_commit": "cbc0ed9",
+      "pytest": "12/12 PASS",
+      "deployed_session": 133,
+      "deployed_date": "2026-05-16"
+    },
+    "mcp_containment_state_s133": {
+      "containment_active": false,
+      "trigger_id": "HC-T-04",
+      "recovery_status": "RELEASED",
+      "released_session": 133,
+      "released_date": "2026-05-16"
+    },
+    "mcp_bridge_version": "2.1.0",
+    "mcp_bridge_commit": "4893b73",
+    "mcp_read_server_version": "1.0.0",
+    "mcp_read_server_commit": "ccbfd79",
+    "read_hmac_secret_configured": true,
+    "read_tools_exposed": 11,
+    "phase1_read_only_status": "COMPLETED",
+    "eag3_verified": true,
+    "mcp_write_gatekeeper_suite": {
+      "mcp_write_config": {
+        "file": "tools/mcp/mcp_write_config.py",
+        "version": "1.1.0",
+        "status": "DEPLOYED",
+        "commit": "940c659",
+        "deployed_session": 136,
+        "deployed_date": "2026-05-17",
+        "note": "Write Plane 공유 상수. RECEIPTS_DIR/BASELINES_DIR/INTAKE_DIR/SOFT_TOKEN_TTL 포함."
+      },
+      "mcp_approval_authority": {
+        "file": "tools/mcp/mcp_approval_authority.py",
+        "version": "1.1.0",
+        "status": "DEPLOYED",
+        "commit": "940c659",
+        "deployed_session": 136,
+        "deployed_date": "2026-05-17",
+        "note": "비오님 전용. --content-file 필수. expected_content_hash 자동 계산. unconfirmed receipt 시 신규 발급 거부."
+      },
+      "mcp_write_gatekeeper": {
+        "file": "tools/mcp/mcp_write_gatekeeper.py",
+        "version": "1.1.0",
+        "status": "DEPLOYED",
+        "commit": "940c659",
+        "deployed_session": 136,
+        "deployed_date": "2026-05-17",
+        "note": "P0(content hash) P1(receipt) P2(soft-expiry 8min FC-T1) P3(baseline drift FC-T3). FC-T1~T4 전구간."
+      },
+      "mcp_write_server": {
+        "file": "tools/mcp/mcp_write_server.py",
+        "version": "1.0.0",
+        "status": "DEPLOYED",
+        "commit": "744b714",
+        "deployed_session": 136,
+        "deployed_date": "2026-05-17",
+        "note": "포트 8444. Read Plane(8443)과 물리 분리. Nginx 미연결 — 별도 EAG 필요."
+      },
+      "test_mcp_write_gatekeeper": {
+        "file": "tests/test_mcp_write_gatekeeper.py",
+        "version": "1.1.0",
+        "status": "DEPLOYED",
+        "commit": "940c659",
+        "pytest": "29/29 PASS (VPS Python 3.10.12)",
+        "deployed_session": 136,
+        "deployed_date": "2026-05-17"
+      }
+    },
+    "mcp_write_registry_dirs": {
+      "approvals": "registry/mcp_write/approvals/",
+      "audit": "registry/mcp_write/audit/",
+      "snapshots": "registry/mcp_write/snapshots/",
+      "receipts": "registry/mcp_write/receipts/",
+      "baselines": "registry/mcp_write/baselines/",
+      "intake": "registry/mcp_write/intake/",
+      "permission": "chmod 750",
+      "caddy_access": "NO ACCESS",
+      "created_session": 136
+    },
+    "mcp_write_sandbox_dirs": {
+      "tools_sandbox": "tools/sandbox/",
+      "tools_tmp": "tools/tmp/",
+      "tests_sandbox": "tests/sandbox/",
+      "allowed_extensions": [
+        ".md",
+        ".json",
+        ".txt"
+      ],
+      "forbidden_extensions": [
+        ".py",
+        ".sh",
+        ".env",
+        ".yaml",
+        ".yml",
+        ".service"
+      ],
+      "created_session": 136
+    },
+    "mcp_write_plane_status": {
+      "phase": "BRIDGE_CONNECTED",
+      "write_server_nginx_status": "CONNECTED",
+      "write_server_port": 8444,
+      "activation_required": "Nginx upstream 추가 + 서비스 등록 — 별도 EAG 필요",
+      "gatekeeper_version": "1.1.0",
+      "enforcement_active": true,
+      "p0_content_hash": true,
+      "p1_receipt": true,
+      "p2_soft_expiry_minutes": 8,
+      "p3_baseline_drift": true,
+      "jeni_5_rules_received": true,
+      "caddy_5_rules_acknowledged": true
+    },
+    "aiba_mcp_write_service": "inactive (disabled, reset-failed — S137)",
+    "nginx_arss_mcp_config": "bak_s137 rollback 상태 (Write Plane 미연결)",
+    "arss_mcp_bak_s137": "존재 (/etc/nginx/sites-enabled/arss-mcp.bak_s137)",
+    "mcp_write_server_version": "v2.0.0 (commit 6992e03)",
+    "mcp_write_plane": {
+      "status": "OPERATIONAL",
+      "nginx_config": "/etc/nginx/sites-enabled/arss-mcp (Write Plane 포함)",
+      "service": "aiba-mcp-write.service (active, enabled)",
+      "port": 8444,
+      "smoke_test": "PASS (S138)",
+      "note": "MCP Read+Write Plane 양방향 완전 운영 중."
+    },
+    "mcp_http_bridge_v22": {
+      "file": "tools/mcp/mcp_http_bridge.py",
+      "version": "2.2.0",
+      "status": "DEPLOYED",
+      "commit": "81e77c0",
+      "deployed_session": 139,
+      "deployed_date": "2026-05-18",
+      "backup": "mcp_http_bridge.py.bak_s139",
+      "note": "Write Plane 브릿지 연결. write_file/get_write_plane_state 추가. FORWARD_ONLY. caddy only. timeout=30s NO_RETRY FAIL_CLOSED."
+    },
+    "mcp_read_constants_registry": {
+      "file": "tools/governance/MCP_READ_CONSTANTS_REGISTRY_v1.0.json",
+      "version": "v1.0",
+      "status": "DEPLOYED",
+      "commit": "4295939",
+      "deployed_session": 139,
+      "deployed_date": "2026-05-18",
+      "note": "MCP Read Plane 운영 상수 레지스트리. SESSION_CONTEXT mcp_read_constants의 원본 권위."
     }
   },
   "wf_structure_confirmed": {
@@ -3536,6 +3835,71 @@
       "deployed_session": 123,
       "deployed_date": "2026-05-13",
       "note": "EAG-4(S123 비오 승인): admission required_keys에서 ssoi_status 제거. SESSION_CONTEXT 실제 구조와 불일치 수정. ssoi/retrieval/archived or{} 방어 처리 추가."
+    },
+    "mcp_read_server_py": {
+      "path": "/opt/arss/engine/arss-protocol/tools/mcp/mcp_read_server.py",
+      "version": "v1.0.0",
+      "commit": "ccbfd79",
+      "session": 134
+    },
+    "mcp_http_bridge_py": {
+      "path": "/opt/arss/engine/arss-protocol/tools/mcp/mcp_http_bridge.py",
+      "version": "v2.1.0",
+      "commit": "4893b73",
+      "session": 134
+    },
+    "test_mcp_read_server_py": {
+      "path": "/opt/arss/engine/arss-protocol/tests/test_mcp_read_server.py",
+      "version": "v1.0.0",
+      "commit": "514b8f4",
+      "session": 134
+    },
+    "test_mcp_http_bridge_v21_py": {
+      "path": "/opt/arss/engine/arss-protocol/tests/test_mcp_http_bridge_v21.py",
+      "version": "v1.0.0",
+      "commit": "4893b73",
+      "session": 134
+    },
+    "mcp_write_gatekeeper_v11": {
+      "files": [
+        "tools/mcp/mcp_write_config.py",
+        "tools/mcp/mcp_approval_authority.py",
+        "tools/mcp/mcp_write_gatekeeper.py",
+        "tools/mcp/mcp_write_server.py",
+        "tests/test_mcp_write_gatekeeper.py"
+      ],
+      "commits": [
+        "744b714",
+        "940c659"
+      ],
+      "pytest": "29/29 PASS",
+      "deployed_session": 136,
+      "deployed_date": "2026-05-17",
+      "note": "v1.0(744b714) + v1.1 강제장치 P0~P3(940c659)"
+    },
+    "mcp_write_server_v200": {
+      "file": "tools/mcp/mcp_write_server.py",
+      "version": "v2.0.0",
+      "commit": "6992e03",
+      "deployed_session": 137,
+      "deployed_date": "2026-05-18",
+      "pytest": "29/29 PASS",
+      "note": "FastAPI/uvicorn 제거. http.server 표준 라이브러리 기반 재구현. External dependency=0. MAX_REQUEST_BODY_BYTES=65536. Content-Length 4규칙 적용. 감사 로그 sys.stderr."
+    },
+    "nginx_arss_mcp_write_plane_s138": {
+      "file": "/etc/nginx/sites-enabled/arss-mcp",
+      "version": "S138",
+      "deployed_session": 138,
+      "deployed_date": "2026-05-18",
+      "note": "Write Plane(8444) location block 추가. /mcp/write + /mcp-write/health. bak_s137/bak_s138 → /etc/nginx/로 이동. nginx -t 경고 없음. reload 성공. $ 변수 보존 확인."
+    },
+    "systemd_aiba_mcp_write_service_s138": {
+      "file": "/etc/systemd/system/aiba-mcp-write.service",
+      "status": "active(running)",
+      "enabled": true,
+      "deployed_session": 138,
+      "deployed_date": "2026-05-18",
+      "note": "aiba-mcp-write.service enable + start 완료. mcp_write_server.py v2.0.0 구동 중."
     }
   },
   "system_changes": {
@@ -3553,52 +3917,17 @@
     "migrated_session": 114
   },
   "pytest_status": {
-    "s103_result": "439 passed / 0 FAILED / 152 skipped",
-    "s103_new_tests": 22,
-    "s103_commits": [
-      "4272999",
-      "01715c6"
+    "last_run_session": 134,
+    "total": "35/35 PASS",
+    "files": [
+      "tests/test_mcp_read_server.py: 20/20",
+      "tests/test_mcp_http_bridge_v21.py: 15/15"
     ],
-    "s103_note": "governance_checker v1.0 Rev.2: test_governance_checker.py TC-1~22 신규. 회귀 없음.",
-    "s104_result": "439 passed / 0 FAILED / 152 skipped",
-    "s104_commit": "f927fdf",
-    "s104_note": "PT-S103-GIT-001 Phase B cleanup 후 회귀 없음 확인.",
-    "s105_result": "439 passed / 0 FAILED / 152 skipped",
-    "s105_commit": "fcbb99a",
-    "s105_note": "PT-S105-COMPLEXITY-GOV-001 문서/Registry 배포. 코드 변경 없음. 회귀 없음.",
-    "s113_result": "518 passed / 0 failed / 156 skipped",
-    "s113_commits": [
-      "25d8325",
-      "a7c506a"
-    ],
-    "s113_note": "PT-S99-GOV-003: session_context_archive TC-1~12 신규. PT-S113-TEST-001: Layer-1 S-1~S-10 + Layer-2 O-1~O-8 신규. test_pt_s58_001 obsolete 4건 skip. 회귀 없음.",
-    "s127_result": "574 passed / 0 failed / 156 skipped",
-    "s127_commits": [
-      "bb11f4e",
-      "2d3e522"
-    ],
-    "s127_note": "PHASE-B: mcp_audit_broker + mcp_server_poc v0.3.0 + test_mcp_server_poc_phase_b(24건 신규). test_pt_s58_001 2건 기존 만료 — PT-S127-TEST-001 등재.",
-    "s128_result": "56 passed / 0 failed",
-    "s128_commits": [
-      "da3341a",
-      "6d48789",
-      "b3b3fe2"
-    ],
-    "s128_note": "PHASE-C: mcp_server_poc_phase_c(신규) + mcp_nonce_store(신규) + mcp_shard_router(신규) + mcp_audit_broker v1.1.0 + test_phase_c 16건 신규. PHASE-A/B 회귀 없음.",
-    "s129_result": "24 passed / 0 failed",
-    "s129_commits": [
-      "be467d0"
-    ],
-    "s129_note": "Filter Policy: mcp_filter_policy.py + test_mcp_filter_policy.py(24건 신규). D-1~D-5/A-1~A-5/B-1~B-5/C-1~C-4/TA-4. 회귀 없음.",
-    "s130_result": "641 passed / 0 failed / 158 skipped",
-    "s130_commits": [
-      "60713d4",
-      "3fa70f8",
-      "d03524a"
-    ],
-    "s130_note": "Recovery Governance Layer(25건 신규) + test_mcp_server_poc_phase_c fixture 수정 + PT-S127-TEST-001 수습(T6/T10 대체 TC + T11/O7 현행화). 회귀 없음.",
-    "s131_result": "N/A — Bridge 배포 세션. pytest 미실행.",
-    "s131_note": "mcp_http_bridge.py 신규 배포. git commit 미완료. 기존 641/0 회귀 없음 가정."
+    "commits": [
+      "514b8f4",
+      "4893b73",
+      "ccbfd79"
+    ]
   },
   "hold_status": {
     "system_stability_hold": false,
@@ -3607,11 +3936,9 @@
     "reason": "S105: PT-S99-GOV-002 COMPLETE. Complexity Governance v1.0 LOCKED. Phase 3C 계속 진행 가능."
   },
   "next_session_first_action": {
-    "quarantine_status": "TIER_D",
-    "archive_ref": "SESSION_CONTEXT_ARCHIVE_TIER_D_S114.json",
-    "integrity_hash": "7bf52061c82274b4f84bed0918aaaf424633319ca58c8198f9ac5623ad34e835",
-    "migrated_at": "2026-05-10T00:00:00.000+09:00",
-    "migrated_session": 114
+    "action": "MCP Write Plane end-to-end 실사용 검증",
+    "reason": "write_file이 브릿지에 연결됐으나 실제 approval → write → receipt 전체 흐름 미검증. S140 첫 작업.",
+    "note": "비오님 approval_authority 실행 → caddy write_file 호출 → receipt 확인"
   },
   "stability_patch_s98": {
     "quarantine_status": "TIER_D",
@@ -4266,14 +4593,14 @@
     "status": "DEACTIVATED"
   },
   "complexity_ceiling_status": {
-    "measured_session": 131,
-    "measured_date": "2026-05-16",
+    "measured_session": 134,
+    "measured_date": "2026-05-17",
     "top_level_key_count": 55,
     "active_canonical_key_count": 42,
     "tier_d_quarantined_count": 12,
     "ceiling_limit": 42,
     "status": "WITHIN_LIMIT",
-    "note": "S131: PT-S131-MCP-REG-001 신규 태스크 추가. active canonical key count 유지 확인 필요.",
+    "note": "S134: PT-S134-VPS-OBS-001 완료. deployed_files/vps_state 내 필드 추가. top-level key 변동 없음. active canonical key 42 유지.",
     "action_required": "NONE — Stabilization Observation Phase 유지",
     "tier_d_quarantine": {
       "spec_id": "TIER-D-QUARANTINE-S114-v1.0",
@@ -4488,6 +4815,40 @@
       "priority_2_status": "IN_PROGRESS — M-01~M-07 정규 운용 중.",
       "priority_3_status": "COMPLETE (S117)",
       "priority_4_status": "IN_PROGRESS — PT-S131-MCP-REG-001 EAG-2 완료. Bridge 배포. HC-T-04 블로커로 실측 중단. S132 재시도 예정."
+    },
+    "s133_status": {
+      "session": 133,
+      "date": "2026-05-16",
+      "priority_1_status": "COMPLETE (S114)",
+      "priority_2_status": "IN_PROGRESS — M-01~M-07 정규 운용 중.",
+      "priority_3_status": "COMPLETE (S117)",
+      "priority_4_status": "COMPLETE — PT-S131-MCP-REG-001 EAG-3 COMPLETE(S133). claude.ai 커넥터 등록 성공. 차기: PT-S132-API-001."
     }
+  },
+  "mcp_read_constants": {
+    "version": "v1.0",
+    "authority": "VPS_OPERATIONAL_REGISTRY",
+    "source_ref": "tools/governance/MCP_READ_CONSTANTS_REGISTRY_v1.0.json",
+    "allowed_purposes": [
+      "OBSERVATION",
+      "EVIDENCE_INSPECTION",
+      "AUDIT_INSPECTION",
+      "CONSISTENCY_CHECK",
+      "STALE_DETECTION"
+    ],
+    "forbidden_purposes": [
+      "EXECUTION_COORDINATION",
+      "DEPLOYMENT_STEERING",
+      "RUNTIME_CONTROL",
+      "MUTATION_PREPARATION",
+      "APPROVAL_SUBSTITUTION"
+    ],
+    "allowed_services": [
+      "aiba-mcp-bridge",
+      "nginx"
+    ],
+    "forbidden_path_patterns_ref": "SOURCE_REGISTRY_ONLY",
+    "session_boot_required": true,
+    "unknown_purpose_policy": "FAIL_CLOSED"
   }
 }
