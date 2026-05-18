@@ -1,0 +1,30 @@
+{
+  "schema": "MCP_READ_CONSTANTS_REGISTRY",
+  "version": "v1.0",
+  "created_session": 139,
+  "created_date": "2026-05-18",
+  "authority": "VPS_OPERATIONAL_REGISTRY",
+  "description": "MCP Read Plane 운영 상수 레지스트리. Read Plane 상수만 포함. Write Plane / approval token / credential / runtime secret 포함 금지.",
+  "allowed_purposes": [
+    "OBSERVATION",
+    "EVIDENCE_INSPECTION",
+    "AUDIT_INSPECTION",
+    "CONSISTENCY_CHECK",
+    "STALE_DETECTION"
+  ],
+  "forbidden_purposes": [
+    "EXECUTION_COORDINATION",
+    "DEPLOYMENT_STEERING",
+    "RUNTIME_CONTROL",
+    "MUTATION_PREPARATION",
+    "APPROVAL_SUBSTITUTION"
+  ],
+  "allowed_services": [
+    "aiba-mcp-bridge",
+    "nginx"
+  ],
+  "forbidden_path_patterns": "SOURCE_REGISTRY_ONLY — mcp_read_server.py 참조",
+  "unknown_purpose_policy": "FAIL_CLOSED",
+  "session_boot_required": true,
+  "scope_boundary": "READ_PLANE_ONLY"
+}
