@@ -1,12 +1,13 @@
 """
-mcp_write_gatekeeper.py — MCP Write Plane Gatekeeper v1.1.0
+mcp_write_gatekeeper.py — MCP Write Plane Gatekeeper v1.2.0
 PT-S136-MCP-WRITE-GATEKEEPER
 
-v1.1.0 강제 장치 추가:
-  P0: expected_content_hash 강제 검증 (content 조작 물리 차단)
-  P1: write_result_receipt 생성 + unconfirmed 시 다음 write FC-T2 차단
-  P2: TOKEN_SOFT_EXPIRED — 8분 경과 시 FC-T1 ABORT
-  P3: sandbox baseline drift 탐지 — FC-T3 LOCK
+v1.2.0 (S141): NORMAL → RECOVERY_MODE 조건부 전이 추가
+  - beo_enter_recovery_mode(pending_count) 조건 확장
+  - NORMAL + pending_count > 0 → RECOVERY_MODE (STALE_PENDING_RECEIPT_RECOVERY)
+  - NORMAL + pending_count == 0 → DENY (FAIL_CLOSED)
+  - 기존 LOCKED/HOLD → RECOVERY_MODE 경로 무변경
+  - 도미 S141-002 설계 + 제니 TRUST_READY PASS(T-1~T-6) + EAG-2 비오(Joshua) 승인
 """
 
 import hashlib
@@ -30,7 +31,7 @@ from mcp_write_config import (
 )
 from mcp_approval_authority import compute_approval_hash, compute_receipt_hash
 
-GATEKEEPER_VERSION = "1.1.0"
+GATEKEEPER_VERSION = "1.2.0"
 
 
 # ── Enums & Exceptions ────────────────────────────────────────────────
@@ -149,10 +150,6 @@ class MCP_WriteGatekeeper:
     # ── P1: Unconfirmed Receipt Check ─────────────────────────────────
 
     def _check_unconfirmed_receipts(self, approval: dict) -> None:
-        """
-        P1: unconfirmed receipt 존재 시 approval의 previous_receipt_confirmation 검증.
-        없으면 FC-T2.
-        """
         if not os.path.exists(self._receipts_dir):
             return
 
@@ -173,7 +170,6 @@ class MCP_WriteGatekeeper:
         if not unconfirmed:
             return
 
-        # unconfirmed 존재 — approval에 confirmation 필요
         confirmation = approval.get("previous_receipt_confirmation")
         if not confirmation:
             raise FailClosedError(
@@ -188,17 +184,14 @@ class MCP_WriteGatekeeper:
         prev_id = confirmation.get("previous_receipt_id")
         prev_hash = confirmation.get("previous_receipt_hash")
 
-        # 해당 receipt 파일 찾기
         prev_file = os.path.join(self._receipts_dir, f"{prev_id}.json")
         if not os.path.exists(prev_file):
             raise FailClosedError("T2", f"previous_receipt_id not found: {prev_id}")
 
-        # hash 검증
         actual_hash = compute_receipt_hash(prev_file)
         if actual_hash != prev_hash:
             raise FailClosedError("T2", "previous_receipt_hash mismatch — confirmation invalid")
 
-        # 여러 unconfirmed 중 하나만 확인된 경우
         remaining = [r for r in unconfirmed if r["receipt_id"] != prev_id]
         if remaining:
             raise FailClosedError(
@@ -206,7 +199,7 @@ class MCP_WriteGatekeeper:
                 f"multiple unconfirmed receipts: {len(remaining)} remaining after confirmation",
             )
 
-    # ── P2: Token Management (Soft TTL) ──────────────────────────────
+    # ── P2: Token Management ──────────────────────────────────────────
 
     def _issue_token(self, approval_id: str, target_path: str, ext: str) -> str:
         token_id = f"WRITE-TOKEN-{uuid.uuid4().hex.upper()}"
@@ -217,8 +210,8 @@ class MCP_WriteGatekeeper:
                 "target_path": os.path.abspath(target_path),
                 "extension": ext,
                 "issued_at": time.monotonic(),
-                "soft_ttl": SOFT_TOKEN_TTL,  # 8분
-                "ttl": TOKEN_TTL,             # 10분
+                "soft_ttl": SOFT_TOKEN_TTL,
+                "ttl": TOKEN_TTL,
                 "used": False,
             }
         return token_id
@@ -231,10 +224,8 @@ class MCP_WriteGatekeeper:
             if token["used"]:
                 raise FailClosedError("T4", f"token already used: {token_id}")
             elapsed = time.monotonic() - token["issued_at"]
-            # P2: HARD expiry → FC-T4
             if elapsed > token["ttl"]:
                 raise FailClosedError("T4", f"token HARD expired ({elapsed:.0f}s)")
-            # P2: SOFT expiry → FC-T1 (abort, no lock)
             if elapsed > token["soft_ttl"]:
                 raise FailClosedError(
                     "T1",
@@ -249,7 +240,6 @@ class MCP_WriteGatekeeper:
     # ── P3: Sandbox Baseline ──────────────────────────────────────────
 
     def _scan_sandbox(self) -> dict:
-        """sandbox 전체 파일 해시 스캔. {abs_path: hash} 반환."""
         result = {}
         for sandbox_path in self._allowed_paths:
             abs_sandbox = os.path.abspath(sandbox_path.rstrip("/"))
@@ -269,7 +259,6 @@ class MCP_WriteGatekeeper:
         return result
 
     def _create_baseline(self) -> dict:
-        """sandbox 현재 상태로 baseline 생성 및 저장."""
         baseline_id = f"MCP-WRITE-BASELINE-{uuid.uuid4().hex[:12].upper()}"
         files_data = self._scan_sandbox()
         files_list = [
@@ -313,24 +302,20 @@ class MCP_WriteGatekeeper:
         return max(baselines, key=lambda b: b["created_at"])
 
     def _check_baseline_drift(self) -> None:
-        """P3: baseline과 현재 sandbox 상태 비교. drift 시 FC-T3."""
         baseline = self._load_latest_baseline()
         if baseline is None:
-            # 최초 write — baseline 생성 후 통과
             self._create_baseline()
             return
 
         baseline_files = {f["path"]: f["hash"] for f in baseline.get("files", [])}
         current_files = self._scan_sandbox()
 
-        # baseline에 있던 파일이 변경/삭제된 경우
         for fpath, expected_hash in baseline_files.items():
             if fpath not in current_files:
                 raise FailClosedError("T3", f"baseline drift: file deleted — {fpath}")
             if current_files[fpath]["hash"] != expected_hash:
                 raise FailClosedError("T3", f"baseline drift: unauthorized modification — {fpath}")
 
-        # baseline에 없던 파일이 추가된 경우 (MCP 외부 접근 탐지)
         for fpath in current_files:
             if fpath not in baseline_files:
                 raise FailClosedError("T3", f"baseline drift: unauthorized addition — {fpath}")
@@ -368,13 +353,9 @@ class MCP_WriteGatekeeper:
             json.dump(snapshot, f, indent=2, ensure_ascii=False)
         return snapshot
 
-    # ── P0: Content Hash Verification ────────────────────────────────
+    # ── P0: Content Hash ──────────────────────────────────────────────
 
     def _verify_content_hash(self, target_path: str, expected_hash: Optional[str]) -> str:
-        """
-        P0: 실제 쓰인 content의 SHA-256이 approval의 expected_content_hash와 일치하는지 검증.
-        expected_hash가 None이면 FC-T4 (강제 장치 — hash 없는 approval 거부).
-        """
         if expected_hash is None:
             raise FailClosedError(
                 "T4",
@@ -471,42 +452,21 @@ class MCP_WriteGatekeeper:
         approval: dict = {}
 
         try:
-            # 0. 상태 확인
             self._assert_writable()
-
-            # 1. 경로 검증
             if not self._validate_path(target_path):
                 raise FailClosedError("T4", f"path not in sandbox whitelist: {target_path}")
-
-            # 2. 확장자 검증
             if not self._validate_extension(target_path):
                 raise FailClosedError("T4", f"extension not allowed: {ext}")
-
-            # 3. approval 로드 및 검증
             approval = self._load_approval(approval_id)
             self._verify_approval(approval, target_path, ext)
             expected_content_hash = approval.get("scope", {}).get("expected_content_hash")
-
-            # 4. P1: unconfirmed receipt 확인
             self._check_unconfirmed_receipts(approval)
-
-            # 5. token 발급
             token_id = self._issue_token(approval_id, target_path, ext)
-
-            # 6. P3: baseline drift 확인
             self._check_baseline_drift()
-
-            # 7. pre-write snapshot
             snapshot = self._seal_snapshot(target_path, approval_id, token_id)
             hash_before = snapshot["hash_before"]
-
-            # 8. P2: token 소비 (soft TTL 포함)
             self._consume_token(token_id, target_path)
-
-            # 9. approval 사용 처리
             self._used_approvals.add(approval_id)
-
-            # 10. 파일 쓰기
             try:
                 parent = os.path.dirname(target_path)
                 if parent:
@@ -515,29 +475,17 @@ class MCP_WriteGatekeeper:
                     f.write(content)
             except Exception as exc:
                 raise FailClosedError("T1", f"write failed: {exc}")
-
-            # 11. P0: content hash 검증
             actual_content_hash = self._verify_content_hash(target_path, expected_content_hash)
-
-            # 12. hash_after
             hash_after = self._sha256_file(target_path)
-
-            # 13. RECOVERY_MODE 추적
             if self.get_state() == WritePlaneState.RECOVERY_MODE:
                 self._recovery_write_used = True
-
-            # 14. P3: baseline 갱신 (PASS 후만)
             self._create_baseline()
-
-            # 15. P1: receipt 생성
             receipt = self._seal_receipt(
                 event_id, approval, token_id, snapshot,
                 hash_before, hash_after,
                 expected_content_hash, actual_content_hash,
                 "PASS", None, None,
             )
-
-            # 16. audit
             self._append_audit({
                 "event_id": event_id,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -557,7 +505,6 @@ class MCP_WriteGatekeeper:
                 "result": "PASS",
                 "failure_reason": None,
             })
-
             return {
                 "result": "PASS",
                 "event_id": event_id,
@@ -565,7 +512,6 @@ class MCP_WriteGatekeeper:
                 "hash_after": hash_after,
                 "receipt_id": receipt["receipt_id"],
             }
-
         except FailClosedError as fc:
             fc_tier = fc.tier
             failure_reason = fc.reason
@@ -586,7 +532,6 @@ class MCP_WriteGatekeeper:
         elif fc.tier in ("T3", "T4"):
             self._set_state(WritePlaneState.LOCKED)
 
-        # receipt 생성 (FAIL도 항상 생성)
         if approval:
             try:
                 self._seal_receipt(
@@ -620,12 +565,29 @@ class MCP_WriteGatekeeper:
 
     # ── Recovery (비오님 전용) ─────────────────────────────────────────
 
-    def beo_recovery_approve(self) -> None:
+    def beo_enter_recovery_mode(self, pending_count: int = 0) -> str:
+        """
+        LOCKED/HOLD → RECOVERY_MODE : 무조건 허용 (기존 경로)
+        NORMAL → RECOVERY_MODE      : pending_count > 0 조건부 허용 (v1.2.0 신규)
+                                      진입 사유: STALE_PENDING_RECEIPT_RECOVERY
+        반환: entry_reason 문자열
+        """
         with self._state_lock:
-            if self._state not in (WritePlaneState.LOCKED, WritePlaneState.HOLD):
-                raise ValueError(f"RECOVERY_MODE 진입 불가: {self._state.value}")
-            self._state = WritePlaneState.RECOVERY_MODE
-            self._recovery_write_used = False
+            if self._state in (WritePlaneState.LOCKED, WritePlaneState.HOLD):
+                self._state = WritePlaneState.RECOVERY_MODE
+                self._recovery_write_used = False
+                return "FAULT_RECOVERY"
+
+            if self._state == WritePlaneState.NORMAL:
+                if pending_count <= 0:
+                    raise ValueError(
+                        "NORMAL → RECOVERY_MODE 불가: PENDING receipt 없음 (FAIL_CLOSED)"
+                    )
+                self._state = WritePlaneState.RECOVERY_MODE
+                self._recovery_write_used = False
+                return "STALE_PENDING_RECEIPT_RECOVERY"
+
+            raise ValueError(f"RECOVERY_MODE 진입 불가: {self._state.value}")
 
     def beo_recovery_close(self) -> None:
         with self._state_lock:
