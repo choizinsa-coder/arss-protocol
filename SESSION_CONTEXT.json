@@ -898,6 +898,26 @@
       "completed_date": "2026-05-18",
       "commit": "81e77c0",
       "deployed_file": "tools/mcp/mcp_http_bridge.py v2.2.0"
+    },
+    {
+      "id": "PT-S140-MCP-WRITE-RECOVERY-001",
+      "title": "mcp_write_server.py v2.1.0 — recovery endpoint 추가",
+      "status": "COMPLETED",
+      "session": 140,
+      "commit": "2a5a5c8",
+      "note": "/internal/recovery/enter + /internal/recovery/close. BEO_ONLY loopback-only. Jeni TRUST_READY PASS."
+    },
+    {
+      "id": "PT-S140-MCP-WRITE-E2E-001",
+      "title": "MCP write_file E2E 검증 — receipt 상태 전이 설계 완료 후 재시도",
+      "status": "BLOCKED",
+      "session": 140,
+      "blocked_by": "receipt status CONFIRMED 전이 메커니즘 미구현 — 도미 설계 대기",
+      "caddy_incidents": [
+        "1차: content hash mismatch (개행 누락)",
+        "2차: approval TTL 만료",
+        "3차: Write Plane LOCKED (T3 P3 baseline drift 오판)"
+      ]
     }
   ],
   "agent_focus": {
@@ -1483,13 +1503,13 @@
   },
   "chain": {
     "last_rpu": "RPU-0043",
-    "note": "S122: PT-S115-BOOT-001 vNext 계층 구축. commit ab9562e. chain 변경 없음. tip 유지.",
+    "note": "S140: mcp_write_server v2.1.0 recovery endpoint 추가. commit 2a5a5c8.",
     "phase": "PHASE 1 COMPLETE",
     "phase1_completed": "2026-03-19",
-    "tip": "81e77c0",
-    "prev_tip": "3dd5d2fa5c98c8d6ddf0bfaff33479c4a1b7c6d1b800d7fa4d07208b4d65de30",
-    "last_updated": 135,
-    "session": 139
+    "tip": "2a5a5c8",
+    "prev_tip": "81e77c0",
+    "last_updated": 140,
+    "session": 140
   },
   "code_health": {
     "briefings_issued": [
@@ -2307,7 +2327,7 @@
     "migrated_at": "2026-05-10T00:00:00.000+09:00",
     "migrated_session": 114
   },
-  "generated_at": "2026-05-18",
+  "generated_at": "2026-05-19T06:33:06.131630+00:00",
   "hold_tasks": [
     {
       "created_session": 48,
@@ -2999,37 +3019,28 @@
       "enforcement": "선언 누락 또는 생성 누락 시 세션 종료 선언 불가"
     }
   },
-  "session_count": 139,
+  "session_count": 140,
   "session_delta": {
-    "session": 139,
-    "date": "2026-05-18",
-    "tasks_completed": [
-      "PT-S139-MCP-READ-CONSTANTS-001",
-      "PT-S139-MCP-WRITE-BRIDGE-001"
+    "session": 140,
+    "date": "2026-05-19",
+    "summary": "MCP write_file E2E 검증 시도. 커넥터 캐시 해소 완료. mcp_write_server v2.1.0 recovery endpoint 배포. 교착 상태 발견(receipt status 전이 메커니즘 누락). 도미 설계 대기.",
+    "completed": [
+      "MCP 커넥터 갱신 — write_file/get_write_plane_state 노출 (총 13개 도구)",
+      "write_file E2E 원인 진단 (B→A→C, 원인 C 확정)",
+      "mcp_write_server.py v2.1.0 배포 (recovery endpoint 추가, commit 2a5a5c8)",
+      "Jeni TRUST_READY PASS"
     ],
-    "tasks_added": [
-      "PT-S139-MCP-READ-CONSTANTS-001",
-      "PT-S139-MCP-WRITE-BRIDGE-001"
+    "in_progress": [
+      "write_file E2E 검증 (BLOCKED — receipt status 전이 설계 GAP)"
     ],
-    "tasks_hold": [],
-    "lessons_added": [
-      "LESSON-S139-PRESENT-FILES-MANDATORY"
+    "caddy_incidents": [
+      "content hash mismatch: 개행 미포함 19bytes 전송 → 1차 E2E 실패 + Write Plane LOCKED",
+      "handle_recovery_close() 교착 구조 사전 미파악: receipt status 전이 메커니즘 없이 PENDING 체크만 구현",
+      "present_files 누락 후 SCP 명령 제시 (비오님 지적 — 반복 패턴)"
     ],
-    "deployed_files": [
-      "tools/governance/MCP_READ_CONSTANTS_REGISTRY_v1.0.json",
-      "tools/mcp/mcp_http_bridge.py (v2.2.0)"
-    ],
-    "commits": [
-      "4295939",
-      "81e77c0"
-    ],
-    "key_events": [
-      "PT-S132-API-001 비오님 지시로 폐기 — 더 이상 고려하지 않음",
-      "ALLOWED_PURPOSES 미문서화 문제 발견 — 세션 초반 MCP 접속 실패 (UNKNOWN_PURPOSE)",
-      "문제 1 해소: MCP_READ_CONSTANTS_REGISTRY_v1.0.json 등재 (commit 4295939)",
-      "문제 2 해소: mcp_http_bridge.py v2.2.0 — write_file/get_write_plane_state 브릿지 연결 (commit 81e77c0)",
-      "캐디 반복 실수: present_files 미호출 후 SCP 명령 제공 — 비오님 지적",
-      "캐디 반복 실수 원인: 서두름으로 인한 전달 완료 확인 단계 생략"
+    "beo_complaints": [
+      "present_files 없이 SCP 명령 제시 — 반복되는 상수적 패턴으로 지적",
+      "AI 성능의 구조적 한계로 비오님 언급"
     ]
   },
   "session_open_rules": {
@@ -3073,22 +3084,17 @@
     }
   },
   "session_reentry": {
-    "session": 139,
-    "priority_1": {
-      "task_id": "MCP-WRITE-E2E-S140",
-      "title": "MCP Write Plane end-to-end 실사용 검증",
-      "status": "PENDING",
-      "priority": "HIGH",
-      "action": "비오님 approval_authority → write_file MCP 호출 → receipt 확인",
-      "note": "write_file tool S140부터 claude.ai 커넥터에서 사용 가능"
+    "resume_point": "MCP write_file E2E 검증 재개",
+    "current_state": {
+      "write_plane": "LOCKED",
+      "pending_receipts": [
+        "MCP-WRITE-RECEIPT-0CD1F9D0A05A",
+        "MCP-WRITE-RECEIPT-13418A375071"
+      ],
+      "design_gap": "receipt status 전이 메커니즘 없음 — 도미 설계 필요"
     },
-    "priority_2": {
-      "task_id": "PT-S115-OBS-001",
-      "title": "Visibility Metrics 정규 운용",
-      "status": "IN_PROGRESS",
-      "priority": "HIGH",
-      "action": "계속 운용"
-    }
+    "first_action": "도미에게 receipt status CONFIRMED 전이 설계 요청",
+    "note": "S140에서 recovery/close가 PENDING receipt 존재로 거부됨. receipt를 CONFIRMED로 전이하는 메커니즘이 없어 교착. mcp_approval_authority.py 또는 별도 confirm 도구 필요."
   },
   "shadow_pipeline": {
     "approved_by": "비오(Joshua) EAG-3",
@@ -3129,7 +3135,7 @@
       "disabled_reason": "evolution_score SOFT_KILL DIS-049",
       "status": "DISABLED"
     },
-    "last_session_date": "2026-05-18",
+    "last_session_date": "2026-05-19",
     "manual_steps": 2,
     "prev_session_hash": "SESSION_CONTEXT_S70_FINAL.json SHA256 기준",
     "prev_session_hash_basis": "SESSION_CONTEXT_S65_FINAL.json 파일 전체 SHA256",
@@ -3577,12 +3583,12 @@
       },
       "mcp_write_server": {
         "file": "tools/mcp/mcp_write_server.py",
-        "version": "1.0.0",
+        "version": "2.1.0",
         "status": "DEPLOYED",
-        "commit": "744b714",
-        "deployed_session": 136,
-        "deployed_date": "2026-05-17",
-        "note": "포트 8444. Read Plane(8443)과 물리 분리. Nginx 미연결 — 별도 EAG 필요."
+        "commit": "2a5a5c8",
+        "deployed_session": 140,
+        "deployed_date": "2026-05-19",
+        "note": "v2.1.0: /internal/recovery/enter + /internal/recovery/close 추가. BEO_ONLY loopback-only. MCP 미노출. Jeni TRUST-ADVISORY 반영(RECEIPTS_DIR FAIL-CLOSED)."
       },
       "test_mcp_write_gatekeeper": {
         "file": "tests/test_mcp_write_gatekeeper.py",
@@ -3625,23 +3631,22 @@
       "created_session": 136
     },
     "mcp_write_plane_status": {
-      "phase": "BRIDGE_CONNECTED",
-      "write_server_nginx_status": "CONNECTED",
-      "write_server_port": 8444,
-      "activation_required": "Nginx upstream 추가 + 서비스 등록 — 별도 EAG 필요",
-      "gatekeeper_version": "1.1.0",
-      "enforcement_active": true,
-      "p0_content_hash": true,
-      "p1_receipt": true,
-      "p2_soft_expiry_minutes": 8,
-      "p3_baseline_drift": true,
-      "jeni_5_rules_received": true,
-      "caddy_5_rules_acknowledged": true
+      "phase": "E2E_VALIDATION_IN_PROGRESS",
+      "write_plane_state": "LOCKED",
+      "pending_receipts": [
+        "MCP-WRITE-RECEIPT-0CD1F9D0A05A",
+        "MCP-WRITE-RECEIPT-13418A375071"
+      ],
+      "design_gap": "receipt status CONFIRMED 전이 메커니즘 누락 — 도미 설계 대기",
+      "caddy_incidents_this_session": [
+        "content hash mismatch (개행 미포함 19bytes 전송 → 20bytes 불일치)",
+        "receipt status 전이 없는 handle_recovery_close() 구현 — 교착 초래"
+      ]
     },
     "aiba_mcp_write_service": "inactive (disabled, reset-failed — S137)",
     "nginx_arss_mcp_config": "bak_s137 rollback 상태 (Write Plane 미연결)",
     "arss_mcp_bak_s137": "존재 (/etc/nginx/sites-enabled/arss-mcp.bak_s137)",
-    "mcp_write_server_version": "v2.0.0 (commit 6992e03)",
+    "mcp_write_server_version": "v2.1.0 (commit 2a5a5c8)",
     "mcp_write_plane": {
       "status": "OPERATIONAL",
       "nginx_config": "/etc/nginx/sites-enabled/arss-mcp (Write Plane 포함)",
@@ -3668,6 +3673,13 @@
       "deployed_session": 139,
       "deployed_date": "2026-05-18",
       "note": "MCP Read Plane 운영 상수 레지스트리. SESSION_CONTEXT mcp_read_constants의 원본 권위."
+    },
+    "mcp_connector_status": {
+      "write_file_exposed": true,
+      "get_write_plane_state_exposed": true,
+      "total_tools": 13,
+      "connector_refreshed_session": 140,
+      "note": "S140: claude.ai 커넥터 캐시 해소 → write_file/get_write_plane_state 노출 완료"
     }
   },
   "wf_structure_confirmed": {
@@ -3936,9 +3948,15 @@
     "reason": "S105: PT-S99-GOV-002 COMPLETE. Complexity Governance v1.0 LOCKED. Phase 3C 계속 진행 가능."
   },
   "next_session_first_action": {
-    "action": "MCP Write Plane end-to-end 실사용 검증",
-    "reason": "write_file이 브릿지에 연결됐으나 실제 approval → write → receipt 전체 흐름 미검증. S140 첫 작업.",
-    "note": "비오님 approval_authority 실행 → caddy write_file 호출 → receipt 확인"
+    "priority_1": {
+      "task": "PT-S140-MCP-WRITE-E2E-001",
+      "action": "도미에게 receipt status CONFIRMED 전이 설계 요청 및 구현",
+      "context": "Write Plane LOCKED, PENDING receipts 2건. recovery/enter → RECOVERY_MODE → receipt status CONFIRMED 전이 → recovery/close → NORMAL 순서 필요."
+    },
+    "priority_2": {
+      "task": "PT-S115-OBS-001",
+      "action": "Visibility Metrics 정규 운용 계속"
+    }
   },
   "stability_patch_s98": {
     "quarantine_status": "TIER_D",
