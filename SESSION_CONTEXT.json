@@ -909,15 +909,22 @@
     },
     {
       "id": "PT-S140-MCP-WRITE-E2E-001",
-      "title": "MCP write_file E2E 검증 — receipt 상태 전이 설계 완료 후 재시도",
-      "status": "BLOCKED",
+      "title": "MCP write_file E2E 검증 — S141 교착 해소 완료, E2E 재시도 필요",
+      "status": "IN_PROGRESS",
       "session": 140,
-      "blocked_by": "receipt status CONFIRMED 전이 메커니즘 미구현 — 도미 설계 대기",
+      "blocked_by": null,
       "caddy_incidents": [
         "1차: content hash mismatch (개행 누락)",
         "2차: approval TTL 만료",
         "3차: Write Plane LOCKED (T3 P3 baseline drift 오판)"
-      ]
+      ],
+      "note": "S141: receipt finalize 메커니즘 구현 완료(mcp_write_server v2.2.0→v2.3.0, gatekeeper v1.2.0). PENDING 2건 EXPIRED 처리. Write Plane NORMAL 복귀. commits e685455. 차기 세션: 새 EAG approval 발급 후 write_file E2E 재시도.",
+      "s141_commits": [
+        "1888025",
+        "e685455"
+      ],
+      "s141_pytest": "727 passed / 15 failed(기존) / 158 skipped",
+      "write_plane_status": "NORMAL"
     }
   ],
   "agent_focus": {
@@ -1506,10 +1513,13 @@
     "note": "S140: mcp_write_server v2.1.0 recovery endpoint 추가. commit 2a5a5c8.",
     "phase": "PHASE 1 COMPLETE",
     "phase1_completed": "2026-03-19",
-    "tip": "2a5a5c8",
+    "tip": "e685455",
     "prev_tip": "81e77c0",
     "last_updated": 140,
-    "session": 140
+    "session": 140,
+    "last_commit_session": 141,
+    "last_commit_date": "2026-05-19",
+    "last_commit_message": "feat: receipt finalize + NORMAL recovery entry (PT-S141)"
   },
   "code_health": {
     "briefings_issued": [
@@ -2327,7 +2337,7 @@
     "migrated_at": "2026-05-10T00:00:00.000+09:00",
     "migrated_session": 114
   },
-  "generated_at": "2026-05-19T06:33:06.131630+00:00",
+  "generated_at": "2026-05-19T09:53:55.553114+00:00",
   "hold_tasks": [
     {
       "created_session": 48,
@@ -3019,28 +3029,34 @@
       "enforcement": "선언 누락 또는 생성 누락 시 세션 종료 선언 불가"
     }
   },
-  "session_count": 140,
+  "session_count": 141,
   "session_delta": {
-    "session": 140,
+    "session": 141,
     "date": "2026-05-19",
-    "summary": "MCP write_file E2E 검증 시도. 커넥터 캐시 해소 완료. mcp_write_server v2.1.0 recovery endpoint 배포. 교착 상태 발견(receipt status 전이 메커니즘 누락). 도미 설계 대기.",
+    "summary": "receipt lifecycle resolution 설계·구현·배포 완료. NORMAL → RECOVERY_MODE 조건부 전이 추가. PENDING receipts 2건 EXPIRED 처리. Write Plane NORMAL 복귀.",
     "completed": [
-      "MCP 커넥터 갱신 — write_file/get_write_plane_state 노출 (총 13개 도구)",
-      "write_file E2E 원인 진단 (B→A→C, 원인 C 확정)",
-      "mcp_write_server.py v2.1.0 배포 (recovery endpoint 추가, commit 2a5a5c8)",
-      "Jeni TRUST_READY PASS"
+      "receipt finalize endpoint 구현 (mcp_write_server v2.2.0)",
+      "NORMAL → RECOVERY_MODE 조건부 전이 구현 (mcp_write_server v2.3.0, gatekeeper v1.2.0)",
+      "도미 설계 2건 (BRIEFING-DOMI-S141-001/002) + 제니 검증 4건 PASS",
+      "sys.modules 전역 mock 오염 해소 — patch 격리 방식으로 테스트 재작성",
+      "Write Plane 교착 해소 — PENDING 2건 EXPIRED, recovery/close, NORMAL 복귀",
+      "pytest 727/15/158 (신규 25건 편입)",
+      "commits 1888025 + e685455"
     ],
     "in_progress": [
-      "write_file E2E 검증 (BLOCKED — receipt status 전이 설계 GAP)"
+      "write_file E2E 재시도 (Write Plane NORMAL, 새 approval 필요)"
     ],
     "caddy_incidents": [
-      "content hash mismatch: 개행 미포함 19bytes 전송 → 1차 E2E 실패 + Write Plane LOCKED",
-      "handle_recovery_close() 교착 구조 사전 미파악: receipt status 전이 메커니즘 없이 PENDING 체크만 구현",
-      "present_files 누락 후 SCP 명령 제시 (비오님 지적 — 반복 패턴)"
+      "테스트 파일 import 경로 오류 3회 반복 (mcp_write_server_v2_2_0, v2_3_0 — VPS 배포명 불일치 사전 미확인)",
+      "sys.modules 전역 mock 방식 채택 → collection 오염 유발 — 도미/제니 판단으로 해소",
+      "conftest.py 훅 방향 오판 2회 (pytest_runtest_setup → pytest_collect_file) — 근본 원인 미파악 반복",
+      "zzz_ 접두사 임시방편 적용 후 도미/제니 개입으로 철회"
     ],
     "beo_complaints": [
-      "present_files 없이 SCP 명령 제시 — 반복되는 상수적 패턴으로 지적",
-      "AI 성능의 구조적 한계로 비오님 언급"
+      "\"몇 백 년이라고 계속 이럴 거냐? 무한루프 아냐?\" — sys.modules 문제 반복 미해소",
+      "\"캐디 못하겠으면 빠져!\" — PowerShell 이스케이프 문제 반복",
+      "\"캐디 너 아무말이나 막 하는 거 맞지?\" — 근본 원인 미파악 상태 반복 시도",
+      "\"도미와 제니에게 도움을 청하라\" — 캐디 독자 판단 한계 지적"
     ]
   },
   "session_open_rules": {
@@ -3084,17 +3100,14 @@
     }
   },
   "session_reentry": {
-    "resume_point": "MCP write_file E2E 검증 재개",
+    "resume_point": "write_file E2E 재시도",
     "current_state": {
-      "write_plane": "LOCKED",
-      "pending_receipts": [
-        "MCP-WRITE-RECEIPT-0CD1F9D0A05A",
-        "MCP-WRITE-RECEIPT-13418A375071"
-      ],
-      "design_gap": "receipt status 전이 메커니즘 없음 — 도미 설계 필요"
+      "write_plane": "NORMAL",
+      "pending_receipts": [],
+      "approval_needed": true
     },
-    "first_action": "도미에게 receipt status CONFIRMED 전이 설계 요청",
-    "note": "S140에서 recovery/close가 PENDING receipt 존재로 거부됨. receipt를 CONFIRMED로 전이하는 메커니즘이 없어 교착. mcp_approval_authority.py 또는 별도 confirm 도구 필요."
+    "first_action": "새 EAG approval 발급 → write_file E2E 실행",
+    "note": "S141에서 receipt finalize + 교착 해소 완료. Write Plane NORMAL. E2E 자체는 미완 — S142에서 재시도."
   },
   "shadow_pipeline": {
     "approved_by": "비오(Joshua) EAG-3",
@@ -3919,7 +3932,24 @@
     "archive_ref": "SESSION_CONTEXT_ARCHIVE_TIER_D_S114.json",
     "integrity_hash": "a31acc254718ac827cbaa3e9f31ab0ee65a1c8dd878527723ae288cbb484cf5c",
     "migrated_at": "2026-05-10T00:00:00.000+09:00",
-    "migrated_session": 114
+    "migrated_session": 114,
+    "s141": {
+      "session": 141,
+      "date": "2026-05-19",
+      "changes": [
+        "mcp_write_server.py v2.1.0 → v2.2.0 (receipt finalize endpoint)",
+        "mcp_write_server.py v2.2.0 → v2.3.0 (NORMAL → RECOVERY_MODE 조건부 전이)",
+        "mcp_write_gatekeeper.py v1.0.0 → v1.2.0 (beo_enter_recovery_mode 조건 확장)",
+        "tests/test_mcp_write_server_finalize.py 신규 (T-1~T-12)",
+        "tests/test_mcp_recovery_enter_normal.py 신규 (N-1~N-8, G-1~G-5)",
+        "tests/conftest.py 신규 (sys.modules 격리)"
+      ],
+      "commits": [
+        "1888025",
+        "e685455"
+      ],
+      "pytest": "727 passed / 15 failed(기존) / 158 skipped"
+    }
   },
   "stability_patch_s97": {
     "quarantine_status": "TIER_D",
@@ -3950,8 +3980,8 @@
   "next_session_first_action": {
     "priority_1": {
       "task": "PT-S140-MCP-WRITE-E2E-001",
-      "action": "도미에게 receipt status CONFIRMED 전이 설계 요청 및 구현",
-      "context": "Write Plane LOCKED, PENDING receipts 2건. recovery/enter → RECOVERY_MODE → receipt status CONFIRMED 전이 → recovery/close → NORMAL 순서 필요."
+      "action": "write_file E2E 재시도 — 새 EAG approval 발급 후 실행",
+      "context": "Write Plane NORMAL. 기존 PENDING receipts 모두 EXPIRED 처리 완료. 새 approval 필요."
     },
     "priority_2": {
       "task": "PT-S115-OBS-001",
@@ -4868,5 +4898,14 @@
     "forbidden_path_patterns_ref": "SOURCE_REGISTRY_ONLY",
     "session_boot_required": true,
     "unknown_purpose_policy": "FAIL_CLOSED"
+  },
+  "visibility_metrics_s141": {
+    "M-01_active_canonical_key_count": 42,
+    "M-02_tier_d_quarantine_key_count": 12,
+    "M-03_ceiling_utilization_rate": "42/42 = 100% (WITHIN_LIMIT)",
+    "M-04_session_delta_size": "LARGE (2 design cycles, 4 deploy commits)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S140.json ACTIVE",
+    "M-06_active_task_load": 54,
+    "M-07_stabilization_compliance": "N/A (Stabilization Mode 해제됨 S120)"
   }
 }
