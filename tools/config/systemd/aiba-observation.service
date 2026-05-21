@@ -1,0 +1,18 @@
+[Unit]
+Description=AIBA Observation Server (OBSERVATION_ONLY + SANDBOX_WRITE_GATE)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/arss/engine/arss-protocol/tools
+ExecStart=/usr/bin/python3 /opt/arss/engine/arss-protocol/tools/observation_server.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aiba-observation
+
+[Install]
+WantedBy=multi-user.target
