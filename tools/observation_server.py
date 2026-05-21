@@ -25,7 +25,7 @@ from sandbox_validator import validate_write, SANDBOX_ROOT, ALLOWED_AGENTS
 
 # ── 상수 ───────────────────────────────────────────────────────────────────
 
-PORT = 8445
+PORT = 8446
 KST = timezone(timedelta(hours=9))
 AUDIT_DIR = Path("/opt/arss/engine/arss-protocol/tools/sandbox/audit")
 TOKEN_FILE = Path("/opt/arss/engine/arss-protocol/tools/sandbox/.tokens")
