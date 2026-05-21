@@ -2,8 +2,9 @@
 observation_server.py
 AIBA Observation Server — Layer 2 (L2-1, L2-10, L2-12)
 SSOT: BRIEFING-DOMI-S142-DESIGN-REQUEST-FINAL
+IMPL-NOTE-04: Fail-Closed unlock 메커니즘 — S143
 
-port: 8445
+port: 8446
 runtime: Python stdlib HTTP server
 purpose: OBSERVATION_ONLY + SANDBOX_WRITE_GATE
 """
@@ -13,6 +14,7 @@ import os
 import hashlib
 import logging
 import threading
+import tempfile
 from datetime import datetime, timezone, timedelta
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
@@ -20,7 +22,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 
-from projection_builder import get_projection, get_stale_output, check_ttl
+from projection_builder import get_projection, get_stale_output, check_ttl, invalidate_cache
 from sandbox_validator import validate_write, SANDBOX_ROOT, ALLOWED_AGENTS
 
 # ── 상수 ───────────────────────────────────────────────────────────────────
@@ -30,14 +32,80 @@ KST = timezone(timedelta(hours=9))
 AUDIT_DIR = Path("/opt/arss/engine/arss-protocol/tools/sandbox/audit")
 TOKEN_FILE = Path("/opt/arss/engine/arss-protocol/tools/sandbox/.tokens")
 
-# ── Fail-Closed 상태 ───────────────────────────────────────────────────────
+# IMPL-NOTE-04: state file 경로
+FAIL_CLOSED_STATE_FILE = Path(
+    "/opt/arss/engine/arss-protocol/tools/sandbox/audit/observation_fail_closed_state.json"
+)
+UNLOCK_APPROVAL_PHRASE = "BEO_APPROVE_OBSERVATION_UNLOCK"
+
+# ── Fail-Closed 상태 (IMPL-NOTE-04: persist 기반) ─────────────────────────
 
 _fail_closed_lock = threading.Lock()
 _system_state = {
     "observation_locked": False,
     "lock_reason": None,
     "lock_time": None,
+    "incident_id": None,
+    "locked_by": "system",
+    "unlock_required_by": "beo",
 }
+
+
+def _load_fail_closed_state():
+    """
+    서버 기동 시 state file 읽어 복구 (IMPL-NOTE-04 D5/D6)
+    파일 부재 또는 파싱 실패 시 기본값(unlocked) 유지
+    """
+    if not FAIL_CLOSED_STATE_FILE.exists():
+        return
+    try:
+        with open(FAIL_CLOSED_STATE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        with _fail_closed_lock:
+            _system_state["observation_locked"] = bool(data.get("observation_locked", False))
+            _system_state["lock_reason"] = data.get("reason")
+            _system_state["lock_time"] = data.get("locked_at")
+            _system_state["incident_id"] = data.get("incident_id")
+            _system_state["locked_by"] = data.get("locked_by", "system")
+            _system_state["unlock_required_by"] = data.get("unlock_required_by", "beo")
+        logging.info(
+            f"[FAIL-CLOSED] state loaded: locked={_system_state['observation_locked']}"
+        )
+    except Exception as e:
+        logging.error(f"[FAIL-CLOSED] state file load failed: {e}. Using default (unlocked).")
+
+
+def _persist_fail_closed_state(locked: bool, reason: Optional[str] = None,
+                                incident_id: Optional[str] = None):
+    """
+    state file atomic write (T-6 race condition 방지)
+    tmpfile → fsync → rename 방식
+    """
+    AUDIT_DIR.mkdir(parents=True, exist_ok=True)
+    now_kst = datetime.now(KST).isoformat()
+    payload = {
+        "observation_locked": locked,
+        "locked_at": now_kst if locked else None,
+        "reason": reason,
+        "incident_id": incident_id,
+        "locked_by": "system" if locked else None,
+        "unlock_required_by": "beo",
+        "updated_at": now_kst,
+    }
+    try:
+        # atomic write: tmpfile in same directory → rename
+        dir_path = FAIL_CLOSED_STATE_FILE.parent
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8",
+            dir=dir_path, delete=False, suffix=".tmp"
+        ) as tf:
+            json.dump(payload, tf, ensure_ascii=False, indent=2)
+            tf.flush()
+            os.fsync(tf.fileno())
+            tmp_path = tf.name
+        os.replace(tmp_path, FAIL_CLOSED_STATE_FILE)
+    except Exception as e:
+        logging.error(f"[FAIL-CLOSED] state file persist failed: {e}")
 
 
 def is_observation_locked() -> bool:
@@ -45,12 +113,15 @@ def is_observation_locked() -> bool:
         return _system_state["observation_locked"]
 
 
-def engage_fail_closed(reason: str):
+def engage_fail_closed(reason: str, incident_id: Optional[str] = None):
     """Fail-Closed 발동 (L2-12) — Execution Layer 비간섭"""
     with _fail_closed_lock:
         _system_state["observation_locked"] = True
         _system_state["lock_reason"] = reason
         _system_state["lock_time"] = datetime.now(KST).isoformat()
+        _system_state["incident_id"] = incident_id
+    # state file persist (lock 밖에서 수행 — 파일 I/O blocking 최소화)
+    _persist_fail_closed_state(locked=True, reason=reason, incident_id=incident_id)
     _write_audit(
         agent="system",
         method="SYSTEM",
@@ -64,8 +135,6 @@ def engage_fail_closed(reason: str):
 
 # ── 토큰 관리 ──────────────────────────────────────────────────────────────
 
-# 토큰 저장 구조 (메모리)
-# { "domi": {"hash": sha256_hex, "expires_epoch": float, "revoked": bool}, ... }
 _token_store: dict = {}
 _token_lock = threading.Lock()
 
@@ -94,10 +163,6 @@ def revoke_token(agent: str):
 
 
 def validate_token(agent: str, token: str) -> tuple[bool, str]:
-    """
-    토큰 검증
-    반환: (valid: bool, reason: str)
-    """
     with _token_lock:
         entry = _token_store.get(agent)
     if entry is None:
@@ -113,7 +178,6 @@ def validate_token(agent: str, token: str) -> tuple[bool, str]:
 
 
 def _extract_token(handler: "ObservationHandler") -> tuple[Optional[str], Optional[str]]:
-    """Authorization: Bearer <token> 헤더 파싱"""
     auth = handler.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         return None, None
@@ -192,7 +256,6 @@ class ObservationHandler(BaseHTTPRequestHandler):
     }
 
     def log_message(self, format, *args):
-        # nginx가 token masking 담당 — 여기서는 최소 로그
         logging.info(f"[REQUEST] {self.address_string()} {format % args}")
 
     def _send_json(self, status: int, body: dict):
@@ -209,10 +272,6 @@ class ObservationHandler(BaseHTTPRequestHandler):
         return self._send_json(status, {"error": reason, "execution_allowed": False})
 
     def _auth(self, required_agent: str) -> tuple[bool, Optional[str], Optional[str]]:
-        """
-        토큰 인증 공통 처리
-        반환: (ok, agent, token_hash)
-        """
         token, token_hash = _extract_token(self)
         if not token:
             return False, None, None
@@ -220,6 +279,11 @@ class ObservationHandler(BaseHTTPRequestHandler):
         if not valid:
             return False, reason, token_hash
         return True, required_agent, token_hash
+
+    def _is_loopback(self) -> bool:
+        """127.0.0.1 loopback-only 체크 (T-4 반영)"""
+        client_ip = self.client_address[0]
+        return client_ip in ("127.0.0.1", "::1")
 
     # ── GET ────────────────────────────────────────────────────────────────
 
@@ -282,6 +346,11 @@ class ObservationHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
 
+        # IMPL-NOTE-04: /internal/observation/unlock 처리
+        if path == "/internal/observation/unlock":
+            self._handle_unlock()
+            return
+
         # Fail-Closed 확인
         if is_observation_locked():
             rb = self._send_error(503, "OBSERVATION_LOCKED")
@@ -300,7 +369,6 @@ class ObservationHandler(BaseHTTPRequestHandler):
             rb = self._send_error(code, agent_or_reason)
             _write_audit(required_agent, "POST", path, code, "DENY",
                          agent_or_reason, token_hash=token_hash, response_bytes=rb)
-            # auth 우회 시도 → Fail-Closed 검토
             trigger = _check_fail_closed_trigger(agent_or_reason or "")
             if trigger:
                 engage_fail_closed(f"auth_bypass_attempt: {agent_or_reason}")
@@ -341,7 +409,6 @@ class ObservationHandler(BaseHTTPRequestHandler):
             _write_audit(required_agent, "POST", path, code, "DENY",
                          result.reason, sandbox_filename=file_name,
                          token_hash=token_hash, response_bytes=rb)
-            # Fail-Closed 트리거 확인
             trigger = _check_fail_closed_trigger(result.reason)
             if trigger:
                 engage_fail_closed(f"{trigger}: {result.reason}")
@@ -369,6 +436,87 @@ class ObservationHandler(BaseHTTPRequestHandler):
                      sandbox_filename=file_name, token_hash=token_hash,
                      response_bytes=rb)
 
+    # ── IMPL-NOTE-04: Unlock Handler ───────────────────────────────────────
+
+    def _handle_unlock(self):
+        """
+        POST /internal/observation/unlock
+        BEO_ONLY + loopback-only + 6종 조건 검증
+        """
+        path = "/internal/observation/unlock"
+
+        # T-4: loopback-only 체크 (애플리케이션 레벨)
+        if not self._is_loopback():
+            rb = self._send_error(403, "OBSERVATION_UNLOCK_DENIED: LOOPBACK_ONLY")
+            _write_audit("unknown", "POST", path, 403, "DENY",
+                         "NON_LOOPBACK_UNLOCK_ATTEMPT", response_bytes=rb)
+            return
+
+        # body 파싱
+        content_length = int(self.headers.get("Content-Length", 0))
+        if content_length > 65536:
+            rb = self._send_error(413, "REQUEST_TOO_LARGE")
+            return
+        try:
+            body = json.loads(self.rfile.read(content_length).decode("utf-8"))
+        except Exception:
+            rb = self._send_error(400, "INVALID_JSON_BODY")
+            return
+
+        # 6종 조건 검증 (D5~D8)
+        actor = body.get("actor", "")
+        approval_phrase = body.get("approval_phrase", "")
+        incident_id = body.get("incident_id", "")
+        jeni_trust = body.get("jeni_trust_revalidation", "")
+        caddy_report = body.get("caddy_incident_report", "")
+        token_rotation = body.get("new_token_rotation", "")
+
+        failures = []
+        if actor != "beo":
+            failures.append("ACTOR_NOT_BEO")
+        if approval_phrase != UNLOCK_APPROVAL_PHRASE:
+            failures.append("APPROVAL_PHRASE_MISMATCH")
+        if not incident_id:
+            failures.append("INCIDENT_ID_MISSING")
+        if jeni_trust != "PASS":
+            failures.append("JENI_TRUST_REVALIDATION_NOT_PASS")
+        if caddy_report != "PRESENT":
+            failures.append("CADDY_INCIDENT_REPORT_MISSING")
+        if token_rotation != "DONE":
+            failures.append("NEW_TOKEN_ROTATION_NOT_DONE")
+
+        if failures:
+            reason = "OBSERVATION_UNLOCK_DENIED: " + ", ".join(failures)
+            rb = self._send_error(403, reason)
+            _write_audit("beo", "POST", path, 403, "DENY", reason,
+                         response_bytes=rb)
+            # locked 상태 유지 — 변경 없음
+            return
+
+        # 모든 조건 충족 → unlock 실행
+        with _fail_closed_lock:
+            _system_state["observation_locked"] = False
+            _system_state["lock_reason"] = None
+            _system_state["lock_time"] = None
+            _system_state["incident_id"] = None
+
+        # state file persist
+        _persist_fail_closed_state(locked=False, reason=None, incident_id=incident_id)
+
+        # fresh projection 강제 생성 (캐시 무효화)
+        invalidate_cache()
+
+        _write_audit("beo", "POST", path, 200, "OBSERVATION_UNLOCKED",
+                     reason=f"incident_id={incident_id}", response_bytes=0)
+        logging.info(f"[FAIL-CLOSED] OBSERVATION_UNLOCKED by beo. incident_id={incident_id}")
+
+        rb = self._send_json(200, {
+            "result": "OBSERVATION_UNLOCKED",
+            "incident_id": incident_id,
+            "projection_cache_invalidated": True,
+            "execution_allowed": False,
+        })
+
 
 # ── Threading HTTP Server ──────────────────────────────────────────────────
 
@@ -384,6 +532,10 @@ def main():
         format="%(asctime)s [%(levelname)s] %(message)s",
     )
     AUDIT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # IMPL-NOTE-04: 기동 시 state file에서 Fail-Closed 상태 복구
+    _load_fail_closed_state()
+
     server = ThreadedHTTPServer(("127.0.0.1", PORT), ObservationHandler)
     logging.info(f"[OBSERVATION SERVER] listening on 127.0.0.1:{PORT}")
     logging.info("[OBSERVATION SERVER] AUTHORITY=OBSERVATION_ONLY_NO_EXECUTION")

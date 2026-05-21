@@ -2,6 +2,7 @@
 projection_builder.py
 AIBA Projection Builder — Layer 2 (L2-2)
 SSOT: BRIEFING-DOMI-S142-DESIGN-REQUEST-FINAL
+IMPL-NOTE-03: state anchor stale 기준 (active 파일 수 범위) — S143
 """
 
 import json
@@ -19,8 +20,13 @@ SESSION_CONTEXT_PATH = Path(
     "/opt/arss/engine/arss-protocol/tools/session_context_gen"
 )
 VPS_ROOT = Path("/opt/arss/engine/arss-protocol")
+SANDBOX_ROOT = Path("/opt/arss/engine/arss-protocol/tools/sandbox")
 
 KST = timezone(timedelta(hours=9))
+
+# IMPL-NOTE-03: active 파일 수 임계값
+ACTIVE_FILE_THRESHOLD = 10
+ALLOWED_AGENTS = {"domi", "jeni", "caddy"}
 
 # 절대 제외 필드 (L2-2)
 FORBIDDEN_FIELDS = {
@@ -116,6 +122,53 @@ def _load_session_context() -> Optional[dict]:
         return None
 
 
+# ── IMPL-NOTE-03: active 파일 수 카운트 ────────────────────────────────────
+
+def _count_active_files(agent: str) -> int:
+    """
+    sandbox/{agent}/active/ 하위 재귀 전체 파일 수 반환
+    디렉토리 부재 시 0 반환
+    """
+    agent_active_dir = SANDBOX_ROOT / agent / "active"
+    if not agent_active_dir.exists():
+        return 0
+    try:
+        return sum(1 for p in agent_active_dir.rglob("*") if p.is_file())
+    except Exception:
+        return 0
+
+
+def _build_sandbox_active_file_count() -> dict:
+    """
+    전 에이전트 active 파일 수 집계 및 stale 판정
+    IMPL-NOTE-03 정책:
+      count > ACTIVE_FILE_THRESHOLD → STATE_ANCHOR_STALE=true + EAG_READY 차단
+      Fail-Closed 발동 없음 (projection 반환은 유지)
+    """
+    counts = {}
+    any_stale = False
+
+    for agent in sorted(ALLOWED_AGENTS):
+        cnt = _count_active_files(agent)
+        counts[agent] = cnt
+        if cnt > ACTIVE_FILE_THRESHOLD:
+            any_stale = True
+
+    total = sum(counts.values())
+
+    return {
+        "domi": counts.get("domi", 0),
+        "jeni": counts.get("jeni", 0),
+        "caddy": counts.get("caddy", 0),
+        "total": total,
+        "threshold": ACTIVE_FILE_THRESHOLD,
+        "recursive": True,
+        "state_anchor_stale": any_stale,
+        "active_file_count_warning": any_stale,
+        "eag_ready_blocked": any_stale,
+    }
+
+
 def _build_projection(raw: dict) -> dict:
     """RAW SESSION_CONTEXT → 필터링된 Projection 생성"""
     now_kst = datetime.now(KST)
@@ -126,6 +179,10 @@ def _build_projection(raw: dict) -> dict:
         if k in raw:
             filtered[k] = _strip_forbidden(raw[k]) if isinstance(raw[k], dict) else raw[k]
 
+    # IMPL-NOTE-03: sandbox active 파일 수 집계
+    sandbox_active = _build_sandbox_active_file_count()
+    state_anchor_stale = sandbox_active["state_anchor_stale"]
+
     payload = {
         "AUTHORITY_LEVEL": "OBSERVATION_ONLY_NO_EXECUTION",
         "generated_at": now_kst.isoformat(),
@@ -135,6 +192,11 @@ def _build_projection(raw: dict) -> dict:
         "purpose": "OBSERVATION_ONLY",
         "stale": False,
         "projection_refresh_failed": False,
+        # IMPL-NOTE-03 필드
+        "sandbox_active_file_count": sandbox_active,
+        "state_anchor_stale": state_anchor_stale,
+        "active_file_count_warning": state_anchor_stale,
+        "eag_ready_blocked": state_anchor_stale,
         "data": filtered,
     }
 
@@ -186,6 +248,14 @@ def get_projection() -> tuple[dict, bool]:
     _cache["refresh_failed"] = False
 
     return projection, False
+
+
+def invalidate_cache():
+    """캐시 강제 무효화 — unlock 직후 호출 (IMPL-NOTE-04)"""
+    _cache["projection"] = None
+    _cache["built_at_epoch"] = 0.0
+    _cache["stale"] = True
+    _cache["refresh_failed"] = False
 
 
 def check_ttl(projection: dict) -> bool:
