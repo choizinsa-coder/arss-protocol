@@ -219,6 +219,8 @@ class TestImplNote04UnlockEndpoint(unittest.TestCase):
         handler._send_json.side_effect = fake_send_json
         handler._send_error.side_effect = fake_send_error
         handler._is_loopback.return_value = (client_ip in ("127.0.0.1", "::1"))
+        # observation_server_v2: _handle_unlock이 _read_body() 사용
+        handler._read_body.return_value = body
         handler.responses = responses
         return handler
 

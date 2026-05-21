@@ -2,7 +2,9 @@
 observation_server.py
 AIBA Observation Server — Layer 2 (L2-1, L2-10, L2-12)
 SSOT: BRIEFING-DOMI-S142-DESIGN-REQUEST-FINAL
-IMPL-NOTE-04: Fail-Closed unlock 메커니즘 — S143
+IMPL-NOTE-03: active file count stale — S143
+IMPL-NOTE-04: Fail-Closed unlock — S143
+TOKEN-ISSUANCE: BRIEFING-DOMI-S143-TOKEN-001 — S143
 
 port: 8446
 runtime: Python stdlib HTTP server
@@ -11,6 +13,7 @@ purpose: OBSERVATION_ONLY + SANDBOX_WRITE_GATE
 
 import json
 import os
+import secrets
 import hashlib
 import logging
 import threading
@@ -32,13 +35,14 @@ KST = timezone(timedelta(hours=9))
 AUDIT_DIR = Path("/opt/arss/engine/arss-protocol/tools/sandbox/audit")
 TOKEN_FILE = Path("/opt/arss/engine/arss-protocol/tools/sandbox/.tokens")
 
-# IMPL-NOTE-04: state file 경로
 FAIL_CLOSED_STATE_FILE = Path(
     "/opt/arss/engine/arss-protocol/tools/sandbox/audit/observation_fail_closed_state.json"
 )
 UNLOCK_APPROVAL_PHRASE = "BEO_APPROVE_OBSERVATION_UNLOCK"
+TOKEN_REGISTER_APPROVAL_PHRASE = "BEO_APPROVE_TOKEN_REGISTER"
+TOKEN_TTL_MAX = 43200  # 12h
 
-# ── Fail-Closed 상태 (IMPL-NOTE-04: persist 기반) ─────────────────────────
+# ── Fail-Closed 상태 ───────────────────────────────────────────────────────
 
 _fail_closed_lock = threading.Lock()
 _system_state = {
@@ -52,10 +56,6 @@ _system_state = {
 
 
 def _load_fail_closed_state():
-    """
-    서버 기동 시 state file 읽어 복구 (IMPL-NOTE-04 D5/D6)
-    파일 부재 또는 파싱 실패 시 기본값(unlocked) 유지
-    """
     if not FAIL_CLOSED_STATE_FILE.exists():
         return
     try:
@@ -77,10 +77,6 @@ def _load_fail_closed_state():
 
 def _persist_fail_closed_state(locked: bool, reason: Optional[str] = None,
                                 incident_id: Optional[str] = None):
-    """
-    state file atomic write (T-6 race condition 방지)
-    tmpfile → fsync → rename 방식
-    """
     AUDIT_DIR.mkdir(parents=True, exist_ok=True)
     now_kst = datetime.now(KST).isoformat()
     payload = {
@@ -93,7 +89,6 @@ def _persist_fail_closed_state(locked: bool, reason: Optional[str] = None,
         "updated_at": now_kst,
     }
     try:
-        # atomic write: tmpfile in same directory → rename
         dir_path = FAIL_CLOSED_STATE_FILE.parent
         with tempfile.NamedTemporaryFile(
             mode="w", encoding="utf-8",
@@ -114,13 +109,11 @@ def is_observation_locked() -> bool:
 
 
 def engage_fail_closed(reason: str, incident_id: Optional[str] = None):
-    """Fail-Closed 발동 (L2-12) — Execution Layer 비간섭"""
     with _fail_closed_lock:
         _system_state["observation_locked"] = True
         _system_state["lock_reason"] = reason
         _system_state["lock_time"] = datetime.now(KST).isoformat()
         _system_state["incident_id"] = incident_id
-    # state file persist (lock 밖에서 수행 — 파일 I/O blocking 최소화)
     _persist_fail_closed_state(locked=True, reason=reason, incident_id=incident_id)
     _write_audit(
         agent="system",
@@ -137,29 +130,131 @@ def engage_fail_closed(reason: str, incident_id: Optional[str] = None):
 
 _token_store: dict = {}
 _token_lock = threading.Lock()
+_token_file_lock = threading.Lock()
 
 
-def _sha256_prefix(token: str) -> str:
-    return hashlib.sha256(token.encode()).hexdigest()[:16]
+def _sha256_hex(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
 
 
-def register_token(agent: str, token: str, ttl_seconds: int = 43200):
-    """토큰 등록 (TTL ≤ 12h = 43200s)"""
+def _sha256_prefix(value: str) -> str:
+    return _sha256_hex(value)[:16]
+
+
+# ── TOKEN_FILE persist ─────────────────────────────────────────────────────
+
+def _load_token_file():
+    """
+    기동 시 .tokens 파일 로드
+    revoked=false + expires_at 유효 항목만 _token_store 활성화
+    raw token 미저장 — hash만 복원
+    """
+    if not TOKEN_FILE.exists():
+        logging.info("[TOKEN] .tokens file not found. Starting with empty store.")
+        return
+    try:
+        with open(TOKEN_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        now_epoch = datetime.now(KST).timestamp()
+        loaded = 0
+        with _token_lock:
+            for agent, entry in data.items():
+                if agent not in ALLOWED_AGENTS:
+                    continue
+                if entry.get("revoked", True):
+                    continue
+                expires_at_str = entry.get("expires_at", "")
+                try:
+                    expires_epoch = datetime.fromisoformat(expires_at_str).timestamp()
+                except Exception:
+                    continue
+                if now_epoch >= expires_epoch:
+                    continue
+                # hash only 복원 — raw token 복원 불가
+                _token_store[agent] = {
+                    "hash": entry["token_hash"],
+                    "expires_epoch": expires_epoch,
+                    "revoked": False,
+                }
+                loaded += 1
+        logging.info(f"[TOKEN] Loaded {loaded} active token(s) from .tokens file.")
+    except Exception as e:
+        logging.error(f"[TOKEN] .tokens load failed: {e}. Starting with empty store.")
+
+
+def _persist_token_file():
+    """
+    _token_store → .tokens 파일 atomic write
+    tmpfile은 TOKEN_FILE과 동일 디렉토리(tools/sandbox/) 내 생성 (T-3 TA 반영)
+    raw token 저장 금지 — token_hash only
+    """
+    TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    now_kst = datetime.now(KST).isoformat()
+
+    with _token_lock:
+        payload = {}
+        for agent, entry in _token_store.items():
+            expires_at = datetime.fromtimestamp(
+                entry["expires_epoch"], tz=KST
+            ).isoformat()
+            payload[agent] = {
+                "token_hash": entry["hash"],
+                "issued_at": entry.get("issued_at", now_kst),
+                "expires_at": expires_at,
+                "ttl_seconds": entry.get("ttl_seconds", TOKEN_TTL_MAX),
+                "revoked": entry["revoked"],
+            }
+
+    try:
+        with _token_file_lock:
+            # tmpfile: 동일 디렉토리(tools/sandbox/) 내 생성
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8",
+                dir=TOKEN_FILE.parent, delete=False, suffix=".tmp"
+            ) as tf:
+                json.dump(payload, tf, ensure_ascii=False, indent=2)
+                tf.flush()
+                os.fsync(tf.fileno())
+                tmp_path = tf.name
+            os.replace(tmp_path, TOKEN_FILE)
+            # chmod 600
+            os.chmod(TOKEN_FILE, 0o600)
+    except Exception as e:
+        logging.error(f"[TOKEN] .tokens persist failed: {e}")
+
+
+def register_token(agent: str, token: str, ttl_seconds: int = TOKEN_TTL_MAX) -> dict:
+    """
+    토큰 등록 (internal use)
+    반환: {"token_hash_prefix": str, "expires_at": str}
+    """
     assert agent in ALLOWED_AGENTS
-    assert ttl_seconds <= 43200
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    ttl_seconds = min(ttl_seconds, TOKEN_TTL_MAX)
+    token_hash = _sha256_hex(token)
+    now_kst = datetime.now(KST)
+    expires_epoch = now_kst.timestamp() + ttl_seconds
+    expires_at = datetime.fromtimestamp(expires_epoch, tz=KST).isoformat()
+
     with _token_lock:
         _token_store[agent] = {
             "hash": token_hash,
-            "expires_epoch": datetime.now(KST).timestamp() + ttl_seconds,
+            "expires_epoch": expires_epoch,
             "revoked": False,
+            "issued_at": now_kst.isoformat(),
+            "ttl_seconds": ttl_seconds,
         }
+    _persist_token_file()
+    return {
+        "token_hash_prefix": token_hash[:16],
+        "expires_at": expires_at,
+    }
 
 
 def revoke_token(agent: str):
     with _token_lock:
         if agent in _token_store:
             _token_store[agent]["revoked"] = True
+    _persist_token_file()
 
 
 def validate_token(agent: str, token: str) -> tuple[bool, str]:
@@ -169,8 +264,7 @@ def validate_token(agent: str, token: str) -> tuple[bool, str]:
         return False, "TOKEN_REQUIRED"
     if entry["revoked"]:
         return False, "TOKEN_REVOKED"
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    if token_hash != entry["hash"]:
+    if _sha256_hex(token) != entry["hash"]:
         return False, "TOKEN_AGENT_MISMATCH"
     if datetime.now(KST).timestamp() > entry["expires_epoch"]:
         return False, "TOKEN_EXPIRED"
@@ -197,8 +291,10 @@ def _write_audit(
     sandbox_filename: Optional[str] = None,
     response_bytes: int = 0,
     token_hash: Optional[str] = None,
+    event: Optional[str] = None,
+    ttl_seconds: Optional[int] = None,
 ):
-    """append-only JSONL audit (L2-9)"""
+    """append-only JSONL audit (L2-9) — raw token 미기록"""
     AUDIT_DIR.mkdir(parents=True, exist_ok=True)
     date_str = datetime.now(KST).strftime("%Y%m%d")
     audit_path = AUDIT_DIR / f"agent_access_{date_str}.jsonl"
@@ -212,15 +308,21 @@ def _write_audit(
         "response_bytes": response_bytes,
         "sandbox_filename": sandbox_filename,
         "author": agent,
-        "token_hash": token_hash or "N/A",
+        "token_hash": token_hash or "N/A",  # hash prefix only — raw token 금지
         "result": result,
         "reason": reason,
     }
+    if event:
+        record["event"] = event
+    if ttl_seconds is not None:
+        record["ttl_seconds"] = ttl_seconds
+
     try:
         with open(audit_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
     except Exception as e:
         logging.error(f"[AUDIT] write failed: {e}")
+
 
 # ── Fail-Closed 발동 조건 탐지 ────────────────────────────────────────────
 
@@ -239,11 +341,11 @@ def _check_fail_closed_trigger(reason: str) -> Optional[str]:
             return trigger
     return None
 
+
 # ── Request Handler ────────────────────────────────────────────────────────
 
 class ObservationHandler(BaseHTTPRequestHandler):
 
-    # endpoint → 허용 agent 매트릭스 (GAP-01)
     GET_ENDPOINT_AGENT = {
         "/domi-view/projection":    "domi",
         "/jeni-view/projection":    "jeni",
@@ -281,9 +383,19 @@ class ObservationHandler(BaseHTTPRequestHandler):
         return True, required_agent, token_hash
 
     def _is_loopback(self) -> bool:
-        """127.0.0.1 loopback-only 체크 (T-4 반영)"""
         client_ip = self.client_address[0]
         return client_ip in ("127.0.0.1", "::1")
+
+    def _read_body(self, max_bytes: int = 65536) -> Optional[dict]:
+        content_length = int(self.headers.get("Content-Length", 0))
+        if content_length > max_bytes:
+            self._send_error(413, "REQUEST_TOO_LARGE")
+            return None
+        try:
+            return json.loads(self.rfile.read(content_length).decode("utf-8"))
+        except Exception:
+            self._send_error(400, "INVALID_JSON_BODY")
+            return None
 
     # ── GET ────────────────────────────────────────────────────────────────
 
@@ -291,7 +403,6 @@ class ObservationHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
 
-        # Fail-Closed 확인
         if is_observation_locked():
             rb = self._send_error(503, "OBSERVATION_LOCKED")
             _write_audit("unknown", "GET", path, 503, "DENY", "OBSERVATION_LOCKED",
@@ -300,7 +411,7 @@ class ObservationHandler(BaseHTTPRequestHandler):
 
         required_agent = self.GET_ENDPOINT_AGENT.get(path)
         if required_agent is None:
-            rb = self._send_error(404, "ENDPOINT_NOT_FOUND")
+            self._send_error(404, "ENDPOINT_NOT_FOUND")
             return
 
         ok, agent_or_reason, token_hash = self._auth(required_agent)
@@ -311,7 +422,6 @@ class ObservationHandler(BaseHTTPRequestHandler):
                          agent_or_reason, token_hash=token_hash, response_bytes=rb)
             return
 
-        # /projection
         if path.endswith("/projection"):
             projection, is_stale = get_projection()
             if is_stale or check_ttl(projection):
@@ -327,16 +437,16 @@ class ObservationHandler(BaseHTTPRequestHandler):
                 _write_audit(required_agent, "GET", path, 200, "ALLOW",
                              token_hash=token_hash, response_bytes=rb)
 
-        # /sandbox/index
         elif path.endswith("/sandbox/index"):
             agent_dir = SANDBOX_ROOT / required_agent / "active"
             if not agent_dir.exists():
                 rb = self._send_json(200, {"files": [], "agent": required_agent})
             else:
                 files = [str(p.name) for p in agent_dir.rglob("*") if p.is_file()]
-                rb_body = {"files": files, "agent": required_agent,
-                           "execution_allowed": False}
-                rb = self._send_json(200, rb_body)
+                rb = self._send_json(200, {
+                    "files": files, "agent": required_agent,
+                    "execution_allowed": False,
+                })
             _write_audit(required_agent, "GET", path, 200, "ALLOW",
                          token_hash=token_hash, response_bytes=rb)
 
@@ -346,12 +456,14 @@ class ObservationHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
 
-        # IMPL-NOTE-04: /internal/observation/unlock 처리
+        # internal 라우팅
         if path == "/internal/observation/unlock":
             self._handle_unlock()
             return
+        if path == "/internal/token/register":
+            self._handle_token_register()
+            return
 
-        # Fail-Closed 확인
         if is_observation_locked():
             rb = self._send_error(503, "OBSERVATION_LOCKED")
             _write_audit("unknown", "POST", path, 503, "DENY",
@@ -360,7 +472,7 @@ class ObservationHandler(BaseHTTPRequestHandler):
 
         required_agent = self.POST_ENDPOINT_AGENT.get(path)
         if required_agent is None:
-            rb = self._send_error(404, "ENDPOINT_NOT_FOUND")
+            self._send_error(404, "ENDPOINT_NOT_FOUND")
             return
 
         ok, agent_or_reason, token_hash = self._auth(required_agent)
@@ -374,17 +486,8 @@ class ObservationHandler(BaseHTTPRequestHandler):
                 engage_fail_closed(f"auth_bypass_attempt: {agent_or_reason}")
             return
 
-        # body 파싱
-        content_length = int(self.headers.get("Content-Length", 0))
-        if content_length > 1 * 1024 * 1024:
-            rb = self._send_error(413, "REQUEST_TOO_LARGE")
-            return
-        raw_body = self.rfile.read(content_length)
-
-        try:
-            body = json.loads(raw_body.decode("utf-8"))
-        except Exception:
-            rb = self._send_error(400, "INVALID_JSON_BODY")
+        body = self._read_body()
+        if body is None:
             return
 
         file_name = body.get("filename", "")
@@ -393,7 +496,6 @@ class ObservationHandler(BaseHTTPRequestHandler):
         safe_pass = bool(body.get("safe_pass", False))
         target_path_str = str(SANDBOX_ROOT / required_agent / "active" / file_name)
 
-        # sandbox_validator 12단계 검증
         result = validate_write(
             request_agent=required_agent,
             target_path_str=target_path_str,
@@ -414,7 +516,6 @@ class ObservationHandler(BaseHTTPRequestHandler):
                 engage_fail_closed(f"{trigger}: {result.reason}")
             return
 
-        # 파일 쓰기
         try:
             target_path = Path(target_path_str)
             target_path.parent.mkdir(parents=True, exist_ok=True)
@@ -436,34 +537,105 @@ class ObservationHandler(BaseHTTPRequestHandler):
                      sandbox_filename=file_name, token_hash=token_hash,
                      response_bytes=rb)
 
-    # ── IMPL-NOTE-04: Unlock Handler ───────────────────────────────────────
+    # ── TOKEN REGISTER Handler ─────────────────────────────────────────────
+
+    def _handle_token_register(self):
+        """
+        POST /internal/token/register
+        BEO_ONLY + loopback-only
+        raw token 1회 응답 후 서버 복원 불가
+        """
+        path = "/internal/token/register"
+
+        if not self._is_loopback():
+            rb = self._send_error(403, "TOKEN_REGISTER_DENIED: LOOPBACK_ONLY")
+            _write_audit("unknown", "POST", path, 403, "DENY",
+                         "NON_LOOPBACK_TOKEN_REGISTER", response_bytes=rb,
+                         event="TOKEN_REGISTER")
+            return
+
+        body = self._read_body()
+        if body is None:
+            return
+
+        actor = body.get("actor", "")
+        approval_phrase = body.get("approval_phrase", "")
+        agent = body.get("agent", "")
+        ttl_seconds = int(body.get("ttl_seconds", TOKEN_TTL_MAX))
+
+        # 조건 검증
+        failures = []
+        if actor != "beo":
+            failures.append("ACTOR_NOT_BEO")
+        if approval_phrase != TOKEN_REGISTER_APPROVAL_PHRASE:
+            failures.append("APPROVAL_PHRASE_MISMATCH")
+        if agent not in ("domi", "jeni"):
+            failures.append(f"INVALID_AGENT: {agent}")
+        if ttl_seconds > TOKEN_TTL_MAX:
+            failures.append(f"TTL_EXCEEDS_MAX: {ttl_seconds}")
+
+        if failures:
+            reason = "TOKEN_REGISTER_DENIED: " + ", ".join(failures)
+            rb = self._send_error(403, reason)
+            _write_audit("beo", "POST", path, 403, "DENY", reason,
+                         response_bytes=rb, event="TOKEN_REGISTER")
+            return
+
+        # 기존 토큰 rotation — revoked=true
+        is_rotation = False
+        with _token_lock:
+            if agent in _token_store and not _token_store[agent]["revoked"]:
+                _token_store[agent]["revoked"] = True
+                is_rotation = True
+        if is_rotation:
+            _persist_token_file()
+            _write_audit("beo", "POST", path, 200, "TOKEN_ROTATE",
+                         reason=f"agent={agent}", event="TOKEN_ROTATE",
+                         ttl_seconds=ttl_seconds)
+
+        # 신규 토큰 생성 (secrets.token_urlsafe — raw token)
+        raw_token = secrets.token_urlsafe(32)
+        meta = register_token(agent, raw_token, ttl_seconds)
+
+        event_type = "TOKEN_ROTATE" if is_rotation else "TOKEN_REGISTER"
+        _write_audit(
+            agent="beo", method="POST", path=path,
+            status_code=200, result="SUCCESS",
+            reason=f"agent={agent}",
+            token_hash=meta["token_hash_prefix"],  # hash prefix only — raw token 미기록
+            event=event_type,
+            ttl_seconds=ttl_seconds,
+        )
+        logging.info(
+            f"[TOKEN] {event_type}: agent={agent} "
+            f"hash_prefix={meta['token_hash_prefix']} expires={meta['expires_at']}"
+        )
+
+        # raw token 1회 응답 반환
+        rb = self._send_json(200, {
+            "ok": True,
+            "agent": agent,
+            "token": raw_token,          # 1회만 — 이후 서버 복원 불가
+            "expires_at": meta["expires_at"],
+            "token_hash_prefix": meta["token_hash_prefix"],
+            "execution_allowed": False,
+        })
+
+    # ── UNLOCK Handler ─────────────────────────────────────────────────────
 
     def _handle_unlock(self):
-        """
-        POST /internal/observation/unlock
-        BEO_ONLY + loopback-only + 6종 조건 검증
-        """
         path = "/internal/observation/unlock"
 
-        # T-4: loopback-only 체크 (애플리케이션 레벨)
         if not self._is_loopback():
             rb = self._send_error(403, "OBSERVATION_UNLOCK_DENIED: LOOPBACK_ONLY")
             _write_audit("unknown", "POST", path, 403, "DENY",
                          "NON_LOOPBACK_UNLOCK_ATTEMPT", response_bytes=rb)
             return
 
-        # body 파싱
-        content_length = int(self.headers.get("Content-Length", 0))
-        if content_length > 65536:
-            rb = self._send_error(413, "REQUEST_TOO_LARGE")
-            return
-        try:
-            body = json.loads(self.rfile.read(content_length).decode("utf-8"))
-        except Exception:
-            rb = self._send_error(400, "INVALID_JSON_BODY")
+        body = self._read_body()
+        if body is None:
             return
 
-        # 6종 조건 검증 (D5~D8)
         actor = body.get("actor", "")
         approval_phrase = body.get("approval_phrase", "")
         incident_id = body.get("incident_id", "")
@@ -488,22 +660,16 @@ class ObservationHandler(BaseHTTPRequestHandler):
         if failures:
             reason = "OBSERVATION_UNLOCK_DENIED: " + ", ".join(failures)
             rb = self._send_error(403, reason)
-            _write_audit("beo", "POST", path, 403, "DENY", reason,
-                         response_bytes=rb)
-            # locked 상태 유지 — 변경 없음
+            _write_audit("beo", "POST", path, 403, "DENY", reason, response_bytes=rb)
             return
 
-        # 모든 조건 충족 → unlock 실행
         with _fail_closed_lock:
             _system_state["observation_locked"] = False
             _system_state["lock_reason"] = None
             _system_state["lock_time"] = None
             _system_state["incident_id"] = None
 
-        # state file persist
         _persist_fail_closed_state(locked=False, reason=None, incident_id=incident_id)
-
-        # fresh projection 강제 생성 (캐시 무효화)
         invalidate_cache()
 
         _write_audit("beo", "POST", path, 200, "OBSERVATION_UNLOCKED",
@@ -532,9 +698,8 @@ def main():
         format="%(asctime)s [%(levelname)s] %(message)s",
     )
     AUDIT_DIR.mkdir(parents=True, exist_ok=True)
-
-    # IMPL-NOTE-04: 기동 시 state file에서 Fail-Closed 상태 복구
     _load_fail_closed_state()
+    _load_token_file()
 
     server = ThreadedHTTPServer(("127.0.0.1", PORT), ObservationHandler)
     logging.info(f"[OBSERVATION SERVER] listening on 127.0.0.1:{PORT}")
