@@ -2413,7 +2413,8 @@
       "note": "S134 확정: A안(API 기반 PRE-OUTPUT CHECK 코드 레벨 자동 삽입). claude.ai UI 대신 API 호출로 user 메시지 앞 CHECK 블록 자동 prepend. Caddy Completion Bias 구조적 차단 목적.",
       "hold_reason": "UI 이원화·세션 맥락 단절 문제 + API 단독 전환 시 기능 손실 및 구현 범위 확장. 비오님 S135 보류 결정.",
       "hold_session": 135,
-      "hold_date": "2026-05-17"
+      "hold_date": "2026-05-17",
+      "executable": false
     }
   ],
   "lesson_review_policy": {

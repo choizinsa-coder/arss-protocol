@@ -10,6 +10,13 @@ PT-S99-GOV-003 Rev.3 FINAL 새 invariant 기반 검증
 S130 수정: PT-S127-TEST-001 수습
   - O7 (test_o7_chain_tip_invariant): chain tip expected 현행화
     (S130 commits 60713d4 + 3fa70f8 이후 tip = 3dd5d2f...)
+
+S145 수정: PT-S143-TEST-DEBT-001 Group C 수습
+  - O4 (test_o4_archive_structure_integrity): SESSION_CONTEXT_ARCHIVE.json
+    실제 구조 현행화. items/total_items → Tier D schema 구조로 갱신.
+    (S120 migration 이후 schema: SESSION_CONTEXT_ARCHIVE_TIER_D_v1.0)
+  - O7 (test_o7_chain_tip_invariant): chain tip expected 현행화
+    (S141 commit e685455 이후 tip = e685455)
 """
 
 import json
@@ -34,7 +41,8 @@ def live_data():
 def archive_data():
     p = Path(ARCHIVE_PATH)
     if not p.exists():
-        return {"items": [], "total_items": 0}
+        # 파일 없음 — Tier D 구조 부재를 명시적으로 표현
+        return {"schema": "ARCHIVE_NOT_FOUND", "tier_d_entries": {}, "migrated_at": ""}
     with open(p, encoding="utf-8") as f:
         return json.load(f)
 
@@ -127,13 +135,24 @@ def test_o3_active_tasks_id_uniqueness(live_data):
 
 
 # ── O-4: SESSION_CONTEXT_ARCHIVE.json 구조 무결성 ────────────────────────────
+# S145: items/total_items 구조 → Tier D schema 구조로 현행화
+# (S120 migration 이후 실제 파일: schema=SESSION_CONTEXT_ARCHIVE_TIER_D_v1.0)
 
 def test_o4_archive_structure_integrity(archive_data):
-    """SESSION_CONTEXT_ARCHIVE.json 존재 및 기본 구조 확인"""
-    assert "items" in archive_data
-    assert "total_items" in archive_data
-    assert isinstance(archive_data["items"], list)
-    assert archive_data["total_items"] == len(archive_data["items"])
+    """
+    SESSION_CONTEXT_ARCHIVE.json 존재 및 Tier D 구조 확인.
+    S120 migration 이후 schema: SESSION_CONTEXT_ARCHIVE_TIER_D_v1.0.
+    """
+    assert "schema" in archive_data, \
+        "schema 필드 누락 — Tier D archive 구조 아님"
+    assert archive_data["schema"] == "SESSION_CONTEXT_ARCHIVE_TIER_D_v1.0", \
+        f"schema 불일치: {archive_data.get('schema')}"
+    assert "tier_d_entries" in archive_data, \
+        "tier_d_entries 필드 누락"
+    assert isinstance(archive_data["tier_d_entries"], dict), \
+        "tier_d_entries는 dict여야 함"
+    assert "migrated_at" in archive_data, \
+        "migrated_at 필드 누락"
 
 
 # ── O-5: archive items recoverable reference 보장 ────────────────────────────
@@ -175,13 +194,14 @@ def test_o6_tier_a_keys_present(live_data):
 
 # ── O-7: chain tip 불변성 ────────────────────────────────────────────────────
 # S130: expected tip 현행화 (S130 commits 60713d4 + 3fa70f8 이후)
+# S145: expected tip 현행화 (S141 commit e685455 이후)
 
 def test_o7_chain_tip_invariant(live_data):
     """
     chain.tip 불변성 확인.
-    S130 현행 tip 기준으로 갱신.
+    S145 현행 tip 기준으로 갱신 (S141 commit e685455).
     """
-    expected = "3dd5d2fa5c98c8d6ddf0bfaff33479c4a1b7c6d1b800d7fa4d07208b4d65de30"
+    expected = "e685455"
     actual = live_data.get("chain", {}).get("tip", "")
     assert actual == expected, (
         f"chain tip 변경 감지: {actual} — "

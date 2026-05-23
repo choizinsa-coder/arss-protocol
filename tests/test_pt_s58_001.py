@@ -13,6 +13,10 @@ S130 수정: PT-S127-TEST-001 수습
   - T10 (test_shim_not_canonical): Tier D 포인터 구조로 변경 → skip + 대체 TC
   - T11 (test_chain_tip_unchanged): chain tip expected 현행화
     (S130 commits 60713d4 + 3fa70f8 이후 tip = 3dd5d2f...)
+
+S145 수정: PT-S143-TEST-DEBT-001 Group C 수습
+  - T11 (test_chain_tip_unchanged): chain tip expected 현행화
+    (S141 commit e685455 이후 tip = e685455)
 """
 
 import json
@@ -177,10 +181,10 @@ def test_shim_tier_d_pointer(live_data):
 
 
 # ── T11: chain tip unchanged ────────────────────────────────────
-# S130: chain tip expected 현행화
-# S130 commits 60713d4 + 3fa70f8 이후 tip 갱신
+# S130: chain tip expected 현행화 (S130 commits 60713d4 + 3fa70f8 이후)
+# S145: chain tip expected 현행화 (S141 commit e685455 이후)
 def test_chain_tip_unchanged(live_data):
-    expected = "3dd5d2fa5c98c8d6ddf0bfaff33479c4a1b7c6d1b800d7fa4d07208b4d65de30"
+    expected = "e685455"
     actual = live_data.get("chain", {}).get("tip", "")
     assert actual == expected, f"chain tip changed: {actual}"
 

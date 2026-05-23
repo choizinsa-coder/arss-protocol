@@ -2,6 +2,12 @@
 test_mcp_read_server.py
 PT-S134-VPS-OBS-001 Phase 1 READ ONLY OBSERVABILITY
 pytest 테스트
+
+S145 수정: PT-S143-TEST-DEBT-001 Group A/B 수습
+  - sys.modules module-level 주입 → pytest fixture(scope='module') 전환
+    근거: collection-time 주입이 test_mcp_hard_containment::test_ht6 /
+          test_mcp_server_poc / phase_b / phase_c 오염
+    patch.dict 사용으로 fixture 종료 시 sys.modules 자동 복원 보장
 """
 
 import os
@@ -9,18 +15,17 @@ import sys
 import time
 import hmac
 import hashlib
+import importlib
 import tempfile
 import json
+import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+import unittest.mock as mock
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "mcp"))
 
-# mcp_audit_broker mock
-import unittest.mock as mock
-audit_broker_mock = mock.MagicMock()
-audit_broker_mock.write_audit = mock.MagicMock()
-sys.modules['mcp_audit_broker'] = audit_broker_mock
+import mcp_read_server  # collection-time: real module (fixture 전 상태)
 
 from mcp_read_server import (
     ReadOnlyServer,
@@ -36,6 +41,32 @@ from mcp_read_server import (
     METADATA_ROOT,
     ALLOWED_SERVICES,
 )
+
+server = ReadOnlyServer()
+
+# ── module-scope autouse fixture: sys.modules 격리 ───────────────────────────
+# collection-time이 아닌 test execution-time에 mock 주입 → 후속 파일 오염 방지.
+# patch.dict: fixture 종료 시 sys.modules 자동 복원.
+# reload: mcp_read_server가 mock mcp_audit_broker를 사용하도록 갱신.
+
+@pytest.fixture(autouse=True, scope='module')
+def _mock_audit_broker():
+    """
+    sys.modules 격리 전용 (reload 없음) — collection-time 오염 방지.
+    reload 제거 이유: reload 시 DenyResult 클래스 객체 교체 →
+      모듈 레벨 바인딩(OLD)과 _validate_purpose raise 대상(NEW) 불일치 →
+      pytest.raises(DenyResult) 실패.
+    mcp_read_server는 collection-time에 real audit_broker로 로드.
+    server method 테스트는 real audit_broker로 정상 동작 확인됨.
+    patch.dict: fixture 종료 시 sys.modules 자동 복원 → poc/phase_b/c 격리 ✓
+    """
+    _audit_mock = mock.MagicMock()
+    _audit_mock.write_audit = mock.MagicMock()
+
+    with patch.dict(sys.modules, {'mcp_audit_broker': _audit_mock}):
+        yield
+    # with 블록 종료: sys.modules 자동 복원 (patch.dict 보장)
+
 
 # ── 헬퍼 ──────────────────────────────────────────────────────────
 SECRET = "test-hmac-secret-s134"
@@ -62,7 +93,6 @@ def base_kwargs(actor_id="caddy", payload="test", extra_nonce=""):
         purpose="OBSERVATION",
     )
 
-server = ReadOnlyServer()
 
 # ── TC-1: Purpose 허용 ─────────────────────────────────────────────
 def test_tc1_allowed_purpose():
@@ -71,7 +101,6 @@ def test_tc1_allowed_purpose():
 
 # ── TC-2: Purpose 금지 ─────────────────────────────────────────────
 def test_tc2_forbidden_purpose():
-    import pytest
     for p in FORBIDDEN_PURPOSES:
         with pytest.raises(DenyResult) as exc:
             _validate_purpose(p)
@@ -79,7 +108,6 @@ def test_tc2_forbidden_purpose():
 
 # ── TC-3: unknown purpose 거부 ─────────────────────────────────────
 def test_tc3_unknown_purpose():
-    import pytest
     with pytest.raises(DenyResult) as exc:
         _validate_purpose("HACK_THE_PLANET")
     assert "UNKNOWN_PURPOSE" in exc.value.reason
@@ -88,7 +116,6 @@ def test_tc3_unknown_purpose():
 def test_tc4_unknown_actor(tmp_path):
     kwargs = base_kwargs()
     kwargs['actor_id'] = "unknown_agent"
-    # HMAC 재생성
     ts = kwargs['timestamp']
     nonce = kwargs['nonce']
     kwargs['hmac_value'] = make_hmac("unknown_agent", kwargs['connector_identity'],
@@ -124,7 +151,6 @@ def test_tc6_stale_timestamp(tmp_path):
 
 # ── TC-7: nonce replay 거부 ───────────────────────────────────────
 def test_tc7_nonce_replay(tmp_path):
-    # 정상 파일 생성
     test_file = tmp_path / "test.txt"
     test_file.write_text("hello")
 
@@ -132,7 +158,6 @@ def test_tc7_nonce_replay(tmp_path):
          patch('mcp_read_server.AGENT_ROOT_ALLOWLIST', {'caddy': [tmp_path]}):
         kwargs1 = base_kwargs(payload=str(test_file), extra_nonce="-replay-test")
         r1 = server.read_file(str(test_file), **kwargs1)
-        # 동일 nonce 재사용
         r2 = server.read_file(str(test_file), **kwargs1)
         assert r2['status'] == 'DENY'
         assert 'NONCE_REPLAY' in r2['reason']

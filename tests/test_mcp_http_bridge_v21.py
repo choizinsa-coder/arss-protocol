@@ -1,38 +1,28 @@
 """
 test_mcp_http_bridge_v21.py
 PT-S134-VPS-OBS-001 Phase 1 — Bridge v2.1.0 통합 테스트
+
+S145 수정: PT-S143-TEST-DEBT-001 Group A 수습
+  - sys.modules module-level 주입 → pytest fixture(scope='module') 전환
+    근거: collection-time 주입이 test_mcp_http_bridge_v2.py / poc 파일 오염
+    patch.dict 사용으로 fixture 종료 시 sys.modules 자동 복원 보장
+  - TC-B14: serverInfo.version 기대값 2.1.0 → 2.2.0 현행화
 """
 
 import sys
 import json
 import time
+import importlib
 import unittest.mock as mock
+import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-# 다른 테스트 파일의 mock 오염 방지 — 관련 모듈 재로드
-for _k in list(sys.modules.keys()):
-    if _k in ('mcp_http_bridge', 'mcp_audit_broker', 'mcp_containment_state'):
-        del sys.modules[_k]
-
+# sys.path 주입 (importlib 모드 대응)
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "mcp"))
 
-# mcp_audit_broker mock
-audit_mock = MagicMock()
-audit_mock.write_audit = MagicMock()
-audit_mock.write_deny_audit = MagicMock()
-sys.modules['mcp_audit_broker'] = audit_mock
-
-# mcp_containment_state mock
-containment_mock = MagicMock()
-containment_mock.is_active = MagicMock(return_value=False)
-sys.modules['mcp_containment_state'] = containment_mock
-
-# 실제 mcp_read_server + mcp_http_bridge 임포트
-import mcp_read_server  # noqa: F401 (실제 모듈 사용)
-import importlib
-import mcp_http_bridge
-importlib.reload(mcp_http_bridge)
+import mcp_read_server  # noqa: F401 (실제 모듈 — mock 대상 아님)
+import mcp_http_bridge  # collection-time: real bridge (fixture 전 상태)
 
 from mcp_http_bridge import (
     _handle_tool_list,
@@ -42,6 +32,35 @@ from mcp_http_bridge import (
     ALLOWED_TOOLS,
     READ_TOOLS,
 )
+
+# ── module-scope autouse fixture: sys.modules 격리 ───────────────────────────
+# collection-time이 아닌 test execution-time에 mock 주입 → 후속 파일 오염 방지.
+# patch.dict: with 블록 종료 시 sys.modules 자동 복원.
+# fixture 종료 후 bridge 재로드로 clean state 보장 (poc / phase_b/c 수혜).
+
+@pytest.fixture(autouse=True, scope='module')
+def _mock_bridge_deps():
+    """
+    mcp_audit_broker / mcp_containment_state를 module 범위에서만 mock 적용.
+    collection-time 주입 방지 → test_mcp_http_bridge_v2.py 등 후속 파일 격리.
+    """
+    _audit = MagicMock()
+    _audit.write_audit = MagicMock()
+    _audit.write_deny_audit = MagicMock()
+
+    _containment = MagicMock()
+    _containment.is_active = MagicMock(return_value=False)
+
+    with patch.dict(sys.modules, {
+        'mcp_audit_broker': _audit,
+        'mcp_containment_state': _containment,
+    }):
+        importlib.reload(mcp_http_bridge)
+        yield
+    # with 블록 종료: sys.modules 자동 복원 (patch.dict 보장)
+    # bridge를 clean state로 재로드 → poc / phase_b/c 테스트 수혜
+    importlib.reload(mcp_http_bridge)
+
 
 # ── TC-B01: ALLOWED_TOOLS에 READ 9종 포함 확인 ────────────────────
 def test_tcb01_allowed_tools_contains_read():
@@ -189,6 +208,7 @@ def test_tcb13_jeni_actor_allowed():
     assert mock_instance.read_audit_event.called
 
 # ── TC-B14: initialize 정상 ───────────────────────────────────────
+# S145: 기대값 2.1.0 → 2.2.0 현행화 (bridge v2.2.0 배포 이후)
 def test_tcb14_initialize():
     gov_ctx = _build_governance_context({})
     body = {
@@ -197,7 +217,7 @@ def test_tcb14_initialize():
         "params": {"protocolVersion": "2024-11-05"},
     }
     result = _handle_jsonrpc(body, gov_ctx)
-    assert result["result"]["serverInfo"]["version"] == "2.1.0"
+    assert result["result"]["serverInfo"]["version"] == "2.2.0"
 
 # ── TC-B15: notification (id=None) → None 반환 ───────────────────
 def test_tcb15_notification_returns_none():
