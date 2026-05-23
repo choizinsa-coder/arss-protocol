@@ -1,0 +1,25 @@
+{
+  "manifest_epoch": "S146-M1",
+  "canonical_session": 146,
+  "shards": [
+    {
+      "id": "chain_state",
+      "hash": "8d521692428228b5d07f08d4e275a07b158f63999c334ed2d3eddde91324a913",
+      "size_class": "runtime",
+      "required": true
+    },
+    {
+      "id": "active_state",
+      "hash": "e80372c58dc6c3d46a080538331f7099bfd0130d0f80724c42804bd8cef3b9d6",
+      "size_class": "runtime",
+      "required": true
+    },
+    {
+      "id": "session_delta",
+      "hash": "33c7d40a0a6a0f062ed1ed1584eada358b36b893cb8563ef478f0dd0f8ab6d2d",
+      "size_class": "runtime",
+      "required": false
+    }
+  ],
+  "commit_status": "committed"
+}

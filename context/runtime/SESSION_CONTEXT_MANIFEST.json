@@ -1,0 +1,10 @@
+{
+  "schema_version": "context_manifest_v1",
+  "session_count": 146,
+  "runtime_epoch": "S146-R1",
+  "chain_tip_ref": "runtime.chain_state",
+  "active_runtime_ref": "runtime.active_state",
+  "integrity_manifest_ref": "runtime.integrity_manifest",
+  "boot_contract_ref": "runtime.session_delta",
+  "legacy_compatibility": "enabled"
+}

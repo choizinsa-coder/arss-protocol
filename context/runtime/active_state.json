@@ -1,0 +1,7 @@
+{
+  "mode": "normal",
+  "activation_allowed": false,
+  "critical_tasks": [],
+  "agent_focus": {},
+  "fail_closed_state": "normal"
+}
