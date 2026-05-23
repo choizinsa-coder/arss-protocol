@@ -1,0 +1,387 @@
+{
+  "shard_meta": {
+    "shard_id": "governance.decisions",
+    "schema_version": "phase2_shard_v1",
+    "domain": "governance",
+    "session_created": 147,
+    "last_updated_session": 147
+  },
+  "summary": {
+    "domain": "governance.decisions",
+    "schema_version": "phase2_shard_v1",
+    "item_count": 37,
+    "latest_session_ref": 147,
+    "status": "active",
+    "body_ref": "context/governance/decisions.json"
+  },
+  "body": [
+    {
+      "confidence": "HIGH",
+      "context": "캐디 역할 정의 — EAG 게이트 강제화",
+      "date": "2026-03-24",
+      "decision": "캐디는 EAG 없이 코드 생성 불가.",
+      "id": "DIS-001",
+      "logic_hash": "13e8de1b8438ab54",
+      "next_session_ref": true,
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "evidence/ 이중 구조 확정",
+      "date": "2026-03-25",
+      "decision": "VPS 내부 경로와 GitHub Pages 공개 경로 분리.",
+      "id": "DIS-002",
+      "logic_hash": "d2a4f1b9e3c07845",
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "ARSS-RPU-Production-Spec 및 verifier.py 재정의",
+      "date": "2026-03-25",
+      "decision": "Option A+B 순차 실행. JCS/0x00 폐기.",
+      "id": "DIS-003",
+      "logic_hash": "b600f44c3a1d70e0",
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "AIBA Session Sync Architecture v1.0",
+      "date": "2026-03-26",
+      "decision": "3-Layer Model 도입. SESSION_CONTEXT.json을 SSOT로 확정.",
+      "id": "DIS-004",
+      "logic_hash": "976727c62223c33c",
+      "next_session_ref": true,
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "도미 맥락 연속성 논쟁",
+      "date": "2026-03-27",
+      "decision": "Stateless+SSOT 구조 유지. REASONING_LAYER 병행.",
+      "id": "DIS-005",
+      "logic_hash": "1977829e5fa983ec",
+      "next_session_ref": true,
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "SSOT 재진입 구조 설계",
+      "date": "2026-03-27",
+      "decision": "Step 1+2+3 3단계 구조 채택.",
+      "id": "DIS-006",
+      "logic_hash": "a3f8c201d94e7b55",
+      "next_session_ref": true,
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "완료 이중 정의",
+      "date": "2026-03-28",
+      "decision": "구조적 완료 + 실행적 완료 두 가지로 정의.",
+      "id": "DIS-007",
+      "logic_hash": "c94e2b7a3f018d55",
+      "next_session_ref": true,
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "동시 세션 이동 금지",
+      "date": "2026-03-28",
+      "decision": "세션 간 이동 시 현재 세션 완전 종료 후 새 세션 시작.",
+      "id": "DIS-008",
+      "logic_hash": "e7b5a290f1c34d66",
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "캐디의 도미 리뷰 무조건 수용 패턴",
+      "date": "2026-03-29",
+      "decision": "캐디는 도미 리뷰를 비판적으로 평가해야 한다.",
+      "id": "DIS-009",
+      "logic_hash": "f2c6d381a0e49b77",
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "OS 레벨 정의",
+      "date": "2026-03-30",
+      "decision": "SESSION_CONTEXT 구조/Constitution/역할/chain/canonical_core 변경은 OS 레벨.",
+      "id": "DIS-010",
+      "logic_hash": "g3d7e492b1f50c88",
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "Hard Enforcement Layer",
+      "date": "2026-03-31",
+      "decision": "도미 [DESIGN]+[SELF-CRITIQUE] 필수. 캐디 경계 위반 시 Hard Rejection.",
+      "id": "DIS-011",
+      "logic_hash": "h4e8f503c2g61d99",
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "Session Sync Layer 확정",
+      "date": "2026-03-31",
+      "decision": "Phase 2-A Polling → Phase 2-B Webhook → Phase 2-C 동적 주입.",
+      "id": "DIS-012",
+      "logic_hash": "i5f9g614d3h72e00",
+      "next_session_ref": true,
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "SSOI 원칙 확정",
+      "date": "2026-04-02",
+      "decision": "INTERPRETATION_RULE.json을 SSOI로 확정. VPS 배치 완료.",
+      "id": "DIS-013",
+      "logic_hash": "j6g0h725e4i83f11",
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "Boot Template EAG-3 완료",
+      "date": "2026-04-04",
+      "decision": "domi_boot.md v1.0 / jeni_boot.md v1.0 GitHub 배포 확정.",
+      "id": "DIS-014",
+      "logic_hash": "k7h1i836f5j94g22",
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "Boot 문서 갱신 거버넌스",
+      "date": "2026-04-04",
+      "decision": "T-1~T-4 트리거 발생 시 [BOOT_UPDATE_NOTICE — DIS-015] 형식으로 보고.",
+      "id": "DIS-015",
+      "logic_hash": "l8i2j947g6k05h33",
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "Boot 갱신 공지 포맷 표준화",
+      "date": "2026-04-04",
+      "decision": "[BOOT_UPDATE_NOTICE — DIS-015] 형식 표준화.",
+      "id": "DIS-016",
+      "logic_hash": "m9j3k058h7l16i44",
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "캐디 세션 시작 시 Boot 일관성 점검 의무",
+      "date": "2026-04-04",
+      "decision": "매 세션 시작 시 캐디가 Boot 일관성 점검 수행.",
+      "id": "DIS-017",
+      "logic_hash": "g7b3d142e8f60c99",
+      "next_session_ref": true,
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "Phase 2-A consecutive_success 리셋",
+      "date": "2026-04-04",
+      "decision": "WF-03 완성 시점 기준 consecutive_success 1로 리셋.",
+      "id": "DIS-018",
+      "logic_hash": "n0k4l169i8m27j55",
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "세션 단절 해결 방향 확정",
+      "date": "2026-04-05",
+      "decision": "수동 4회 구조 분석 완료. Phase 2-B(WF-04) 핵심 과제 등재.",
+      "id": "DIS-019",
+      "logic_hash": "o1l5m270j9n38k66",
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "consecutive_success 공식값 기준",
+      "date": "2026-04-05",
+      "decision": "consecutive_success_current는 자동화 시스템 검증값 기준. 수동 추정값 SSOT 기입 금지.",
+      "id": "DIS-020",
+      "logic_hash": "h9c4e231f7a86d55",
+      "next_session_ref": true,
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "Phase 2-B 자동 push 대상 매체 확정",
+      "date": "2026-04-05",
+      "decision": "Phase 2-B 출력 대상은 Google Drive 단일 고정. GitHub push는 별도 과제.",
+      "id": "DIS-021",
+      "logic_hash": "i2d7f340e8b95c66",
+      "next_session_ref": true,
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "status server 환경변수 정렬 (B안)",
+      "date": "2026-04-06",
+      "decision": "aiba_status_server.py 환경변수 참조를 .env 기준(AIBA_TOKEN_CADDY 등)으로 통일. EAG 승인 완료.",
+      "id": "DIS-022",
+      "logic_hash": "j3e8g451f9b06d77",
+      "next_session_ref": false,
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "interpretation/INTERPRETATION_RULE.json 구버전 삭제 — SSOI 단일 소스 경로 확정",
+      "date": "2026-04-07",
+      "decision": "INTERPRETATION_RULE.json SSOI 운영 경로를 루트(/opt/arss/engine/arss-protocol/INTERPRETATION_RULE.json)로 단일화. interpretation/ 구버전 삭제(commit b2f8814). RECOMPUTE_GUIDE.md는 유지.",
+      "id": "DIS-026",
+      "logic_hash": "j3e8f451d9c72b87",
+      "next_session_ref": false,
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "AIBA 프로덕션 RPU 체인 계보 공식화",
+      "date": "2026-04-07",
+      "decision": "scoring_ledger chain_tip(eace1217...) 기반 체인을 공식 프로덕션 운영 체인으로 확정. SNAPSHOT_LOG/rpu-0007/0008은 레거시 독립 체인 보존. 신규 RPU 저장 규칙: SNAPSHOT_LOG/ 소문자 rpu-XXXX.json 고정. 저장 위치와 체인 계보는 별개 관리.",
+      "id": "DIS-027",
+      "logic_hash": "n7i2k895j3f16h11",
+      "next_session_ref": true,
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "Session 10 포괄 EAG 승인 및 WF-05 자동화 방향 채택",
+      "date": "2026-04-08",
+      "decision": "Session 10 발생 task_completed / governance_directive / lesson_added / document_approved RPU 발행 및 GitHub push 포괄 승인. WF-05 자동 RPU 발행 파이프라인 설계 착수 결정(방향 2 채택).",
+      "id": "DIS-029",
+      "logic_hash": "o8j3l906k4m17i55",
+      "next_session_ref": true,
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "WF-05 RPU 자동 발행 위임 규칙 — EAG-1 설계 확정",
+      "date": "2026-04-08",
+      "decision": "세션 단위 포괄 위임. 1차 허용 event_type: task_completed / lesson_added / document_approved 3종. governance_directive / decision_recorded는 수동 유지. generate/persist 2단계 분리. publication_state 4단계(GENERATED→PERSISTED→LEDGER_UPDATED→PUSHED). delegation evidence 5개 필드 고정. dedup key: event_type+source_ref+session_id+content_hash+최근100RPU. DIS-028 교차검증 실패 시 발행 금지 STOP. persist 계층: 단기 status server 확장 / 최종 별도 save service.",
+      "id": "DIS-030",
+      "logic_hash": "p9k4m017l5n28j66",
+      "next_session_ref": true,
+      "status": "CONFIRMED"
+    },
+    {
+      "approved_by": "비오(Joshua)",
+      "confidence": "HIGH",
+      "context": "stable_days 계산 규칙 강제화",
+      "date": "2026-04-12",
+      "decision": "stable_days 계산 시 pending_tasks/note의 날짜 표현 신뢰 금지. session_time_lock 기준으로 직접 재계산 의무.",
+      "id": "DIS-037",
+      "logic_hash": "q1r5s890t2u34v56",
+      "session_date": "2026-04-12",
+      "status": "CONFIRMED"
+    },
+    {
+      "approved_by": "비오(Joshua) EAG-1",
+      "confidence": "HIGH",
+      "context": "Phase 2-A → Phase 2-B 전환 확정",
+      "date": "2026-04-12",
+      "decision": "stable_days 7/7(Apr 12) + consecutive_success 420+ 달성. Phase 2-B 전환 선언. SESSION_CONTEXT.json GitHub 자동 push 설계 착수.",
+      "id": "DIS-038",
+      "logic_hash": "r2s6t901u3v45w67",
+      "session_date": "2026-04-12",
+      "status": "CONFIRMED"
+    },
+    {
+      "approved_by": "비오(Joshua) EAG-1/2/3",
+      "confidence": "HIGH",
+      "context": "approval_token canonical 구조 확정 — eag_approval record 기반",
+      "date": "2026-04-12",
+      "decision": "approval_token v3.0: eag_approval record(evidence/eag_approvals/) 기반 자동 생성. approval_phrase 제거. G1~G14 gatekeeper 검증. session_id=AIBA-YYYY-MM-DD-S{n}. eag_approval record: B안(VPS 별도 파일). WF-05 재활성화 전 비오 EAG-2 승인 → 자동 후속 처리 구조 설계 필요.",
+      "id": "DIS-039",
+      "logic_hash": "s3t7u012v4w56x78",
+      "session_date": "2026-04-12",
+      "status": "CONFIRMED"
+    },
+    {
+      "approved_by": "비오(Joshua) EAG-1",
+      "confidence": "HIGH",
+      "context": "AIBA Knowledge Architecture v1.1 확정",
+      "date": "2026-04-13",
+      "decision": "5계층 구조(SSOT/Core/Execution/Reference/Archive) 확정. SESSION_CONTEXT.json = SSOT Layer 독립. Core 3문서 = 정적 운영 규범. Execution Layer = 향후 WORKFLOW_RULES.md/RPU_SPEC.md. Archive = Google Drive.",
+      "id": "DIS-040",
+      "logic_hash": "s3t7u012v4w56x78",
+      "session_date": "2026-04-13",
+      "status": "CONFIRMED"
+    },
+    {
+      "approved_by": "비오(Joshua) EAG-2",
+      "confidence": "HIGH",
+      "context": "Claude 프로젝트 파일 구조 재편 확정",
+      "date": "2026-04-13",
+      "decision": "프로젝트 내 파일: SESSION_CONTEXT.json + Core 3문서 4개만 유지. 나머지 전체 제거 후 Google Drive Archive. ARSS-RPU-Production-Spec Core 내용은 AIBA_GOVERNANCE.md v1.2에 흡수.",
+      "id": "DIS-041",
+      "logic_hash": "t4u8v123w5x67y89",
+      "session_date": "2026-04-13",
+      "status": "CONFIRMED"
+    },
+    {
+      "approved_by": "비오(Joshua)",
+      "confidence": "HIGH",
+      "context": "문서 형식 정책 확정",
+      "date": "2026-04-13",
+      "decision": "보관/참고 목적 문서는 md 형식 우선. docx는 외부 공식 제출 또는 비오님 명시 요청 시에만 사용. Daily Session Report 포함 모든 운영 문서 md 적용.",
+      "id": "DIS-042",
+      "logic_hash": "u5v9w234x6y78z90",
+      "session_date": "2026-04-13",
+      "status": "CONFIRMED"
+    },
+    {
+      "approved_by": "비오(Joshua) 묵시적 확인",
+      "confidence": "HIGH",
+      "context": "create_eag_approval.py vs /rpu/issue R4 hash 계산 불일치 확정",
+      "date": "2026-04-14",
+      "decision": "create_eag_approval.py는 파일 SHA256 방식, /rpu/issue R4는 3개 필드 JSON 직렬화 방식으로 구조적 불일치. 도미 설계로 통일 방향 확정 필요.",
+      "id": "DIS-043",
+      "logic_hash": "v6w0x345y7z89a01",
+      "session_date": "2026-04-14",
+      "status": "CONFIRMED"
+    },
+    {
+      "approved_by": "비오(Joshua) EAG-1",
+      "confidence": "HIGH",
+      "context": "WF-05 hash 불일치 해소 — canonical core OS 레벨 잠금 + session_count auto-fetch",
+      "date": "2026-04-14",
+      "decision": "event_hash canonical core = actor_id+content+event_type (OS 레벨 잠금, DIS-010). session_count = GET /status auto-fetch, 수동 입력 금지. create_eag_approval.py R4 방식으로 통일.",
+      "id": "DIS-044",
+      "logic_hash": "w7x1y456z8a90b12",
+      "session_date": "2026-04-14",
+      "status": "CONFIRMED"
+    },
+    {
+      "approved_by": "비오(Joshua) EAG-1/2/3",
+      "confidence": "HIGH",
+      "context": "Caddy System Prompt v1.3 채택 — AIBA-DESIGN-003",
+      "date": "2026-04-16",
+      "decision": "Response Compression Layer + Abbreviation Layer + Command Layer(/boot /close /view /pending /mode) 신설. /sync 제외(v1.4 이월). [F|H] 푸터 제거, [Usage] 유지. v1.3.1 보완안 작성 주체: 비오+Gemini 협업. OS-level light governance patch.",
+      "id": "DIS-045",
+      "logic_hash": "d003s37caddy13",
+      "session": 37,
+      "status": "CONFIRMED"
+    },
+    {
+      "approved_by": "비오(Joshua)",
+      "confidence": "HIGH",
+      "context": "S40 정산 미실행 — 근본 원인 및 근본해결책",
+      "date": "2026-04-18",
+      "decision": "EPS v1.3 (Execution Pre-Safety v1.3) 설계. Double-Lock Model: Layer A (DIS-011 governance) + Layer B (G15 machine safety). 도미 5개 LOCKED SPEC 작성 필수. FINAL SAFETY DIRECTIVE 준수.",
+      "id": "DIS-046",
+      "logic_hash": "eps_v13_root_fix_s41",
+      "session_date": "2026-04-18",
+      "status": "CONFIRMED"
+    },
+    {
+      "confidence": "HIGH",
+      "context": "DESIGN-EXECUTION PROTOCOL v1.2 확정",
+      "date": "2026-04-23",
+      "decision": "DEP v1.2 채택. DCP 9항목 도미 강제. 제니=신뢰 무결성 필터(TRUST_READY). 캐디=구현 가능성 필터(IMPLEMENTABLE). Final Anchor 필수. boot v1.1 GitHub 배포(commit 546dfdd).",
+      "eag": "EAG-1 비오(Joshua) 승인 완료 (2026-04-23 S53)",
+      "id": "DIS-050",
+      "logic_hash": "dep_v1_2_dis050",
+      "status": "CONFIRMED"
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "shard_meta": {
+    "shard_id": "governance.refs",
+    "schema_version": "phase2_shard_v1",
+    "domain": "governance",
+    "session_created": 147,
+    "last_updated_session": 147
+  },
+  "summary": {
+    "domain": "governance.refs",
+    "schema_version": "phase2_shard_v1",
+    "item_count": 10,
+    "latest_session_ref": 147,
+    "status": "active",
+    "body_ref": "context/governance/refs.json"
+  },
+  "body": [
+    {
+      "approved_by": "비오(Joshua)",
+      "decision": "RPU-0031부터 rpu/1.0 nested schema를 프로덕션 기준으로 채택. RPU-0009~0030은 Frozen Legacy(수정/재검증 제외).",
+      "dual_mode": "금지",
+      "eag": "EAG-1 승인 완료",
+      "id": "DIS-031",
+      "migration": "Hard Cut — RPU-0031 기준",
+      "schema_cutover": "RPU-0031",
+      "session_date": "2026-04-08",
+      "title": "RPU Schema Standard Realignment"
+    },
+    {
+      "approved_by": "비오(Joshua)",
+      "decision": "evidence/scoring_ledger.json을 유일한 프로덕션 체인 SSOT로 확정. dual-ledger 금지.",
+      "eag": "EAG-1 승인 완료",
+      "id": "DIS-032",
+      "session_date": "2026-04-08",
+      "title": "SSOT Ledger Unification"
+    },
+    {
+      "approved_by": "비오(Joshua)",
+      "decision": "SNAPSHOT_LOG = staging + legacy + failed 격리 영역. 프로덕션 체인 참여 금지.",
+      "eag": "EAG-1 승인 완료",
+      "id": "DIS-033",
+      "session_date": "2026-04-08",
+      "title": "SNAPSHOT_LOG Staging Role"
+    },
+    {
+      "approved_by": "비오(Joshua)",
+      "decision": "schema_version = ARSS-RPU-1.0 단일화. generator 종속 계층으로 정의. generator 수정 완료.",
+      "eag": "EAG-1 승인 완료",
+      "id": "DIS-034",
+      "session_date": "2026-04-08",
+      "title": "schema_version Canonicalization"
+    },
+    {
+      "approved_by": "비오(Joshua)",
+      "decision": "verifier는 evidence/만 검증. DEFAULT_CHAIN_DIR 변경 완료. RPU-0013~0030 freeze-in-place.",
+      "eag": "EAG-1 승인 완료",
+      "id": "DIS-035",
+      "session_date": "2026-04-08",
+      "title": "Chain Validation Path Lock"
+    },
+    {
+      "approved_by": "비오(Joshua)",
+      "chain_tip_after": "e28fc666... (RPU-0031, verifier ALL PASS)",
+      "chain_tip_before": "d77c38f4... (RPU-0030, scoring_ledger 수동 기록)",
+      "commits": [
+        "dde540d",
+        "cccc521"
+      ],
+      "decision": "evidence/ canonical chain을 SSOT로 확정. RPU-0023을 체인 끝으로 확정. RPU-0024~0030은 SNAPSHOT_LOG legacy frozen branch로 보존. RPU-0031을 Chain Resumption Declaration으로 evidence/에 발행. 4-way 정합성 완료.",
+      "eag": "EAG-2/EAG-3 승인 완료",
+      "id": "DIS-036",
+      "session_date": "2026-04-09",
+      "title": "Hard Cut B-2 — RPU Chain Canonical Reconstruction"
+    },
+    {
+      "approved_by": "비오(Joshua)",
+      "decision": "SSOT(SESSION_CONTEXT.json) == /status == approval session_count 불일치 시 STOP. 불일치 발견 시 즉시 비오님께 보고.",
+      "eag": "EAG-1 승인 완료(Session 38)",
+      "id": "DIS-045",
+      "session_date": "2026-04-18",
+      "title": "Equality Gate — session_count 3-way 일치 규칙"
+    },
+    {
+      "approved_by": "비오(Joshua)",
+      "decision": "AI 문장 기반 상태 전이 금지. Execution Receipt + Verification Receipt + Binding Gate 12단계 코드 강제 구조 도입. VPS verifier only receipt 생성. Suspicion Mode 트리거 구조화.",
+      "eag": "EAG-1 승인 완료(Session 45)",
+      "id": "DIS-047",
+      "session_date": "2026-04-20",
+      "title": "EPS v1.3-D LOCK SPEC v1.1 확정"
+    },
+    {
+      "approved_by": "비오(Joshua)",
+      "decision": "STAGING=/opt/arss/engine/arss-protocol/staging/ (chmod 700), REFERENCE=/opt/arss/engine/arss-protocol/evidence/, QUARANTINE=/opt/arss/engine/arss-protocol/SNAPSHOT_LOG/quarantine/ (chmod 700). STAGING→REFERENCE 승격은 promote.py whitelist 전용. FAIL/SYSTEM_ERROR는 quarantine 강제.",
+      "eag": "EAG-2 승인 완료(Session 45)",
+      "id": "DIS-048",
+      "session_date": "2026-04-20",
+      "title": "OS 경로 잠금 확정"
+    },
+    {
+      "approved_by": "비오(Joshua)",
+      "decision": "evolution_score 영구 비활성화. 구조 보존, 계산/검증/판단 경로 전면 차단. 신규 state_events에 score_delta 필드 생성 금지. INTERPRETATION_RULE.json score_rules status=DISABLED. trs_v2_1.py 실행 금지. scoring_ledger.json append/update 금지.",
+      "eag": "EAG-2 승인 완료(Session 46)",
+      "id": "DIS-049",
+      "session_date": "2026-04-20",
+      "title": "Evolution Score Soft Kill"
+    }
+  ]
+}

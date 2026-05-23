@@ -1,0 +1,90 @@
+{
+  "shard_meta": {
+    "shard_id": "governance.enforcement",
+    "schema_version": "phase2_shard_v1",
+    "domain": "governance",
+    "session_created": 147,
+    "last_updated_session": 147
+  },
+  "summary": {
+    "domain": "governance.enforcement",
+    "schema_version": "phase2_shard_v1",
+    "item_count": 10,
+    "latest_session_ref": 147,
+    "status": "active",
+    "body_ref": "context/governance/enforcement.json"
+  },
+  "body": {
+    "audit_loop": {
+      "hard_stop_rule": {
+        "effective_remedy": "Boot Template 즉시 수정",
+        "hard_stop_actions": [
+          "캐디: 해당 에이전트 출력 처리 즉시 중단",
+          "캐디: 비오님께 위반 내용 + Boot Template 수정 권고 보고"
+        ],
+        "resume_condition": "비오님 명시적 재개 승인 필수",
+        "trigger": "동일 세션 + 동일 violation_type 2회 반복"
+      },
+      "log_field": "session_delta.enforcement_violations"
+    },
+    "boot_consistency_check": {
+      "action": "Constitution/RGO 변경 여부 확인 → Boot 문서와 불일치 발견 시 즉시 [BOOT_UPDATE_NOTICE — DIS-015] 제출",
+      "auto_detect": "PLANNED — Phase 2-C 이후",
+      "mandatory": true,
+      "ref": "DIS-017",
+      "trigger": "세션 시작 시"
+    },
+    "boundary_criteria": {
+      "allowed": [
+        "개념적 구조 설명",
+        "JSON 스키마/필드 정의"
+      ],
+      "conditional_allowed": [
+        "의사코드 — 'non-executable / illustrative only' 명시 필수",
+        "코드-like 표현 — 'non-executable / illustrative only' 명시 필수"
+      ],
+      "forbidden": [
+        "CLI/Shell 명령",
+        "파일 생성/수정/경로 지시",
+        "Deployment 절차",
+        "Execution Order"
+      ]
+    },
+    "design_package_required": true,
+    "execution_output_forbidden_for_domi": true,
+    "hard_rejection_enabled": true,
+    "pre_output_guard": {
+      "checklist": [
+        "1. 파일/코드 생성 포함 여부 확인",
+        "2. OS 레벨 해당 시 도미 설계 완료 여부 확인 → 미완료 시 즉시 중단",
+        "3. EAG 승인 여부 확인 → 미승인 시 즉시 중단"
+      ],
+      "nature": "behavioral_norm",
+      "updated_date": "2026-04-04",
+      "violation_action": "출력 중단 + 비오님께 위반 선언 + 올바른 절차로 리디렉션"
+    },
+    "rejection_action": {
+      "on_eag_bypass_attempt": "stop_report_and_flag_lesson",
+      "on_execution_order_detected": "stop_and_report",
+      "on_missing_self_critique": "reject_immediately_and_report"
+    },
+    "self_critique_required": true,
+    "frp_hard_stop_extension": {
+      "confirmed_session": 132,
+      "confirmed_by": "비오(Joshua)",
+      "conditions": [
+        "SESSION_OPEN VERIFY 단계 미완료 시 HARD_STOP=ON",
+        "Proof 없는 가능 선언 시 HARD_STOP=ON",
+        "Proof 없는 경로 선언 시 HARD_STOP=ON",
+        "Rule Reinterpretation 발견 시 HARD_STOP=ON",
+        "FRP_ACKNOWLEDGEMENT 누락 시 HARD_STOP=ON"
+      ],
+      "resume_rule": {
+        "id": "FRP-HS-01",
+        "rule": "SESSION_OPEN HARD STOP은 explicit human release 없이 해제될 수 없다.",
+        "resume_condition": "EXPLICIT_HUMAN_RESUME_REQUIRED=YES",
+        "resume_format": "[RESUME_AUTHORIZATION]\nAUTHORIZED_BY=비오\nRESUME_SCOPE=SESSION_OPEN_VERIFY\nHARD_STOP_RELEASE=YES"
+      }
+    }
+  }
+}

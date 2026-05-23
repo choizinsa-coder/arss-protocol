@@ -1,10 +1,16 @@
 {
-  "schema_version": "context_manifest_v1",
-  "session_count": 146,
-  "runtime_epoch": "S146-R1",
+  "schema_version": "context_manifest_v2",
+  "session_count": 147,
+  "runtime_epoch": "S147-R1",
   "chain_tip_ref": "runtime.chain_state",
   "active_runtime_ref": "runtime.active_state",
   "integrity_manifest_ref": "runtime.integrity_manifest",
   "boot_contract_ref": "runtime.session_delta",
-  "legacy_compatibility": "enabled"
+  "legacy_compatibility": "enabled",
+  "reference_shards": {
+    "governance.rules": "context/governance/rules.json",
+    "governance.enforcement": "context/governance/enforcement.json",
+    "governance.decisions": "context/governance/decisions.json",
+    "governance.refs": "context/governance/refs.json"
+  }
 }

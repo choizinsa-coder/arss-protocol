@@ -1,0 +1,563 @@
+{
+  "shard_meta": {
+    "shard_id": "governance.rules",
+    "schema_version": "phase2_shard_v1",
+    "domain": "governance",
+    "session_created": 147,
+    "last_updated_session": 147
+  },
+  "summary": {
+    "domain": "governance.rules",
+    "schema_version": "phase2_shard_v1",
+    "item_count": 50,
+    "latest_session_ref": 147,
+    "status": "active",
+    "body_ref": "context/governance/rules.json"
+  },
+  "body": {
+    "DIS-011": "Hard Enforcement Layer Active — 위반 구조적 차단",
+    "active_lessons": [
+      "LESSON-001",
+      "LESSON-002",
+      "LESSON-003",
+      "LESSON-004",
+      "LESSON-005",
+      "LESSON-006",
+      "LESSON-007",
+      "LESSON-008",
+      "LESSON-009",
+      "LESSON-010",
+      "LESSON-011",
+      "LESSON-012",
+      "LESSON-013",
+      "LESSON-014",
+      "LESSON-015",
+      "LESSON-016",
+      "LESSON-017",
+      "LESSON-018",
+      "LESSON-019",
+      "LESSON-020",
+      "LESSON-021",
+      "LESSON-022"
+    ],
+    "agent_boot_procedure": {
+      "caddy": {
+        "boot_md": "Claude Project Instructions (상시)",
+        "session_context": "Claude 프로젝트 업로드"
+      },
+      "domi": {
+        "boot_md": "GitHub raw URL fetch (자동) — https://raw.githubusercontent.com/choizinsa-coder/arss-protocol/main/boot/domi_boot.md",
+        "session_context": "파일 직접 첨부"
+      },
+      "established_date": "2026-04-05",
+      "jeni": {
+        "boot_md": "GitHub 페이지 텍스트 복사·붙여넣기 — URL fetch 실패로 수동 방식 확정",
+        "session_context": "파일 직접 첨부"
+      }
+    },
+    "arss_gatekeeper": {
+      "approved_by": "비오(Joshua) EAG-1/2/3",
+      "commit": "1fb8b63",
+      "deployed_date": "2026-04-12",
+      "file": "tools/arss_gatekeeper.py",
+      "note": "G1~G14 검증 체계. Session 32: line 128 raw bytes → canonical JSON payload hash 패치 완료(commit 1d97127). WF-05 재활성화 전 운영 방식 확정 필요.",
+      "status": "LIVE — G1~G14 검증 체계",
+      "version": "v3.0"
+    },
+    "auto_loader": {
+      "activation_status": "LOAD_RESULT_ONLY — SESSION_CONTEXT mutation forbidden",
+      "approved_by": "비오(Joshua) EAG-3",
+      "deployed_date": "2026-04-27",
+      "deployed_session": 60,
+      "execution_tool": "Codex CLI",
+      "files": [
+        "__init__.py",
+        "auto_loader.py",
+        "field_contract.py",
+        "hash_engine.py",
+        "load_result.py",
+        "source_adapter.py",
+        "activation_runner.py",
+        "mutation_gate.py"
+      ],
+      "pt_s61_001_status": "COMPLETED — S62 EAG-3 비오(Joshua) 승인",
+      "status": "DEPLOYED",
+      "test_result": "PT-S61-001 pytest 30/30 PASS (S62 EAG-3 완료)",
+      "version": "v1.1",
+      "vps_path": "/opt/arss/engine/arss-protocol/tools/auto_loader/"
+    },
+    "boot_architecture": {
+      "activated_date": "2026-04-25",
+      "activated_session": 56,
+      "approved_by": "비오(Joshua)",
+      "boot_generation_path": "boot_generator",
+      "boot_splitter_status": "QUARANTINED_DEPRECATED",
+      "boot_validation_required": true,
+      "full_context_usage": "on_demand_only",
+      "mode": "BOOT_FULL_SPLIT_ACTIVE"
+    },
+    "boot_templates": {
+      "caddy": {
+        "method": "Claude Project Instructions (상시)",
+        "note": "Pre-Output Guard 체크리스트 포함. SESSION_CONTEXT.json 업로드로 SSOT 주입."
+      },
+      "domi": {
+        "approved_by": "비오(Joshua) EAG-3",
+        "commit": "546dfdd",
+        "deployed_date": "2026-04-24",
+        "url": "https://raw.githubusercontent.com/choizinsa-coder/arss-protocol/main/boot/domi_boot.md",
+        "version": "v1.1"
+      },
+      "jeni": {
+        "approved_by": "비오(Joshua) EAG-3",
+        "commit": "546dfdd",
+        "deployed_date": "2026-04-24",
+        "url": "https://raw.githubusercontent.com/choizinsa-coder/arss-protocol/main/boot/jeni_boot.md",
+        "version": "v1.1"
+      },
+      "update_governance": {
+        "auto_detect_status": "PLANNED — Phase 2-C 이후",
+        "notice_channel": "세션 메시지 (Phase 2-A) → 이벤트 기반 자동화 (Phase 2-C)",
+        "notice_format": "[BOOT_UPDATE_NOTICE — DIS-015]",
+        "ref": "DIS-015",
+        "triggers": [
+          "T-1: Constitution 개정",
+          "T-2: 역할/권한 변경",
+          "T-3: Boot-규범 불일치",
+          "T-4: 운영 결함"
+        ]
+      }
+    },
+    "caddy_lead_mode": {
+      "constraints": "설계 권한(도미)·검증 권한(제니)·EAG(비오) 유지",
+      "directive_by": "비오(Joshua)",
+      "directive_date": "2026-03-31",
+      "enabled": true,
+      "scope": "작업 흐름 조율만 — 캐디가 태스크 진행 순서·요청 타이밍 관리"
+    },
+    "caddy_system_prompt": {
+      "file": "caddy_system_prompt_v1_3.md",
+      "note": "AIBA-DESIGN-003 EAG-1/2/3 완료. Response Compression + Abbreviation + Command Layer 신설. Session 37 업데이트.",
+      "prev_version": "caddy_system_prompt_v1_2.md (archived → 99_LEGACY)",
+      "status": "ACTIVE",
+      "version": "v1.3"
+    },
+    "claude_code_operation_rule": {
+      "established_date": "2026-05-04",
+      "established_session": "S78",
+      "rule_1_caddy": "실행 결과 붙여넣기 시 Claude Code 자동 출력(제안/선택지)이 포함될 수 있음. 비오 발화와 구분하여 실행 결과 본문만 처리.",
+      "rule_2_claude_code": "명령 실행 후 결과만 출력. 추가 제안/선택지/질문 출력 금지. 실행 결과 + 오류 메시지만 출력."
+    },
+    "completion_definition": {
+      "operational": "실제 시스템 작동 기준 완료 (DIS-007)",
+      "structural": "설계·승인·데이터 충족 기준 완료 (DIS-007)",
+      "v1_1_addition": "Execution success ≠ Completion. 완료 = 비오 현실 확인 + (Tier 2 이상) 제니 검증 PASS"
+    },
+    "concurrent_session_rule": "동시 세션 이동 금지 원칙 유지 — DIS-008.",
+    "conflict_rule": "State Mismatch 발생 시 즉시 선언 후 비오 확인 요청",
+    "constitution_ref": {
+      "approved_by": "비오(Joshua)",
+      "basis": "DIS-007 + DIS-008 + Rule-000.",
+      "boot_order": [
+        "SESSION_CONTEXT.json (SSOT)",
+        "Constitution_v1_0_Patch_RevA_SC (SSOI + Governance)"
+      ],
+      "file": "Constitution_v1_0_Patch_RevA_SC.docx",
+      "locked": true,
+      "locked_date": "2026-03-28",
+      "rule_000": "Supremacy Clause (Scoped) — AIBA OS 내부 최상위 해석 권위.",
+      "version": "v1.0_Patch_RevA_SC"
+    },
+    "current_standard": "ARSS-RPU-1.0",
+    "dep_protocol": {
+      "approved_by": "비오(Joshua)",
+      "approved_date": "2026-04-23",
+      "binary_output_enforced": {
+        "caddy": "IMPLEMENTABLE = YES/NO + STRUCTURAL_CHANGE = YES/NO",
+        "jeni": "TRUST_READY = PASS/FAIL + REVALIDATION_REQUIRED = YES/NO"
+      },
+      "dcp_items": 9,
+      "dcp_version": "v1.1",
+      "dis_ref": "DIS-050",
+      "final_anchor_required": true,
+      "revalidation_triggers": [
+        "캐디 STRUCTURAL_CHANGE=YES",
+        "도미 최종 보증 후 구조 수정",
+        "제니 REVALIDATION_REQUIRED=YES"
+      ],
+      "version": "v1.2"
+    },
+    "eag_approval_tools": {
+      "canonical_core_governance": "canonical core 필드 범위 변경 = OS 레벨 (DIS-010). 변경 시 도미 설계 + EAG 필수.",
+      "create_approval_token": "tools/create_approval_token.py — approval_token v3.0 생성",
+      "create_eag_approval": "tools/create_eag_approval.py — EAG-2 승인 record 생성 (파일 SHA256 방식 — R4와 불일치 확정, 수정 필요)",
+      "hash_mismatch_issue": "Session 32 완료 — arss_gatekeeper.py line 128 raw bytes → canonical JSON payload hash 패치 완료(commit 1d97127). create_eag_approval.py + create_approval_token.py R4 canonical payload hash 방식 패치 완료(Session 31, commit 09bc8dd). WF-05 403→500 오류 진행 중 — token JSON 객체 전달 방식 문제 추정.",
+      "receipts": "evidence/receipts/ (PASS/FAIL 자동 저장, chmod 400)",
+      "session_count_source": "create_eag_approval.py 실행 직전 GET /status auto-fetch. 수동 입력 금지.",
+      "storage": "evidence/eag_approvals/ (1 approval = 1 record, chmod 440)"
+    },
+    "eag_stages": {
+      "EAG-1": "비오 설계 승인",
+      "EAG-2": "제니 TRUST_READY + 캐디 IMPLEMENTABLE",
+      "EAG-3": "비오 실행 결과 최종 승인"
+    },
+    "eps_v1_3_d": {
+      "activated_date": "2026-04-20",
+      "activated_session": 45,
+      "approval_model": "gatekeeper_enforced",
+      "approved_by": "비오(Joshua) EAG-1",
+      "baseline_mode": "LAST_KNOWN_GOOD_RECEIPT",
+      "commit": "2eb9b3a",
+      "completed_date": "2026-04-21",
+      "completed_session": 47,
+      "core_principle": "AI는 사실을 선언하지 않는다. 시스템이 검증한 결과만 전달한다.",
+      "execution_model": "receipt-driven",
+      "lock_spec_version": "v1.1",
+      "modules": "tools/eps_v1_3_d/",
+      "paths": {
+        "quarantine": "/opt/arss/engine/arss-protocol/SNAPSHOT_LOG/quarantine/",
+        "receipts": "/opt/arss/engine/arss-protocol/evidence/receipts/",
+        "reference": "/opt/arss/engine/arss-protocol/evidence/",
+        "staging": "/opt/arss/engine/arss-protocol/staging/"
+      },
+      "status": "FULLY_COMPLETED",
+      "trust_mode": "code_enforced"
+    },
+    "eps_v1_4": {
+      "activated_session": 48,
+      "implementation": "COMPLETE",
+      "integration_status": "NOT_POSSIBLE — architectural limit. Domi/Caddy speech generation is inside Claude/ChatGPT runtime. VPS has no access to that boundary.",
+      "note": "SEP v1.0 (E/P/A classifier) + wrapper + adapter + segmenter + enforcement. fail-closed. stale verifier blocking. runtime evidence check. safe_emit contract.",
+      "revisit_condition": "B3 (Claude API orchestration layer) implementation complete",
+      "role": "Machine Output Audit Layer (NOT conversational emission gate)",
+      "status": "DEPLOYED_UNINTEGRATED_INACTIVE",
+      "test_result": "53/53 PASS",
+      "vps_path": "/opt/arss/engine/arss-protocol/tools/eps_v1_4/"
+    },
+    "execution_order": "설계(도미·DCP 9항목) → EAG-1(비오) → 제니 검증(TRUST_READY) → 비오 2차 검토 → 캐디 구현 가능성 점검(IMPLEMENTABLE) → [STRUCTURAL_CHANGE=YES시 제니 재검증] → 도미 최종 보증(Final Anchor) → Claude Code 실행 → Post-Execution Validation(캐디) → EAG-3(비오)",
+    "execution_tool": {
+      "note": "S64 이후 Claude Code Terminal 기본. Codex CLI는 AIBA 거버넌스 미인지 — 단순 스크립트 실행에 한해 허용. AIBA 판단 개입 작업은 Claude Code Terminal 전용.",
+      "primary": "Claude Code Terminal",
+      "secondary": "Codex CLI (단순 실행 한정 허용 — S80 비오 확정)"
+    },
+    "flat_verifier": {
+      "approved_by": "비오(Joshua) EAG-3",
+      "commit": "c3f85fd",
+      "deployed_date": "2026-04-10",
+      "file": "tools/flat_verifier.py",
+      "note": "flat schema 전용 verifier. canonical verifier 완전 분리. importable=false 고정(missing canonical chain structure). Phase 3 Governance Lock.",
+      "status": "LIVE — rpu-0024~0030 validated (importable: false)",
+      "version": "v1.0"
+    },
+    "gdrive_adapter_limitation": {
+      "component": "GDriveFileAdapter",
+      "confirmed_date": "2026-05-01",
+      "confirmed_session": 66,
+      "impact": "no current runtime impact — AUTO-LOADER remains LOAD_RESULT_ONLY, SESSION_CONTEXT mutation forbidden",
+      "next_action": "register as separate activation prerequisite before B3 or real GDrive source activation",
+      "status": "KNOWN_LIMITATION_PENDING_SCOPE_CONFIRMATION"
+    },
+    "generator": {
+      "approved_by": "비오(Joshua) EAG-3",
+      "commit": "956320d",
+      "deployed_date": "2026-04-06",
+      "file": "arss_generator_v1.py",
+      "note": "POST /generate API 방식. Authorization: Bearer $AIBA_TOKEN_CADDY 필수. actor_id, content, prev_chain_hash, event_type 필수. persist 미지원. UUIDv7 내부 구현(Python 3.10.12). event_type은 INTERPRETATION_RULE 허용 목록 사전 확인 필수(LESSON-013).",
+      "port": 8001,
+      "status": "RUNNING",
+      "version": "v1.0",
+      "vps_path": "/opt/arss/engine/arss-protocol/arss_generator_v1.py"
+    },
+    "governance_v1_1": {
+      "approved_by": "비오(Joshua) EAG-1 Session 35",
+      "approved_date": "2026-04-16",
+      "file": "governance_v1_1_core.md",
+      "note": "AIBA Cross-Monitoring OS Hard Enforcement Layer. caddy_system_prompt_v1_1.md에 통합.",
+      "status": "ACTIVE",
+      "version": "v1.1"
+    },
+    "lesson_reference_mode": "Canonical State 기반 전체 로딩 — 세션 시작 시 lessons 전체 강제 참조",
+    "n8n": {
+      "access": "SSH 터널 전용 (ssh -L 5678:localhost:5678 root@159.203.125.1)",
+      "account": "choizinsa@gmail.com",
+      "note": "WF-01/02/03/04/05 구성. WF-03 복구 완료(Session 27, Apr 13). TZ=Asia/Seoul 적용(Session 29). WF-05 n8n 노드 재구성 완료(Session 34). Pool Check→Edit Fields→HTTP Request→IF 구조. live test 미완료 — session_id 불일치 해소 필요.",
+      "port": 5678,
+      "service": "aiba-n8n.service",
+      "status": "RUNNING",
+      "version": "v2.8.4",
+      "vps_ip": "159.203.125.1"
+    },
+    "operation_directive": {
+      "directive_by": "비오(Joshua)",
+      "directive_date": "2026-04-27",
+      "execution_style": "Step by Step — 단계별 실행, 결과 확인 후 다음 단계",
+      "execution_tool": "Claude Code Terminal (S64 변경)"
+    },
+    "os_level_definition": {
+      "criteria": [
+        "SESSION_CONTEXT.json 구조 변경",
+        "Constitution 규칙 변경 또는 추가",
+        "에이전트 역할/권한 변경",
+        "chain 또는 SSOT 구조 변경",
+        "/status canonical_core 변경"
+      ],
+      "ref": "DIS-010"
+    },
+    "pec_failures_log": {
+      "commit": "c3f85fd",
+      "deployed_date": "2026-04-10",
+      "dir": "logs/pec_failures/",
+      "note": "step5_machine_pec() verdict FAIL 시 PEC_FAIL_<timestamp>.json 자동 기록. 외부 감사 대응 보강(제니 의견 반영).",
+      "vps_path": "/opt/arss/engine/arss-protocol/logs/pec_failures/"
+    },
+    "phase2_direction": {
+      "auth": "B안 (서비스 계정) — Phase 2-C에서 전환.",
+      "confirmed_by": "비오(Joshua) EAG 2차 승인 2026-03-31",
+      "consecutive_success_current": 420,
+      "consecutive_success_reset_date": "2026-04-06",
+      "consecutive_success_reset_reason": "WF-01 인증 수정 후 Exec 1205~1573+ 연속 370회 이상 Success 확인 (2026-04-08 Session 10).",
+      "phase2a_transition_criteria": {
+        "consecutive_success": 30,
+        "error_rate_max": 0.05,
+        "fallback_count_max": 0,
+        "resource_status": "ok",
+        "stable_days": 7
+      },
+      "phase2b_transition": {
+        "achieved_date": "2026-04-12",
+        "approved_by": "비오(Joshua) EAG-1 Session 25",
+        "consecutive_success": "420+",
+        "next": "SESSION_CONTEXT.json GitHub 자동 push 설계(도미 의뢰 PLANNED)",
+        "stable_days_achieved": "7/7"
+      },
+      "trigger": "B안 (Webhook) — 최종 목표. Phase 2-A는 Polling으로 시작.",
+      "validation": "B안 + 증분 검증 (Session Delta 기준)"
+    },
+    "pre_execution_pec": {
+      "approved_by": "비오(Joshua)",
+      "established_date": "2026-04-09",
+      "hard_stop": "PEC 섹션 없는 패키지는 EAG-2 제출 불가 — 자동 무효",
+      "pec_required_fields": [
+        "실행 일시",
+        "대상 파일 경로",
+        "확인 명령어",
+        "실제 구조 (key 목록)",
+        "현재 핵심 값 (chain_tip 등)",
+        "구조 이상 여부"
+      ],
+      "ref": "LESSON-012 + Session 13 끝장토론 결정",
+      "rule": "모든 Pre-Execution Package(EAG-2 제출 대상)에 PEC 섹션 필수 포함",
+      "status": "ACTIVE"
+    },
+    "preflight": {
+      "achieved_date": "2026-04-06",
+      "note": "VPS SSH 루프백 설정 완료. .approval_token 생성 완료. arss_generator_v1.py 배포 완료.",
+      "status": "9/9 ALL PASS"
+    },
+    "role_definition_v1_1": {
+      "approved_date": "2026-04-16",
+      "beo": "현실 상태 확인 + 최종 완료 선언. 유일한 완료 확정 권한자.",
+      "caddy": "코드 초안(미검증) + 논리 검토. 현실 판단/완료 선언 금지.",
+      "claude_code": "실행 전용. 판단/완료 선언 금지.",
+      "domi": "설계 + 성공/실패 기준 정의 + 사전 코드 검토. 사후 검증 금지.",
+      "jeni": "사후 기획 일치 + Trust Chain + 거버넌스 검증. 현실 확정 불가.",
+      "ref": "GOVERNANCE_v1.1_CORE"
+    },
+    "rpu_atomic_issuer": {
+      "approved_by": "비오(Joshua) EAG-2",
+      "bugfix_session15": "step3_generator()에 event_type 파라미터 누락 → 수정 완료. commit 0b51d17.",
+      "commit": "1fb8b63",
+      "deployed_date": "2026-04-12",
+      "eag_status": "EAG-3 완료 (RPU-0032 발행 성공 2026-04-09 Session 15).",
+      "file": "tools/rpu_atomic_issuer.py",
+      "note": "step1_eag: arss_gatekeeper.validate(event_file, approval_token_path, session_count). --approval-token=JSON파일경로, --session-count=int 인터페이스.",
+      "status": "LIVE — step1_eag v2.0 시그니처 적용",
+      "token_location": "/etc/environment (AIBA_TOKEN_CADDY=caddy-a7f3k9m2p5x8)",
+      "version": "v1.0"
+    },
+    "rpu_chain": {
+      "filename_format": "대문자 RPU-XXXX.json (evidence/ canonical 기준)",
+      "legacy_branch": {
+        "decision": "DIS-031~035 (2026-04-08 EAG-1) + Hard Cut B-2 DIS-036 (2026-04-09 EAG-2/3)",
+        "files": "rpu-0024.json ~ rpu-0030.json",
+        "future": "flat schema verifier 설계 후 사후 편입 가능성 보존 — 도미 담당 PLANNED",
+        "path": "/opt/arss/engine/arss-protocol/SNAPSHOT_LOG/",
+        "reason": "verifier incompatibility — flat schema, chain 블록 없음",
+        "status": "Legacy flat schema — SNAPSHOT_LOG frozen. canonical: false."
+      },
+      "legacy_chain": {
+        "files": [
+          "rpu-0007.json",
+          "rpu-0008.json"
+        ],
+        "path": "/opt/arss/engine/arss-protocol/SNAPSHOT_LOG/",
+        "status": "레거시 독립 체인 — generator 체인과 별도 계보 (DIS-027)"
+      },
+      "note": "저장 위치(SNAPSHOT_LOG/)와 체인 계보는 별개로 관리. DIS-027 확정.",
+      "production_chain_basis": "evidence/scoring_ledger.json chain_tip 기준 (DIS-032)",
+      "storage_path": "/opt/arss/engine/arss-protocol/evidence/"
+    },
+    "scoring_ledger": {
+      "disabled_date": "2026-04-20",
+      "disabled_reason": "evolution_score SOFT_KILL DIS-049",
+      "raw_url": "https://raw.githubusercontent.com/choizinsa-coder/arss-protocol/main/evidence/scoring_ledger.json",
+      "schema_version": "2.1",
+      "status": "DISABLED",
+      "trs_path": "/opt/arss/engine/arss-protocol/scripts/workflow/trs_v2_1.py",
+      "vps_path": "/opt/arss/engine/arss-protocol/evidence/scoring_ledger.json"
+    },
+    "session_context_gen": {
+      "approved_by": "비오(Joshua) EAG-3",
+      "chain_integrity": "UNCHANGED (PRE==POST)",
+      "commit": "c369eaf",
+      "deployed_date": "2026-04-21",
+      "deployed_session": 49,
+      "modules": [
+        "__init__.py",
+        "hash_utils.py",
+        "baseline_selector.py",
+        "delta_engine.py",
+        "state_events_normalizer.py",
+        "generation_pipeline.py",
+        "recovery_manager.py (R1+R2+R3 완료)",
+        "boot_generator.py (PT-S55-001)",
+        "boot_validator.py (PT-S55-001)"
+      ],
+      "receipt_extension_namespace": "extension",
+      "receipt_schema": "arss_generator_v1.py canonical schema 준수",
+      "recovery_manager_status": "R2_DEPLOYED — PT-S51-001 COMPLETED(S52 EAG-3). R3 unblocked. commit 3ab2b9c.",
+      "refs": [
+        "PT-S45-002",
+        "PT-S45-003",
+        "DIS-047",
+        "DIS-048"
+      ],
+      "status": "DEPLOYED",
+      "test_result": "8/8 PASS (33 total)",
+      "version": "v1.0",
+      "vps_path": "/opt/arss/engine/arss-protocol/tools/session_context_gen/"
+    },
+    "ssoi_principle": "SSOT(데이터 단일화)에 더하여 SSOI(Single Source of Interpretation) 적용. INTERPRETATION_RULE.json VPS 배치 완료 — activation_status: active.",
+    "ssoi_status": {
+      "activated_date": "2026-03-30",
+      "activation_status": "active",
+      "approved_by": "비오(Joshua) EAG 3차",
+      "file": "INTERPRETATION_RULE.json",
+      "hash": "30aaf2e28e262ea0b946259f2d451892453819ffef95b4dc1281c7c5ec654fb1",
+      "hash_update_reason": "DIS-049 updated_at+update_reason 반영 [S47]",
+      "hash_updated_date": "2026-04-21",
+      "note": "v2.0: Evolution Score v2.1 전환 — score_rules_v2_1 ACTIVE, score_rules_v1 ARCHIVED (2026-04-10 Session 17 EAG-3 완료)",
+      "schema_version": "v2.0",
+      "vps_path": "/opt/arss/engine/arss-protocol/INTERPRETATION_RULE.json"
+    },
+    "state_priority": "SESSION_CONTEXT.json이 System Prompt보다 상위 규범",
+    "status_server": {
+      "file": "aiba_status_server.py",
+      "note": "v0.9: R1~R4 Revalidation Contract 추가(commit 57d695f, Session 27). POST /rpu/issue approval_id 기반 동적 검증. receipts/ gitignore 처리(commit fa56285). TZ=Asia/Seoul 적용 완료(Session 29, commit c1ed296). GET /approval-token 엔드포인트 추가(Session 32, commit f74d4ce). GET /approval-pool/ready + POST /approval-pool/consume 추가(Session 33, commit 834fd18). POST /approval-pool/add 추가(commit b204a96, Session 34). Flask 이중 파싱 버그 수정(line 394). GET /session/current 엔드포인트 신설(Option A-2, commit 5de4355, Session 39). create_eag_approval.py fetch 경로 /status → /session/current 변경. S40: actor_id 빈값 필수 필드 오판정 수정. score_rules_v1 fallback 추가. session_count .approval_token session_id 파싱 방식 교체. INTERPRETATION_RULE.json HUMAN_APPROVAL_RECORDED 등재. arss_generator_v1.py score_rules fallback + actor_id 빈값 허용. create_approval_token.py approved_at_kst 원본 시각 사용 수정. WF-05 n8n live test 최종 성공(RPU-0043). commit 6736cf2.",
+      "port": 8000,
+      "service": "aiba-status.service",
+      "status": "RUNNING",
+      "version": "v0.11",
+      "vps_ip": "159.203.125.1"
+    },
+    "sync_metadata": {
+      "file": "sync_metadata.json",
+      "schema_version": "1.0",
+      "status": "INITIALIZED",
+      "sync_mode": "polling",
+      "vps_path": "/opt/arss/engine/arss-protocol/sync_metadata.json"
+    },
+    "task_structure": {
+      "approved_by": "비오(Joshua) EAG-3",
+      "bucket_structure": "active_tasks / blocked_tasks / hold_tasks / archived_tasks",
+      "commit": "b26ec3d",
+      "deployed_date": "2026-05-01",
+      "deployed_session": 66,
+      "files": [
+        "migration_validator.py",
+        "task_migrator.py",
+        "test_pt_s58_001.py"
+      ],
+      "note": "PT-S58-001 COMPLETED. 74 tasks migrated. validator PASS. chain tip unchanged.",
+      "shim": "pending_tasks_legacy_shim (read-only, is_canonical=false)",
+      "status": "DEPLOYED",
+      "status_standard": [
+        "DESIGN_PENDING",
+        "EAG_1_PENDING",
+        "EAG_2_PENDING",
+        "EAG_3_PENDING",
+        "READY_FOR_DEPLOY",
+        "IN_PROGRESS",
+        "BLOCKED",
+        "HOLD",
+        "COMPLETED",
+        "CANCELED",
+        "SUPERSEDED",
+        "ARCHIVED"
+      ],
+      "test_result": "pytest 16/16 PASS (S66 EAG-3 완료)",
+      "version": "v1.0",
+      "vps_path": "/opt/arss/engine/arss-protocol/tools/task_structure/"
+    },
+    "transient_rule": "세션 중 변화는 Session Delta로 관리. 병합 전 Canonical State 효력 없음",
+    "verifier_bridge": {
+      "approved_by": "비오(Joshua) EAG-2",
+      "commit": "20ef650",
+      "deployed_date": "2026-04-09",
+      "file": "vps_verifier_bridge.py",
+      "note": "Bridge-Mode Extension v1.0 추가. --candidate-rpu / --candidate-ledger 인자. Zero-Trust Validation. 출력 계약 고정.",
+      "version": "v0.3+Bridge-Mode-v1.0"
+    },
+    "saturation_detection_rule": {
+      "confirmed_session": 117,
+      "confirmed_by": "비오(Joshua)",
+      "eag_stage": "EAG-2_COMPLETE",
+      "version": "v1.1-T6",
+      "task_ref": "PT-S115-OBS-002",
+      "formula": "SATURATION_SCORE = (M-03 × 0.5) + (REOPEN_PRESSURE × 0.3) + (GROWTH_VELOCITY × 0.2)",
+      "thresholds": {
+        "TRG-04_warning": 68,
+        "TRG-05_hard_stop": 82
+      },
+      "trg05_action": "MANDATORY_HUMAN_REVIEW — 자동 중단 없음",
+      "warning_first": true,
+      "storage": "visibility_metrics.saturation (세션 리포트 내 출력)",
+      "log_trace_required": true,
+      "log_trace_items": [
+        "m03_ceiling_utilization",
+        "reopen_pressure",
+        "growth_velocity",
+        "formula_weights"
+      ],
+      "jeni_audit": "10세션 rolling 샘플링 기반 재계산 검증",
+      "expansion_freeze_compliant": true,
+      "jeni_trust_ready": "PASS (T-1~T-8 / RC-03 COMPLETE, S117)"
+    },
+    "document_creation_rule": {
+      "confirmed_session": 117,
+      "confirmed_by": "비오(Joshua)",
+      "rule": "기본 산출물 형식은 .md. docx는 비오님이 명시적으로 지시할 때만 생성. 에이전트 간 브리핑/검증/설계 전달은 채팅창 직접 출력으로 처리한다. 파일 생성은 VPS 배포 대상이거나 비오님이 명시적으로 저장을 지시한 경우에만 수행한다."
+    },
+    "retrieval_governance_rule": {
+      "confirmed_session": 118,
+      "confirmed_by": "비오(Joshua) EAG-2/3",
+      "version": "v1.1",
+      "task_ref": "PT-S115-ERG-001",
+      "final_anchor": "Retrieval is auxiliary authority. SESSION_CONTEXT remains the sole canonical interpreter of operational state.",
+      "retrieval_classes": {
+        "CLASS-A": "저위험 메타데이터 조회 — ALLOW",
+        "CLASS-B": "맥락 지원 조회 — ALLOW",
+        "CLASS-C": "해석 영향 가능 조회 — CVC-01~04 검증 절차 필수",
+        "CLASS-D": "Canonical 충돌 조회 — DENY + STOP"
+      },
+      "ssot_priority": "SEP-01~04 — SESSION_CONTEXT 자동 우선. 검색 결과 canonical 변환 금지.",
+      "fail_closed": "FCC-01~04 — 결과 없음: STOP/CONTINUE_WITHOUT_RETRIEVAL. 모호: HOLD. 충돌: DENY. 신뢰 불명: FAIL_CLOSED.",
+      "class_c_flow": "CVC-01~04 — 캐디(분류·충돌탐지) → 필요 시 제니 개입 → 필요 시 비오님 검토. PASS 조건 5개(SESSION_CONTEXT 충돌 없음/EAG semantic 변이 없음/임계값 재해석 없음/REFERENCE_ONLY 유지/미해소 모호성 없음)",
+      "recording_rule": "RLR-01~04 — 세션 리포트 선언 기준. CLASS-C/D·HOLD_UNVERIFIED·REVALIDATION_REQUIRED·SSOT충돌 필수 기록. SESSION_CONTEXT 직접 변경 금지.",
+      "first_class_c_rule": "CLASS-C 최초 발생 세션: 캐디 즉시 비오님 보고 후 처리 진행.",
+      "revalidation_required": "COMPLETE — S119 제니 REVALIDATION PASS (RV-1~RV-8 전항목)",
+      "jeni_trust_ready": "PASS (T-1~T-8 전항목, S118)",
+      "jeni_revalidation": "PASS (RV-1~RV-8 전항목, S119)"
+    }
+  }
+}
