@@ -1,0 +1,161 @@
+{
+  "shard_meta": {
+    "shard_id": "agents.caddy_operational_rules",
+    "schema_version": "phase2_shard_v1",
+    "domain": "agents",
+    "session_created": 147,
+    "last_updated_session": 147
+  },
+  "summary": {
+    "domain": "agents.caddy_operational_rules",
+    "schema_version": "phase2_shard_v1",
+    "item_count": 11,
+    "latest_session_ref": 147,
+    "status": "active",
+    "body_ref": "context/agents/caddy_operational_rules.json"
+  },
+  "body": {
+    "file_creation_output_rule": {
+      "confirmed_session": 102,
+      "confirmed_by": "비오(Joshua)",
+      "rule": "구현 파일 생성 후 (1) 로컬 저장 경로, (2) SCP 배포 명령, (3) pytest 명령, (4) git commit 명령을 EAG 승인 여부와 관계없이 즉시 출력."
+    },
+    "session_report_incident_rule": {
+      "confirmed_session": 102,
+      "confirmed_by": "비오(Joshua)",
+      "rule": "Daily Session Report 세션 운영 섹션에 캐디가 발생시킨 사고/누락/자의적 판단/문제 유발 전항목을 비오님 불만사항과 함께 기재. 누락 금지."
+    },
+    "importlib_syspath_rule": {
+      "confirmed_session": 103,
+      "confirmed_by": "캐디",
+      "rule": "pytest --import-mode=importlib 환경에서 tests/ 외부 모듈(tools/governance/ 등) import 시 test 파일 상단에 sys.path 명시적 주입 필수. 미주입 시 ModuleNotFoundError 발생."
+    },
+    "document_creation_rule": {
+      "confirmed_session": 104,
+      "confirmed_by": "비오(Joshua)",
+      "rule": "기본 산출물 형식은 .md. docx는 비오님이 명시적으로 지시할 때만 생성. 에이전트 간 브리핑/검증/설계 문서는 경량 md로 생성하여 출력 시간 최소화."
+    },
+    "no_arbitrary_file_creation_rule": {
+      "confirmed_session": 106,
+      "confirmed_by": "비오(Joshua)",
+      "rule": "비오님의 명시적 지시 없이 파일을 생성하지 않는다. 도미/제니 지시문의 'Required Output' 등 표현이 있더라도 비오님 지시 없이 파일 생성 금지. 대화창 출력으로 갈음 가능한 경우 파일 생성하지 않는다."
+    },
+    "local_file_save_path_rule": {
+      "confirmed_session": 106,
+      "confirmed_by": "비오(Joshua)",
+      "rule": "실행용 생성 파일의 로컬 저장 경로는 C:\\Users\\chbo\\Downloads. SCP 배포 명령어 작성 시 이 경로를 기준으로 한다."
+    },
+    "session_boot_legacy_rule": {
+      "confirmed_session": 116,
+      "confirmed_by": "비오(Joshua)",
+      "updated_session": 124,
+      "rule": "SESSION BOOT 레거시 코드(boot_generator.py v1.0.1 / boot_validator.py / PT-S59-003 / PT-S59-SPLIT-CANDIDATE)는 LEGACY 상태. boot_vnext_generator.py(vNext)가 정식 교체. 레거시 코드 수정·재사용·확장 금지.",
+      "status": "SUPERSEDED_BY_VNEXT"
+    },
+    "early_warning_system": {
+      "confirmed_session": 116,
+      "confirmed_by": "비오(Joshua)",
+      "stage": "1단계 운영 중 (임계점 수치 LOCK 전)",
+      "rule": "세션 시작 시 [BOOT vNext WATCH] 섹션을 브리핑에 필수 출력. M-01~M-07 현재값 + 직전 3세션 추이 표시. 판단은 비오님 직접.",
+      "stage2_activation": "STEP-2(PT-S115-OBS-002) 완료 후 WATCH/WARN/ALERT 자동 판정 활성화.",
+      "doc_ref": "BOOT_VNEXT_READINESS_LAYER_S116.md §9"
+    },
+    "tier_d_archive_generation_rule": {
+      "confirmed_session": 131,
+      "confirmed_by": "비오(Joshua) 지적 기반 캐디 자기 수정",
+      "rule": "Tier D Archive 생성 시 반드시 직전 세션 Archive 파일을 원본으로 로드 후 archive_session/archive_date/archive_note/note/tier_d_change_this_session/tier_d_change_note 6개 필드만 갱신. tier_d_entries 포함 그 외 전항목 원본 그대로 유지. 내부 재생성 절대 금지.",
+      "violation_this_session": "S130/S131 Archive를 S128 정본 참조 없이 내부 요약 구조로 신규 생성 — S131에서 비오님 지적으로 발견 및 수정."
+    },
+    "force_read_protocol_v1": {
+      "confirmed_session": 132,
+      "confirmed_by": "비오(Joshua)",
+      "eag_stage": "EAG-2_COMPLETE",
+      "version": "1.0_REV1",
+      "design_refs": [
+        "BRIEFING-DOMI-S132-FRP-001 Rev.2",
+        "BRIEFING-DOMI-S132-FRP-002 (GAP-1~3 보완)",
+        "BRIEFING-JENI-S132-FRP-001 TRUST_READY PASS"
+      ],
+      "core_principle": "NO_PROOF = NO_PROGRESS",
+      "design_philosophy": "Constraint-based safety. Intelligence-based safety 아님.",
+      "execution_order": "VERIFY → PROOF → EXECUTE (기존 READ → EXECUTE → VERIFY 역전)",
+      "work_type_proof_mapping": {
+        "SESSION_OPEN": [
+          "PATH_PROOF",
+          "MERGE_PROOF"
+        ],
+        "PATH_OUTPUT": [
+          "PATH_PROOF"
+        ],
+        "POSSIBILITY_CLAIM": [
+          "NETWORK_PROOF"
+        ],
+        "IMPORT_DEPLOYMENT": [
+          "IMPORT_PROOF"
+        ],
+        "SESSION_CLOSE": [
+          "MERGE_PROOF"
+        ],
+        "SCHEMA_CHANGE": [
+          "SCHEMA_PROOF"
+        ],
+        "FILE_CREATION": [
+          "HUMAN_APPROVAL_PROOF"
+        ]
+      },
+      "proof_formats": {
+        "PATH_PROOF": "[PATH_PROOF]\nTARGET=<path>\nEXISTS=YES|NO\nVERIFIED_BY=BASH_OUTPUT",
+        "NETWORK_PROOF": "[NETWORK_PROOF]\nTARGET=<target>\nCONNECTIVITY=CONFIRMED|FAILED\nVERIFIED_BY=EXECUTION_RESULT",
+        "IMPORT_PROOF": "[IMPORT_PROOF]\nMODULE=<module>\nIMPORT_STATUS=SUCCESS|FAIL\nVERIFIED_BY=IMPORT_EXECUTION",
+        "MERGE_PROOF": "[MERGE_PROOF]\nSESSION_CONTEXT_LOAD=SUCCESS\nSESSION_COUNT_MATCH=YES|NO\nCHAIN_TIP_MATCH=YES|NO\nSOURCE=SESSION_CONTEXT_JSON\nVERIFICATION_MODE=BEST_AVAILABLE",
+        "SCHEMA_PROOF": "[SCHEMA_PROOF]\nTARGET_SCHEMA=<schema>\nFIELD_MATCH=YES|NO\nCONTRACT_VERSION=<version>\nVERIFIED_BY=SCHEMA_COMPARISON",
+        "HUMAN_APPROVAL_PROOF": "[HUMAN_APPROVAL_PROOF]\nAPPROVED_BY=비오\nSOURCE_MESSAGE=<quoted_directive>\nAPPROVAL_SCOPE=<scope>"
+      },
+      "session_open_structure": {
+        "stage_1_VERIFY": {
+          "items": [
+            "PATH_PROOF: 프로젝트 파일 bash 확인",
+            "PATH_PROOF: 업로드 파일 bash 확인",
+            "MERGE_PROOF: SESSION_CONTEXT json.load 실행",
+            "MERGE_PROOF: session_count / chain.tip 일치 확인",
+            "FORBIDDEN_RULES_ACK: 금지 규칙 복창",
+            "PREVIOUS_INCIDENT_ACK: 직전 세션 incidents 선언"
+          ],
+          "hard_stop_condition": "1개라도 미완료 시 HARD_STOP=ON"
+        },
+        "stage_2_OUTPUT": {
+          "condition": "VERIFY 전항목 완료 후에만 허용",
+          "blocked_until": "VERIFY_COMPLETE"
+        }
+      },
+      "frp_acknowledgement_format": "[FRP_ACKNOWLEDGEMENT]\nFRP_VERSION=1.0_REV1\nWORK_TYPE=SESSION_OPEN\nVERIFY_STAGE=REQUIRED\nOUTPUT_STAGE=BLOCKED_UNTIL_VERIFY\nPATH_PROOF=REQUIRED\nMERGE_PROOF=REQUIRED\nFORBIDDEN_RULES_READ=YES\nPREVIOUS_INCIDENTS_READ=YES\nKNOWN_FAILURE_PATTERNS_READ=YES\nCLAIM_BEFORE_PROOF=FORBIDDEN\nRULE_REINTERPRETATION=FORBIDDEN\nUNVERIFIED_OUTPUT=BLOCKED",
+      "ssot_priority_rule": {
+        "id": "FRP-SSOT-01",
+        "rule": "caddy_operational_rules 내 규칙이 SESSION_CONTEXT 내 레거시 필드(scp_standard_path 등)보다 항상 우선한다. 경합 시 caddy_operational_rules 적용."
+      },
+      "rule_reinterpretation_ban": {
+        "id": "FRP-RRB-01",
+        "rule": "규칙의 의미를 편의상 축소·예외화·완화 해석하는 행위를 금지한다. 금지 예시: 경량 md / 임시 파일 / 이 정도는 괜찮다 / 사실상 동일하다. Explicitly forbidden = forbidden."
+      }
+    },
+    "artifact_discipline_rule": {
+      "description": "Phase 0 Artifact Discipline Rule (S144 확정)",
+      "rules": [
+        "모든 에이전트 협업 결과는 sandbox artifact 파일로 기록되어야 함",
+        "대화창 텍스트만으로는 협업 산출물로 인정하지 않음",
+        "세션 시작 시 SESSION-BOOT-CONTRACT-S144.md에 따라 sandbox를 읽어야 함",
+        "도미 설계/제니 검증은 sandbox 파일로 기록된 뒤에야 캐디 구현 근거가 됨",
+        "sandbox artifact 없이 페르소나 전환 협업 시뮬레이션 금지"
+      ]
+    },
+    "shard_load_proof_rule": {
+      "id": "SHARD_LOAD_PROOF_RULE",
+      "confirmed_session": 147,
+      "confirmed_by": "제니(TRUST_READY) + 비오(Joshua) EAG-2/3",
+      "rule": "EAG 기안(설계안·실행 패키지) 시 해당 도메인 shard body 로드 hash 첨부 강제. 미첨부 = READ_ONLY_COGNITION_MODE 위반 = ROLE VIOLATION 선언.",
+      "scope": "모든 에이전트 — 도미(설계 기안), 제니(TRUST_READY 기안), 캐디(구현 패키지)",
+      "fail_action": "ROLE_VIOLATION_DECLARATION + HARD_STOP",
+      "basis": "제니 TRUST_READY Advisory T-3/T-4 (S147) — Inferential Hallucination 방지"
+    }
+  }
+}

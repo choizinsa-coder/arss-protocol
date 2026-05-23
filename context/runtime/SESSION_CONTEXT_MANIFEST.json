@@ -1,7 +1,7 @@
 {
   "schema_version": "context_manifest_v2",
   "session_count": 147,
-  "runtime_epoch": "S147-R1",
+  "runtime_epoch": "S147-R2",
   "chain_tip_ref": "runtime.chain_state",
   "active_runtime_ref": "runtime.active_state",
   "integrity_manifest_ref": "runtime.integrity_manifest",
@@ -11,6 +11,9 @@
     "governance.rules": "context/governance/rules.json",
     "governance.enforcement": "context/governance/enforcement.json",
     "governance.decisions": "context/governance/decisions.json",
-    "governance.refs": "context/governance/refs.json"
+    "governance.refs": "context/governance/refs.json",
+    "lessons.lessons": "context/lessons/lessons.json",
+    "lessons.review_policy": "context/lessons/review_policy.json",
+    "agents.caddy_operational_rules": "context/agents/caddy_operational_rules.json"
   }
 }

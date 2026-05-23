@@ -1,6 +1,6 @@
 {
   "schema_version": "manifest_v2",
-  "manifest_epoch": "S147-M1",
+  "manifest_epoch": "S147-M2",
   "canonical_session": 147,
   "shards": [
     {
@@ -83,6 +83,54 @@
       "load_class": "lazy",
       "fail_closed_policy": "KEEP_PREVIOUS_CANONICAL",
       "path": "context/governance/refs.json",
+      "last_updated_session": 147
+    },
+    {
+      "id": "lessons.lessons",
+      "hash": "a8b02788f7a61bc97355794bd3476a37771198153d4cabfd31b82805f7e9a053",
+      "domain": "lessons",
+      "schema_version": "phase2_shard_v1",
+      "size_class": "reference",
+      "required_for_agents": {
+        "domi": false,
+        "jeni": true,
+        "caddy": false
+      },
+      "load_class": "lazy",
+      "fail_closed_policy": "KEEP_PREVIOUS_CANONICAL",
+      "path": "context/lessons/lessons.json",
+      "last_updated_session": 147
+    },
+    {
+      "id": "lessons.review_policy",
+      "hash": "4eaac5b121d6e240e081d8d2a17afd30782de8892e0560d832c44da82914330e",
+      "domain": "lessons",
+      "schema_version": "phase2_shard_v1",
+      "size_class": "reference",
+      "required_for_agents": {
+        "domi": false,
+        "jeni": false,
+        "caddy": true
+      },
+      "load_class": "lazy",
+      "fail_closed_policy": "KEEP_PREVIOUS_CANONICAL",
+      "path": "context/lessons/review_policy.json",
+      "last_updated_session": 147
+    },
+    {
+      "id": "agents.caddy_operational_rules",
+      "hash": "0a34f13ca48b9516172e3c9b5c8f0746aebdf679b61e593fec2bd6dbc7b3cb63",
+      "domain": "agents",
+      "schema_version": "phase2_shard_v1",
+      "size_class": "reference",
+      "required_for_agents": {
+        "domi": false,
+        "jeni": false,
+        "caddy": true
+      },
+      "load_class": "lazy",
+      "fail_closed_policy": "KEEP_PREVIOUS_CANONICAL",
+      "path": "context/agents/caddy_operational_rules.json",
       "last_updated_session": 147
     }
   ],

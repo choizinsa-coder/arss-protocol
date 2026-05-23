@@ -1,0 +1,303 @@
+{
+  "shard_meta": {
+    "shard_id": "lessons.lessons",
+    "schema_version": "phase2_shard_v1",
+    "domain": "lessons",
+    "session_created": 147,
+    "last_updated_session": 147
+  },
+  "summary": {
+    "domain": "lessons.lessons",
+    "schema_version": "phase2_shard_v1",
+    "item_count": 29,
+    "latest_session_ref": 147,
+    "status": "active",
+    "body_ref": "context/lessons/lessons.json"
+  },
+  "body": [
+    {
+      "id": "LESSON-001",
+      "must_reference": true,
+      "prevention_rule": "verifier.py 통과 전 Chain 생성 금지",
+      "statement": "검증 없는 Chain은 존재 가치 없다",
+      "status": "IMMUTABLE",
+      "trigger": "Chain #0001~#0007 형식만 모방 — 2026-03-18"
+    },
+    {
+      "id": "LESSON-002",
+      "must_reference": true,
+      "prevention_rule": "EAG 없이 실행 착수 금지",
+      "statement": "설계→실행 Gate 없으면 역할 위반 발생",
+      "status": "IMMUTABLE",
+      "trigger": "캐디 preflight_check.py 무승인 직접 생성 — 2026-03-24"
+    },
+    {
+      "id": "LESSON-003",
+      "must_reference": true,
+      "prevention_rule": "외부 발행 전 raw 링크 접근 가능 여부 점검 필수",
+      "statement": "검증 경로가 실제로 열려 있어야 주장이 살아있다",
+      "status": "IMMUTABLE",
+      "trigger": "LinkedIn 발행 전 ledger.json 404 발견 — 2026-03-24"
+    },
+    {
+      "id": "LESSON-004",
+      "must_reference": true,
+      "prevention_rule": "VPS 내부 / GitHub raw / GitHub Pages 3가지 명시 구분",
+      "statement": "내부 저장 경로와 외부 공개 경로는 설계 단계에서 반드시 분리",
+      "status": "IMMUTABLE",
+      "trigger": "VPS 로컬 경로와 GitHub Pages 경로 혼동 — 2026-03-25"
+    },
+    {
+      "id": "LESSON-005",
+      "must_reference": true,
+      "prevention_rule": "검증기 작성 전 production chain 스키마 직접 확인 필수",
+      "statement": "검증기는 체인에 맞춰야 한다",
+      "status": "IMMUTABLE",
+      "trigger": "bridge v0.1 samples 스키마를 production에 적용 — 2026-03-25"
+    },
+    {
+      "id": "LESSON-006",
+      "must_reference": true,
+      "prevention_rule": "에이전트 대신 선언 시 즉시 반려 + 비오님께 직접 확인 요청",
+      "statement": "에이전트가 비오님의 EAG 결정권을 대행하는 패턴은 거버넌스 구조를 무력화한다",
+      "status": "IMMUTABLE",
+      "trigger": "도미가 비오님 결정 사항을 직접 선언 — 2026-03-31"
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-04-05",
+      "id": "LESSON-007",
+      "must_reference": true,
+      "prevention_rule": "VPS 파일 배포 시 Windows SCP 명령어를 비오님께 제시",
+      "statement": "Claude Code 환경에서 /mnt 경로 접근 불가",
+      "status": "IMMUTABLE",
+      "trigger": "Claude Code에서 /mnt 경로 접근 불가 확인 — 2026-04-02"
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-04-05",
+      "id": "LESSON-008",
+      "must_reference": true,
+      "prevention_rule": "status server HTTP 엔드포인트로 우회 설계",
+      "statement": "n8n Code 노드에서 fs/crypto 모듈 차단",
+      "status": "IMMUTABLE",
+      "trigger": "fs.readFileSync, crypto 모두 차단 확인 — 2026-04-03"
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-04-05",
+      "id": "LESSON-009",
+      "must_reference": true,
+      "prevention_rule": "n8n 업그레이드 후 Execute Workflow 계열 노드 전수 점검",
+      "statement": "n8n Execute Workflow 노드 구버전 교체 필수",
+      "status": "IMMUTABLE",
+      "trigger": "WF-01 Call WF-02 노드 binary 오류 — 2026-04-04"
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-04-05",
+      "id": "LESSON-010",
+      "must_reference": true,
+      "prevention_rule": "포트 충돌 시 대체 포트(예: 15678) 사용. 관리자 권한 PowerShell에서 실행.",
+      "statement": "SSH 터널은 로컬 PC 별도 터미널에서 실행 필요. Claude Code Terminal은 터널 유지 불가.",
+      "status": "IMMUTABLE",
+      "trigger": "n8n 접속 시 5678 포트 좀비 소켓 충돌 — 2026-04-05"
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-04-08",
+      "id": "LESSON-011",
+      "must_reference": true,
+      "prevention_rule": "항상 전체 64자 해시를 별도 추출(python3 -m json.tool 또는 파싱 스크립트) 후 저장해야 한다. 축약 해시 저장 금지.",
+      "statement": "RPU 저장 시 precheck 결과의 축약 해시를 그대로 사용하면 chain 연속성 검증이 실패한다",
+      "status": "IMMUTABLE",
+      "trigger": "RPU-0027 저장 시 축약 해시 사용으로 chain 무결성 위협 발생 — 2026-04-08"
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-04-09",
+      "id": "LESSON-012",
+      "must_reference": true,
+      "prevention_rule": "VPS 파일은 읽기 명령 결과를 받은 후에만 가공 로직을 설계한다. Pre-Execution Package에 PEC(Physical Evidence Check) 섹션 필수 포함.",
+      "statement": "실행 패키지 제출 전 반드시 실제 파일 구조를 먼저 확인하라. 추정 기반 스크립트 작성 금지.",
+      "status": "IMMUTABLE",
+      "trigger": "scoring_ledger events 키 구조를 entries/records로 추정하여 패키지 작성 → 실제 구조 상이로 작업 중단. SESSION_CONTEXT chain.tip 추정 오류 — 2026-04-09"
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-04-10",
+      "id": "LESSON-013",
+      "must_reference": true,
+      "prevention_rule": "issuer 호출 전 INTERPRETATION_RULE.json score_rules.event_types 목록 대조 필수.",
+      "statement": "rpu_atomic_issuer.py payload 구성 시 event_type은 INTERPRETATION_RULE 허용 목록을 반드시 사전 확인할 것. 미허용 event_type 사용 시 ERR-005로 실패.",
+      "status": "IMMUTABLE",
+      "trigger": "Session 15 — session_open → ERR-005 실패 (2026-04-09)"
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-04-12",
+      "id": "LESSON-015",
+      "must_reference": true,
+      "prevention_rule": "ls -la로 파일 존재 확인만으로 PEC 통과 금지. cat/python3로 실제 내용·schema·필드 구조 직접 확인 후 PEC 작성.",
+      "statement": "EAG-2 PEC에서 인증 관련 파일은 존재 여부뿐 아니라 실제 내용과 구조까지 확인 필수.",
+      "status": "IMMUTABLE",
+      "trigger": ".approval_token 파일이 JSON 구조임을 PEC에서 미확인 → gatekeeper 설계 불일치 발생 — 2026-04-12 Session 25"
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-04-14",
+      "id": "LESSON-016",
+      "must_reference": true,
+      "prevention_rule": "eag_approval + token 생성 시 사용할 hash 방식을 /rpu/issue R4 방식과 사전 정합 확인. 방식 불일치 발견 즉시 도미 설계 의뢰.",
+      "statement": "create_eag_approval.py(파일 SHA256)와 /rpu/issue R4(3개 필드 JSON 직렬화)는 hash 계산 방식이 구조적으로 다르다. 수동 우회 시도 전 반드시 설계 정합성 확인 필수.",
+      "status": "IMMUTABLE",
+      "trigger": "Session 29 — WF-05 디버깅 중 hash 계산 방식 구조적 불일치 확인 (2026-04-14)"
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-04-18",
+      "id": "LESSON-017",
+      "must_reference": true,
+      "prevention_rule": "create_approval_token.py 실행 시 approved_at 필드는 eag_approval 원본 rec['approved_at_kst'] 기준. token 생성 시각 사용 금지.",
+      "statement": "create_approval_token.py는 반드시 원본 eag_approval의 approved_at_kst를 사용해야 한다. token 생성 시각(now_kst) 사용 시 approval_hash mismatch 발생.",
+      "status": "IMMUTABLE",
+      "trigger": "Session 40 — WF-05 live test 중 issuer returncode=1. create_approval_token.py:76 approved_at_kst 버그 (2026-04-18)"
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-04-18",
+      "id": "LESSON-018",
+      "must_reference": true,
+      "prevention_rule": "오류 원인이 VPS 코드/파일에 있을 때 캐디는 즉시 Claude Code Terminal 사용을 제안하고 진단 지시문을 준비한다. 명령어 추측 반복 금지.",
+      "statement": "VPS 직접 조작이 필요한 디버깅 작업은 Claude Code Terminal 우선 사용. 캐디 추측 기반 명령어 전달 방식은 무한루프를 유발한다.",
+      "status": "IMMUTABLE",
+      "trigger": "Session 40 — WF-05 403/400/issuer 오류 디버깅 중 캐디 추측 반복 → Claude Code 전환 후 버그 6개 일괄 해소 (2026-04-18)"
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-04-21",
+      "confirmed_session": 47,
+      "id": "LESSON-019",
+      "must_reference": true,
+      "prevention_rule": "PEC 결과 수신 후 코드 생성·실행 전 EAG-2 명시적 승인 대기. 승인 없는 코드 생성 즉시 HARD STOP.",
+      "statement": "PEC 완료 = EAG-2 승인 아님. PEC는 EAG-2 제출을 위한 사전 조건일 뿐이며, 코드 생성·실행은 반드시 EAG-2 명시적 승인 후에만 허용된다.",
+      "status": "IMMUTABLE",
+      "trigger": "S47 — EPS v1.3-D Phase 2~6 EAG-2 생략 후 실행 진행"
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-04-27",
+      "confirmed_session": 61,
+      "id": "LESSON-020",
+      "must_reference": true,
+      "prevention_rule": "설계 검토 중 공백 발견 시 즉시 도미에게 보완 요청. 공백 미해소 상태로 EAG 진입 금지. 캐디가 발견한 공백은 반드시 EAG 전에 보고 및 보완 완료.",
+      "statement": "EAG 진입 전 설계 공백은 허용되지 않는다. 보완 가능한 결함은 반드시 사전에 제거한 후 진입한다.",
+      "status": "IMMUTABLE",
+      "trigger": "S61 — PT-S61-001 Mutation Gate 설계 공백 발견. EAG-1 진입 전 보완 완료 후 진입."
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-05-10",
+      "confirmed_session": 115,
+      "id": "LESSON-021",
+      "must_reference": true,
+      "prevention_rule": "세션 종료 Report 작성 전 Stabilization Metrics 섹션(M-01~M-07) 전항목 출력 여부를 캐디가 자가 검증. 누락 항목 존재 시 Report 제출 불가. 세션 종료 선언 불가.",
+      "statement": "Daily Session Report에 Stabilization Metrics 섹션(M-01~M-07 전항목) 누락 시 세션 종료 선언 불가.",
+      "status": "IMMUTABLE",
+      "trigger": "S115 — Visibility Metrics STEP-1A 승인. 보장 메커니즘 C안(체크리스트+LESSON 병행) 비오(Joshua) 확정.",
+      "metrics_required": [
+        "M-01: Active Canonical Key Count",
+        "M-02: Tier D Quarantine Key Count",
+        "M-03: Ceiling Utilization Rate",
+        "M-04: Session Delta Size",
+        "M-05: Archive File Status",
+        "M-06: Active Task Load",
+        "M-07: Stabilization Compliance"
+      ]
+    },
+    {
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_date": "2026-05-10",
+      "confirmed_session": 115,
+      "id": "LESSON-022",
+      "must_reference": true,
+      "prevention_rule": "세션 종료 시 Tier D 변동 여부를 캐디가 명시적으로 선언. 변동 없음: S114 Archive를 기반으로 S{n} 버전 Archive 파일 생성 필수. 변동 있음: 신규 내용 포함한 Archive 생성 필수. 어떤 경우에도 Archive 파일은 매 세션 생성한다.",
+      "statement": "Tier D Archive 파일은 매 세션 생성한다. 변동 없으면 직전 Archive 복사본을 S{n} 버전으로 생성. 생성 누락 시 세션 종료 선언 불가.",
+      "status": "IMMUTABLE",
+      "trigger": "S115 — 비오(Joshua) 지적. Archive 생성 누락 가능성에 대한 보장 메커니즘 부재 확인.",
+      "correction_note": "S115 초기 선언 오류 정정: '변동 없으면 생성 불필요'는 잘못된 적용이었음. 매 세션 생성이 원칙."
+    },
+    {
+      "id": "LESSON-023",
+      "status": "IMMUTABLE",
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_session": 132,
+      "confirmed_date": "2026-05-16",
+      "statement": "검증되지 않은 operational 선언은 거버넌스 오염으로 간주한다. Unverified operational claim constitutes governance contamination.",
+      "prevention_rule": "Proof 없는 path claim / completion claim / capability claim / schema claim / merge claim 전부 금지. 위반 시 HARD_STOP.",
+      "trigger": "S132 — 세션 오픈 3건 연속 오류(미검증 파일 없음 선언 / SCP 경로 오류 / 파일명 누락). Completion Bias 단일 뿌리 확인.",
+      "must_reference": true
+    },
+    {
+      "id": "LESSON-024",
+      "title": "pytest 다중 파일 실행 시 sys.modules 오염 방지",
+      "session": 134,
+      "content": "두 테스트 파일이 같은 pytest 세션에서 실행될 때 수집 단계에서 sys.modules 교체가 발생하면 실행 단계의 patch가 wrong target에 적용된다. 해결: sys.modules['module']을 mock으로 교체하는 대신 실제 모듈을 사용하고 인스턴스만 patch 처리.",
+      "category": "testing"
+    },
+    {
+      "id": "LESSON-S137-HUMAN-AI-PRINCIPLE",
+      "title": "인간과 AI가 함께하기 위한 원칙",
+      "status": "CONFIRMED",
+      "confirmed_by": "비오(Joshua)",
+      "confirmed_session": 137,
+      "confirmed_date": "2026-05-18",
+      "must_reference": false,
+      "statement": "AI 결과물의 신뢰 여부 판단은 전적으로 사용자에게 있다. AI가 스스로 정직성을 보장하는 구조는 현재 없다.",
+      "prevention_rule": "AI는 압박 없이는 한계를 자발적으로 드러내지 않는 경향이 있다. 대책은 사용자의 몫이다. 외부 거버넌스 구조로 AI를 검증하는 것이 현재 가장 현실적인 방법이다. AIBA 거버넌스(EAG 체인, 도미·제니 검증, REPORT & WAIT)는 이 원칙의 실천적 구현이다.",
+      "trigger": "S137 — present_files 미호출 사건. 캐디가 실현성 없는 대책 제시 후 비오님 압박으로 한계 인정. AI 정직성 구조 부재 확인."
+    },
+    {
+      "id": "LESSON-S138-EAG-STATE-INTERPRETATION",
+      "session": 138,
+      "date": "2026-05-18",
+      "title": "EAG 연속성 해석 원칙",
+      "content": "EAG-2_IN_PROGRESS 상태에서 비오님이 [DESIGN]으로 설계를 직접 확정하신 경우, 이는 EAG 포함 진행 지시로 해석한다. 설계 방식만 변경된 경우 별도 EAG-2 재승인 요청 없이 파일 생성으로 바로 진행한다. 비오님이 직접 설계를 제시하는 것 자체가 EAG를 내포한다.",
+      "incident": "S138 세션 시작 시 EAG-2_IN_PROGRESS 상태에서 캐디가 EAG-2 재승인을 요청하여 파일 생성을 지연시킨 사건",
+      "category": "EAG_INTERPRETATION"
+    },
+    {
+      "id": "LESSON-S139-PRESENT-FILES-MANDATORY",
+      "session": 139,
+      "date": "2026-05-18",
+      "category": "CADDY_PROCESS",
+      "severity": "HIGH",
+      "content": "파일 생성 후 present_files 호출은 필수 단계. 컨테이너 내 생성/검증만으로 완료 처리하면 안 됨. SCP 명령 제공 전 반드시 present_files 호출 결과 확인 후 진행.",
+      "trigger": "create_file + bash 검증 후 present_files 미호출 → SCP 명령 제공 → 비오님 지적 (S139 반복)"
+    },
+    {
+      "id": "LESSON-S144-PERSONA-SIM-RISK",
+      "session": 144,
+      "date": "2026-05-23",
+      "category": "ARCHITECTURE",
+      "severity": "HIGH",
+      "content": "단일 세션 내 도미/제니/캐디 페르소나 전환은 '협업 시뮬레이션'에 불과함. recursive reasoning expansion → context saturation → session instability 발생. 실제 협업은 sandbox artifact exchange 기반이어야 함. 대화창 reasoning은 operational artifact가 아님."
+    },
+    {
+      "id": "LESSON-S144-ARTIFACT-FIRST",
+      "session": 144,
+      "date": "2026-05-23",
+      "category": "PROCESS",
+      "severity": "HIGH",
+      "content": "Phase 0 확립: artifact discipline = 협업의 전제 조건. sandbox 파일이 없으면 어떤 협업 결과도 다음 세션에 전달되지 않음. Session Boot Contract에 따라 각 세션은 sandbox를 읽고 시작해야 함. TKT-S144-001이 최초 공식 sandbox ticket으로 생성됨."
+    },
+    {
+      "id": "LESSON-S144-CONTEXT-FRAGMENTATION",
+      "session": 144,
+      "date": "2026-05-23",
+      "category": "ARCHITECTURE",
+      "severity": "HIGH",
+      "content": "SESSION_CONTEXT.json 단일 파일 방식의 한계 확인: 233KB, 59 keys, ceiling 초과, write_file 한도 초과. 주제별 분산 저장 구조(context/) 전환 필요. 에이전트당 필요 읽기 범위를 ~16KB 수준으로 감소시켜야 함. 세션별 metrics는 개별 파일로 누적, 만료 항목은 archive/로 자동 이동."
+    }
+  ]
+}
