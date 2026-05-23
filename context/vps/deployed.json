@@ -1,0 +1,194 @@
+{
+  "domain": "vps.deployed",
+  "schema_version": "phase3_shard_v1",
+  "session_ref": 148,
+  "data": {
+    "test_shadow_pipeline_p2_integrity": {
+      "file": "tests/test_shadow_pipeline_p2_integrity.py",
+      "status": "UPDATED",
+      "commit": "766cc19",
+      "pytest": "9/9 PASS (S98 재확인)",
+      "updated_session": 98,
+      "updated_date": "2026-05-08",
+      "note": "S98: TC-5/6/7 mock_ssot_payload_provider session_time_lock 6개 필드 추가(timezone/generated_at/observed_at 보강). S95 계약 강화 추적 완료. production 코드 무변경."
+    },
+    "test_pair_validator": {
+      "file": "tests/test_pair_validator.py",
+      "status": "UPDATED",
+      "commit": "46b29ce",
+      "pytest": "9/9 PASS",
+      "updated_session": 94,
+      "updated_date": "2026-05-07",
+      "note": "PT-S93-003 fixture 재작성. _make_runtime/boot 전면 교체(session_count/chain.tip/boot_meta). TC-3 제거. pair_validator.py 수정 없음."
+    },
+    "aiba_status_server_system_time": {
+      "file": "aiba_status_server.py",
+      "status": "UPDATED",
+      "commit": "425c787",
+      "note": "GET /v1/system/time A안 계약 필드 추가(ok/source/timestamp/epoch_ms). 기존 필드 하위 호환 유지. aiba_status_server v0.12.",
+      "updated_session": 95,
+      "updated_date": "2026-05-07"
+    },
+    "ssot_time_payload_provider": {
+      "file": "tools/delta_context/ssot_time_payload_provider.py",
+      "status": "DEPLOYED",
+      "commit": "425c787",
+      "note": "SSOT time payload provider 신규. GET /v1/system/time 호출 → session_time_lock payload 반환. FORBIDDEN: runtime clock 직접 호출/fallback/partial payload.",
+      "deployed_session": 95,
+      "deployed_date": "2026-05-07"
+    },
+    "test_pt_s71_002": {
+      "file": "tests/test_pt_s71_002.py",
+      "status": "UPDATED",
+      "commit": "425c787",
+      "pytest": "7/7 PASS",
+      "note": "TC-1/TC-6 ssot_payload_provider mock + run_with_collapse_gate patch 주입. _mock_ssot_provider/_mock_collapse_gate 모듈 레벨 정의. from unittest.mock import patch as _patch 추가.",
+      "updated_session": 95,
+      "updated_date": "2026-05-07"
+    },
+    "test_verifier": {
+      "file": "reference-verifier/tests/test_verifier.py",
+      "status": "UPDATED",
+      "commit": "766cc19",
+      "pytest": "ALL PASS (S98)",
+      "updated_session": 98,
+      "updated_date": "2026-05-08",
+      "note": "EXPECTED_FINAL_HASH 갱신: eb337942d91510f39fdf959ff47aa09205543bad87ab04be2440f3f77e5d1c6c"
+    },
+    "rpu_samples_flat": {
+      "files": [
+        "samples/rpu-0004.json",
+        "samples/rpu-0005.json",
+        "samples/rpu-0006.json",
+        "samples/rpu-0007.json",
+        "samples/rpu-0008.json"
+      ],
+      "status": "REWRITTEN",
+      "commit": "766cc19",
+      "updated_session": 98,
+      "updated_date": "2026-05-08",
+      "note": "nested→flat schema 재작성. genesis_hash(28aac7f4...) 기준 chain 전체 재계산. payload 내용 무변경(payload_hash 5건 기존값 일치). verifier ALL PASS 확인."
+    },
+    "expected_chain_hash": {
+      "file": "tests/expected-chain-hash.txt",
+      "status": "UPDATED",
+      "commit": "766cc19",
+      "value": "eb337942d91510f39fdf959ff47aa09205543bad87ab04be2440f3f77e5d1c6c",
+      "updated_session": 98,
+      "updated_date": "2026-05-08"
+    },
+    "boot_vnext_schema": {
+      "file": "tools/session_context_gen/boot_vnext_schema.py",
+      "status": "DEPLOYED",
+      "commit": "ab9562e",
+      "deployed_session": 122,
+      "deployed_date": "2026-05-13",
+      "note": "PT-S115-BOOT-001 vNext Schema Layer. structure 정의 전용."
+    },
+    "boot_vnext_contract": {
+      "file": "tools/session_context_gen/boot_vnext_contract.py",
+      "status": "DEPLOYED",
+      "commit": "ab9562e",
+      "deployed_session": 122,
+      "deployed_date": "2026-05-13",
+      "note": "PT-S115-BOOT-001 vNext Contract Layer. AV/RV taxonomy / sufficiency / authority_mode enum."
+    },
+    "boot_vnext_validator": {
+      "file": "tools/session_context_gen/boot_vnext_validator.py",
+      "status": "DEPLOYED",
+      "commit": "ab9562e",
+      "deployed_session": 122,
+      "deployed_date": "2026-05-13",
+      "note": "PT-S115-BOOT-001 vNext Validator. boundary integrity validator. 18/18 PASS."
+    },
+    "boot_vnext_generator": {
+      "file": "tools/session_context_gen/boot_vnext_generator.py",
+      "status": "DEPLOYED",
+      "commit": "ab9562e",
+      "deployed_session": 122,
+      "deployed_date": "2026-05-13",
+      "note": "PT-S115-BOOT-001 vNext Generator. policy-driven BOOT 생성 파이프라인."
+    },
+    "test_pt_s115_boot_vnext": {
+      "file": "tests/test_pt_s115_boot_vnext.py",
+      "status": "DEPLOYED",
+      "commit": "ab9562e",
+      "deployed_session": 122,
+      "deployed_date": "2026-05-13",
+      "pytest": "18/18 ALL PASS (VPS Python 3.10.12)"
+    },
+    "boot_vnext_generator_eag4": {
+      "file": "tools/session_context_gen/boot_vnext_generator.py",
+      "status": "UPDATED",
+      "commit": "1d61fd1",
+      "deployed_session": 123,
+      "deployed_date": "2026-05-13",
+      "note": "EAG-4(S123 비오 승인): admission required_keys에서 ssoi_status 제거. SESSION_CONTEXT 실제 구조와 불일치 수정. ssoi/retrieval/archived or{} 방어 처리 추가."
+    },
+    "mcp_read_server_py": {
+      "path": "/opt/arss/engine/arss-protocol/tools/mcp/mcp_read_server.py",
+      "version": "v1.0.0",
+      "commit": "ccbfd79",
+      "session": 134
+    },
+    "mcp_http_bridge_py": {
+      "path": "/opt/arss/engine/arss-protocol/tools/mcp/mcp_http_bridge.py",
+      "version": "v2.1.0",
+      "commit": "4893b73",
+      "session": 134
+    },
+    "test_mcp_read_server_py": {
+      "path": "/opt/arss/engine/arss-protocol/tests/test_mcp_read_server.py",
+      "version": "v1.0.0",
+      "commit": "514b8f4",
+      "session": 134
+    },
+    "test_mcp_http_bridge_v21_py": {
+      "path": "/opt/arss/engine/arss-protocol/tests/test_mcp_http_bridge_v21.py",
+      "version": "v1.0.0",
+      "commit": "4893b73",
+      "session": 134
+    },
+    "mcp_write_gatekeeper_v11": {
+      "files": [
+        "tools/mcp/mcp_write_config.py",
+        "tools/mcp/mcp_approval_authority.py",
+        "tools/mcp/mcp_write_gatekeeper.py",
+        "tools/mcp/mcp_write_server.py",
+        "tests/test_mcp_write_gatekeeper.py"
+      ],
+      "commits": [
+        "744b714",
+        "940c659"
+      ],
+      "pytest": "29/29 PASS",
+      "deployed_session": 136,
+      "deployed_date": "2026-05-17",
+      "note": "v1.0(744b714) + v1.1 강제장치 P0~P3(940c659)"
+    },
+    "mcp_write_server_v200": {
+      "file": "tools/mcp/mcp_write_server.py",
+      "version": "v2.0.0",
+      "commit": "6992e03",
+      "deployed_session": 137,
+      "deployed_date": "2026-05-18",
+      "pytest": "29/29 PASS",
+      "note": "FastAPI/uvicorn 제거. http.server 표준 라이브러리 기반 재구현. External dependency=0. MAX_REQUEST_BODY_BYTES=65536. Content-Length 4규칙 적용. 감사 로그 sys.stderr."
+    },
+    "nginx_arss_mcp_write_plane_s138": {
+      "file": "/etc/nginx/sites-enabled/arss-mcp",
+      "version": "S138",
+      "deployed_session": 138,
+      "deployed_date": "2026-05-18",
+      "note": "Write Plane(8444) location block 추가. /mcp/write + /mcp-write/health. bak_s137/bak_s138 → /etc/nginx/로 이동. nginx -t 경고 없음. reload 성공. $ 변수 보존 확인."
+    },
+    "systemd_aiba_mcp_write_service_s138": {
+      "file": "/etc/systemd/system/aiba-mcp-write.service",
+      "status": "active(running)",
+      "enabled": true,
+      "deployed_session": 138,
+      "deployed_date": "2026-05-18",
+      "note": "aiba-mcp-write.service enable + start 완료. mcp_write_server.py v2.0.0 구동 중."
+    }
+  }
+}

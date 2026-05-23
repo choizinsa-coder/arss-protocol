@@ -1,0 +1,536 @@
+{
+  "domain": "vps.state",
+  "schema_version": "phase3_shard_v1",
+  "session_ref": 148,
+  "data": {
+    "github": {
+      "status": "commit a7c506a — S113 PT-S99-GOV-003 + PT-S113-TEST-001 완료. origin push 완료."
+    },
+    "index_json": {
+      "af_latest_delta_id": "DELTA-S71-AGENT_FOCUS-0002",
+      "path": "/opt/arss/engine/arss-protocol/DELTA_LOG/INDEX.json",
+      "status": "S71_RESTORED",
+      "tasks_latest_delta_id": "DELTA-S71-TASKS-0001",
+      "transactions": [
+        "TX-S69:VOID"
+      ]
+    },
+    "quarantine": {
+      "S72_round1": "TX-S72.json, COMMIT-S72.json (1차 격리)",
+      "S72_round2": "TX-S72.json, COMMIT-S72.json, DELTA-S72-TASKS-0003.json, DELTA-S72-AGENT_FOCUS-0003.json (2차 격리)"
+    },
+    "shadow_pipeline": {
+      "actual_path": "/opt/arss/engine/arss-protocol/tools/delta_context/shadow_pipeline.py",
+      "backup": "shadow_pipeline.py.bak_s85",
+      "file": "arss-protocol/tools/delta_context/shadow_pipeline.py",
+      "gap3_fixed": true,
+      "gap4_fixed": true,
+      "phase2_validator_source_collapse": true,
+      "pytest": "67/67 ALL PASS (TC-1~14 신규 + 기존 53건 회귀 없음)",
+      "syntax_ok": true,
+      "total_lines": 302,
+      "version": "v1.2 + Stage6.5 + GAP-3/4 + Stage0-classifier-callsite(S92)",
+      "stage0_classifier_integrated": true,
+      "stage0_integrated_session": 92,
+      "stage0_integrated_commit": "ab72e73"
+    },
+    "session_context_gen_path": "/opt/arss/engine/arss-protocol/tools/session_context_gen/",
+    "runtime_generator": {
+      "file": "tools/session_context_gen/runtime_generator.py",
+      "status": "DEPLOYED",
+      "pytest": "10/10 PASS",
+      "deployed_session": 87,
+      "deployed_date": "2026-05-05",
+      "runtime_content_hash_baseline": "dccec82e2b4e2a868a2688d0955d1d842610e70e95b03aa4a04e9cb41ef18e80"
+    },
+    "boot_generator_phase2": {
+      "file": "tools/session_context_gen/boot_generator.py",
+      "modification": "runtime_pair_hash 필드 + runtime_pair_rule 추가 (boot_meta)",
+      "backup": "boot_generator.py.bak_s87",
+      "pytest": "6/6 PASS",
+      "modified_session": 89,
+      "modified_date": "2026-05-07",
+      "note": "runtime_pair_rule 값 BOOT_REFERENCES_RUNTIME_ONLY로 통일(S89)",
+      "version": "1.0.1"
+    },
+    "phase2_execution": {
+      "completed_steps": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "pending_steps": [],
+      "step5_target": "generation_pipeline.py 수정 — RUNTIME 선행 생성 순서 반영",
+      "chain_tip_baseline": "eeffbe715b4877158529339fc7b6487af6a384adc0a261ba58f2413e13be9ecd",
+      "full_sha256_baseline": "93be0dd656a5be8a85a81f5c41a06e5f35d878aebb019b93b46edc82d219564e",
+      "boot_sha256_baseline": "df41e27a8585424f205a46f871c5b542badaae447efe637e093ce02a4facb1b0",
+      "runtime_sha256_baseline": "fbe9b3854e359be4edc202cbbc91f0992856c5840886ed2c633ed0b758bfd31b",
+      "step5_status": "DEPLOYED_PYTEST_PASS",
+      "phase2_status": "COMPLETE",
+      "eag3_approved_by": "비오(Joshua)",
+      "eag3_approved_date": "2026-05-08",
+      "commit": "7d91fe625a59107f954434f876adf5852684afa4"
+    },
+    "pair_validator": {
+      "file": "tools/session_context_gen/pair_validator.py",
+      "version": "1.1.0",
+      "status": "DEPLOYED",
+      "pytest": "6/6 PASS (test_generation_pipeline_phase2.py)",
+      "deployed_session": 89,
+      "deployed_date": "2026-05-07",
+      "note": "계약 정합화: session_count/chain.tip/boot_meta 하위 필드 기준. EAG 보완 승인(비오 S89)."
+    },
+    "boundary_enforcement_validator": {
+      "file": "tools/session_context_gen/boundary_enforcement_validator.py",
+      "status": "DEPLOYED",
+      "pytest": "10/10 PASS",
+      "deployed_session": 88,
+      "deployed_date": "2026-05-06",
+      "note": "context_sanitizer B안 흡수. detect-and-fail 강제."
+    },
+    "generation_pipeline_phase2": {
+      "file": "tools/session_context_gen/generation_pipeline.py",
+      "version": "2.0.0",
+      "status": "DEPLOYED_PYTEST_PASS",
+      "backup": "generation_pipeline.py.bak_s88",
+      "pytest": "6/6 PASS (S89)",
+      "deployed_session": 88,
+      "deployed_date": "2026-05-06"
+    },
+    "upload_bundle_validator": {
+      "file": "tools/session_context_gen/upload_bundle_validator.py",
+      "status": "DEPLOYED",
+      "pytest": "10/10 PASS",
+      "deployed_session": 90,
+      "deployed_date": "2026-05-08"
+    },
+    "agent_injection_manifest": {
+      "file": "tools/session_context_gen/agent_injection_manifest.py",
+      "status": "DEPLOYED",
+      "pytest": "10/10 PASS",
+      "deployed_session": 90,
+      "deployed_date": "2026-05-08"
+    },
+    "integrated_phase2_validator": {
+      "file": "tools/session_context_gen/integrated_phase2_validator.py",
+      "status": "DEPLOYED",
+      "pytest": "10/10 PASS",
+      "deployed_session": 90,
+      "deployed_date": "2026-05-08"
+    },
+    "phase2_commit_gate": {
+      "file": "tools/session_context_gen/phase2_commit_gate.py",
+      "status": "DEPLOYED",
+      "pytest": "10/10 PASS",
+      "deployed_session": 90,
+      "deployed_date": "2026-05-08"
+    },
+    "phase2_receipt_emitter": {
+      "file": "tools/session_context_gen/phase2_receipt_emitter.py",
+      "status": "DEPLOYED",
+      "pytest": "10/10 PASS",
+      "deployed_session": 90,
+      "deployed_date": "2026-05-08"
+    },
+    "phase2_status_update": {
+      "file": "tools/session_context_gen/phase2_status_update.py",
+      "status": "DEPLOYED",
+      "pytest": "10/10 PASS",
+      "deployed_session": 90,
+      "deployed_date": "2026-05-08",
+      "note": "SESSION_CONTEXT 직접 변경 없이 update package 생성. EAG-3 승인 완료(비오 S90)."
+    },
+    "phase2_validator": {
+      "file": "tools/delta_context/phase2_validator.py",
+      "version": "1.2.0",
+      "status": "DEPLOYED",
+      "commit": "36b83d4",
+      "pytest": "TC-1~14 PASS + 기존 53건 회귀 없음",
+      "deployed_session": 91,
+      "deployed_date": "2026-05-07",
+      "note": "check_source_collapse(PATH/HASH/INODE/INTEGRITY/FORMAT + FAIL-CLOSED) + run_with_collapse_gate 신설. validate_phase2 내부 수정 없음."
+    },
+    "test_source_collapse": {
+      "file": "tests/test_source_collapse.py",
+      "status": "DEPLOYED",
+      "pytest": "10/10 PASS",
+      "deployed_session": 91,
+      "deployed_date": "2026-05-07"
+    },
+    "test_collapse_integration": {
+      "file": "tests/test_collapse_integration.py",
+      "status": "DEPLOYED",
+      "pytest": "4/4 PASS (TC-11~14)",
+      "deployed_session": 91,
+      "deployed_date": "2026-05-07"
+    },
+    "stage0_idempotency_classifier": {
+      "file": "tools/delta_context/stage0_idempotency_classifier.py",
+      "version": "1.0.0",
+      "status": "DEPLOYED",
+      "commit": "ab72e73",
+      "pytest": "TC-1~TC-10 10/10 PASS",
+      "deployed_session": 92,
+      "deployed_date": "2026-05-07",
+      "note": "Stage 0 PRE_DELTA_IDEMPOTENCY_GATE 전용 classifier. detect→basic_integrity_check→optional_hash_check→classify→validate→gate decision. Race Condition Defense: in-process memory scope. hash 검증: 파일 내부 hash 필드 기반(content hash 계산 아님). shadow_pipeline.py Stage 0 블록 교체(.bak_s92 백업)."
+    },
+    "governance_dir": {
+      "path": "/opt/arss/engine/arss-protocol/tools/governance/",
+      "files": [
+        "approved_dependency_registry_v1.0.json",
+        "legacy_exception_registry_v1.0.json",
+        "governance_checker.py"
+      ],
+      "created_session": 103,
+      "created_date": "2026-05-09"
+    },
+    "artifact_classification_governance": {
+      "version": "v1.0",
+      "status": "LOCKED",
+      "eag_1_approved_by": "비오(Joshua)",
+      "eag_1_approved_session": 104,
+      "eag_2_approved_by": "비오(Joshua)",
+      "eag_2_approved_session": 104,
+      "ledger_file": "ARTIFACT_CLASSIFICATION_LEDGER_S104.md",
+      "ledger_vps_path": "/opt/arss/engine/arss-protocol/ARTIFACT_CLASSIFICATION_LEDGER_S104.md",
+      "total_artifacts": 220,
+      "classes": [
+        "ACTIVE",
+        "GENERATED",
+        "RUNTIME",
+        "BACKUP",
+        "LEGACY",
+        "QUARANTINE",
+        "VOID",
+        "EXPERIMENTAL"
+      ],
+      "authority_layers": [
+        "Layer-A:Structural",
+        "Layer-B:Governance",
+        "Layer-C:Operational"
+      ],
+      "authoritative_priority": "EAG_lineage > canonical_placement > active_classification > git_HEAD > hash",
+      "gitignore_added": 12,
+      "deleted": 21,
+      "active_added": 165
+    },
+    "session_context_archive": {
+      "file": "SESSION_CONTEXT_ARCHIVE.json",
+      "path": "/opt/arss/engine/arss-protocol/SESSION_CONTEXT_ARCHIVE.json",
+      "status": "DEPLOYED",
+      "commit": "25d8325",
+      "deployed_session": 113,
+      "deployed_date": "2026-05-10",
+      "schema_version": "1.0.0",
+      "total_items": 0,
+      "note": "초기 빈 구조. Tier D migration 실행 전 상태."
+    },
+    "session_context_archive_py": {
+      "file": "tools/session_context_gen/session_context_archive.py",
+      "status": "DEPLOYED",
+      "commit": "25d8325",
+      "deployed_session": 113,
+      "deployed_date": "2026-05-10",
+      "version": "1.0.0",
+      "pytest": "TC-1~12 PASS"
+    },
+    "generation_pipeline_rev_d": {
+      "file": "tools/session_context_gen/generation_pipeline.py",
+      "version": "2.0.0",
+      "status": "DEPLOYED",
+      "commit": "25d8325",
+      "deployed_session": 113,
+      "deployed_date": "2026-05-10",
+      "note": "REV-D hook 삽입 — stage 5b_tier_d_migration (state_events merge 이후, SESSION_CONTEXT.json 생성 이전)"
+    },
+    "session_context_s122_deployed": {
+      "file": "SESSION_CONTEXT.json",
+      "source": "SESSION_CONTEXT_S122_FINAL.json",
+      "deployed_session": 123,
+      "deployed_date": "2026-05-13",
+      "note": "S123: VPS SESSION_CONTEXT.json을 S122 기준으로 업데이트. 이전: S120. 백업: SESSION_CONTEXT_S120_BACKUP.json."
+    },
+    "mcp_phase_b": {
+      "mcp_server_poc": {
+        "file": "tools/mcp/mcp_server_poc.py",
+        "version": "0.3.0",
+        "status": "DEPLOYED",
+        "commits": [
+          "bb11f4e",
+          "2d3e522"
+        ],
+        "deployed_session": 127,
+        "deployed_date": "2026-05-14",
+        "note": "PHASE-B boundary hardening. B-1~B-4-B 전항목 구현."
+      },
+      "mcp_audit_broker": {
+        "file": "tools/mcp/mcp_audit_broker.py",
+        "version": "1.0.0",
+        "status": "DEPLOYED",
+        "commit": "bb11f4e",
+        "deployed_session": 127,
+        "deployed_date": "2026-05-14",
+        "note": "B-2-B append broker separation. execution authority ≠ audit authority."
+      },
+      "test_mcp_server_poc_phase_b": {
+        "file": "tests/test_mcp_server_poc_phase_b.py",
+        "status": "DEPLOYED",
+        "commit": "bb11f4e",
+        "pytest": "24/24 PASS",
+        "deployed_session": 127,
+        "deployed_date": "2026-05-14"
+      }
+    },
+    "mcp_phase_c": {
+      "mcp_server_poc_phase_c": {
+        "file": "tools/mcp/mcp_server_poc_phase_c.py",
+        "version": "0.4.0",
+        "status": "DEPLOYED",
+        "commit": "b3b3fe2",
+        "deployed_session": 128,
+        "deployed_date": "2026-05-14",
+        "note": "PHASE-C 전용 모듈. HMAC 4요소 인증 + shard routing + deny-by-default."
+      },
+      "mcp_nonce_store": {
+        "file": "tools/mcp/mcp_nonce_store.py",
+        "version": "1.0.0",
+        "status": "DEPLOYED",
+        "commit": "da3341a",
+        "deployed_session": 128,
+        "deployed_date": "2026-05-14",
+        "note": "in-memory nonce 저장소. TTL 15분. single-use 보장."
+      },
+      "mcp_shard_router": {
+        "file": "tools/mcp/mcp_shard_router.py",
+        "version": "1.0.0",
+        "status": "DEPLOYED",
+        "commit": "da3341a",
+        "deployed_session": 128,
+        "deployed_date": "2026-05-14",
+        "note": "whitelist shard 라우팅. agent별 권한 매핑(domi/jeni/caddy)."
+      },
+      "mcp_audit_broker": {
+        "file": "tools/mcp/mcp_audit_broker.py",
+        "version": "1.1.0",
+        "status": "DEPLOYED",
+        "commit": "6d48789",
+        "deployed_session": 128,
+        "deployed_date": "2026-05-14",
+        "note": "PHASE-B 하위 호환 유지 + PHASE-C write_audit/write_deny_audit/read_audit_log 추가. nonce_hash 필드."
+      },
+      "test_mcp_server_poc_phase_c": {
+        "file": "tests/test_mcp_server_poc_phase_c.py",
+        "status": "DEPLOYED",
+        "commit": "b3b3fe2",
+        "pytest": "16/16 PASS",
+        "deployed_session": 128,
+        "deployed_date": "2026-05-14"
+      }
+    },
+    "mcp_recovery_governance": {
+      "mcp_containment_state": {
+        "file": "tools/mcp/mcp_containment_state.py",
+        "version": "1.0.0",
+        "status": "DEPLOYED",
+        "commit": "60713d4",
+        "deployed_session": 130,
+        "deployed_date": "2026-05-15",
+        "note": "HARD_CONTAINMENT canonical state 관리. local file / FAIL_CLOSED default / restart restore."
+      },
+      "mcp_recovery_validator": {
+        "file": "tools/mcp/mcp_recovery_validator.py",
+        "version": "1.0.0",
+        "status": "DEPLOYED",
+        "commit": "60713d4",
+        "deployed_session": 130,
+        "deployed_date": "2026-05-15",
+        "note": "RC-P-02 전용 trigger classification validator."
+      },
+      "test_mcp_hard_containment": {
+        "file": "tests/test_mcp_hard_containment.py",
+        "status": "DEPLOYED",
+        "commit": "60713d4",
+        "pytest": "25/25 PASS",
+        "deployed_session": 130,
+        "deployed_date": "2026-05-15"
+      }
+    },
+    "mcp_http_bridge": {
+      "file": "tools/mcp/mcp_http_bridge.py",
+      "version": "2.0.0",
+      "status": "DEPLOYED",
+      "git_commit": "cbc0ed9",
+      "deployed_session": 133,
+      "deployed_date": "2026-05-16",
+      "note": "MCP Streamable HTTP endpoint 재정의. Transport/Governance/AIBA Tool 3계층. SSE GET + JSON-RPC POST. actor_id 내부 고정 주입. containment safe denial."
+    },
+    "nginx_mcp": {
+      "config": "/etc/nginx/sites-enabled/arss-mcp",
+      "status": "ACTIVE",
+      "tls": "Let's Encrypt arss-protocol.org (만료 2026-08-14)",
+      "upstream": "127.0.0.1:8443",
+      "deployed_session": 131
+    },
+    "test_mcp_http_bridge_v2": {
+      "file": "tests/test_mcp_http_bridge_v2.py",
+      "status": "DEPLOYED",
+      "git_commit": "cbc0ed9",
+      "pytest": "12/12 PASS",
+      "deployed_session": 133,
+      "deployed_date": "2026-05-16"
+    },
+    "mcp_containment_state_s133": {
+      "containment_active": false,
+      "trigger_id": "HC-T-04",
+      "recovery_status": "RELEASED",
+      "released_session": 133,
+      "released_date": "2026-05-16"
+    },
+    "mcp_bridge_version": "2.1.0",
+    "mcp_bridge_commit": "4893b73",
+    "mcp_read_server_version": "1.0.0",
+    "mcp_read_server_commit": "ccbfd79",
+    "read_hmac_secret_configured": true,
+    "read_tools_exposed": 11,
+    "phase1_read_only_status": "COMPLETED",
+    "eag3_verified": true,
+    "mcp_write_gatekeeper_suite": {
+      "mcp_write_config": {
+        "file": "tools/mcp/mcp_write_config.py",
+        "version": "1.1.0",
+        "status": "DEPLOYED",
+        "commit": "940c659",
+        "deployed_session": 136,
+        "deployed_date": "2026-05-17",
+        "note": "Write Plane 공유 상수. RECEIPTS_DIR/BASELINES_DIR/INTAKE_DIR/SOFT_TOKEN_TTL 포함."
+      },
+      "mcp_approval_authority": {
+        "file": "tools/mcp/mcp_approval_authority.py",
+        "version": "1.1.0",
+        "status": "DEPLOYED",
+        "commit": "940c659",
+        "deployed_session": 136,
+        "deployed_date": "2026-05-17",
+        "note": "비오님 전용. --content-file 필수. expected_content_hash 자동 계산. unconfirmed receipt 시 신규 발급 거부."
+      },
+      "mcp_write_gatekeeper": {
+        "file": "tools/mcp/mcp_write_gatekeeper.py",
+        "version": "1.1.0",
+        "status": "DEPLOYED",
+        "commit": "940c659",
+        "deployed_session": 136,
+        "deployed_date": "2026-05-17",
+        "note": "P0(content hash) P1(receipt) P2(soft-expiry 8min FC-T1) P3(baseline drift FC-T3). FC-T1~T4 전구간."
+      },
+      "mcp_write_server": {
+        "file": "tools/mcp/mcp_write_server.py",
+        "version": "2.1.0",
+        "status": "DEPLOYED",
+        "commit": "2a5a5c8",
+        "deployed_session": 140,
+        "deployed_date": "2026-05-19",
+        "note": "v2.1.0: /internal/recovery/enter + /internal/recovery/close 추가. BEO_ONLY loopback-only. MCP 미노출. Jeni TRUST-ADVISORY 반영(RECEIPTS_DIR FAIL-CLOSED)."
+      },
+      "test_mcp_write_gatekeeper": {
+        "file": "tests/test_mcp_write_gatekeeper.py",
+        "version": "1.1.0",
+        "status": "DEPLOYED",
+        "commit": "940c659",
+        "pytest": "29/29 PASS (VPS Python 3.10.12)",
+        "deployed_session": 136,
+        "deployed_date": "2026-05-17"
+      }
+    },
+    "mcp_write_registry_dirs": {
+      "approvals": "registry/mcp_write/approvals/",
+      "audit": "registry/mcp_write/audit/",
+      "snapshots": "registry/mcp_write/snapshots/",
+      "receipts": "registry/mcp_write/receipts/",
+      "baselines": "registry/mcp_write/baselines/",
+      "intake": "registry/mcp_write/intake/",
+      "permission": "chmod 750",
+      "caddy_access": "NO ACCESS",
+      "created_session": 136
+    },
+    "mcp_write_sandbox_dirs": {
+      "tools_sandbox": "tools/sandbox/",
+      "tools_tmp": "tools/tmp/",
+      "tests_sandbox": "tests/sandbox/",
+      "allowed_extensions": [
+        ".md",
+        ".json",
+        ".txt"
+      ],
+      "forbidden_extensions": [
+        ".py",
+        ".sh",
+        ".env",
+        ".yaml",
+        ".yml",
+        ".service"
+      ],
+      "created_session": 136
+    },
+    "mcp_write_plane_status": {
+      "phase": "E2E_VALIDATION_IN_PROGRESS",
+      "write_plane_state": "LOCKED",
+      "pending_receipts": [
+        "MCP-WRITE-RECEIPT-0CD1F9D0A05A",
+        "MCP-WRITE-RECEIPT-13418A375071"
+      ],
+      "design_gap": "receipt status CONFIRMED 전이 메커니즘 누락 — 도미 설계 대기",
+      "caddy_incidents_this_session": [
+        "content hash mismatch (개행 미포함 19bytes 전송 → 20bytes 불일치)",
+        "receipt status 전이 없는 handle_recovery_close() 구현 — 교착 초래"
+      ]
+    },
+    "aiba_mcp_write_service": "inactive (disabled, reset-failed — S137)",
+    "nginx_arss_mcp_config": "bak_s137 rollback 상태 (Write Plane 미연결)",
+    "arss_mcp_bak_s137": "존재 (/etc/nginx/sites-enabled/arss-mcp.bak_s137)",
+    "mcp_write_server_version": "v2.1.0 (commit 2a5a5c8)",
+    "mcp_write_plane": {
+      "status": "OPERATIONAL",
+      "nginx_config": "/etc/nginx/sites-enabled/arss-mcp (Write Plane 포함)",
+      "service": "aiba-mcp-write.service (active, enabled)",
+      "port": 8444,
+      "smoke_test": "PASS (S138)",
+      "note": "MCP Read+Write Plane 양방향 완전 운영 중."
+    },
+    "mcp_http_bridge_v22": {
+      "file": "tools/mcp/mcp_http_bridge.py",
+      "version": "2.2.0",
+      "status": "DEPLOYED",
+      "commit": "81e77c0",
+      "deployed_session": 139,
+      "deployed_date": "2026-05-18",
+      "backup": "mcp_http_bridge.py.bak_s139",
+      "note": "Write Plane 브릿지 연결. write_file/get_write_plane_state 추가. FORWARD_ONLY. caddy only. timeout=30s NO_RETRY FAIL_CLOSED."
+    },
+    "mcp_read_constants_registry": {
+      "file": "tools/governance/MCP_READ_CONSTANTS_REGISTRY_v1.0.json",
+      "version": "v1.0",
+      "status": "DEPLOYED",
+      "commit": "4295939",
+      "deployed_session": 139,
+      "deployed_date": "2026-05-18",
+      "note": "MCP Read Plane 운영 상수 레지스트리. SESSION_CONTEXT mcp_read_constants의 원본 권위."
+    },
+    "mcp_connector_status": {
+      "write_file_exposed": true,
+      "get_write_plane_state_exposed": true,
+      "total_tools": 13,
+      "connector_refreshed_session": 140,
+      "note": "S140: claude.ai 커넥터 캐시 해소 → write_file/get_write_plane_state 노출 완료"
+    }
+  }
+}
