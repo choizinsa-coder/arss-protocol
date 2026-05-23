@@ -1,0 +1,270 @@
+{
+  "domain": "tasks.pending",
+  "schema_version": "phase3_shard_v1",
+  "session_ref": 148,
+  "items": [
+    {
+      "note": "Phase 2-C 이후 구현. Constitution/RGO 변경 시 자동 감지 및 통보. 캐디가 Phase 2-C 진입 시 의제로 올릴 것.",
+      "owner": "도미→캐디→Claude Code",
+      "priority": "LOW",
+      "status": "PLANNED",
+      "task": "Boot 문서 자동 감지 시스템"
+    },
+    {
+      "note": "Phase 2-B 전환 완료(Apr 12). GitHub push는 별도 설계 필요. WF-05 재활성화 후 진행.",
+      "owner": "도미→캐디→Claude Code",
+      "priority": "MEDIUM",
+      "status": "PLANNED",
+      "task": "Phase 2-B 설계 의뢰 — SESSION_CONTEXT.json GitHub 자동 push"
+    },
+    {
+      "canceled_date": "2026-04-20",
+      "canceled_reason": "evolution_score SOFT_KILL DIS-049",
+      "note": "lesson_confirmed eligibility_rule 자동 교차검증. 현재 캐디 수동 확인으로 대체 중.",
+      "owner": "도미→캐디→Claude Code",
+      "priority": "LOW",
+      "status": "CANCELED_BY_POLICY",
+      "task": "TRS eligibility_rule 자동검증 로직 구현"
+    },
+    {
+      "note": "POST /generate 필수 필드(Authorization, actor_id, content, prev_chain_hash) 및 persist 미지원 사항 공식 스펙 문서 정리 필요.",
+      "owner": "캐디",
+      "priority": "MEDIUM",
+      "status": "PLANNED",
+      "task": "generator API 스펙 공식 문서화"
+    },
+    {
+      "note": "LESSON-014 기반. 필드 누락 skip 시 hash_match:null 또는 hash_match_skipped:true 반환으로 개선. 별도 EAG 필요.",
+      "owner": "캐디→Claude Code",
+      "priority": "LOW",
+      "status": "PLANNED",
+      "task": "flat_verifier.py hash_match 반환값 개선"
+    },
+    {
+      "canceled_date": "2026-04-20",
+      "canceled_reason": "evolution_score SOFT_KILL DIS-049",
+      "note": "rebase 후 첫 실제 이벤트 발생 시 scoring_ledger v2.1 records에 등록. trs_v2_1.py calculate() 호출 후 persist 파이프라인 경유.",
+      "owner": "캐디",
+      "priority": "MEDIUM",
+      "status": "CANCELED_BY_POLICY",
+      "task": "Evolution Score v2.1 첫 이벤트 등록"
+    },
+    {
+      "arss_hub_path": "01_GOVERNANCE/",
+      "created_date": "2026-04-11",
+      "design_doc": "AIBA_Structure_Consolidation_A_Design_Review_v1_0.docx",
+      "doc_ref": "AIBA-DESIGN-002",
+      "eag2_prerequisites": [
+        "Drive 폴더 신설 순서 정의",
+        "WF-04 folder ID 교체 실행(Claude Code)",
+        "WF-03 후처리 단계 추가 설계(도미 의뢰)",
+        "Drive-VPS mapping table 문서 작성"
+      ],
+      "eag_stage": "EAG-1_COMPLETE",
+      "note": "ARSS_HUB Drive 폴더 구조 A안 재편. B2 자동화 파이프라인 Drive 쪽 완결 작업. EAG-1 비오(Joshua) 승인 완료(S27). EAG-2 대기. S58 우선순위 상향(비오 결정 — 자동화 완성 관련 핵심 작업).",
+      "owner": "비오(EAG-1) → 도미(WF-03 후처리 설계) → 캐디→Claude Code",
+      "priority": "HIGH",
+      "status": "EAG-2_PENDING",
+      "task": "AIBA Structure Consolidation A안 — EAG-1 승인 및 실행"
+    },
+    {
+      "briefing_ref": "BRIEFING-DOMI-S58-001",
+      "created_date": "2026-04-25",
+      "created_session": 58,
+      "eag_stage": "EAG-0_BRIEFING_READY",
+      "id": "PT-S58-001",
+      "note": "S58 비오(Joshua) 도입 결정. BRIEFING-DOMI-S58-001 작성 완료. OS 레벨(DIS-010). 캐디 IMPLEMENTABLE=YES(S60). 도미 [DESIGN]+[SELF-CRITIQUE] 필요.",
+      "owner": "도미→비오(EAG-1)→캐디",
+      "priority": "HIGH",
+      "scope": "① STATUS_STANDARD 공식 상태값 목록 확정 ② pending_tasks → active_tasks/archived_tasks 분리",
+      "status": "DESIGN_PENDING",
+      "task": "SESSION_CONTEXT pending_tasks 구조 개선 — 상태값 표준화 + active/archive 분리"
+    },
+    {
+      "canceled_date": "2026-04-20",
+      "canceled_reason": "evolution_score SOFT_KILL DIS-049",
+      "completed_date": "2026-04-13",
+      "created_date": "2026-04-12",
+      "note": "trs_v2_1.py 플래그 구현 대기 (EPS v1.3 설계 완료 후)",
+      "owner": "캐디→Claude Code",
+      "priority": "HIGH",
+      "status": "CANCELED_BY_POLICY",
+      "task": "trs_v2_1.py 실행 — Session 25 evolution_score 정산"
+    },
+    {
+      "closed_date": "2026-04-25",
+      "created_date": "2026-04-13",
+      "note": "RPU-0043 발행 성공으로 해소됨. S58 정리.",
+      "owner": "캐디→비오",
+      "priority": "CRITICAL",
+      "status": "SUPERSEDED",
+      "superseded_by": "Approval Pool EAG-3 + WF-05 n8n 노드 재구성 (COMPLETED)",
+      "task": "WF-05 n8n → status server 오류 해소 — hash 계산 불일치 근본 원인"
+    },
+    {
+      "closed_date": "2026-04-25",
+      "created_date": "2026-04-14",
+      "note": "RPU-0043 EAG-3 완료로 대체됨. S58 정리.",
+      "owner": "도미→캐디→Claude Code",
+      "priority": "CRITICAL",
+      "status": "SUPERSEDED",
+      "superseded_by": "WF-05 재활성화 — EAG 승인 연동 자동 후속 처리 (COMPLETED, Session 40)",
+      "task": "WF-05 재활성화 — 도미 설계 의뢰 (R4 원인 확정)"
+    },
+    {
+      "created_date": "2026-04-14",
+      "note": "캐디(오케스트레이터)+Claude 서브에이전트(워커) 구조 설계 의뢰. 도미/제니 독립성 유지 전제. 서브에이전트 호출 자격/출력 처리/VPS 접근/RPU 발행 경계 규칙 포함. WF-05 재활성화 + Phase 2-B 안정화 이후 착수. 비오(Joshua) 지시 2026-04-14 Session 28.",
+      "owner": "도미→캐디→Claude Code",
+      "priority": "LOW",
+      "status": "PLANNED",
+      "task": "Claude 서브에이전트 통합 설계 — 캐디+서브에이전트 오케스트레이터 구조"
+    },
+    {
+      "closed_date": "2026-04-25",
+      "created_date": "2026-04-15",
+      "note": "canonical payload 3요소 고정 완료. 하위 태스크 전체 COMPLETED로 흡수됨. S58 정리.",
+      "owner": "도미→비오(EAG-1)→캐디",
+      "priority": "CRITICAL",
+      "status": "CLOSED",
+      "task": "WF-05 canonical contract EAG-1 — 도미 최종 문서 제출 및 비오님 승인"
+    },
+    {
+      "created_date": "2026-04-15",
+      "note": "비오님 지시(Session 33): 도미 설계→EAG 절차가 안전성을 실질적으로 보장하는지, 번거로움 대비 효과 재검토 필요. WF-05 재구축 완료 후 별도 세션.",
+      "owner": "비오(Joshua)",
+      "priority": "LOW",
+      "status": "PLANNED",
+      "task": "거버넌스 프로세스 효율성 재검토 — 도미 설계→EAG 절차 실질적 효과 검토"
+    },
+    {
+      "created_date": "2026-04-15",
+      "note": "S38 PEC 결과: /status 정상 미러 확인. 버그 없음. Root Cause = publication timing으로 재정의됨. Option A-2로 해소 예정.",
+      "owner": "캐디→Claude Code",
+      "priority": "LOW",
+      "status": "CLOSED",
+      "task": "/status session_count 반환 버그 수정"
+    },
+    {
+      "assigned_to": "비오(Joshua)",
+      "closed_date": "2026-04-25",
+      "created_session": 35,
+      "id": "EAG1_DECLARATION_JENI_CORRECTION",
+      "note": "프로젝트 운영에 실질적 영향 없음. boot_template v1.1로 거버넌스 재정의 흡수 완료. S58 비오(Joshua) 결정.",
+      "status": "CLOSED",
+      "title": "EAG-1 선언문 제니 검토 오기 수정"
+    },
+    {
+      "assigned_to": "캐디",
+      "closed_date": "2026-04-25",
+      "created_session": 35,
+      "id": "DOMI_JENI_BRIEFING_DELIVERY",
+      "note": "BRIEFING_DOMI/JENI_S35.md 내용이 boot_template v1.1에 흡수됨. S58 비오(Joshua) 결정.",
+      "status": "CLOSED",
+      "title": "도미/제니 거버넌스 재정의 브리핑 전달"
+    },
+    {
+      "created_date": "2026-04-16",
+      "note": "AIBA-DESIGN-003에서 제외. hash 계산 방식 및 출력 계약 미정의. v1.4 별도 설계 필요.",
+      "owner": "도미→캐디",
+      "priority": "LOW",
+      "status": "PLANNED",
+      "task": "/sync 명령어 설계 — Command Layer v1.4 이월"
+    },
+    {
+      "closed_date": "2026-04-25",
+      "created_session": 41,
+      "note": "EPS v1.3-D FULLY_COMPLETED(Session 47, commit 2eb9b3a)로 대체됨. S58 정리.",
+      "owner": "도미",
+      "priority": "CRITICAL",
+      "status": "CLOSED",
+      "task": "EPS v1.3 LOCKED SPEC v1.0 작성"
+    },
+    {
+      "created_session": 48,
+      "deferred_reason": "B3 이전 구조적 불가. Domi/Caddy 발언 생성 경계는 Claude/ChatGPT 내부 — VPS 접근 불가.",
+      "id": "PT-S48-001",
+      "owner": "캐디",
+      "priority": "LOW",
+      "revisit_condition": "B3 완성 후",
+      "status": "DEFERRED",
+      "task": "EPS v1.4 Wrapper — agent pre-output integration"
+    },
+    {
+      "created_session": 48,
+      "deferred_reason": "PT-S48-001 DEFERRED에 종속",
+      "id": "PT-S48-002",
+      "owner": "캐디",
+      "priority": "LOW",
+      "revisit_condition": "B3 완성 후",
+      "status": "DEFERRED",
+      "task": "SEP context builder (build_sep_context) 구현"
+    },
+    {
+      "created_session": 48,
+      "deferred_reason": "현재 우선순위에서 제외. B3 또는 outbound pipeline 재설계 이후 재검토.",
+      "id": "PT-S48-003",
+      "owner": "캐디",
+      "priority": "MEDIUM",
+      "revisit_condition": "비오님 별도 지시 시",
+      "status": "DEFERRED",
+      "task": "n8n outbound path EPS v1.4 wrapper 연결"
+    },
+    {
+      "created_session": 59,
+      "id": "PT-S59-003",
+      "note": "BOOT v2 candidate. boot_is_ssot=false. 10/10 PASS. EAG 대기.",
+      "owner": "캐디",
+      "priority": "MEDIUM",
+      "status": "EAG_PENDING",
+      "task": "SESSION_BOOT_SPLIT_V2_CANDIDATE.json 생성"
+    },
+    {
+      "created_session": 63,
+      "eag_stage": "EAG-2_COMPLETE",
+      "id": "PT-S63-001",
+      "next": "S64 Codex CLI 실행 → pytest ALL PASS → Post-Execution Validation → EAG-3",
+      "note": "EAG-1 PASS(S63), EAG-2 PASS(S63). S64: tools/delta_context/ 10개 모듈 생성 완료. index_validator.py 설계 공백 발견 — 비오(Joshua) 판단: atomic_sync.py 대체 불가. auto_loader.py/activation_runner.py 수정 보류. tests/ 생성 보류. EAG-2 진행 HOLD(reason=missing index_validator design). 다음: 도미 index_validator 설계 → Jeni/Caddy 재검토 → EAG 재개.",
+      "owner": "캐디→Codex CLI",
+      "priority": "HIGH",
+      "required_files_modify": [
+        "tools/auto_loader/auto_loader.py",
+        "tools/auto_loader/activation_runner.py"
+      ],
+      "required_files_new": [
+        "tools/delta_context/__init__.py",
+        "tools/delta_context/event_type_target_validator.py",
+        "tools/delta_context/delta_writer.py",
+        "tools/delta_context/index_updater.py",
+        "tools/delta_context/session_transaction_manager.py",
+        "tools/delta_context/commit_marker_manager.py",
+        "tools/delta_context/shadow_pipeline.py",
+        "tools/delta_context/atomic_sync.py",
+        "tools/delta_context/b1_single_entry_wrapper.py",
+        "tools/delta_context/switch_readiness_tracker.py",
+        "tests/test_eag2_validator.py",
+        "tests/test_eag2_chain_integrity.py",
+        "tests/test_eag2_fail_closed.py",
+        "tests/test_eag2_atomic_sync.py",
+        "tests/test_eag2_shadow_mode.py"
+      ],
+      "status": "IN_PROGRESS",
+      "task": "AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2 — EAG-2 구현 실행 (Shadow Mode Phase 1)"
+    },
+    {
+      "id": "PT-S134-VPS-OBS-001",
+      "title": "AIBA VPS Canonical Observability — Phase 1 READ ONLY OBSERVABILITY",
+      "status": "COMPLETED",
+      "priority": "HIGH",
+      "created_session": 134,
+      "completed_session": 134,
+      "owner": "캐디",
+      "commits": [
+        "514b8f4",
+        "4893b73",
+        "ccbfd79"
+      ],
+      "pytest": "35/35 PASS",
+      "note": "READ ONLY MCP 도구 9종 구현 및 Bridge v2.1.0 통합. claude.ai 커넥터 연동 EAG-3 완료. get_runtime_snapshot ALLOW 확인. Domi 원칙 6종 채택."
+    }
+  ]
+}

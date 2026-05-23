@@ -1,0 +1,84 @@
+{
+  "domain": "tasks.hold",
+  "schema_version": "phase3_shard_v1",
+  "session_ref": 148,
+  "items": [
+    {
+      "created_session": 48,
+      "deferred_reason": "B3 이전 구조적 불가. Domi/Caddy 발언 생성 경계는 Claude/ChatGPT 내부 — VPS 접근 불가.",
+      "executable": false,
+      "id": "PT-S48-001",
+      "owner": "캐디",
+      "priority": "LOW",
+      "revisit_condition": "B3 완성 후",
+      "status": "HOLD",
+      "task": "EPS v1.4 Wrapper — agent pre-output integration"
+    },
+    {
+      "created_session": 48,
+      "deferred_reason": "PT-S48-001 DEFERRED에 종속",
+      "executable": false,
+      "id": "PT-S48-002",
+      "owner": "캐디",
+      "priority": "LOW",
+      "revisit_condition": "B3 완성 후",
+      "status": "HOLD",
+      "task": "SEP context builder (build_sep_context) 구현"
+    },
+    {
+      "created_session": 48,
+      "deferred_reason": "현재 우선순위에서 제외. B3 또는 outbound pipeline 재설계 이후 재검토.",
+      "executable": false,
+      "id": "PT-S48-003",
+      "owner": "캐디",
+      "priority": "MEDIUM",
+      "revisit_condition": "비오님 별도 지시 시",
+      "status": "HOLD",
+      "task": "n8n outbound path EPS v1.4 wrapper 연결"
+    },
+    {
+      "created_date": "2026-04-26",
+      "created_session": 59,
+      "deferred_date": "2026-05-01",
+      "deferred_reason": "B3 설계 통합 검토",
+      "deferred_session": 66,
+      "executable": false,
+      "id": "PT-S59-SPLIT-CANDIDATE",
+      "legacy_rule": "REFERENCE_ONLY",
+      "note": "EAG-3 PASS 완료. VPS 실체 없음. B3 설계 시 SESSION_BOOT_SPLIT_V2와 통합 검토로 전환. S66 비오(Joshua) 결정. | PT-S81-ARCH-001 LEGACY ARTIFACT HANDLING RULE 적용: Reference Only + Re-design. 필드·규칙 직접 재사용 금지.",
+      "owner": "캐디",
+      "priority": "LOW",
+      "status": "HOLD",
+      "task": "SESSION_CONTEXT_SPLIT_CANDIDATE_R1.json 배포"
+    },
+    {
+      "created_date": "2026-04-26",
+      "created_session": 59,
+      "deferred_date": "2026-05-01",
+      "deferred_reason": "B3 설계 통합 검토",
+      "deferred_session": 66,
+      "executable": false,
+      "id": "PT-S59-003",
+      "legacy_rule": "REFERENCE_ONLY",
+      "note": "BOOT v2 candidate 생성 완료. boot_is_ssot=false. 10/10 PASS. VPS 실체 없음. B3 설계 시 SPLIT_CANDIDATE_R1과 통합 검토. S66 비오(Joshua) 결정. | PT-S81-ARCH-001 LEGACY ARTIFACT HANDLING RULE 적용: Reference Only + Re-design. 필드·규칙 직접 재사용 금지.",
+      "owner": "캐디",
+      "priority": "LOW",
+      "status": "HOLD",
+      "task": "SESSION_BOOT_SPLIT_V2_CANDIDATE.json EAG 및 배포"
+    },
+    {
+      "id": "PT-S132-API-001",
+      "task": "API 기반 Pre-Output Check 자동 삽입 인터페이스 구축",
+      "owner": "도미→캐디→비오(EAG)",
+      "priority": "HIGH",
+      "status": "HOLD",
+      "created_session": 132,
+      "created_date": "2026-05-16",
+      "note": "S134 확정: A안(API 기반 PRE-OUTPUT CHECK 코드 레벨 자동 삽입). claude.ai UI 대신 API 호출로 user 메시지 앞 CHECK 블록 자동 prepend. Caddy Completion Bias 구조적 차단 목적.",
+      "hold_reason": "UI 이원화·세션 맥락 단절 문제 + API 단독 전환 시 기능 손실 및 구현 범위 확장. 비오님 S135 보류 결정.",
+      "hold_session": 135,
+      "hold_date": "2026-05-17",
+      "executable": false
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "domain": "metrics.visibility_history",
+  "schema_version": "phase3_shard_v1",
+  "session_ref": 148,
+  "history": {
+    "visibility_metrics_s141": {
+      "M-01_active_canonical_key_count": 42,
+      "M-02_tier_d_quarantine_key_count": 12,
+      "M-03_ceiling_utilization_rate": "42/42 = 100% (WITHIN_LIMIT)",
+      "M-04_session_delta_size": "LARGE (Layer 1/2 설계 확정 + 구현)",
+      "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S141.json ACTIVE",
+      "M-06_active_task_load": 55,
+      "M-07_stabilization_compliance": "N/A (Stabilization Mode 해제됨 S120)"
+    },
+    "visibility_metrics_s143": {
+      "M-01_active_canonical_key_count": 42,
+      "M-02_tier_d_quarantine_key_count": 12,
+      "M-03_ceiling_utilization_rate": "42/42 = 100% (WITHIN_LIMIT)",
+      "M-04_session_delta_size": "MEDIUM (IMPL-NOTE-03/04 + Token Issuance 구현)",
+      "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S143.json ACTIVE",
+      "M-06_active_task_load": 56,
+      "M-07_stabilization_compliance": "N/A (Stabilization Mode 해제됨 S120)"
+    },
+    "visibility_metrics_s144": {
+      "session": 144,
+      "date": "2026-05-23",
+      "pytest_result": "769 pass / 16 fail(기존부채) / 158 skip (변동 없음, 구현 미착수)",
+      "sandbox_artifacts_created": 5,
+      "sandbox_phase": "Phase 0 initiated",
+      "key_decisions": [
+        "persona simulation → artifact-first 전환 결정",
+        "Ticket Schema v1.0 확정",
+        "Session Boot Contract 확정",
+        "LOCK-1~5 governance 구조 확정",
+        "PT-S143-TEST-DEBT-001 → S145 이관 결정"
+      ],
+      "chain_tip": "e685455",
+      "top_level_key_count": 59
+    },
+    "visibility_metrics_s145": {
+      "session": 145,
+      "date": "2026-05-23",
+      "pytest_result": "785 pass / 0 fail / 158 skip (기존부채 16건 전량 수습)",
+      "M-01_active_canonical_key_count": 60,
+      "M-02_tier_d_quarantine_key_count": 12,
+      "M-03_ceiling_utilization_rate": "60/42 = OVER (Tier D migration 대상 잔여)",
+      "M-04_session_delta_size": "SMALL (PT-S143-TEST-DEBT-001 완료 + chain 갱신)",
+      "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S144.json ACTIVE (신규 없음)",
+      "M-06_active_task_load": 55,
+      "M-07_stabilization_compliance": "N/A (Stabilization Mode 해제됨 S120)",
+      "chain_tip": "ad14631",
+      "key_decisions": [
+        "PT-S143-TEST-DEBT-001 COMPLETED — 16건 전량 수습",
+        "sys.modules fixture 전환 패턴 확립 (pytest collection-time 오염 방지)",
+        "chain.tip 현행화 주의사항: 다음 SESSION_CONTEXT SCP 후 test_chain_tip_unchanged 재갱신 필요"
+      ]
+    },
+    "visibility_metrics_s146": {
+      "session": 146,
+      "date": "2026-05-23",
+      "pytest_result": "785 pass / 0 fail / 158 skip (변동 없음)",
+      "M-01_active_canonical_key_count": 61,
+      "M-02_tier_d_quarantine_key_count": 12,
+      "M-03_ceiling_utilization_rate": "61/42 = OVER (Phase 2 분리 후 해소 예정)",
+      "M-04_session_delta_size": "MEDIUM (Phase 1 context refactor 구현)",
+      "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S145.json ACTIVE (신규 없음)",
+      "M-06_active_task_load": 56,
+      "M-07_stabilization_compliance": "N/A (Stabilization Mode 해제됨 S120)",
+      "chain_tip": "9c384d5",
+      "key_decisions": [
+        "SESSION_CONTEXT 분산 저장 Phase 1 COMPLETE — runtime shard 5개 배포",
+        "manifest-last 트랜잭션 원칙 확립",
+        "제니 REVALIDATION_REQUIRED = NO 해제",
+        "Phase 2 착수 전까지 SESSION_CONTEXT 생성 방식 유지"
+      ]
+    },
+    "visibility_metrics_s147": {
+      "session": 147,
+      "date": "2026-05-23",
+      "pytest_result": "785 pass (기존) + 20 pass (Phase 2 신규) = 805 pass / 0 fail / 158 skip",
+      "M-01_active_canonical_key_count": 62,
+      "M-02_tier_d_quarantine_key_count": 12,
+      "M-03_ceiling_utilization_rate": "62/42 = OVER (Phase 3 분리 후 해소 예정 — Phase 2는 SIZE 감축 목적)",
+      "M-04_session_delta_size": "MEDIUM (Phase 2 shard 7개 + pointer 교체)",
+      "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S147.json ACTIVE (신규 없음)",
+      "M-06_active_task_load": 19,
+      "M-07_stabilization_compliance": "N/A (Stabilization Mode 해제됨 S120)",
+      "chain_tip": "ebbc5bb",
+      "key_decisions": [
+        "Context Refactor Phase 2 COMPLETE — governance/lessons/agents 7개 shard 배포",
+        "Option C (압축 요약 + 포인터) 채택 — SESSION_CONTEXT SSOT 권위 유지",
+        "Advisory-1 SHARD_LOAD_PROOF_RULE 명문화 완료",
+        "3자 hash 검증 구조 확립 (Fail-Closed + manifest-last)",
+        "제니 REVALIDATION_REQUIRED=YES — 운영 진입 후 1회 예정"
+      ]
+    }
+  }
+}
