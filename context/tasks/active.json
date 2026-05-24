@@ -3,7 +3,7 @@
   "schema_version": "phase3_shard_v1",
   "session_ref": 150,
   "item_count": 58,
-  "open_count": 10,
+  "open_count": 9,
   "critical_count": 0,
   "last_mutated_session": 150,
   "items": [
@@ -59,8 +59,12 @@
       "id": "PT-LEGACY-AUTO-029",
       "owner": "비오(EAG-2)",
       "priority": "HIGH",
-      "status": "EAG_2_PENDING",
-      "task": "WF Structure Consolidation A안 — EAG-2 대기"
+      "status": "SUPERSEDED",
+      "task": "WF Structure Consolidation A안 — EAG-2 대기",
+      "superseded_session": 150,
+      "superseded_date": "2026-05-24",
+      "superseded_by": "WF-05 (B2 자동화 완료로 핵심 목적 달성)",
+      "superseded_note": "S27 EAG-1 승인 후 92세션 미착수. B2 자동화(WF-05 live test RPU-0043, ACTIVE 운영)로 핵심 목적 기달성. Drive 폴더 A안 재편 실익 소멸. 비오(Joshua) S150 SUPERSEDED 확정."
     },
     {
       "id": "PT-LEGACY-AUTO-006",
