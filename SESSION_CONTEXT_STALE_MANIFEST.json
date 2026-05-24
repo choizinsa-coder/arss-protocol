@@ -1,0 +1,27 @@
+{
+  "manifest_session": 150,
+  "context_hash": "6f3cbc7f8c33a593008d7556384120a2c158c5381904027df66fc65b1371922a",
+  "pointer_hash": "1133e614b9d0d3b9173ddd9c166284bb7e2988a498ffd44014440fbc3eef4a0b",
+  "generated_at": "2026-05-24T19:44:56.689539+09:00",
+  "generated_by": "caddy",
+  "projection_status": "fresh",
+  "shard_status_summary": {
+    "context/tasks/active.json": "fresh",
+    "context/tasks/hold.json": "fresh",
+    "context/tasks/blocked.json": "fresh",
+    "context/tasks/pending.json": "fresh",
+    "context/lessons/lessons.json": "fresh",
+    "context/metrics/visibility_history.json": "fresh",
+    "context/vps/state.json": "fresh",
+    "context/vps/deployed.json": "fresh"
+  },
+  "role_projection_status": {
+    "domi": "fresh",
+    "jeni": "fresh",
+    "caddy": "fresh"
+  },
+  "blocking_flags": [],
+  "stale_blocked_actions": [],
+  "phase": "A",
+  "write_back_allowed": false
+}
