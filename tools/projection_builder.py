@@ -3,34 +3,39 @@ projection_builder.py
 AIBA Projection Builder — Layer 2 (L2-2)
 SSOT: BRIEFING-DOMI-S142-DESIGN-REQUEST-FINAL
 IMPL-NOTE-03: state anchor stale 기준 (active 파일 수 범위) — S143
+Phase A Patch: Pointer-first canonical load + role-scoped projection — S151
 """
 
 import json
+import sys
 import time
 import hashlib
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
 
+sys.path.insert(0, "/opt/arss/engine/arss-protocol")
+from tools.context_gateway.pointer_manager import load_canonical_context
+from tools.context_gateway.manifest_manager import (
+    load_manifest,
+    is_blocking,
+    FLAG_STALE_PROJECTION,
+)
+
 # ── 상수 ───────────────────────────────────────────────────────────────────
 
 TTL_SECONDS = 600  # 10분
 
-SESSION_CONTEXT_PATH = Path(
-    "/opt/arss/engine/arss-protocol/tools/session_context_gen"
-)
 VPS_ROOT = Path("/opt/arss/engine/arss-protocol")
 SANDBOX_ROOT = Path("/opt/arss/engine/arss-protocol/tools/sandbox")
 
 KST = timezone(timedelta(hours=9))
 
-# IMPL-NOTE-03: active 파일 수 임계값
 ACTIVE_FILE_THRESHOLD = 10
 ALLOWED_AGENTS = {"domi", "jeni", "caddy"}
 
-# 절대 제외 필드 (L2-2)
 FORBIDDEN_FIELDS = {
-    "chain",          # chain.tip 포함
+    "chain",
     "hmac",
     "token",
     "credential",
@@ -43,7 +48,7 @@ FORBIDDEN_FIELDS = {
     "HMAC",
 }
 
-# Projection에 포함 허용하는 최상위 키 whitelist
+# Caddy full operational projection (기존 유지)
 ALLOWED_TOP_KEYS = {
     "system_name",
     "system_version",
@@ -64,18 +69,62 @@ ALLOWED_TOP_KEYS = {
     "complexity_ceiling_status",
 }
 
+# Phase A: 역할별 Projection 필드 (Domi 설계 A-4)
+ROLE_PROJECTION_KEYS = {
+    "domi": {
+        "system_name",
+        "system_version",
+        "session_count",
+        "generated_at",
+        "session_reentry",      # current_state / open_gaps
+        "agent_focus",          # active_design_tasks
+        "active_tasks",         # active_design_tasks
+        "canonical_rules",      # governance_constraints
+        "enforcement_rules",    # governance_constraints
+        "decisions",            # governance_constraints
+        "hold_tasks",           # open_gaps
+        "complexity_ceiling_status",  # freshness_status
+        "context_refactor_direction", # freshness_status
+        "sandbox_collaboration",      # freshness_status
+    },
+    "jeni": {
+        "system_name",
+        "system_version",
+        "session_count",
+        "generated_at",
+        "code_health",          # risk_flags
+        "hold_status",          # risk_flags
+        "pytest_status",        # risk_flags
+        "canonical_rules",      # trust_status
+        "enforcement_rules",    # trust_status / approval_boundary
+        "caddy_operational_rules",    # trust_status
+        "decisions",            # approval_boundary
+        "mcp_read_constants",   # external_exposure
+        "crp_governance",       # trust_status
+        "complexity_ceiling_status",  # trust_status
+    },
+    "caddy": ALLOWED_TOP_KEYS,  # full operational projection 유지
+}
+
 STALE_OUTPUT = (
     "PROJECTION_STALE: generated_at 기준 TTL 초과.\n"
     "판단 불가. Observation Server 갱신 후 재확인 필요."
 )
 
-# ── 캐시 (in-memory, 프로세스 범위) ───────────────────────────────────────
+STALE_PROJECTION_BLOCKED = (
+    "STALE_PROJECTION: Manifest blocking_flags 활성화.\n"
+    "설계 확정 / TRUST_READY / EAG 권고 금지 상태.\n"
+    "비오님 승인 후 Manifest 갱신 필요."
+)
+
+# ── 캐시 ───────────────────────────────────────────────────────────────────
 
 _cache: dict = {
     "projection": None,
     "built_at_epoch": 0.0,
     "stale": True,
     "refresh_failed": False,
+    "canonical_source": "NONE",
 }
 
 
@@ -85,6 +134,8 @@ def _is_cache_valid() -> bool:
     elapsed = time.time() - _cache["built_at_epoch"]
     return elapsed < TTL_SECONDS
 
+
+# ── 내부 헬퍼 ──────────────────────────────────────────────────────────────
 
 def _strip_forbidden(data: dict) -> dict:
     """재귀적으로 forbidden 필드 제거"""
@@ -106,29 +157,7 @@ def _strip_forbidden(data: dict) -> dict:
     return result
 
 
-def _load_session_context() -> Optional[dict]:
-    """SESSION_CONTEXT_FINAL.json 로드 (최신 파일 탐색)"""
-    try:
-        candidates = sorted(
-            VPS_ROOT.glob("SESSION_CONTEXT_S*_FINAL.json"),
-            key=lambda p: p.stat().st_mtime,
-            reverse=True
-        )
-        if not candidates:
-            return None
-        with open(candidates[0], "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return None
-
-
-# ── IMPL-NOTE-03: active 파일 수 카운트 ────────────────────────────────────
-
 def _count_active_files(agent: str) -> int:
-    """
-    sandbox/{agent}/active/ 하위 재귀 전체 파일 수 반환
-    디렉토리 부재 시 0 반환
-    """
     agent_active_dir = SANDBOX_ROOT / agent / "active"
     if not agent_active_dir.exists():
         return 0
@@ -139,23 +168,14 @@ def _count_active_files(agent: str) -> int:
 
 
 def _build_sandbox_active_file_count() -> dict:
-    """
-    전 에이전트 active 파일 수 집계 및 stale 판정
-    IMPL-NOTE-03 정책:
-      count > ACTIVE_FILE_THRESHOLD → STATE_ANCHOR_STALE=true + EAG_READY 차단
-      Fail-Closed 발동 없음 (projection 반환은 유지)
-    """
     counts = {}
     any_stale = False
-
     for agent in sorted(ALLOWED_AGENTS):
         cnt = _count_active_files(agent)
         counts[agent] = cnt
         if cnt > ACTIVE_FILE_THRESHOLD:
             any_stale = True
-
     total = sum(counts.values())
-
     return {
         "domi": counts.get("domi", 0),
         "jeni": counts.get("jeni", 0),
@@ -169,17 +189,30 @@ def _build_sandbox_active_file_count() -> dict:
     }
 
 
-def _build_projection(raw: dict) -> dict:
-    """RAW SESSION_CONTEXT → 필터링된 Projection 생성"""
+def _get_role_keys(role: Optional[str]) -> set:
+    """역할별 허용 키 반환. None 또는 unknown → caddy(full) 적용"""
+    if role in ROLE_PROJECTION_KEYS:
+        return ROLE_PROJECTION_KEYS[role]
+    return ALLOWED_TOP_KEYS
+
+
+def _build_projection(
+    raw: dict,
+    canonical_source: str,
+    role: Optional[str] = None,
+) -> dict:
+    """RAW SESSION_CONTEXT → role-scoped Projection 생성"""
     now_kst = datetime.now(KST)
     epoch_ms = int(time.time() * 1000)
 
+    allowed_keys = _get_role_keys(role)
     filtered = {}
-    for k in ALLOWED_TOP_KEYS:
+    for k in allowed_keys:
         if k in raw:
-            filtered[k] = _strip_forbidden(raw[k]) if isinstance(raw[k], dict) else raw[k]
+            filtered[k] = (
+                _strip_forbidden(raw[k]) if isinstance(raw[k], dict) else raw[k]
+            )
 
-    # IMPL-NOTE-03: sandbox active 파일 수 집계
     sandbox_active = _build_sandbox_active_file_count()
     state_anchor_stale = sandbox_active["state_anchor_stale"]
 
@@ -192,7 +225,8 @@ def _build_projection(raw: dict) -> dict:
         "purpose": "OBSERVATION_ONLY",
         "stale": False,
         "projection_refresh_failed": False,
-        # IMPL-NOTE-03 필드
+        "canonical_source": canonical_source,  # Phase A: POINTER | GLOB_FALLBACK
+        "role": role or "caddy",
         "sandbox_active_file_count": sandbox_active,
         "state_anchor_stale": state_anchor_stale,
         "active_file_count_warning": state_anchor_stale,
@@ -200,38 +234,66 @@ def _build_projection(raw: dict) -> dict:
         "data": filtered,
     }
 
-    # integrity_hash: payload(data 제외) 기준 SHA256
     hash_basis = json.dumps(
         {k: v for k, v in payload.items() if k not in ("integrity_hash", "data")},
-        sort_keys=True, ensure_ascii=False
+        sort_keys=True, ensure_ascii=False,
     ).encode()
     payload["integrity_hash"] = hashlib.sha256(hash_basis).hexdigest()
 
     return payload
 
 
-def get_projection() -> tuple[dict, bool]:
+def _check_manifest_blocking() -> tuple[bool, str]:
     """
-    On-request + TTL cache hybrid (GAP-02)
+    Manifest blocking_flags 확인.
+    반환: (is_blocked: bool, reason: str)
+    """
+    manifest = load_manifest()
+    if manifest is None:
+        return False, "MANIFEST_NOT_FOUND"
+    if is_blocking(manifest):
+        flags = manifest.get("blocking_flags", [])
+        return True, f"MANIFEST_BLOCKING: {flags}"
+    return False, "MANIFEST_OK"
+
+
+# ── 공개 API ───────────────────────────────────────────────────────────────
+
+def get_projection(role: Optional[str] = None) -> tuple[dict, bool]:
+    """
+    On-request + TTL cache hybrid.
+    Phase A: Pointer-first canonical load + role-scoped projection.
+    STALE_PROJECTION blocking_flags 활성화 시 차단 응답 반환.
     반환: (projection_dict, is_stale)
     """
-    # cache TTL 이내 → 기존 반환
-    if _is_cache_valid():
+    # Manifest blocking 선행 확인
+    is_blocked, block_reason = _check_manifest_blocking()
+    if is_blocked:
+        return {
+            "AUTHORITY_LEVEL": "OBSERVATION_ONLY_NO_EXECUTION",
+            "stale": True,
+            "blocked": True,
+            "block_reason": block_reason,
+            "execution_allowed": False,
+            "message": STALE_PROJECTION_BLOCKED,
+        }, True
+
+    # TTL 캐시 유효 → 반환 (role 무관하게 raw 재사용 불가 → role별 재빌드)
+    # 단순화: role이 다르면 캐시 미사용
+    if role is None and _is_cache_valid():
         return _cache["projection"], False
 
-    # cache 없음 또는 TTL 초과 → 새 projection 생성 시도
-    raw = _load_session_context()
+    # Pointer-first canonical load (Phase A 핵심 변경)
+    raw, canonical_source = load_canonical_context(fallback_glob=True)
+
     if raw is None:
-        # 생성 실패 처리
         _cache["refresh_failed"] = True
         if _cache["projection"] is not None:
-            # stale projection 반환
             stale_proj = dict(_cache["projection"])
             stale_proj["stale"] = True
             stale_proj["projection_refresh_failed"] = True
             stale_proj["stale_warning"] = "STALE_WARNING: SESSION_CONTEXT 로드 실패"
             return stale_proj, True
-        # 캐시도 없으면 stale 전용 응답
         return {
             "AUTHORITY_LEVEL": "OBSERVATION_ONLY_NO_EXECUTION",
             "stale": True,
@@ -240,29 +302,30 @@ def get_projection() -> tuple[dict, bool]:
             "message": STALE_OUTPUT,
         }, True
 
-    # 생성 성공
-    projection = _build_projection(raw)
-    _cache["projection"] = projection
-    _cache["built_at_epoch"] = time.time()
-    _cache["stale"] = False
-    _cache["refresh_failed"] = False
+    projection = _build_projection(raw, canonical_source, role=role)
+
+    # caddy(default) 캐시 갱신
+    if role is None:
+        _cache["projection"] = projection
+        _cache["built_at_epoch"] = time.time()
+        _cache["stale"] = False
+        _cache["refresh_failed"] = False
+        _cache["canonical_source"] = canonical_source
 
     return projection, False
 
 
 def invalidate_cache():
-    """캐시 강제 무효화 — unlock 직후 호출 (IMPL-NOTE-04)"""
+    """캐시 강제 무효화"""
     _cache["projection"] = None
     _cache["built_at_epoch"] = 0.0
     _cache["stale"] = True
     _cache["refresh_failed"] = False
+    _cache["canonical_source"] = "NONE"
 
 
 def check_ttl(projection: dict) -> bool:
-    """
-    에이전트 호출 전 TTL 확인 헬퍼
-    True = STALE, False = VALID
-    """
+    """True = STALE, False = VALID"""
     if projection.get("stale"):
         return True
     generated_at_str = projection.get("generated_at")
