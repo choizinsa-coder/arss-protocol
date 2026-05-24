@@ -4,13 +4,13 @@
     "schema_version": "phase2_shard_v1",
     "domain": "lessons",
     "session_created": 147,
-    "last_updated_session": 147
+    "last_updated_session": 150
   },
   "summary": {
     "domain": "lessons.lessons",
     "schema_version": "phase2_shard_v1",
     "item_count": 29,
-    "latest_session_ref": 147,
+    "latest_session_ref": 150,
     "status": "active",
     "body_ref": "context/lessons/lessons.json"
   },
@@ -158,7 +158,7 @@
       "confirmed_date": "2026-04-18",
       "id": "LESSON-017",
       "must_reference": true,
-      "prevention_rule": "create_approval_token.py 실행 시 approved_at 필드는 eag_approval 원본 rec['approved_at_kst'] 기준. token 생성 시각 사용 금지.",
+      "prevention_rule": "create_approval_token.py 실행 시 approved_at 필드는 eag_approval 원본 rec[\"approved_at_kst\"] 기준. token 생성 시각 사용 금지.",
       "statement": "create_approval_token.py는 반드시 원본 eag_approval의 approved_at_kst를 사용해야 한다. token 생성 시각(now_kst) 사용 시 approval_hash mismatch 발생.",
       "status": "IMMUTABLE",
       "trigger": "Session 40 — WF-05 live test 중 issuer returncode=1. create_approval_token.py:76 approved_at_kst 버그 (2026-04-18)"
@@ -225,7 +225,7 @@
       "statement": "Tier D Archive 파일은 매 세션 생성한다. 변동 없으면 직전 Archive 복사본을 S{n} 버전으로 생성. 생성 누락 시 세션 종료 선언 불가.",
       "status": "IMMUTABLE",
       "trigger": "S115 — 비오(Joshua) 지적. Archive 생성 누락 가능성에 대한 보장 메커니즘 부재 확인.",
-      "correction_note": "S115 초기 선언 오류 정정: '변동 없으면 생성 불필요'는 잘못된 적용이었음. 매 세션 생성이 원칙."
+      "correction_note": "S115 초기 선언 오류 정정: 변동 없으면 생성 불필요는 잘못된 적용이었음. 매 세션 생성이 원칙."
     },
     {
       "id": "LESSON-023",
@@ -242,7 +242,7 @@
       "id": "LESSON-024",
       "title": "pytest 다중 파일 실행 시 sys.modules 오염 방지",
       "session": 134,
-      "content": "두 테스트 파일이 같은 pytest 세션에서 실행될 때 수집 단계에서 sys.modules 교체가 발생하면 실행 단계의 patch가 wrong target에 적용된다. 해결: sys.modules['module']을 mock으로 교체하는 대신 실제 모듈을 사용하고 인스턴스만 patch 처리.",
+      "content": "두 테스트 파일이 같은 pytest 세션에서 실행될 때 수집 단계에서 sys.modules 교체가 발생하면 실행 단계의 patch가 wrong target에 적용된다. 해결: sys.modules[\"module\"]을 mock으로 교체하는 대신 실제 모듈을 사용하고 인스턴스만 patch 처리.",
       "category": "testing"
     },
     {
@@ -281,7 +281,7 @@
       "date": "2026-05-23",
       "category": "ARCHITECTURE",
       "severity": "HIGH",
-      "content": "단일 세션 내 도미/제니/캐디 페르소나 전환은 '협업 시뮬레이션'에 불과함. recursive reasoning expansion → context saturation → session instability 발생. 실제 협업은 sandbox artifact exchange 기반이어야 함. 대화창 reasoning은 operational artifact가 아님."
+      "content": "단일 세션 내 도미/제니/캐디 페르소나 전환은 협업 시뮬레이션에 불과함. recursive reasoning expansion → context saturation → session instability 발생. 실제 협업은 sandbox artifact exchange 기반이어야 함. 대화창 reasoning은 operational artifact가 아님."
     },
     {
       "id": "LESSON-S144-ARTIFACT-FIRST",
@@ -297,7 +297,11 @@
       "date": "2026-05-23",
       "category": "ARCHITECTURE",
       "severity": "HIGH",
-      "content": "SESSION_CONTEXT.json 단일 파일 방식의 한계 확인: 233KB, 59 keys, ceiling 초과, write_file 한도 초과. 주제별 분산 저장 구조(context/) 전환 필요. 에이전트당 필요 읽기 범위를 ~16KB 수준으로 감소시켜야 함. 세션별 metrics는 개별 파일로 누적, 만료 항목은 archive/로 자동 이동."
+      "content": "SESSION_CONTEXT.json 단일 파일 방식의 한계 확인: 233KB, 59 keys, ceiling 초과, write_file 한도 초과. 주제별 분산 저장 구조(context/) 전환 필요. 에이전트당 필요 읽기 범위를 ~16KB 수준으로 감소시켜야 함. 세션별 metrics는 개별 파일로 누적, 만료 항목은 archive/로 자동 이동.",
+      "status": "TRANSITION_COMPLETE",
+      "resolved_session": 148,
+      "resolved_date": "2026-05-23",
+      "resolution_note": "Context Refactor Phase 1~3 완료(S148). 15개 shard 분산 저장 구조 배포 완료(context/ 디렉토리). 전환 취지 실현됨. 비오(Joshua) S150 확정."
     }
   ]
 }
