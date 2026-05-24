@@ -1,7 +1,11 @@
 {
   "domain": "tasks.active",
   "schema_version": "phase3_shard_v1",
-  "session_ref": 148,
+  "session_ref": 150,
+  "item_count": 58,
+  "open_count": 10,
+  "critical_count": 0,
+  "last_mutated_session": 150,
   "items": [
     {
       "created_session": 72,
@@ -163,7 +167,6 @@
       "eag_stage": "EAG-3_COMPLETE",
       "id": "PT-S81-ARCH-001",
       "implementable": "PASS (캐디)",
-      "next": "S108: DEBT-105-001 만료 처리 결정(S108 시한). 제니 TRUST_READY briefing 전달(CRP enforcement 조건 #8). PT-S99-GOV-001 Receipt Retention Policy 수치 LOCK. PT-S99-GOV-003 착수 여부 비오 지시 대기.",
       "note": "Phase 1 COMPLETE(S86). Phase 2 COMPLETE(S90, commit 7d91fe6). Phase 3A COMPLETE(S101, commit 0681ff0). Phase 3B COMPLETE(S102, commits 5e29d0b+195a0f3). Phase 3C IN PROGRESS(S103: Registry EAG-3 COMPLETE + governance_checker EAG-3 COMPLETE). S105: Complexity Governance docs EAG-3 COMPLETE(commit fcbb99a). S106: CRP v1.1 패키지 EAG-3 COMPLETE(commit 794d551).",
       "owner": "도미(설계) → 캐디(IMPLEMENTABLE) → 비오(EAG)",
       "phase0_completed_date": "2026-05-06",
@@ -424,10 +427,13 @@
       "task": "S101 Governance Sync Architecture 설계 — 4-Layer Hybrid Model Formal Specification",
       "owner": "도미→캐디→제니→비오(EAG)",
       "priority": "HIGH",
-      "status": "EAG-1_LOCKED",
+      "status": "COMPLETED",
       "created_session": 100,
       "created_date": "2026-05-08",
-      "note": "S101: 도미 설계 GOVSYNC-S101-FORMAL v1.1 완료. EAG-1 LOCKED. 4-Layer Hybrid Model / Hash-Based Sync Lock / Fail-Closed Tiering / Trust State Matrix / OVR-1~8 LOCKED."
+      "completed_session": 150,
+      "completed_date": "2026-05-24",
+      "superseded_by": "PT-S101-GOV-SYNC-001",
+      "note": "S101: 도미 설계 GOVSYNC-S101-FORMAL v1.1 완료. EAG-1 LOCKED. 4-Layer Hybrid Model / Hash-Based Sync Lock / Fail-Closed Tiering / Trust State Matrix / OVR-1~8 LOCKED. S150: PT-S101-GOV-SYNC-001(commit 0a25acf, EAG-3 완료, S111)로 이미 실현됨 확인. stale record 정정 완료. 비오(Joshua) S150 지시."
     },
     {
       "id": "PT-S100-GOV-SYNC-002",
@@ -726,52 +732,11 @@
         "모든 호출 Audit Trail 로깅 필수",
         "get_all_context() 류 full preload 도구 절대 금지"
       ],
-      "note": "S125: 캐디 직접 접근(bash_tool/web_fetch) 불가 확인. Remote MCP Connector(claude.ai) 방향 도출. 도미 PROMISING/UNVERIFIED 판정. 제니 PASS(Analysis). POC 연결 검증 S126 이월. S126: MCP POC v0.2.0 구현(EAG-2) — L0/L1 명문화 + deny-by-default + FAIL_CLOSED invariant. commit f4d35ca. pytest 16/16 PASS. 제니 TRUST_READY PASS(Operational, T-1~T-10). EAG-3 비오(Joshua) 승인. PHASE-A COMPLETE. S127: PHASE-B boundary hardening EAG-3 비오(Joshua) 승인. commits bb11f4e+2d3e522. pytest 574/0 PASS. PHASE-C 착수 별도 지시 필요. S128: PHASE-C Private Local MCP HTTP Path COMPLETE. HMAC 4요소 인증/shard routing/nonce store/audit v1.1.0. commits da3341a+6d48789+b3b3fe2. pytest 56/56 PASS. EAG-3 비오(Joshua) 승인. S129: T-6 해소 — READ_ONLY_COGNITION_MODE Filter Policy 설계(도미)/구현(캐디)/검증(제니) 완료. commit be467d0. pytest 24/24 PASS. EAG-1/2/3 비오(Joshua) 승인. 제니 최종 재검증 TRUST_READY PASS(BRIEFING-JENI-S129-003). PT-S125 COMPLETED. S130: HARD_CONTAINMENT Recovery Protocol v1.2 구현(EAG-3 비오 승인). commits 60713d4+3fa70f8. pytest 25/25 PASS. 641/0 회귀 없음.",
+      "note": "S125~S130 전 Phase 완료. EAG-3_COMPLETE (FINAL).",
       "eag2_approved_by": "비오(Joshua)",
       "eag2_approved_session": 126,
       "eag3_approved_by": "비오(Joshua)",
       "eag3_approved_session": 127,
-      "jeni_trust_advisories": [
-        "TA-1: Registry Rigidness — 동적 로딩 추가 시 로드 시점 검증 재강화 필수",
-        "TA-2: Audit Isolation — PHASE-B 이후 Append-only Storage 또는 독립 프로세스 로그 전송 설계 권고",
-        "TA-3: PHASE-C HTTP 전환 시 frozenset 통제 외 암호화 기반 Identity 검증 필수"
-      ],
-      "phase_a_commit": "f4d35ca",
-      "phase_a_pytest": "16/16 PASS (VPS)",
-      "phase_a_completed_session": 126,
-      "phase_a_completed_date": "2026-05-14",
-      "phase_a_scope": "Local stdio observability-only MCP. L0/L1 계층. deny-by-default. FAIL_CLOSED structural invariant.",
-      "phase_b_commit": "bb11f4e + 2d3e522",
-      "phase_b_pytest": "574 passed / 156 skipped / 0 failed",
-      "phase_b_completed_session": 127,
-      "phase_b_completed_date": "2026-05-14",
-      "phase_b_scope": "B-1 Throttling / B-2 Audit Isolation / B-3 Timeout / B-4-A Freshness / B-4-B Routing Integrity",
-      "phase_b_new_files": [
-        "tools/mcp/mcp_audit_broker.py (신규)",
-        "tools/mcp/mcp_server_poc.py v0.3.0 (교체)",
-        "tests/test_mcp_server_poc_phase_b.py (신규 24건)",
-        "tests/test_mcp_server_poc.py v0.3.0 (수정)"
-      ],
-      "jeni_trust_advisories_phase_b": [
-        "TA-1: prevalidation hang 방지 — prevalidation 별도 timeout 구현 완료",
-        "TA-2: AUDIT_UNVERIFIED_RESULT 에러 코드 명확한 관리 필수",
-        "TA-3: READ_ONLY_COGNITION_MODE 강등 판정 로직 — PHASE-C 설계 시 메타데이터 필터링 기준 정의 필요"
-      ],
-      "eag3_phase_c_approved_by": "비오(Joshua)",
-      "eag3_phase_c_approved_session": 128,
-      "eag3_phase_c_approved_date": "2026-05-14",
-      "phase_c_commit": "b3b3fe2",
-      "phase_c_pytest": "56/56 PASS (PHASE-A/B/C 전체 회귀 없음)",
-      "phase_c_completed_session": 128,
-      "phase_c_completed_date": "2026-05-14",
-      "phase_c_scope": "Private Local MCP HTTP Path — HMAC auth + shard routing + nonce store + audit v1.1.0",
-      "phase_c_new_files": [
-        "tools/mcp/mcp_server_poc_phase_c.py (신규)",
-        "tools/mcp/mcp_nonce_store.py (신규)",
-        "tools/mcp/mcp_shard_router.py (신규)",
-        "tools/mcp/mcp_audit_broker.py v1.1.0 (확장)",
-        "tests/test_mcp_server_poc_phase_c.py (신규 16건)"
-      ],
       "completed_session": 129,
       "completed_date": "2026-05-15",
       "filter_policy_commit": "be467d0",
@@ -802,23 +767,10 @@
       "created_session": 131,
       "created_date": "2026-05-16",
       "eag_stage": "EAG-3_COMPLETE",
-      "note": "S131: BRIEFING-DOMI-S131-001(등록절차) + BRIEFING-DOMI-S131-002 Rev.1(Bridge Layer) EAG-2 완료. mcp_http_bridge.py v1.0.1 배포. nginx+certbot 설치. arss-protocol.org TLS 구성. HC-T-04 HARD_CONTAINMENT 블로커로 실측 중단. S132: Containment 해제 후 실측 재시도 + EAG-3 예정. S133: HC-T-04 Recovery 완료. test_mcp_filter_policy.py TC-1/TC-2 격리 수정(commit a211a49). mcp_http_bridge.py v2.0.0 MCP Streamable HTTP endpoint 재정의(commit cbc0ed9). test_mcp_http_bridge_v2.py T1~T10 12/12 PASS. claude.ai ARSS Protocol 커넥터 등록 성공. PEV-1~5 PASS. EAG-3 비오(Joshua) 승인.",
-      "design_docs": [
-        "BRIEFING-DOMI-S131-001 (SCOPE-1~4: 등록 절차)",
-        "BRIEFING-DOMI-S131-002 Rev.1 (SCOPE-1~4: Bridge Layer)"
-      ],
-      "jeni_trust_ready": "PASS (T-1~T-10, S131)",
-      "pev_pending": [
-        "PEV-1",
-        "PEV-2",
-        "PEV-3",
-        "PEV-4",
-        "PEV-5"
-      ],
+      "note": "S133: HC-T-04 Recovery 완료. mcp_http_bridge.py v2.0.0 재정의. claude.ai ARSS Protocol 커넥터 등록 성공. PEV-1~5 PASS. EAG-3 비오(Joshua) 승인.",
       "completed_session": 133,
       "completed_date": "2026-05-16",
       "pev_result": "PASS (PEV-1~5 전항목, S133)",
-      "jeni_trust_ready_v2": "PASS (T1~T10, S133)",
       "commits": [
         "a211a49",
         "cbc0ed9"
@@ -857,7 +809,7 @@
       "eag_stage": "EAG-2_COMPLETE",
       "commit": "6992e03",
       "pytest": "29/29 PASS",
-      "note": "FastAPI/uvicorn VPS 미설치 확인. Read Plane(mcp_http_bridge.py)이 stdlib 기반임을 실측. 도미 설계: dependency-light runtime model 통일. External dependency=0. MAX_REQUEST_BODY_BYTES=65536. 제니 TRUST_READY PASS(T-1~T-7). EAG-1/2 비오(Joshua) 승인."
+      "note": "FastAPI/uvicorn VPS 미설치 확인. stdlib 기반 재구현. EAG-1/2 비오(Joshua) 승인."
     },
     {
       "id": "PT-S137-MCP-WRITE-NGINX-001",
@@ -868,20 +820,10 @@
       "status": "COMPLETED",
       "created_session": 137,
       "created_date": "2026-05-18",
-      "eag_stage": "EAG-2_COMPLETE",
-      "completed_acts": [
-        "ACT-1: /etc/systemd/system/aiba-mcp-write.service 생성 완료 (S137)",
-        "ACT-2: /etc/nginx/sites-enabled/arss-mcp.bak_s137 생성 완료 (S137)",
-        "ACT-3: nginx config 로컬 파일 생성 + SCP 전송 + raw visibility check 완료 (S138)",
-        "ACT-3d: bak_s138 백업 생성 + config 교체 완료 (S138)",
-        "ACT-3f: nginx -t 통과 (경고 없음, bak 파일 sites-enabled 밖으로 이동 후)",
-        "ACT-3g: systemctl reload nginx 성공 (S138)",
-        "ACT-4: aiba-mcp-write.service enable + start 완료 (S138)",
-        "ACT-5: smoke 검증 PASS — /mcp-write/health OK, /mcp/write 400(정상 거부) (S138)"
-      ],
-      "note": "S138: 도미 설계 확정(로컬 파일 생성+SCP 방식). PowerShell $ 이스케이프 문제 해소. arss-mcp.bak_s137/bak_s138 sites-enabled 밖(/etc/nginx/)으로 이동. nginx -t 경고 없음. reload 성공. service active(running). smoke PASS.",
       "completed_session": 138,
-      "completed_date": "2026-05-18"
+      "completed_date": "2026-05-18",
+      "eag_stage": "EAG-2_COMPLETE",
+      "note": "S138: nginx reload 성공. service active(running). smoke PASS."
     },
     {
       "id": "PT-S139-MCP-READ-CONSTANTS-001",
@@ -920,14 +862,8 @@
         "2차: approval TTL 만료",
         "3차: Write Plane LOCKED (T3 P3 baseline drift 오판)"
       ],
-      "note": "S141: receipt finalize 메커니즘 구현 완료(mcp_write_server v2.2.0→v2.3.0, gatekeeper v1.2.0). PENDING 2건 EXPIRED 처리. Write Plane NORMAL 복귀. commits e685455. 차기 세션: 새 EAG approval 발급 후 write_file E2E 재시도.",
-      "s141_commits": [
-        "1888025",
-        "e685455"
-      ],
-      "s141_pytest": "727 passed / 15 failed(기존) / 158 skipped",
-      "write_plane_status": "NORMAL",
-      "superseded_note": "S142 Layer1/2 설계 확정으로 도미/제니 MCP Write Plane 접근 구조 폐기. Observation Server POST /sandbox 경로로 대체됨."
+      "note": "S142 Layer1/2 설계 확정으로 도미/제니 MCP Write Plane 접근 구조 폐기. Observation Server POST /sandbox 경로로 대체됨.",
+      "superseded_note": "S142 Layer1/2 설계 확정으로 도미/제니 MCP Write Plane 접근 구조 폐기."
     },
     {
       "id": "PT-S142-SANDBOX-LAYER1-LAYER2-001",
@@ -962,39 +898,9 @@
         "842a2b3"
       ],
       "pytest": "25/25 PASS (sandbox_validator) + E2E ALL PASS",
-      "deployed_files": [
-        "tools/sandbox_validator.py",
-        "tools/projection_builder.py",
-        "tools/observation_server.py",
-        "tools/setup_sandbox_dirs.sh",
-        "tools/test_sandbox_validator.py",
-        "tools/test_observation_e2e.py",
-        "tools/config/nginx/aiba-observation",
-        "tools/config/nginx/aiba-observation-http.conf",
-        "tools/config/systemd/aiba-observation.service"
-      ],
-      "services": [
-        "aiba-observation.service (active/running, port 8446)"
-      ],
-      "nginx": "8445 → 127.0.0.1:8446 proxy 적용",
-      "sandbox_dirs": "tools/sandbox/ 전체 구조 생성 완료",
-      "impl_notes_pending": [],
-      "caddy_incidents": [
-        "에이전트 간 전달 시 문서 파일 생성 (2회)",
-        "제니 TRUST_READY를 캐디가 단독 수행 (1차)",
-        "nginx conf 배포 전 VPS 상태 미확인으로 포트 충돌 발생",
-        "E2E 테스트 검증 로직 오류 (2회) — 파일 미생성 상태 cross-overwrite 시도, 전체 문자열 검색"
-      ],
       "completed_session": 143,
       "completed_date": "2026-05-21",
-      "token_issuance": {
-        "status": "COMPLETED",
-        "endpoint": "POST /internal/token/register",
-        "persist": "tools/sandbox/.tokens (hash only)",
-        "design_ref": "BRIEFING-DOMI-S143-TOKEN-001",
-        "commit": "842a2b3"
-      },
-      "note": " S143: EAG-3 승인. IMPL-NOTE-03(active file count stale) + IMPL-NOTE-04(fail-closed unlock persist) + Token Issuance 구현 완료. pytest 769/16(기존부채)/158. commits ce93b20+842a2b3."
+      "note": "S143: EAG-3 승인. IMPL-NOTE-03/04 + Token Issuance 구현 완료. pytest 769/16(기존부채)/158. commits ce93b20+842a2b3."
     },
     {
       "id": "PT-S143-TEST-DEBT-001",
@@ -1004,13 +910,7 @@
       "owner": "캐디",
       "created_session": 143,
       "created_date": "2026-05-21",
-      "scope": {
-        "group_A_7건": "mcp_http_bridge / containment / audit 기대값 현행화",
-        "group_B_6건": "poc_phase_b/c audit fixture 계약 현행화",
-        "group_C_3건": "test_pt_s58_001 / test_pt_s113_001 불변식 만료 수습"
-      },
-      "note": "S145: 전체 16건 수습 완료. Group A/B(11건): sys.modules module-level 주입 → pytest fixture(scope='module')+patch.dict 전환 (test_mcp_http_bridge_v21.py + test_mcp_read_server.py). Group C(4건): chain.tip 현행화(e685455) + ARCHIVE Tier D 구조 현행화 + PT-S132-API-001 executable:false SSOT 패치. TC-B14 버전 기대값 2.1.0→2.2.0. 785 pass / 0 fail / 158 skip. commit ad14631.",
-      "sandbox_ticket": "TKT-S144-001",
+      "note": "S145: 전체 16건 수습 완료. 785 pass / 0 fail / 158 skip. commit ad14631.",
       "completed_session": 145,
       "completed_date": "2026-05-23",
       "eag_stage": "EAG-3_COMPLETE"
@@ -1025,7 +925,7 @@
       "priority": "HIGH",
       "task": "SESSION_CONTEXT 분산 저장 Phase 1 — runtime shard 구조 구축",
       "owner": "도미(설계) → 제니(TRUST_READY) → 비오(EAG-1/2/3) → 캐디",
-      "note": "BRIEFING-DOMI-S146-CONTEXT-REFACTOR-001 발행. G1~G6 GAP 패치 완료. Phase 1 IMPLEMENTABLE PASS. 제니 TRUST_READY PASS. 5개 shard 파일 배포(context/runtime/). pytest 785 pass. commit 9c384d5."
+      "note": "Phase 1 IMPLEMENTABLE PASS. 제니 TRUST_READY PASS. 5개 shard 파일 배포(context/runtime/). pytest 785 pass. commit 9c384d5."
     },
     {
       "id": "PT-S146-CONTEXT-REFACTOR-PHASE2",
@@ -1037,21 +937,12 @@
       "priority": "HIGH",
       "task": "SESSION_CONTEXT 분산 저장 Phase 2 — governance/lessons/agents shard 분리",
       "owner": "도미(설계) → 제니(TRUST_READY) → 비오(EAG-1/2/3) → 캐디",
-      "note": "BRIEFING-DOMI-S147-CONTEXT-REFACTOR-002. Option C(압축 요약+포인터). governance 4개(1차)+lessons 2개+agents 1개(2차). 3자 hash 검증 PASS. Advisory-1 SHARD_LOAD_PROOF_RULE 명문화. manifset_epoch S147-M2. 20/20 PASS. commits 70fd840+ebbc5bb.",
+      "note": "Phase 2 완료. 7개 shard 배포. commits 70fd840+ebbc5bb.",
       "commits": [
         "70fd840",
         "ebbc5bb"
       ],
-      "pytest": "20/20 PASS",
-      "shard_files": [
-        "context/governance/rules.json",
-        "context/governance/enforcement.json",
-        "context/governance/decisions.json",
-        "context/governance/refs.json",
-        "context/lessons/lessons.json",
-        "context/lessons/review_policy.json",
-        "context/agents/caddy_operational_rules.json"
-      ]
+      "pytest": "20/20 PASS"
     }
   ]
 }
