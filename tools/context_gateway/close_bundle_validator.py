@@ -2,6 +2,7 @@
 close_bundle_validator.py
 AIBA Context Gateway — Close Bundle Validator
 SSOT: Domi Phase C Design / EAG Approved (S153)
+RULE-6 fix: S153 Code Health Remediation Phase 1
 
 역할:
   - Close Bundle 3-way consistency 검증
@@ -19,10 +20,13 @@ SSOT: Domi Phase C Design / EAG Approved (S153)
 
 import json
 import hashlib
+import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 # ── 상수 ───────────────────────────────────────────────────────────────────
 
@@ -58,26 +62,35 @@ class ValidationResult:
 
 # ── 내부 헬퍼 ──────────────────────────────────────────────────────────────
 
-def _fsync_read_hash(path: Path) -> Optional[str]:
+def _fsync_read_hash(path: Path) -> tuple[Optional[str], bool]:
     """
-    파일 읽기 전 fsync 보장 후 SHA256 계산.
+    파일 읽기 전 fsync 시도 후 SHA256 계산.
     제니 TRUST-ADVISORY: 쓰기 완료 후 동기화(fsync) 보장 필수.
 
-    파일 핸들을 통해 OS 레벨 flush 후 읽기 수행.
-    반환: hex digest 또는 None (읽기 실패 시)
+    fsync 실패는 비치명(non-fatal) — 경고 로그 기록 후 degraded 신호 반환.
+    성공으로 오인하지 않도록 fsync_ok=False를 caller에 명시적으로 전달.
+
+    반환: (sha256_hex | None, fsync_ok: bool)
+      - sha256_hex=None: 파일 읽기 자체 실패
+      - fsync_ok=False: fsync 실패 (buffered 상태에서 hash 계산됨)
     """
     try:
         with open(path, "rb") as f:
-            # 읽기 전 fsync 호출 — 이전 쓰기 완료 보장
+            fsync_ok = True
             try:
                 os.fsync(f.fileno())
-            except OSError:
-                # read-only 파일시스템 등 fsync 불가 환경에서 무시
-                pass
+            except OSError as exc:
+                fsync_ok = False
+                logger.warning(
+                    "FSYNC_READ_DEGRADED: fsync failed on %s — %s. "
+                    "Hash computed from potentially unflushed buffer.",
+                    path, exc,
+                )
             content = f.read()
-        return hashlib.sha256(content).hexdigest()
-    except Exception:
-        return None
+        return hashlib.sha256(content).hexdigest(), fsync_ok
+    except Exception as exc:
+        logger.error("FSYNC_READ_FAILED: cannot read %s — %s", path, exc)
+        return None, False
 
 
 def _load_json_safe(path: Path) -> Optional[dict]:
@@ -100,8 +113,13 @@ def validate_final_file(bundle: CloseBundleInput, result: ValidationResult) -> N
         result.add_error(f"FINAL_FILE_MISSING: {bundle.final_path.name}")
         return
 
-    # fsync 보장 후 hash 계산
-    computed_hash = _fsync_read_hash(bundle.final_path)
+    # fsync 시도 후 hash 계산 — 실패 시 degraded 경고
+    computed_hash, fsync_ok = _fsync_read_hash(bundle.final_path)
+    if not fsync_ok and computed_hash is not None:
+        result.add_warning(
+            "FSYNC_DEGRADED: hash computed from potentially unflushed buffer "
+            f"on {bundle.final_path.name}"
+        )
     if computed_hash is None:
         result.add_error(f"FINAL_FILE_UNREADABLE: {bundle.final_path.name}")
         return
@@ -159,7 +177,6 @@ def validate_manifest_clean(bundle: CloseBundleInput, result: ValidationResult) 
             f"MANIFEST_HAS_BLOCKING_FLAGS: {flags} — STALE 상태에서 Close Bundle 불가"
         )
 
-    # projection_status fresh 확인
     proj_status = bundle.manifest.get("projection_status", "")
     if proj_status != "fresh":
         result.add_warning(
@@ -184,7 +201,7 @@ def validate_close_bundle(bundle: CloseBundleInput) -> ValidationResult:
     Close Bundle 전체 검증 실행.
 
     검증 순서 (제니 ADVISORY: 해시 검증 선행):
-    V-1: FINAL 파일 실존 + hash 재계산 (fsync 보장)
+    V-1: FINAL 파일 실존 + hash 재계산 (fsync 시도)
     V-2: session_count 3-way 일치
     V-3: POINTER chain hash 형식
     V-4: MANIFEST blocking_flags 없음
@@ -195,11 +212,11 @@ def validate_close_bundle(bundle: CloseBundleInput) -> ValidationResult:
     """
     result = ValidationResult(passed=True)
 
-    validate_final_file(bundle, result)       # V-1 — hash 선행 (제니 ADVISORY)
-    validate_session_count(bundle, result)    # V-2
-    validate_pointer_chain(bundle, result)    # V-3
-    validate_manifest_clean(bundle, result)   # V-4
-    validate_timestamp_alignment(bundle, result)  # V-5
+    validate_final_file(bundle, result)
+    validate_session_count(bundle, result)
+    validate_pointer_chain(bundle, result)
+    validate_manifest_clean(bundle, result)
+    validate_timestamp_alignment(bundle, result)
 
     return result
 
@@ -214,7 +231,7 @@ def make_stale_decision(result: ValidationResult) -> dict:
         "reason": "CLOSE_BUNDLE_VALIDATION_FAILED",
         "errors": result.errors,
         "warnings": result.warnings,
-        "recovery_attempted": False,  # 항상 False — Fail-Closed
+        "recovery_attempted": False,
         "action_required": "비오님 EAG 재승인 후 context_writer 재실행 필요",
     }
 

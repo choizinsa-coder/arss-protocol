@@ -220,14 +220,15 @@ class TestCloseBundleValidator(unittest.TestCase):
         self.assertFalse(result.passed)
         self.assertTrue(any("BLOCKING_FLAGS" in e for e in result.errors))
 
-    # T-9b: fsync_read_hash — 실제 파일 hash 일치
+    # T-9b: fsync_read_hash — tuple(hash, fsync_ok) 반환 및 hash 일치
     def test_T9b_fsync_read_hash_correct(self):
-        """제니 TRUST-ADVISORY: fsync 보장 후 hash 검증 정합성"""
+        """제니 TRUST-ADVISORY: fsync 보장 후 hash 검증 정합성 / RULE-6 fix: tuple 반환"""
         path = Path(self.tmp) / "test_fsync.json"
         data = {"test": "fsync_check"}
         expected_hash = _write_json(path, data)
-        computed = _fsync_read_hash(path)
+        computed, fsync_ok = _fsync_read_hash(path)
         self.assertEqual(expected_hash, computed)
+        self.assertIsInstance(fsync_ok, bool)
 
     def test_stale_decision_no_recovery(self):
         result = ValidationResult(passed=False, errors=["TEST_ERROR"])

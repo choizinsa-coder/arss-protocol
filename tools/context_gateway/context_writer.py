@@ -2,6 +2,7 @@
 context_writer.py
 AIBA Context Gateway — Context Writer
 SSOT: Domi Phase C Design / EAG Approved (S153)
+RULE-6 fix: S153 Code Health Remediation Phase 1
 
 역할:
   - Close Bundle 원자적 트랜잭션 실행
@@ -22,6 +23,7 @@ SSOT: Domi Phase C Design / EAG Approved (S153)
 """
 
 import json
+import logging
 import os
 import hashlib
 from datetime import datetime, timezone, timedelta
@@ -54,6 +56,8 @@ from tools.context_gateway.write_tier_policy import (
     assert_tier1_required,
 )
 
+logger = logging.getLogger(__name__)
+
 # ── 상수 ───────────────────────────────────────────────────────────────────
 
 VPS_ROOT = Path("/opt/arss/engine/arss-protocol")
@@ -62,18 +66,31 @@ KST = timezone(timedelta(hours=9))
 
 # ── 내부 헬퍼 ──────────────────────────────────────────────────────────────
 
-def _fsync_write(path: Path, content: str) -> None:
+def _fsync_write(path: Path, content: str) -> bool:
     """
-    파일 쓰기 후 fsync 보장.
+    파일 쓰기 후 fsync 시도.
     제니 TRUST-ADVISORY: 쓰기 완료 후 OS 레벨 동기화 필수.
+
+    fsync 실패는 비치명(non-fatal) — 경고 로그 기록 후 degraded 신호 반환.
+    성공으로 오인하지 않도록 fsync_ok=False를 caller에 명시적으로 전달.
+
+    반환: fsync_ok (bool)
+      True  = 파일 쓰기 + fsync 모두 성공
+      False = 파일은 쓰였으나 fsync 실패 (OS sync 미확인 상태)
     """
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
         f.flush()
         try:
             os.fsync(f.fileno())
-        except OSError:
-            pass
+            return True
+        except OSError as exc:
+            logger.warning(
+                "FSYNC_WRITE_DEGRADED: fsync failed on %s — %s. "
+                "File written but OS-level sync not confirmed.",
+                path, exc,
+            )
+            return False
 
 
 def _compute_file_hash(path: Path) -> Optional[str]:
@@ -124,7 +141,6 @@ class ContextWriter:
         """
         import tools.context_gateway.context_writer as _self_module
 
-        # 모듈 레벨 POINTER_PATH / MANIFEST_PATH 참조 (patch 가능하도록)
         _pointer_path = _self_module.POINTER_PATH
         _manifest_path = _self_module.MANIFEST_PATH
 
@@ -170,9 +186,7 @@ class ContextWriter:
             context_hash=context_hash,
             pointer_hash=pointer_hash,
         )
-        # timestamp 동기화 — validator V-5 조건
         new_manifest["generated_at"] = committed_at
-        # Phase C 표시
         new_manifest["phase"] = "C"
         new_manifest["write_back_allowed"] = True
 
@@ -194,15 +208,26 @@ class ContextWriter:
                 reason=f"CLOSE_BUNDLE_FAILED: {'; '.join(validation.errors)}",
             )
             stale_manifest["phase"] = "C"
-            _fsync_write(_manifest_path, json.dumps(stale_manifest, ensure_ascii=False, indent=2))
+            mfst_fsync_ok = _fsync_write(
+                _manifest_path,
+                json.dumps(stale_manifest, ensure_ascii=False, indent=2),
+            )
 
             decision = make_stale_decision(validation)
             decision["pointer_changed"] = False
+            if not mfst_fsync_ok:
+                decision["fsync_warning"] = "STALE_MANIFEST_FSYNC_DEGRADED"
             return decision
 
         # Step 6 — 검증 통과: POINTER → MANIFEST fsync write (순서 고정)
-        _fsync_write(_pointer_path, json.dumps(new_pointer, ensure_ascii=False, indent=2))
-        _fsync_write(_manifest_path, json.dumps(new_manifest, ensure_ascii=False, indent=2))
+        ptr_fsync_ok = _fsync_write(
+            _pointer_path,
+            json.dumps(new_pointer, ensure_ascii=False, indent=2),
+        )
+        mfst_fsync_ok = _fsync_write(
+            _manifest_path,
+            json.dumps(new_manifest, ensure_ascii=False, indent=2),
+        )
 
         self._committed = True
         decision = make_commit_decision(validation)
@@ -210,6 +235,14 @@ class ContextWriter:
         decision["final_file"] = self.final_path.name
         decision["pointer_updated"] = True
         decision["manifest_fresh"] = True
+
+        if not ptr_fsync_ok or not mfst_fsync_ok:
+            decision["fsync_warning"] = "COMMIT_FSYNC_DEGRADED — OS sync not confirmed"
+            logger.warning(
+                "COMMIT_FSYNC_DEGRADED: session=%s ptr_fsync=%s mfst_fsync=%s",
+                self.session, ptr_fsync_ok, mfst_fsync_ok,
+            )
+
         return decision
 
 
