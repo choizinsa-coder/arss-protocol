@@ -2,6 +2,7 @@
 manifest_manager.py
 AIBA Context Gateway — Stale Manifest Manager
 SSOT: Domi Phase A Design / EAG-1 Approved (S151)
+Phase B patch: "degraded" 상태 추가 (S152)
 
 역할:
   - SESSION_CONTEXT_STALE_MANIFEST.json 생성 / 갱신 / 검증 / 로드
@@ -24,8 +25,8 @@ MANIFEST_PATH = VPS_ROOT / MANIFEST_FILENAME
 
 KST = timezone(timedelta(hours=9))
 
-# projection_status 허용 값
-VALID_PROJECTION_STATUSES = {"fresh", "stale", "unknown", "not_required"}
+# projection_status 허용 값 — Phase B: "degraded" 추가
+VALID_PROJECTION_STATUSES = {"fresh", "stale", "unknown", "not_required", "degraded"}
 
 # blocking_flags 정의
 FLAG_STALE_PROJECTION = "STALE_PROJECTION"
@@ -192,7 +193,6 @@ def verify_close_bundle_consistency(
     """
     errors = []
 
-    # session_count 검증
     ptr_session = pointer.get("current_session")
     mfst_session = manifest.get("manifest_session")
 
@@ -205,7 +205,6 @@ def verify_close_bundle_consistency(
             f"SESSION_COUNT_MISMATCH: context={session_count} manifest={mfst_session}"
         )
 
-    # context_hash 검증
     ptr_hash = pointer.get("context_hash")
     mfst_hash = manifest.get("context_hash")
 
@@ -218,7 +217,6 @@ def verify_close_bundle_consistency(
             f"CONTEXT_HASH_MISMATCH: context≠manifest ({context_hash[:8]}...≠{str(mfst_hash)[:8]}...)"
         )
 
-    # updated_at 검증 (pointer.updated_at = manifest.generated_at 동일해야 함)
     ptr_updated = pointer.get("updated_at")
     mfst_generated = manifest.get("generated_at")
     if ptr_updated != mfst_generated:
