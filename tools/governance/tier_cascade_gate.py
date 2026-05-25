@@ -105,18 +105,15 @@ def _check_required_gates(tier_config: dict, gate_tokens: list[str]) -> bool:
     return all(g in gate_tokens for g in required)
 
 
-def evaluate(request: MutationRequest) -> GateResult:
+def _evaluate_tier_inputs(
+    request: MutationRequest,
+    registry: dict,
+) -> Optional[GateResult]:
     """
-    MutationRequest를 평가하여 GateResult를 반환.
-
-    Default: DENY.
-    Unknown tier/path/tool/gate = DENY.
-    Ambiguous = HOLD.
-    T0 violation = HARD_STOP + cascade to all lower tiers.
+    Step 1~6: registry 실패 / unknown 체크 / gate 검증.
+    실패 시 GateResult 반환. 통과 시 None 반환.
     """
-    registry = _load_registry()
-
-    # Registry 로드 실패 — fail-closed DENY
+    # Step 1: Registry 로드 실패 — fail-closed DENY
     if not registry:
         return GateResult(
             decision=GateDecision.DENY,
@@ -128,7 +125,7 @@ def evaluate(request: MutationRequest) -> GateResult:
 
     unknown_handling = registry.get("unknown_handling", {})
 
-    # Unknown tier — DENY
+    # Step 2: Unknown tier — DENY
     tier_config = _get_tier_config(registry, request.tier)
     if tier_config is None:
         return GateResult(
@@ -138,7 +135,7 @@ def evaluate(request: MutationRequest) -> GateResult:
             violation_type="UNKNOWN_TIER",
         )
 
-    # Unknown tool — DENY
+    # Step 3: Unknown tool — DENY
     if not _is_allowed_tool(tier_config, request.tool):
         return GateResult(
             decision=GateDecision.DENY,
@@ -147,7 +144,7 @@ def evaluate(request: MutationRequest) -> GateResult:
             violation_type="UNKNOWN_TOOL",
         )
 
-    # Unknown path — DENY
+    # Step 4: Unknown path — DENY
     if not _is_allowed_path(tier_config, request.path):
         return GateResult(
             decision=GateDecision.DENY,
@@ -156,7 +153,7 @@ def evaluate(request: MutationRequest) -> GateResult:
             violation_type="UNKNOWN_PATH",
         )
 
-    # Unknown mutation type — DENY
+    # Step 5: Unknown mutation type — DENY
     if not _is_allowed_mutation_type(tier_config, request.mutation_type):
         return GateResult(
             decision=GateDecision.DENY,
@@ -165,7 +162,7 @@ def evaluate(request: MutationRequest) -> GateResult:
             violation_type="UNKNOWN_MUTATION_TYPE",
         )
 
-    # Missing gate — DENY
+    # Step 6: Missing gate — DENY
     if not _check_required_gates(tier_config, request.gate_tokens):
         required = tier_config.get("required_gate", [])
         missing = [g for g in required if g not in request.gate_tokens]
@@ -176,7 +173,15 @@ def evaluate(request: MutationRequest) -> GateResult:
             violation_type="MISSING_GATE",
         )
 
-    # T0: EAG 승인 필수
+    return None  # 전 단계 통과
+
+
+def _resolve_tier_decision(request: MutationRequest) -> GateResult:
+    """
+    Step 7~10: T0/T1/T3 tier별 판정 + ALLOW.
+    _evaluate_tier_inputs 통과 후 호출.
+    """
+    # Step 7: T0 — EAG + hash 필수
     if request.tier == "T0":
         if not request.has_eag_approval:
             return GateResult(
@@ -197,7 +202,7 @@ def evaluate(request: MutationRequest) -> GateResult:
                 violation_type="T0_HASH_MISMATCH",
             )
 
-    # T1: EAG 승인 필수
+    # Step 8: T1 — EAG 필수
     if request.tier == "T1":
         if not request.has_eag_approval:
             return GateResult(
@@ -209,7 +214,7 @@ def evaluate(request: MutationRequest) -> GateResult:
                 violation_type="T1_EAG_MISSING",
             )
 
-    # T3: LOG_ONLY — mutation 금지
+    # Step 9: T3 — LOG_ONLY 전용
     if request.tier == "T3":
         if request.mutation_type != "LOG_APPEND":
             return GateResult(
@@ -224,12 +229,28 @@ def evaluate(request: MutationRequest) -> GateResult:
             reason="T3 LOG_APPEND allowed",
         )
 
-    # 모든 검증 통과 — ALLOW
+    # Step 10: 모든 검증 통과 — ALLOW
     return GateResult(
         decision=GateDecision.ALLOW,
         tier=request.tier,
         reason=f"All gate conditions met for tier {request.tier}",
     )
+
+
+def evaluate(request: MutationRequest) -> GateResult:
+    """
+    MutationRequest를 평가하여 GateResult를 반환.
+
+    Default: DENY.
+    Unknown tier/path/tool/gate = DENY.
+    Ambiguous = HOLD.
+    T0 violation = HARD_STOP + cascade to all lower tiers.
+    """
+    registry = _load_registry()
+    input_fail = _evaluate_tier_inputs(request, registry)
+    if input_fail is not None:
+        return input_fail
+    return _resolve_tier_decision(request)
 
 
 def apply_cascade(violation_tier: ViolationTier, registry: Optional[dict] = None) -> dict:
