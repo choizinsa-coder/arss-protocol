@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 ACTIVE_VERSION = "1.0.0"
-VERSION_STATUS = "active"
+VERSION_STATUS = "superseded"
+# LEGACY_STATUS = "superseded"
+# SUPERSEDED_BY = "scripts/workflow/vps_verifier_bridge.py (v0.3)"
+# SUPERSEDED_SESSION = "S154"
+# NOTE: 모든 호출자가 v0.3으로 전환 완료. 이 파일은 제거 전 검증 대기 중.
+
 """
 vps_verifier_bridge.py
 ARSS VPS Production Chain Verifier — Bridge v0.2

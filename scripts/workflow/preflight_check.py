@@ -35,7 +35,7 @@ GENERATOR_PATH = os.path.join(REPO_ROOT, "arss_generator_v1.py")
 VERIFIER_PATH  = os.path.join(
     REPO_ROOT, "reference-verifier", "src", "verifier.py"
 )
-BRIDGE_PATH    = os.path.join(REPO_ROOT, "vps_verifier_bridge.py")
+BRIDGE_PATH    = os.path.join(REPO_ROOT, "scripts", "workflow", "vps_verifier_bridge.py")
 LEDGER_PATH    = os.path.join(
     REPO_ROOT, "ARSS_HUB", "04_EVIDENCE", "SNAPSHOT_LOG", "ledger.json"
 )
