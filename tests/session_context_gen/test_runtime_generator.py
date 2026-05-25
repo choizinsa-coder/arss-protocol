@@ -1,6 +1,7 @@
 """
 test_runtime_generator.py
 PT-S81-ARCH-001 Phase 2 — Step 2 pytest
+RULE-3 이동: tools/session_context_gen/tests/ → tests/session_context_gen/ (S153)
 """
 import json
 import hashlib
@@ -8,8 +9,8 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, mock_open
 import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from runtime_generator import (
+sys.path.insert(0, "/opt/arss/engine/arss-protocol")
+from tools.session_context_gen.runtime_generator import (
     load_runtime, compute_content_hash,
     generate_runtime_meta, validate_runtime_integrity
 )
@@ -30,7 +31,7 @@ RUNTIME_NO_SESSION = {k: v for k, v in VALID_RUNTIME.items() if k != 'session_co
 
 
 def mock_runtime(data):
-    return patch('runtime_generator.load_runtime', return_value=data)
+    return patch('tools.session_context_gen.runtime_generator.load_runtime', return_value=data)
 
 
 # TC-1: 정상 RUNTIME → validate PASS

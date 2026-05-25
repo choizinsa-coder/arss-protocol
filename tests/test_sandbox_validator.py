@@ -1,6 +1,7 @@
 """
 test_sandbox_validator.py
 AIBA SANDBOX Validator 단위 테스트 (S142)
+RULE-3 이동: tools/ → tests/ (S153)
 """
 
 import sys
@@ -8,8 +9,8 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
-sys.path.insert(0, str(Path(__file__).parent))
-import sandbox_validator as sv
+sys.path.insert(0, "/opt/arss/engine/arss-protocol")
+from tools import sandbox_validator as sv
 
 SANDBOX_ROOT = sv.SANDBOX_ROOT
 
@@ -97,7 +98,6 @@ def test_monitor_type_invalid():
 
 
 def test_type_no_hyphen_rule():
-    # 하이픈 포함 type은 enum에 없으므로 자동 실패
     parsed = {"mode": "task", "type": "final-draft"}
     assert sv.validate_type_enum(parsed) is False
 
@@ -214,9 +214,7 @@ def test_safe_pass_allowed_draft():
     paths = [_valid_path("task-S142-001-domi-design.md")]
     statuses = ["DRAFT"]
     result = sv.check_safe_pass_batch(
-        request_agent="domi",
-        file_paths=paths,
-        file_statuses=statuses,
+        request_agent="domi", file_paths=paths, file_statuses=statuses,
     )
     assert result.allowed is True
 
@@ -225,9 +223,7 @@ def test_safe_pass_denied_beo_pending():
     paths = [_valid_path("task-S142-001-domi-design.md")]
     statuses = ["BEO_PENDING"]
     result = sv.check_safe_pass_batch(
-        request_agent="domi",
-        file_paths=paths,
-        file_statuses=statuses,
+        request_agent="domi", file_paths=paths, file_statuses=statuses,
     )
     assert result.allowed is False
     assert "FSM_STATE_BLOCKED" in result.reason
@@ -237,9 +233,7 @@ def test_safe_pass_denied_approved():
     paths = [_valid_path("task-S142-001-domi-design.md")]
     statuses = ["APPROVED"]
     result = sv.check_safe_pass_batch(
-        request_agent="domi",
-        file_paths=paths,
-        file_statuses=statuses,
+        request_agent="domi", file_paths=paths, file_statuses=statuses,
     )
     assert result.allowed is False
 
@@ -248,9 +242,7 @@ def test_safe_pass_denied_file_count():
     paths = [_valid_path(f"task-S142-00{i}-domi-design.md") for i in range(4)]
     statuses = ["DRAFT"] * 4
     result = sv.check_safe_pass_batch(
-        request_agent="domi",
-        file_paths=paths,
-        file_statuses=statuses,
+        request_agent="domi", file_paths=paths, file_statuses=statuses,
     )
     assert result.allowed is False
     assert "FILE_COUNT_EXCEEDED" in result.reason
@@ -260,9 +252,7 @@ def test_safe_pass_denied_service_restart():
     paths = [_valid_path("task-S142-001-domi-design.md")]
     statuses = ["DRAFT"]
     result = sv.check_safe_pass_batch(
-        request_agent="domi",
-        file_paths=paths,
-        file_statuses=statuses,
+        request_agent="domi", file_paths=paths, file_statuses=statuses,
         service_restart=True,
     )
     assert result.allowed is False
@@ -272,9 +262,7 @@ def test_safe_pass_denied_service_restart():
 def test_safe_pass_denied_tmp_path():
     tmp_path = str(sv.TMP_PATH / "task-S142-001-domi-design.md")
     result = sv.check_safe_pass_batch(
-        request_agent="domi",
-        file_paths=[tmp_path],
-        file_statuses=["DRAFT"],
+        request_agent="domi", file_paths=[tmp_path], file_statuses=["DRAFT"],
     )
     assert result.allowed is False
     assert "TMP_PATH_EXCLUDED" in result.reason

@@ -2,13 +2,14 @@
 test_boot_generator_phase2.py
 PT-S81-ARCH-001 Phase 2 — Step 4 pytest
 boot_generator.py runtime_pair_hash 연동 검증
+RULE-3 이동: tools/session_context_gen/tests/ → tests/session_context_gen/ (S153)
 """
 import json, hashlib, pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from boot_generator import generate
+sys.path.insert(0, "/opt/arss/engine/arss-protocol")
+from tools.session_context_gen.boot_generator import generate
 
 ARSS_ROOT = Path('/opt/arss/engine/arss-protocol')
 FULL_PATH = str(ARSS_ROOT / 'SESSION_CONTEXT_FULL.json')
@@ -55,6 +56,5 @@ def test_tc5_output_file_written(tmp_path):
 def test_tc6_hash_not_in_root(tmp_path):
     result = generate(FULL_PATH, str(tmp_path / 'boot_out.json'),
                       runtime_pair_hash=MOCK_HASH)
-    # boot_meta 외 최상위 키에 runtime_pair_hash 없어야 함
     top_keys = set(result.keys()) - {'boot_meta'}
     assert 'runtime_pair_hash' not in top_keys
