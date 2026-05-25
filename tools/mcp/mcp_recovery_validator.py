@@ -43,6 +43,74 @@ TRIGGER_SOURCE_MAP: dict[str, str] = {
 }
 
 
+# ── 내부 헬퍼 ─────────────────────────────────────────────────────────────────
+
+def _check_containment_and_trigger(
+    incident_context: dict,
+    containment_state: dict,
+) -> Optional[dict]:
+    """
+    Step 1~3: containment 유효성 + trigger_id + incident_id 일치 검증.
+    실패 시 fail result dict 반환. 통과 시 None 반환.
+    """
+    # Step 1: containment_state 유효성
+    if not isinstance(containment_state, dict):
+        return {
+            "fail_reason": "INVALID_CONTAINMENT_STATE",
+            "ambiguity_detected": True,
+        }
+    if not containment_state.get("containment_active", False):
+        return {"fail_reason": "CONTAINMENT_NOT_ACTIVE"}
+
+    # Step 2: trigger_id 일치 확인
+    ctx_trigger = incident_context.get("trigger_id", "UNKNOWN")
+    state_trigger = containment_state.get("trigger_id", "UNKNOWN")
+    if ctx_trigger != state_trigger:
+        return {
+            "fail_reason": (
+                f"TRIGGER_MISMATCH: context={ctx_trigger} state={state_trigger}"
+            ),
+            "ambiguity_detected": True,
+        }
+    if ctx_trigger == "UNKNOWN" or ctx_trigger not in VALID_TRIGGER_IDS:
+        return {
+            "resolved_trigger": "UNKNOWN",
+            "fail_reason": f"UNKNOWN_TRIGGER: {ctx_trigger}",
+            "ambiguity_detected": True,
+        }
+
+    # Step 3: incident_id 일치 확인
+    ctx_incident = incident_context.get("incident_id", "")
+    state_incident = containment_state.get("incident_id", "")
+    if ctx_incident != state_incident:
+        return {
+            "fail_reason": (
+                f"INCIDENT_ID_MISMATCH: context={ctx_incident} state={state_incident}"
+            ),
+            "ambiguity_detected": True,
+        }
+
+    return None  # 전 단계 통과
+
+
+def _validate_audit_consistency(audit_reference: list) -> Optional[str]:
+    """
+    Step 4: audit 연속성 검증.
+    실패 시 fail_reason 문자열 반환. 통과 시 None 반환.
+    """
+    if not isinstance(audit_reference, list):
+        return "INVALID_AUDIT_REFERENCE"
+    if len(audit_reference) == 0:
+        return "AUDIT_EMPTY: no audit records found"
+    deny_records = [
+        r for r in audit_reference
+        if isinstance(r, dict) and r.get("decision") == "DENY"
+    ]
+    if len(deny_records) == 0:
+        return "AUDIT_NO_DENY_RECORDS: containment evidence missing"
+    return None  # audit 통과
+
+
 # ── I/O 계약 ──────────────────────────────────────────────────────────────────
 
 def validate_trigger(
@@ -85,81 +153,32 @@ def validate_trigger(
         "fail_reason": None,
     }
 
-    # ── 1. containment_state 유효성 ────────────────────────────────────────────
-    if not isinstance(containment_state, dict):
-        result["fail_reason"] = "INVALID_CONTAINMENT_STATE"
-        result["ambiguity_detected"] = True
+    # Step 1~3: containment + trigger + incident 검증
+    pre_fail = _check_containment_and_trigger(incident_context, containment_state)
+    if pre_fail is not None:
+        result.update(pre_fail)
         return result
 
-    if not containment_state.get("containment_active", False):
-        result["fail_reason"] = "CONTAINMENT_NOT_ACTIVE"
-        return result
-
-    # ── 2. trigger_id 확인 ────────────────────────────────────────────────────
-    ctx_trigger = incident_context.get("trigger_id", "UNKNOWN")
-    state_trigger = containment_state.get("trigger_id", "UNKNOWN")
-
-    # incident_context와 containment_state 간 trigger_id 일치 확인
-    if ctx_trigger != state_trigger:
-        result["ambiguity_detected"] = True
-        result["fail_reason"] = (
-            f"TRIGGER_MISMATCH: context={ctx_trigger} state={state_trigger}"
-        )
-        return result
-
-    # UNKNOWN trigger → ambiguity
-    if ctx_trigger == "UNKNOWN" or ctx_trigger not in VALID_TRIGGER_IDS:
-        result["resolved_trigger"] = "UNKNOWN"
-        result["ambiguity_detected"] = True
-        result["fail_reason"] = f"UNKNOWN_TRIGGER: {ctx_trigger}"
-        return result
-
-    # ── 3. incident_id 일치 확인 ──────────────────────────────────────────────
-    ctx_incident = incident_context.get("incident_id", "")
-    state_incident = containment_state.get("incident_id", "")
-    if ctx_incident != state_incident:
-        result["ambiguity_detected"] = True
-        result["fail_reason"] = (
-            f"INCIDENT_ID_MISMATCH: context={ctx_incident} state={state_incident}"
-        )
-        return result
-
-    # ── 4. audit 연속성 검증 (audit_reference 제공 시) ─────────────────────────
+    # Step 4: audit 연속성 검증 (audit_reference 제공 시)
     if audit_reference is not None:
-        if not isinstance(audit_reference, list):
-            result["fail_reason"] = "INVALID_AUDIT_REFERENCE"
+        audit_fail = _validate_audit_consistency(audit_reference)
+        if audit_fail is not None:
+            result["fail_reason"] = audit_fail
             result["ambiguity_detected"] = True
             return result
 
-        # audit 존재 여부 확인 (최소 1건)
-        if len(audit_reference) == 0:
-            result["fail_reason"] = "AUDIT_EMPTY: no audit records found"
-            result["ambiguity_detected"] = True
-            return result
-
-        # audit 내 DENY 기록 확인
-        deny_records = [
-            r for r in audit_reference
-            if isinstance(r, dict) and r.get("decision") == "DENY"
-        ]
-        if len(deny_records) == 0:
-            result["fail_reason"] = "AUDIT_NO_DENY_RECORDS: containment evidence missing"
-            result["ambiguity_detected"] = True
-            return result
-
-    # ── 5. multi-trigger 탐지 ─────────────────────────────────────────────────
-    # incident_context에 additional_triggers 필드가 있는 경우 검사
+    # Step 5: multi-trigger 탐지
+    ctx_trigger = incident_context.get("trigger_id", "UNKNOWN")
     additional = incident_context.get("additional_triggers", [])
     if additional and len(additional) > 0:
         result["multi_trigger_detected"] = True
-        # multi-trigger는 FAIL 처리 (오염 연쇄 가능성)
         result["fail_reason"] = (
             f"MULTI_TRIGGER_CONTAMINATION: {[ctx_trigger] + list(additional)}"
         )
         result["resolved_trigger"] = ctx_trigger
         return result
 
-    # ── 6. PASS ───────────────────────────────────────────────────────────────
+    # Step 6: PASS
     result["status"] = "PASS"
     result["resolved_trigger"] = ctx_trigger
     result["ambiguity_detected"] = False
