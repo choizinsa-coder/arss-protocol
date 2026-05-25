@@ -304,8 +304,9 @@ def _handle_write_tool(tool_name: str, arguments: dict) -> dict:
 
 # ── AIBA Tool Layer ───────────────────────────────────────────────────────────
 
-def _handle_tool_list() -> dict:
-    tools = [
+def _build_base_tool_entries() -> list:
+    """ping/get_load_state 기본 도구 목록 반환."""
+    return [
         {
             "name": "ping",
             "description": "AIBA bridge connectivity check",
@@ -316,7 +317,12 @@ def _handle_tool_list() -> dict:
             "description": "Returns bridge load state (visibility only)",
             "inputSchema": {"type": "object", "properties": {}, "required": []},
         },
-        # READ ONLY OBSERVABILITY 도구
+    ]
+
+
+def _build_read_tool_entries_fs() -> list:
+    """파일시스템/서비스 계열 READ 도구 (read_file~check_service_state) 반환."""
+    return [
         {
             "name": "read_file",
             "description": "[READ] 단일 파일 읽기 (whitelist 경로 전용)",
@@ -385,6 +391,12 @@ def _handle_tool_list() -> dict:
                 "required": ["service_name", "actor_id", "purpose"],
             },
         },
+    ]
+
+
+def _build_read_tool_entries_meta() -> list:
+    """메타데이터/감사 계열 READ 도구 (read_pytest_result~get_runtime_snapshot) 반환."""
+    return [
         {
             "name": "read_pytest_result",
             "description": "[READ] pytest result artifact 읽기 (실행 아님)",
@@ -437,7 +449,12 @@ def _handle_tool_list() -> dict:
                 "required": ["actor_id", "purpose"],
             },
         },
-        # Write Plane 도구 (v2.2.0)
+    ]
+
+
+def _build_write_tool_entries() -> list:
+    """Write Plane 도구 목록 반환 (v2.2.0)."""
+    return [
         {
             "name": "write_file",
             "description": "[WRITE] EAG approval 기반 sandbox 파일 쓰기 (caddy only)",
@@ -464,6 +481,16 @@ def _handle_tool_list() -> dict:
             },
         },
     ]
+
+
+def _build_read_tool_entries() -> list:
+    """READ ONLY OBSERVABILITY 전체 도구 목록 반환 (FS계열 + 메타계열)."""
+    return _build_read_tool_entries_fs() + _build_read_tool_entries_meta()
+
+
+def _handle_tool_list() -> dict:
+    """BASE + READ + WRITE 도구 목록 조합 반환."""
+    tools = _build_base_tool_entries() + _build_read_tool_entries() + _build_write_tool_entries()
     return {"tools": tools}
 
 
