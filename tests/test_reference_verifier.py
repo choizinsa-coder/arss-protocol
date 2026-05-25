@@ -1,13 +1,16 @@
 """
+test_reference_verifier.py
 ARSS Reference Verifier — Test Suite
 Tests the reference implementation against the sample chain.
+RULE-3 이동: reference-verifier/tests/ → tests/ (S153)
 """
 
 import sys
 import os
 import pytest
+from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../src"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "reference-verifier" / "src"))
 from verifier import (
     jcs_serialize,
     compute_payload_hash,
@@ -16,8 +19,9 @@ from verifier import (
     verify_chain,
 )
 
-SAMPLES_DIR = os.path.join(os.path.dirname(__file__), "../../samples")
-EXPECTED_HASH_FILE = os.path.join(os.path.dirname(__file__), "../../tests/expected-chain-hash.txt")
+_BASE = Path(__file__).parent.parent
+SAMPLES_DIR = str(_BASE / "samples")
+EXPECTED_HASH_FILE = str(_BASE / "tests" / "expected-chain-hash.txt")
 EXPECTED_FINAL_HASH = "eb337942d91510f39fdf959ff47aa09205543bad87ab04be2440f3f77e5d1c6c"
 
 
