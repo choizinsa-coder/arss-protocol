@@ -123,18 +123,17 @@ def _build_receipt(
     }
 
 
-def run_pipeline(
+def _pipeline_pre_validate(
     input_path: str,
     receipts_dir: str,
-    output_dir: str,
-    runtime_path: str = None,
-    bundle_manifest: dict = None,
-    session: int = 0,
-    t2_warn_active_ids: set = None,
-    archive_path: Path = None,
-) -> PipelineResult:
-    validator_results = {}
-    tier_d_result = None
+    session: int,
+    t2_warn_active_ids: Optional[set],
+    archive_path: Path,
+) -> dict:
+    """
+    Stage 1~5b: 입력 로드 + baseline + hash + delta + normalize + tier_d migration.
+    반환: pre_ctx dict. 실패 시 PipelineError.
+    """
     stage = "1_load_input"
     if not os.path.exists(input_path):
         raise PipelineError(f"[{stage}] artifact not found: {input_path}")
@@ -145,99 +144,73 @@ def run_pipeline(
     except json.JSONDecodeError as e:
         raise PipelineError(f"[{stage}] JSON parse failed: {e}")
     state_events = input_data.get("state_events", [])
+
     stage = "2_select_baseline"
     try:
         baseline = select_baseline(receipts_dir)
     except BaselineSelectorError as e:
         raise PipelineError(f"[{stage}] baseline not found: {e}")
+
     stage = "3_compute_artifact_hash"
     artifact_hash = compute_hash(raw_content)
+
     stage = "4_compute_delta"
     try:
         delta = compute_delta(baseline, input_path)
     except DeltaEngineError as e:
         raise PipelineError(f"[{stage}] {e}")
+
     stage = "5_normalize_state_events"
     try:
         normalized_events = normalize_events(state_events)
     except StateEventsNormalizerError as e:
         raise PipelineError(f"[{stage}] state_events normalization failure: {e}")
 
-    # ── REV-D: stage 5b_tier_d_migration ──────────────────────────────────────
-    # PT-S99-GOV-003 Rev.3 FINAL
-    # 호출 위치: stage 5_normalize_state_events 완료 이후,
-    #            stage 13_generate_receipt (SESSION_CONTEXT.json 생성) 이전 mandatory.
+    # REV-D: stage 5b — PT-S99-GOV-003 Rev.3 FINAL
     stage = "5b_tier_d_migration"
-    _archive_path = archive_path if archive_path is not None else ARCHIVE_PATH
     tier_d_result = run_tier_d_migration(
         session_context=input_data,
         session=session,
-        archive_path=_archive_path,
+        archive_path=archive_path,
         t2_warn_active_ids=t2_warn_active_ids,
     )
     if tier_d_result["status"] == "FAIL":
-        raise PipelineError(
-            f"[{stage}] Tier D migration FAIL: {tier_d_result['errors']}"
-        )
-    # ── REV-D hook 종료 ────────────────────────────────────────────────────────
+        raise PipelineError(f"[{stage}] Tier D migration FAIL: {tier_d_result['errors']}")
 
-    stage = "6_validate_structure"
-    if not isinstance(input_data, dict):
-        raise PipelineError(f"[{stage}] schema mismatch")
-    stage = "7_load_runtime_and_hash"
-    rt_path = Path(runtime_path) if runtime_path else DEFAULT_RUNTIME_PATH
-    try:
-        runtime_data = load_runtime(rt_path)
-        runtime_content_hash = compute_content_hash(runtime_data)
-    except FileNotFoundError as e:
-        raise PipelineError(f"[{stage}] RUNTIME load failed: {e}")
-    except Exception as e:
-        raise PipelineError(f"[{stage}] RUNTIME processing failed: {e}")
-    stage = "8_generate_boot"
-    os.makedirs(output_dir, exist_ok=True)
-    boot_name = "SESSION_BOOT.json"
-    boot_output_path = os.path.join(output_dir, boot_name)
-    try:
-        boot_data = generate_boot(full_path=input_path, boot_path=boot_output_path, runtime_pair_hash=runtime_content_hash)
-    except Exception as e:
-        raise PipelineError(f"[{stage}] boot generation failed: {e}")
-    stage = "9_hash_boot"
-    boot_hash = compute_hash(boot_data)
-    stage = "10_pair_validator"
-    boot_meta = boot_data.get("boot_meta", {})
-    actual_runtime_pair_hash = boot_meta.get("runtime_pair_hash", "")
-    pair_result = validate_boot_runtime_pair(boot_data, runtime_data)
-    validator_results["pair_validator"] = pair_result
-    if not pair_result["pass"]:
-        raise PipelineError(f"[{stage}] pair_validator FAIL: {pair_result['errors']}")
-    stage = "11_boundary_enforcement_validator"
-    manifest = bundle_manifest if bundle_manifest is not None else _DEFAULT_BUNDLE_MANIFEST
-    boundary_result = validate_agent_boundaries(manifest)
-    validator_results["boundary_enforcement_validator"] = boundary_result
-    if not boundary_result["pass"]:
-        raise PipelineError(f"[{stage}] boundary_enforcement_validator FAIL: {boundary_result['errors']}")
-    stage = "12_all_pass_gate"
-    failed = [k for k, v in validator_results.items() if not v.get("pass", False)]
-    if failed:
-        raise PipelineError(f"[{stage}] ALL PASS gate FAIL: {failed}")
+    return {
+        "input_data": input_data,
+        "artifact_hash": artifact_hash,
+        "delta": delta,
+        "normalized_events": normalized_events,
+        "tier_d_result": tier_d_result,
+        "baseline": baseline,
+    }
+
+
+def _pipeline_finalize(
+    output_dir: str,
+    input_path: str,
+    output_data: dict,
+    prev_chain_hash: str,
+    prev_artifact_hash: str,
+    artifact_hash: str,
+    boot_output_path: str,
+    rt_path: Path,
+    boot_hash: str,
+    runtime_content_hash: str,
+    actual_runtime_pair_hash: str,
+    validator_results: dict,
+) -> tuple:
+    """
+    Stage 13~14: output 저장 + receipt 생성 + verify + promote.
+    반환: (receipt_path, output_path)
+    """
     stage = "13_generate_receipt"
-    prev_chain_hash = baseline["candidate_rpu"]["chain"]["chain_hash"]
-    prev_artifact_hash = baseline.get("extension", {}).get("artifact_hash", "")
     output_name = Path(input_path).name
     output_path = os.path.join(output_dir, output_name)
-    output_data = dict(input_data)
-    output_data["state_events"] = normalized_events
-    output_data["_pipeline_meta"] = {
-        "generated_at": _utc_ts(),
-        "delta_status": delta.status,
-        "pipeline_version": "session_context_gen/2.0",
-        "runtime_first": True,
-        "boot_path": boot_name,
-        "runtime_path": str(rt_path),
-        "tier_d_migration": tier_d_result,
-    }
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(output_data, f, ensure_ascii=False, indent=2)
+
     receipt = _build_receipt(
         prev_chain_hash=prev_chain_hash,
         artifact_path=output_path,
@@ -251,6 +224,7 @@ def run_pipeline(
         validator_results=validator_results,
         commit_status="READY_FOR_COMMIT",
     )
+
     stage = "14_verify_and_promote"
     with open(output_path, "r", encoding="utf-8") as f:
         written = f.read()
@@ -265,12 +239,122 @@ def run_pipeline(
     receipt_path = os.path.join(output_dir, receipt_name)
     with open(receipt_path, "w", encoding="utf-8") as f:
         json.dump(receipt, f, ensure_ascii=False, indent=2)
+
+    return receipt_path, output_path
+
+
+def run_pipeline(
+    input_path: str,
+    receipts_dir: str,
+    output_dir: str,
+    runtime_path: str = None,
+    bundle_manifest: dict = None,
+    session: int = 0,
+    t2_warn_active_ids: set = None,
+    archive_path: Path = None,
+) -> PipelineResult:
+    """
+    SESSION_CONTEXT generation pipeline orchestrator.
+    Stage 1~5b: _pipeline_pre_validate
+    Stage 6~12: validation (runtime/boot/pair/boundary/all_pass gate)
+    Stage 13~14: _pipeline_finalize
+    """
+    validator_results = {}
+    _archive_path = archive_path if archive_path is not None else ARCHIVE_PATH
+
+    # Stage 1~5b
+    pre_ctx = _pipeline_pre_validate(
+        input_path, receipts_dir, session, t2_warn_active_ids, _archive_path
+    )
+    input_data = pre_ctx["input_data"]
+    artifact_hash = pre_ctx["artifact_hash"]
+    delta = pre_ctx["delta"]
+    normalized_events = pre_ctx["normalized_events"]
+    tier_d_result = pre_ctx["tier_d_result"]
+    baseline = pre_ctx["baseline"]
+
+    # Stage 6~12: validation
+    stage = "6_validate_structure"
+    if not isinstance(input_data, dict):
+        raise PipelineError(f"[{stage}] schema mismatch")
+
+    stage = "7_load_runtime_and_hash"
+    rt_path = Path(runtime_path) if runtime_path else DEFAULT_RUNTIME_PATH
+    try:
+        runtime_data = load_runtime(rt_path)
+        runtime_content_hash = compute_content_hash(runtime_data)
+    except FileNotFoundError as e:
+        raise PipelineError(f"[{stage}] RUNTIME load failed: {e}")
+    except Exception as e:
+        raise PipelineError(f"[{stage}] RUNTIME processing failed: {e}")
+
+    stage = "8_generate_boot"
+    os.makedirs(output_dir, exist_ok=True)
+    boot_name = "SESSION_BOOT.json"
+    boot_output_path = os.path.join(output_dir, boot_name)
+    try:
+        boot_data = generate_boot(full_path=input_path, boot_path=boot_output_path, runtime_pair_hash=runtime_content_hash)
+    except Exception as e:
+        raise PipelineError(f"[{stage}] boot generation failed: {e}")
+
+    stage = "9_hash_boot"
+    boot_hash = compute_hash(boot_data)
+
+    stage = "10_pair_validator"
+    boot_meta = boot_data.get("boot_meta", {})
+    actual_runtime_pair_hash = boot_meta.get("runtime_pair_hash", "")
+    pair_result = validate_boot_runtime_pair(boot_data, runtime_data)
+    validator_results["pair_validator"] = pair_result
+    if not pair_result["pass"]:
+        raise PipelineError(f"[{stage}] pair_validator FAIL: {pair_result['errors']}")
+
+    stage = "11_boundary_enforcement_validator"
+    manifest = bundle_manifest if bundle_manifest is not None else _DEFAULT_BUNDLE_MANIFEST
+    boundary_result = validate_agent_boundaries(manifest)
+    validator_results["boundary_enforcement_validator"] = boundary_result
+    if not boundary_result["pass"]:
+        raise PipelineError(f"[{stage}] boundary_enforcement_validator FAIL: {boundary_result['errors']}")
+
+    stage = "12_all_pass_gate"
+    failed = [k for k, v in validator_results.items() if not v.get("pass", False)]
+    if failed:
+        raise PipelineError(f"[{stage}] ALL PASS gate FAIL: {failed}")
+
+    # Stage 13~14: output 저장 + receipt 생성 + verify
+    prev_chain_hash = baseline["candidate_rpu"]["chain"]["chain_hash"]
+    prev_artifact_hash = baseline.get("extension", {}).get("artifact_hash", "")
+    output_data = dict(input_data)
+    output_data["state_events"] = normalized_events
+    output_data["_pipeline_meta"] = {
+        "generated_at": _utc_ts(),
+        "delta_status": delta.status,
+        "pipeline_version": "session_context_gen/2.0",
+        "runtime_first": True,
+        "boot_path": boot_name,
+        "runtime_path": str(rt_path),
+        "tier_d_migration": tier_d_result,
+    }
+    receipt_path, output_path = _pipeline_finalize(
+        output_dir=output_dir,
+        input_path=input_path,
+        output_data=output_data,
+        prev_chain_hash=prev_chain_hash,
+        prev_artifact_hash=prev_artifact_hash,
+        artifact_hash=artifact_hash,
+        boot_output_path=boot_output_path,
+        rt_path=rt_path,
+        boot_hash=boot_hash,
+        runtime_content_hash=runtime_content_hash,
+        actual_runtime_pair_hash=actual_runtime_pair_hash,
+        validator_results=validator_results,
+    )
+
     return PipelineResult(
         status="SUCCESS",
         delta=delta,
         receipt_path=receipt_path,
         output_path=output_path,
-        stage=stage,
+        stage="14_verify_and_promote",
         boot_path=boot_output_path,
         runtime_path=str(rt_path),
         boot_hash=boot_hash,
