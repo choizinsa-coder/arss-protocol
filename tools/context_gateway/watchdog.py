@@ -64,6 +64,8 @@ FLAG_WATCHDOG_UNKNOWN = "WATCHDOG_UNKNOWN"
 
 # Watchdog이 STALE_MANIFEST에 기록하는 트리거 레이블
 TRIGGER_SESSION_OPEN = "session_open_call"
+TRIGGER_CLOSE_BUNDLE = "close_bundle_event"
+TRIGGER_DEPLOY_COMPLETION = "deploy_completion_call"
 
 
 # ── 데이터 클래스 ──────────────────────────────────────────────────────────
@@ -380,6 +382,70 @@ def run_session_open_watchdog() -> WatchdogResult:
     verdict = evaluate_freshness(mismatch)
 
     # Step 5: STALE_MANIFEST 갱신
+    updated, path, error = emit_manifest(verdict, mismatch, trigger=trigger)
+
+    return WatchdogResult(
+        trigger=trigger,
+        observation=observation,
+        mismatch=mismatch,
+        verdict=verdict,
+        manifest_updated=updated,
+        manifest_path=path,
+        error=error,
+    )
+
+
+def run_close_bundle_watchdog() -> WatchdogResult:
+    """
+    Phase B Step 2 — close_bundle_event 트리거.
+
+    세션 종료 시 Close Bundle 완료 직후 호출.
+    Step 1(session_open_call)과 완전히 독립 — 실패 시 상호 영향 없음.
+
+    목적:
+      Close Bundle 완료 후 POINTER ↔ VPS 상태가 즉시 일치하는지 검증.
+      불일치 감지 시 STALE_MANIFEST blocking_flags 즉시 갱신.
+
+    금지 불변: POINTER write-back / SESSION_CONTEXT mutation / auto recovery
+    """
+    trigger = TRIGGER_CLOSE_BUNDLE
+
+    observation = observe_vps_freshness()
+    pointer = load_pointer()
+    mismatch = detect_mismatch(observation, pointer=pointer)
+    verdict = evaluate_freshness(mismatch)
+    updated, path, error = emit_manifest(verdict, mismatch, trigger=trigger)
+
+    return WatchdogResult(
+        trigger=trigger,
+        observation=observation,
+        mismatch=mismatch,
+        verdict=verdict,
+        manifest_updated=updated,
+        manifest_path=path,
+        error=error,
+    )
+
+
+def run_deploy_completion_watchdog() -> WatchdogResult:
+    """
+    Phase B Step 2 — deploy_completion_call 트리거.
+
+    VPS에 신규 SESSION_CONTEXT_S{n}_FINAL.json 배포 완료 직후 호출.
+    Step 1/2(session_open/close_bundle)과 완전히 독립 — 실패 시 상호 영향 없음.
+
+    목적:
+      배포 직후 POINTER가 아직 갱신되지 않은 SESSION_DRIFT 상태를 즉시 탐지.
+      STALE_MANIFEST blocking_flags 갱신 → 판단 차단 전파.
+
+    금지 불변: POINTER write-back / SESSION_CONTEXT mutation / auto recovery
+    """
+    trigger = TRIGGER_DEPLOY_COMPLETION
+
+    observation = observe_vps_freshness()
+    pointer = load_pointer()
+    mismatch = detect_mismatch(observation, pointer=pointer)
+    verdict = evaluate_freshness(mismatch)
     updated, path, error = emit_manifest(verdict, mismatch, trigger=trigger)
 
     return WatchdogResult(

@@ -27,6 +27,8 @@ from tools.context_gateway.watchdog import (
     evaluate_freshness,
     emit_manifest,
     run_session_open_watchdog,
+    run_close_bundle_watchdog,
+    run_deploy_completion_watchdog,
     FreshnessObservation,
     MismatchReport,
     FreshnessVerdict,
@@ -36,6 +38,8 @@ from tools.context_gateway.watchdog import (
     FLAG_WATCHDOG_UNKNOWN,
     FLAG_POINTER_MISSING,
     TRIGGER_SESSION_OPEN,
+    TRIGGER_CLOSE_BUNDLE,
+    TRIGGER_DEPLOY_COMPLETION,
     VALID_FRESHNESS_STATUSES,
 )
 from tools.context_gateway.manifest_manager import (
@@ -584,3 +588,204 @@ class TestInvariants:
     def test_trigger_label_is_session_open(self):
         """트리거 레이블 고정값 확인"""
         assert TRIGGER_SESSION_OPEN == "session_open_call"
+
+
+# ── Phase B Step 2 — 추가 트리거 테스트 ──────────────────────────────────
+
+class TestStep2Triggers:
+    """close_bundle_event / deploy_completion_call 트리거 독립성 검증"""
+
+    def _patch_common(self, ptr, sessions: list, status: str, flags: list):
+        """공통 패치 컨텍스트 생성 헬퍼"""
+        mock_vps = MagicMock(spec=Path)
+        mock_vps.iterdir.return_value = iter(
+            [_make_fake_path(f"SESSION_CONTEXT_S{n}_FINAL.json") for n in sessions]
+        )
+        mock_create = MagicMock(return_value={
+            "projection_status": status,
+            "blocking_flags": flags,
+            "phase": "A",
+        })
+        mock_save = MagicMock(return_value=Path("/tmp/manifest.json"))
+        return mock_vps, mock_create, mock_save
+
+    # ── close_bundle_event ────────────────────────────────────────────────
+
+    def test_close_bundle_trigger_label(self):
+        """run_close_bundle_watchdog 트리거 레이블 = close_bundle_event"""
+        ptr = _make_pointer(151)
+        mock_vps, mock_create, mock_save = self._patch_common(
+            ptr, [151], "fresh", []
+        )
+        mock_path = MagicMock(spec=Path)
+
+        with patch("tools.context_gateway.watchdog.VPS_ROOT", mock_vps), \
+             patch("tools.context_gateway.watchdog.load_pointer", return_value=ptr), \
+             patch("tools.context_gateway.watchdog.resolve_canonical_path", return_value=mock_path), \
+             patch("tools.context_gateway.watchdog.verify_context_hash", return_value=(True, "OK")), \
+             patch("tools.context_gateway.watchdog.create_manifest", mock_create), \
+             patch("tools.context_gateway.watchdog.save_manifest", mock_save):
+            result = run_close_bundle_watchdog()
+
+        assert result.trigger == TRIGGER_CLOSE_BUNDLE
+        assert result.trigger == "close_bundle_event"
+
+    def test_close_bundle_detects_stale(self):
+        """close_bundle_event: pointer=150, latest=151 → STALE 탐지"""
+        ptr = _make_pointer(150)
+        mock_vps, mock_create, mock_save = self._patch_common(
+            ptr, [150, 151], "stale", [FLAG_STALE_PROJECTION, FLAG_SESSION_DRIFT]
+        )
+
+        with patch("tools.context_gateway.watchdog.VPS_ROOT", mock_vps), \
+             patch("tools.context_gateway.watchdog.load_pointer", return_value=ptr), \
+             patch("tools.context_gateway.watchdog.create_manifest", mock_create), \
+             patch("tools.context_gateway.watchdog.save_manifest", mock_save):
+            result = run_close_bundle_watchdog()
+
+        assert result.verdict.status == "stale"
+        assert result.trigger == TRIGGER_CLOSE_BUNDLE
+        assert result.manifest_updated is True
+
+    def test_close_bundle_independent_of_session_open(self):
+        """close_bundle_event 실패가 session_open_call에 영향 없음"""
+        ptr = _make_pointer(151)
+        mock_vps_good = MagicMock(spec=Path)
+        mock_vps_good.iterdir.return_value = iter(
+            [_make_fake_path("SESSION_CONTEXT_S151_FINAL.json")]
+        )
+        mock_vps_fail = MagicMock(spec=Path)
+        mock_vps_fail.iterdir.side_effect = PermissionError("denied")
+
+        mock_path = MagicMock(spec=Path)
+        mock_create = MagicMock(return_value={"projection_status": "fresh", "blocking_flags": [], "phase": "A"})
+        mock_save = MagicMock(return_value=Path("/tmp/m.json"))
+
+        # close_bundle 실패 (PermissionError)
+        with patch("tools.context_gateway.watchdog.VPS_ROOT", mock_vps_fail), \
+             patch("tools.context_gateway.watchdog.load_pointer", return_value=ptr), \
+             patch("tools.context_gateway.watchdog.create_manifest", mock_create), \
+             patch("tools.context_gateway.watchdog.save_manifest", mock_save):
+            close_result = run_close_bundle_watchdog()
+
+        assert close_result.verdict.status == "unknown"  # 관측 실패 → UNKNOWN
+
+        # session_open 정상 실행 — 영향 없음
+        with patch("tools.context_gateway.watchdog.VPS_ROOT", mock_vps_good), \
+             patch("tools.context_gateway.watchdog.load_pointer", return_value=ptr), \
+             patch("tools.context_gateway.watchdog.resolve_canonical_path", return_value=mock_path), \
+             patch("tools.context_gateway.watchdog.verify_context_hash", return_value=(True, "OK")), \
+             patch("tools.context_gateway.watchdog.create_manifest", mock_create), \
+             patch("tools.context_gateway.watchdog.save_manifest", mock_save):
+            open_result = run_session_open_watchdog()
+
+        assert open_result.verdict.status == "fresh"
+        assert open_result.trigger == TRIGGER_SESSION_OPEN
+
+    # ── deploy_completion_call ────────────────────────────────────────────
+
+    def test_deploy_completion_trigger_label(self):
+        """run_deploy_completion_watchdog 트리거 레이블 = deploy_completion_call"""
+        ptr = _make_pointer(150)
+        mock_vps, mock_create, mock_save = self._patch_common(
+            ptr, [150, 151], "stale", [FLAG_STALE_PROJECTION, FLAG_SESSION_DRIFT]
+        )
+
+        with patch("tools.context_gateway.watchdog.VPS_ROOT", mock_vps), \
+             patch("tools.context_gateway.watchdog.load_pointer", return_value=ptr), \
+             patch("tools.context_gateway.watchdog.create_manifest", mock_create), \
+             patch("tools.context_gateway.watchdog.save_manifest", mock_save):
+            result = run_deploy_completion_watchdog()
+
+        assert result.trigger == TRIGGER_DEPLOY_COMPLETION
+        assert result.trigger == "deploy_completion_call"
+
+    def test_deploy_completion_detects_drift_immediately(self):
+        """deploy_completion_call: 배포 직후 SESSION_DRIFT 즉시 탐지"""
+        ptr = _make_pointer(151)
+        # 배포 완료 → VPS에 S152 등장, POINTER는 아직 S151
+        mock_vps, mock_create, mock_save = self._patch_common(
+            ptr, [151, 152], "stale", [FLAG_STALE_PROJECTION, FLAG_SESSION_DRIFT]
+        )
+
+        with patch("tools.context_gateway.watchdog.VPS_ROOT", mock_vps), \
+             patch("tools.context_gateway.watchdog.load_pointer", return_value=ptr), \
+             patch("tools.context_gateway.watchdog.create_manifest", mock_create), \
+             patch("tools.context_gateway.watchdog.save_manifest", mock_save):
+            result = run_deploy_completion_watchdog()
+
+        assert result.verdict.status == "stale"
+        assert result.observation.latest_deployed_session == 152
+        assert result.mismatch.pointer_session == 151
+        assert FLAG_SESSION_DRIFT in result.verdict.blocking_flags
+        assert result.trigger == TRIGGER_DEPLOY_COMPLETION
+
+    def test_deploy_completion_independent_of_close_bundle(self):
+        """deploy_completion_call 실패가 close_bundle_event에 영향 없음"""
+        ptr = _make_pointer(151)
+        mock_vps_ok = MagicMock(spec=Path)
+        mock_vps_ok.iterdir.return_value = iter(
+            [_make_fake_path("SESSION_CONTEXT_S151_FINAL.json")]
+        )
+        mock_vps_fail = MagicMock(spec=Path)
+        mock_vps_fail.iterdir.side_effect = OSError("disk error")
+
+        mock_path = MagicMock(spec=Path)
+        mock_create = MagicMock(return_value={"projection_status": "fresh", "blocking_flags": [], "phase": "A"})
+        mock_save = MagicMock(return_value=Path("/tmp/m.json"))
+
+        # deploy_completion 실패
+        with patch("tools.context_gateway.watchdog.VPS_ROOT", mock_vps_fail), \
+             patch("tools.context_gateway.watchdog.load_pointer", return_value=ptr), \
+             patch("tools.context_gateway.watchdog.create_manifest", mock_create), \
+             patch("tools.context_gateway.watchdog.save_manifest", mock_save):
+            deploy_result = run_deploy_completion_watchdog()
+
+        assert deploy_result.verdict.status == "unknown"
+
+        # close_bundle 정상 실행 — 영향 없음
+        with patch("tools.context_gateway.watchdog.VPS_ROOT", mock_vps_ok), \
+             patch("tools.context_gateway.watchdog.load_pointer", return_value=ptr), \
+             patch("tools.context_gateway.watchdog.resolve_canonical_path", return_value=mock_path), \
+             patch("tools.context_gateway.watchdog.verify_context_hash", return_value=(True, "OK")), \
+             patch("tools.context_gateway.watchdog.create_manifest", mock_create), \
+             patch("tools.context_gateway.watchdog.save_manifest", mock_save):
+            close_result = run_close_bundle_watchdog()
+
+        assert close_result.verdict.status == "fresh"
+        assert close_result.trigger == TRIGGER_CLOSE_BUNDLE
+
+    # ── 3-트리거 레이블 독립성 ────────────────────────────────────────────
+
+    def test_three_trigger_labels_are_distinct(self):
+        """3개 트리거 레이블이 모두 서로 다른 값임을 확인"""
+        labels = {TRIGGER_SESSION_OPEN, TRIGGER_CLOSE_BUNDLE, TRIGGER_DEPLOY_COMPLETION}
+        assert len(labels) == 3
+
+    def test_manifest_trigger_field_matches_caller(self):
+        """emit_manifest가 STALE_MANIFEST에 올바른 trigger 레이블 기록"""
+        verdict = FreshnessVerdict(
+            status="stale",
+            reason="SESSION_DRIFT",
+            blocking_flags=[FLAG_STALE_PROJECTION],
+            role_projection_status={"domi": "stale", "jeni": "stale", "caddy": "stale"},
+        )
+        ptr = _make_pointer(150)
+        mismatch = MismatchReport(
+            has_mismatch=True,
+            pointer_session=150,
+            latest_deployed_session=151,
+            pointer_valid=True,
+            pointer_dict=ptr,
+        )
+
+        for trigger in [TRIGGER_SESSION_OPEN, TRIGGER_CLOSE_BUNDLE, TRIGGER_DEPLOY_COMPLETION]:
+            with patch("tools.context_gateway.watchdog.save_manifest") as mock_save, \
+                 patch("tools.context_gateway.watchdog.create_manifest") as mock_create:
+                mock_create.return_value = {"projection_status": "stale", "blocking_flags": [], "phase": "A"}
+                mock_save.return_value = Path("/tmp/m.json")
+                emit_manifest(verdict, mismatch, trigger=trigger)
+
+            saved = mock_save.call_args[0][0]
+            assert saved["watchdog_trigger"] == trigger, \
+                f"trigger mismatch: expected {trigger}, got {saved['watchdog_trigger']}"
