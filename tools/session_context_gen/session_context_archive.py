@@ -207,6 +207,103 @@ def _check_complexity_ceiling(session_context: dict) -> dict:
     return result
 
 
+def _collect_migration_candidates(
+    session_context: dict,
+    t2_warn_active_ids: set,
+    session: int,
+) -> tuple:
+    """
+    Step 3~4: eligibility 평가 + archive_item 생성.
+    반환: (migrated_items, ineligibles_by_key, errors)
+    errors 비어있으면 성공, 있으면 FAIL.
+    ineligibles_by_key: {source_key: [ineligible_items]}
+    """
+    keys_to_process = ["active_tasks", "archived_tasks"]
+    migrated_items = []
+    ineligibles_by_key = {}
+    errors = []
+
+    for source_key in keys_to_process:
+        items = session_context.get(source_key, [])
+        if not items:
+            ineligibles_by_key[source_key] = []
+            continue
+
+        # Step 3: eligibility 평가
+        try:
+            eligible, ineligible = _evaluate_tier_d_eligibility(
+                source_key, items, t2_warn_active_ids
+            )
+        except (TierAViolationError, T2WarnActiveError) as e:
+            errors.append(str(e))
+            return migrated_items, ineligibles_by_key, errors
+
+        # Step 4: hash snapshot + archive_item 생성
+        for item in eligible:
+            try:
+                archive_item = _build_archive_item(
+                    source_key=source_key,
+                    source_path=f"session_context.{source_key}",
+                    item=item,
+                    migration_rule="TIER_D_AUTO_MIGRATION_REV3",
+                    session=session,
+                )
+                migrated_items.append((source_key, item, archive_item))
+            except ArchiveItemInvalidError as e:
+                errors.append(str(e))
+                return migrated_items, ineligibles_by_key, errors
+
+        ineligibles_by_key[source_key] = ineligible
+
+    return migrated_items, ineligibles_by_key, errors
+
+
+def _execute_tier_d_transfer(
+    migrated_items: list,
+    ineligibles_by_key: dict,
+    session_context: dict,
+    archive_data: dict,
+    archive_path: Path,
+    session: int,
+    dry_run: bool,
+) -> tuple:
+    """
+    Step 5~6: Tier D residue 제거 + archive 저장.
+    반환: (remaining_count, r3_receipt_required, error_str | None)
+    """
+    remaining_count = 0
+
+    # Step 5: Tier D residue 제거 (ineligible 직접 적용)
+    for source_key, ineligible in ineligibles_by_key.items():
+        items = session_context.get(source_key, [])
+        if not items:
+            continue
+        if not dry_run:
+            session_context[source_key] = ineligible
+            remaining_count += len(ineligible)
+        else:
+            remaining_count += len(items)
+
+    # Step 6: archive 저장
+    r3_receipt_required = False
+    if migrated_items and not dry_run:
+        if "items" not in archive_data:
+            archive_data["items"] = []
+        for _, _, archive_item in migrated_items:
+            archive_data["items"].append(archive_item)
+        archive_data["last_migration_session"] = session
+        archive_data["last_migration_at"] = _utc_ts()
+        archive_data["total_items"] = len(archive_data["items"])
+        r3_receipt_required = True
+
+        try:
+            _save_archive(archive_data, archive_path)
+        except Exception as e:
+            return remaining_count, r3_receipt_required, f"archive 저장 실패: {e}"
+
+    return remaining_count, r3_receipt_required, None
+
+
 def run_tier_d_migration(
     session_context: dict,
     session: int,
@@ -244,9 +341,6 @@ def run_tier_d_migration(
         "errors": [],
     }
 
-    # Step 1: T2 verification — session_context 전체 대상
-    # (개별 항목은 _evaluate_tier_d_eligibility 내에서 확인)
-
     # Step 2: archive 로드
     try:
         archive_data = _load_archive(archive_path)
@@ -255,68 +349,27 @@ def run_tier_d_migration(
         result["errors"].append(str(e))
         return result
 
-    migrated_items = []
-    keys_to_process = ["active_tasks", "archived_tasks"]
+    # Step 3~4: 이관 대상 수집
+    migrated_items, ineligibles_by_key, errors = _collect_migration_candidates(
+        session_context, t2_warn_active_ids, session
+    )
+    if errors:
+        result["status"] = "FAIL"
+        result["errors"].extend(errors)
+        return result
 
-    for source_key in keys_to_process:
-        items = session_context.get(source_key, [])
-        if not items:
-            continue
-
-        # Step 3: eligibility 평가
-        try:
-            eligible, ineligible = _evaluate_tier_d_eligibility(
-                source_key, items, t2_warn_active_ids
-            )
-        except (TierAViolationError, T2WarnActiveError) as e:
-            result["status"] = "FAIL"
-            result["errors"].append(str(e))
-            return result
-
-        # Step 4: hash snapshot + archive 등록
-        for item in eligible:
-            try:
-                archive_item = _build_archive_item(
-                    source_key=source_key,
-                    source_path=f"session_context.{source_key}",
-                    item=item,
-                    migration_rule="TIER_D_AUTO_MIGRATION_REV3",
-                    session=session,
-                )
-                migrated_items.append((source_key, item, archive_item))
-            except ArchiveItemInvalidError as e:
-                result["status"] = "FAIL"
-                result["errors"].append(str(e))
-                return result
-
-        # Step 5: Tier D residue 제거 (dry_run 아닐 때)
-        if not dry_run:
-            session_context[source_key] = ineligible
-            result["remaining_count"] += len(ineligible)
-        else:
-            result["remaining_count"] += len(items)
-
-    # Step 6: archive 저장
-    if migrated_items and not dry_run:
-        if "items" not in archive_data:
-            archive_data["items"] = []
-        for source_key, _, archive_item in migrated_items:
-            archive_data["items"].append(archive_item)
-        archive_data["last_migration_session"] = session
-        archive_data["last_migration_at"] = _utc_ts()
-        archive_data["total_items"] = len(archive_data["items"])
-
-        # R3 receipt mandatory (archive mutation = R3)
-        result["r3_receipt_required"] = True
-
-        try:
-            _save_archive(archive_data, archive_path)
-        except Exception as e:
-            result["status"] = "FAIL"
-            result["errors"].append(f"archive 저장 실패: {e}")
-            return result
+    # Step 5~6: 실제 이관 실행
+    remaining_count, r3_required, transfer_error = _execute_tier_d_transfer(
+        migrated_items, ineligibles_by_key, session_context, archive_data, archive_path, session, dry_run
+    )
+    if transfer_error:
+        result["status"] = "FAIL"
+        result["errors"].append(transfer_error)
+        return result
 
     result["migrated_count"] = len(migrated_items)
+    result["remaining_count"] = remaining_count
+    result["r3_receipt_required"] = r3_required
 
     # Step 7: Complexity Ceiling 평가
     ceiling = _check_complexity_ceiling(session_context)
