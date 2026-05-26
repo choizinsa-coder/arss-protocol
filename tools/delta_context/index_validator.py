@@ -67,43 +67,52 @@ def _load_json(path: str, label: str) -> tuple[Any, dict | None]:
 
 
 # ---------------------------------------------------------------------------
-# 도메인별 검증
+# 도메인별 검증 — 내부 서브루틴 (RULE-5 분리, EAG-A1, S156)
 # ---------------------------------------------------------------------------
 
-def _validate_domain(
+def _validate_index_fields(
     domain: str,
     domain_entry: dict,
-    delta_root: str,
-) -> dict:
+) -> tuple[dict | None, str, str, int]:
     """
-    단일 domain에 대해 G1~G4 검증을 수행한다.
-    FAIL 즉시 반환 (fail-fast).
+    INDEX 필수 필드 존재 검증 및 변수 추출.
+    PASS 시 (None, id, hash, count), FAIL 시 (fail_dict, '', '', 0) 반환.
     """
-
-    # ── INDEX 구조 확인 (필수 필드) ──────────────────────────────────────
     required_fields = ["latest_delta_id", "latest_content_hash", "delta_count"]
     for field in required_fields:
         if field not in domain_entry:
-            return _fail(
-                f"[G4-구조] domain='{domain}' INDEX 필수 필드 누락: '{field}'"
+            return (
+                _fail(f"[G4-구조] domain='{domain}' INDEX 필수 필드 누락: '{field}'"),
+                "", "", 0,
             )
+    return (
+        None,
+        domain_entry["latest_delta_id"],
+        domain_entry["latest_content_hash"],
+        domain_entry["delta_count"],
+    )
 
-    index_latest_delta_id: str = domain_entry["latest_delta_id"]
-    index_latest_content_hash: str = domain_entry["latest_content_hash"]
-    index_delta_count: int = domain_entry["delta_count"]
 
-    # ── DELTA_LOG 디렉터리 확인 ──────────────────────────────────────────
-    delta_dir = os.path.join(delta_root, domain)
+def _load_domain_deltas(
+    domain: str,
+    delta_dir: str,
+    index_delta_count: int,
+) -> tuple[dict | None, list]:
+    """
+    delta_dir에서 delta JSON 파일을 로드하고 sequence_number 기준 정렬.
+    반환:
+      (pass_dict, [])      — empty domain PASS
+      (fail_dict, [])      — FAIL
+      (None, [delta, ...]) — 정상 로드 완료
+    """
     if not os.path.isdir(delta_dir):
-        # empty domain (delta 없음) 은 delta_count == 0 조건과 함께 허용
         if index_delta_count == 0:
             print(f"  [G-PASS] domain='{domain}' — empty domain (delta_count=0), PASS")
-            return _pass()
+            return _pass(), []
         return _fail(
             f"[G-DIR] domain='{domain}' DELTA_LOG 디렉터리 미존재: {delta_dir}"
-        )
+        ), []
 
-    # ── DELTA 파일 목록 로드 ─────────────────────────────────────────────
     try:
         filenames = sorted(
             f for f in os.listdir(delta_dir) if f.endswith(".json")
@@ -111,36 +120,44 @@ def _validate_domain(
     except OSError as exc:
         return _fail(
             f"[G-DIR] domain='{domain}' DELTA_LOG 디렉터리 접근 실패: {exc}"
-        )
+        ), []
 
-    # ── empty domain 허용 ────────────────────────────────────────────────
     if not filenames and index_delta_count == 0:
         print(f"  [G-PASS] domain='{domain}' — empty domain (no files, delta_count=0), PASS")
-        return _pass()
+        return _pass(), []
 
     if not filenames and index_delta_count != 0:
         return _fail(
             f"[G4] domain='{domain}' delta 파일 없음이나 INDEX.delta_count={index_delta_count}"
-        )
+        ), []
 
-    # ── delta 파일 로드 ──────────────────────────────────────────────────
     deltas: list[dict] = []
     for fname in filenames:
         fpath = os.path.join(delta_dir, fname)
         data, err = _load_json(fpath, f"delta({fname})")
         if err:
-            return err
+            return err, []
         deltas.append(data)
 
-    # ── sequence_number 기준 정렬 ────────────────────────────────────────
     try:
         deltas.sort(key=lambda d: int(d["sequence_number"]))
     except (KeyError, TypeError, ValueError) as exc:
         return _fail(
             f"[G1] domain='{domain}' sequence_number 필드 파싱 실패: {exc}"
-        )
+        ), []
 
-    # ── G4: delta_count 정합성 ───────────────────────────────────────────
+    return None, deltas
+
+
+def _validate_delta_sequence(
+    domain: str,
+    deltas: list[dict],
+    index_delta_count: int,
+) -> dict | None:
+    """
+    G4 delta_count 정합성 + G1 sequence_number 연속성 검증.
+    PASS 시 None, FAIL 시 fail_dict 반환.
+    """
     actual_count = len(deltas)
     if actual_count != index_delta_count:
         return _fail(
@@ -149,7 +166,6 @@ def _validate_domain(
         )
     print(f"  [G4-PASS] domain='{domain}' delta_count={actual_count}")
 
-    # ── G1: sequence_number 연속성 ───────────────────────────────────────
     seq_numbers: list[int] = []
     for d in deltas:
         try:
@@ -161,20 +177,28 @@ def _validate_domain(
 
     expected = list(range(1, actual_count + 1))
     if seq_numbers != expected:
-        # 중복 검사
         if len(seq_numbers) != len(set(seq_numbers)):
             return _fail(
                 f"[G1] domain='{domain}' sequence_number 중복 발견: {seq_numbers}"
             )
-        # gap 검사
         return _fail(
             f"[G1] domain='{domain}' sequence_number 연속성 위반: "
             f"기대={expected}, 실제={seq_numbers}"
         )
     print(f"  [G1-PASS] domain='{domain}' sequence continuity OK (1~{actual_count})")
+    return None
 
-    # ── G2: latest_delta_id 정합성 ───────────────────────────────────────
-    last_delta = deltas[-1]
+
+def _validate_delta_integrity(
+    domain: str,
+    last_delta: dict,
+    index_latest_delta_id: str,
+    index_latest_content_hash: str,
+) -> dict | None:
+    """
+    G2 latest_delta_id + G3 latest_content_hash 정합성 검증.
+    PASS 시 None, FAIL 시 fail_dict 반환.
+    """
     try:
         actual_last_delta_id: str = last_delta["delta_id"]
     except KeyError:
@@ -189,7 +213,6 @@ def _validate_domain(
         )
     print(f"  [G2-PASS] domain='{domain}' latest_delta_id='{actual_last_delta_id}'")
 
-    # ── G3: latest_content_hash 정합성 ──────────────────────────────────
     try:
         actual_last_content_hash: str = last_delta["content_hash"]
     except KeyError:
@@ -203,6 +226,45 @@ def _validate_domain(
             f"INDEX='{index_latest_content_hash}', 실제='{actual_last_content_hash}'"
         )
     print(f"  [G3-PASS] domain='{domain}' latest_content_hash='{actual_last_content_hash[:16]}...'")
+    return None
+
+
+# ---------------------------------------------------------------------------
+# 도메인별 검증 — 공개 진입점
+# ---------------------------------------------------------------------------
+
+def _validate_domain(
+    domain: str,
+    domain_entry: dict,
+    delta_root: str,
+) -> dict:
+    """
+    단일 domain에 대해 G1~G4 검증을 수행한다.
+    FAIL 즉시 반환 (fail-fast).
+    """
+    # G_FIELDS: INDEX 필수 필드 검증
+    err, index_latest_delta_id, index_latest_content_hash, index_delta_count = \
+        _validate_index_fields(domain, domain_entry)
+    if err:
+        return err
+
+    # G_LOAD: delta 파일 로드
+    delta_dir = os.path.join(delta_root, domain)
+    result, deltas = _load_domain_deltas(domain, delta_dir, index_delta_count)
+    if result is not None:
+        return result
+
+    # G_SEQ: G4 count + G1 sequence 연속성
+    err = _validate_delta_sequence(domain, deltas, index_delta_count)
+    if err:
+        return err
+
+    # G_INTEG: G2 delta_id + G3 content_hash
+    err = _validate_delta_integrity(
+        domain, deltas[-1], index_latest_delta_id, index_latest_content_hash
+    )
+    if err:
+        return err
 
     return _pass()
 
