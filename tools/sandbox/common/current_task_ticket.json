@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "ticket_id": "TKT-S144-001",
+  "created_at": "2026-05-23T00:00:00+09:00",
+  "updated_at": "2026-05-23T00:00:00+09:00",
+  "task_ref": "PT-S143-TEST-DEBT-001",
+  "title": "テスト부채 16건 수습 — 기대값 미갱신 + live-state 만료",
+  "status": "PENDING",
+  "current_stage": "caddy_observation",
+  "next_stage": "domi_design",
+  "assigned_to": "caddy",
+  "dispatch_pending": false,
+  "dispatch_reason": "S144에서 원인 분석 완료. S145에서 artifact-first 구조로 재착수 예정.",
+  "artifacts": {
+    "observation": "caddy/active/notes/observation_TKT-S144-001_20260523.md",
+    "design": null,
+    "audit": null,
+    "receipt": null
+  },
+  "stale": {
+    "observation_created_at": "2026-05-23T00:00:00+09:00",
+    "observation_stale_warn_at": "2026-05-23T02:00:00+09:00",
+    "observation_stale_lock_at": "2026-05-23T04:00:00+09:00",
+    "stale_locked": false
+  },
+  "governance": {
+    "eag_ref": null,
+    "beo_approval_at": "2026-05-23T00:00:00+09:00",
+    "lock_flags": {
+      "ticket_integrity": false,
+      "stale_lock": false,
+      "circuit_breaker": false,
+      "single_active_violated": false
+    }
+  },
+  "hash": "703bbbbb953601c2f9413175b7afb3372bd7ca8cc8c1a18cc5b852a4c38bef58"
+}

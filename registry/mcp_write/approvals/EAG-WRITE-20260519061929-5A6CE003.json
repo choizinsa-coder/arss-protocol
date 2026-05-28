@@ -1,0 +1,23 @@
+{
+  "type": "EAG_WRITE_APPROVAL",
+  "approval_id": "EAG-WRITE-20260519061929-5A6CE003",
+  "approved_by": "Beo",
+  "approved_at": "2026-05-19T06:19:29.868186+00:00",
+  "scope": {
+    "target_path": "/opt/arss/engine/arss-protocol/tools/sandbox/s140_test.txt",
+    "operation": "WRITE",
+    "extension": ".txt",
+    "content_hash_algorithm": "SHA-256",
+    "expected_content_hash": "b18e895a0662c80b8407f08e8134bafbcca9500e2cd68112da61d84d1f3c29a8",
+    "content_size_bytes": 20
+  },
+  "ttl_seconds": 600,
+  "previous_receipt_confirmation": {
+    "previous_receipt_id": "MCP-WRITE-RECEIPT-0CD1F9D0A05A",
+    "previous_receipt_hash": "a8920d80900e0e6e32ad133d0820ea0476e24f95d4ed86d624b6ca3d9ff12070",
+    "confirmed_by": "Beo",
+    "confirmed_at": "2026-05-19T06:19:29.868272+00:00",
+    "confirmation_meaning": "previous write receipt reviewed and accepted before issuing this approval"
+  },
+  "approval_hash": "bbea5105dbd98066b950c0d9d3adc26ee36cd7ff40d7efd01db34a991c52e717"
+}

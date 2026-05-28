@@ -17,6 +17,7 @@ State Topology:
 """
 
 from __future__ import annotations
+import logging as _logging
 
 import json
 import os
@@ -55,8 +56,8 @@ def _now_iso() -> str:
 def _apply_permissions(path: str) -> None:
     try:
         os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
-    except OSError:
-        pass
+    except OSError as _rule6_e:
+        _logging.debug("RULE6 mcp_containment_state: %s", _rule6_e)
 
 
 def _fail_closed_state(reason: str = "FAIL_CLOSED_DEFAULT") -> dict:

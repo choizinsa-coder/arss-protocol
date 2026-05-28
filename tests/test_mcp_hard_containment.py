@@ -10,6 +10,7 @@ EAG:   EAG-3 비오(Joshua) 승인 (S130)
 - HC-T-xx trigger integration: HT-1~HT-7
 """
 
+import logging as _logging
 import json
 import os
 import sys
@@ -340,8 +341,8 @@ class TestTriggerIntegration(unittest.TestCase):
                             decision="ALLOW",
                             reason="ALLOWED",
                         )
-                    except OSError:
-                        pass
+                    except OSError as _rule6_e:
+                        _logging.debug("RULE6 test_mcp_hard_containment: %s", _rule6_e)
                     mock_hct05.assert_called_once()
 
     # HT-7: HARD_CONTAINMENT 활성 시 handle_retrieval 차단

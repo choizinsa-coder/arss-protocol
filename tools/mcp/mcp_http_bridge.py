@@ -17,6 +17,7 @@ MCP Streamable HTTP Bridge — PT-S131-MCP-REG-001 + PT-S134-VPS-OBS-001 + PT-S1
 """
 
 from __future__ import annotations
+import logging as _logging
 
 import hashlib
 import hmac as hmac_lib
@@ -727,8 +728,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 while True:
                     time.sleep(SSE_HEARTBEAT_INTERVAL)
                     self._sse_send_heartbeat()
-            except (BrokenPipeError, ConnectionResetError):
-                pass
+            except (BrokenPipeError, ConnectionResetError) as _rule6_e:
+                _logging.debug("RULE6 mcp_http_bridge: %s", _rule6_e)
             finally:
                 with _sse_clients_lock:
                     if self in _sse_clients:

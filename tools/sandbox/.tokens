@@ -1,0 +1,16 @@
+{
+  "domi": {
+    "token_hash": "50e0bfc348d7d77bba82cb26546bfdbd3738b304050de790e6fd3b985bcc5573",
+    "issued_at": "2026-05-24T18:43:26.659103+09:00",
+    "expires_at": "2026-05-25T06:43:26.659103+09:00",
+    "ttl_seconds": 43200,
+    "revoked": false
+  },
+  "jeni": {
+    "token_hash": "35e75f9b185dda51b67b064b20bae7e5659cc5555400d8090496ff312bea58be",
+    "issued_at": "2026-05-24T18:43:37.143450+09:00",
+    "expires_at": "2026-05-25T06:43:37.143450+09:00",
+    "ttl_seconds": 43200,
+    "revoked": false
+  }
+}

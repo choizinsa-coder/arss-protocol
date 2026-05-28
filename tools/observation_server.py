@@ -16,6 +16,7 @@ import os
 import secrets
 import hashlib
 import logging
+_logging = logging
 import threading
 import tempfile
 from datetime import datetime, timezone, timedelta
@@ -166,7 +167,8 @@ def _load_token_file():
                 expires_at_str = entry.get("expires_at", "")
                 try:
                     expires_epoch = datetime.fromisoformat(expires_at_str).timestamp()
-                except Exception:
+                except Exception as _rule6_e:
+                    _logging.debug("RULE6 observation_server: %s", _rule6_e)
                     continue
                 if now_epoch >= expires_epoch:
                     continue

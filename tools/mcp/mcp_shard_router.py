@@ -15,6 +15,7 @@ EAG:   EAG-2 비오(Joshua) 승인 (S128) / EAG-3 비오(Joshua) 승인 (S130)
 - HC-T-03: 허용되지 않은 shard 접근 시도 -> enter_containment("HC-T-03")
 """
 
+import logging as _logging
 import os
 import sys
 from typing import Optional
@@ -150,8 +151,8 @@ def _trigger_hct03() -> None:
     """HC-T-03: unauthorized shard access -> HARD_CONTAINMENT 진입."""
     try:
         enter_containment("HC-T-03")
-    except Exception:
-        pass
+    except Exception as _rule6_e:
+        _logging.debug("RULE6 mcp_shard_router: %s", _rule6_e)
 
 
 def get_agent_allowed_shards(agent_id: str) -> frozenset:

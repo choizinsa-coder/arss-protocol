@@ -529,16 +529,16 @@ def _dispatch(tool_name: str) -> dict:
     if tool_name in FORBIDDEN_TOOLS:
         try:
             broker.submit_deny(tool_name, "FORBIDDEN_TOOLS", CURRENT_PHASE)
-        except AuditPersistenceError:
-            pass
+        except AuditPersistenceError as _rule6_e:
+            _logging.debug("RULE6 mcp_server_poc: %s", _rule6_e)
         raise PermissionError(f"[FAIL_CLOSED] FORBIDDEN 도구: {tool_name}")
 
     # 미등재 검사
     if tool_name not in ALLOWED_TOOLS:
         try:
             broker.submit_deny(tool_name, "NOT_IN_REGISTRY", CURRENT_PHASE)
-        except AuditPersistenceError:
-            pass
+        except AuditPersistenceError as _rule6_e:
+            _logging.debug("RULE6 mcp_server_poc: %s", _rule6_e)
         raise PermissionError(f"[FAIL_CLOSED] 미등재 도구: {tool_name}")
 
     entry = ALLOWED_TOOLS[tool_name]
@@ -547,8 +547,8 @@ def _dispatch(tool_name: str) -> dict:
     if entry["layer"] not in PHASE_A_ALLOWED_LAYERS:
         try:
             broker.submit_deny(tool_name, f"LAYER_VIOLATION:{entry['layer']}", CURRENT_PHASE)
-        except AuditPersistenceError:
-            pass
+        except AuditPersistenceError as _rule6_e:
+            _logging.debug("RULE6 mcp_server_poc: %s", _rule6_e)
         raise PermissionError(f"[FAIL_CLOSED] 계층 위반: {tool_name}")
 
     # B-1 throttle 검사
@@ -557,8 +557,8 @@ def _dispatch(tool_name: str) -> dict:
     except ThrottleError as exc:
         try:
             broker.submit_deny(tool_name, STATE_RATE_LIMIT_EXCEEDED, CURRENT_PHASE)
-        except AuditPersistenceError:
-            pass
+        except AuditPersistenceError as _rule6_e:
+            _logging.debug("RULE6 mcp_server_poc: %s", _rule6_e)
         raise
 
     # B-3 T-2: 도구 실행 timeout (5s)
@@ -579,8 +579,8 @@ def _dispatch(tool_name: str) -> dict:
         # T-2 timeout — FAIL_CLOSED
         try:
             broker.submit_deny(tool_name, "T2_TOOL_EXECUTION_TIMEOUT", CURRENT_PHASE)
-        except AuditPersistenceError:
-            pass
+        except AuditPersistenceError as _rule6_e:
+            _logging.debug("RULE6 mcp_server_poc: %s", _rule6_e)
         raise ToolExecutionTimeoutError(
             f"[FAIL_CLOSED] T-2 tool execution timeout ({T2_TOOL_EXECUTION_TIMEOUT_S}s): {tool_name}"
         )

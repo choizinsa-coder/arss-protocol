@@ -4,6 +4,7 @@ AIBA Context Gateway — manifest_manager 단위 테스트
 PT-S150-CONTEXT-GATEWAY-ORCHESTRATION Phase A
 """
 
+import logging as _logging
 import sys
 import json
 import tempfile
@@ -238,5 +239,5 @@ def test_T13_create_manifest_invalid_status_raises():
             blocking_flags=[],
         )
         assert False, "Expected ValueError"
-    except ValueError:
-        pass
+    except ValueError as _rule6_e:
+        _logging.debug("RULE6 test_context_gateway_manifest: %s", _rule6_e)

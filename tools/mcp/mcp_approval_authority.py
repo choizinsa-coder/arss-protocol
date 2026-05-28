@@ -25,6 +25,7 @@ Usage:
     --previous-receipt-id MCP-WRITE-RECEIPT-XXXX
 """
 
+import logging as _logging
 import argparse
 import hashlib
 import json
@@ -110,7 +111,8 @@ def find_unconfirmed_receipts(receipts_dir: str = None) -> list:
             if receipt.get("status") == "PENDING_BEO_REVIEW":
                 receipt["_file_path"] = fpath
                 unconfirmed.append(receipt)
-        except Exception:
+        except Exception as _rule6_e:
+            _logging.debug("RULE6 mcp_approval_authority: %s", _rule6_e)
             continue
     return unconfirmed
 

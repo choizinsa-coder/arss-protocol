@@ -3,20 +3,20 @@
   "active_tasks": {
     "domain": "tasks.active",
     "schema_version": "phase3_shard_v1",
-    "item_count": 58,
-    "open_count": 20,
-    "critical_count": 1,
-    "last_mutated_session": 148,
+    "item_count": 59,
+    "open_count": 10,
+    "critical_count": 0,
+    "last_mutated_session": 153,
     "requires_load_for_task_selection": true,
-    "latest_session_ref": 148,
+    "latest_session_ref": 153,
     "status": "active",
     "body_ref": "context/tasks/active.json",
     "_shard_hash": "9e69206d98864be39a4f5f40d61103d5dcfb9978c367cc8e8414e841af5e4d6a"
   },
   "agent_focus": {
-    "caddy": "Context Refactor Phase 3 COMPLETE(S148). 다음 단위 작업 비오 지시 대기.",
-    "domi": "Context Refactor Phase 3 설계 완료. 차기 작업 대기.",
-    "jeni": "REVALIDATION_REQUIRED=NO. 정규 운용 유지."
+    "caddy": "S155: AUDIT_PREPARATION_SESSION. canonical enforcement 미실행. F-A~F-E CANDIDATE 식별(수동). authority escalation by narration 발생. SESSION_CONTEXT eag_approved→candidate 정정. RULE-AR-1~6 등록. S156 착수 조건: enforcement_gate raw output 확보.",
+    "domi": "AIBA Authority Recovery Protocol v1.0 수립. Observation/Authority Layer 분리 원칙 확정. DESIGN = DESIGN_CANDIDATE. S156 설계 재평가 조건: canonical FAIL list 확보 후.",
+    "jeni": "TRUST_READY REVOKED. S155 authority escalation 판정. RULE-AR-4 강화 조건 수립. S156 재개 조건: enforcement raw output + hash + 필요 evidence 충족 후."
   },
   "architecture": "AIBA Session Sync Architecture v1.0",
   "archived_tasks": {
@@ -70,13 +70,15 @@
     "note": "S148: Context Refactor Phase 3 완료 — tasks/metrics/vps shard 7개 배포. commits 38328a3+da21697.",
     "phase": "PHASE 1 COMPLETE",
     "phase1_completed": "2026-03-19",
-    "tip": "da21697",
-    "prev_tip": "ebbc5bb",
-    "last_updated": 148,
+    "tip": "153ce7c",
+    "prev_tip": "21ba0cb",
+    "last_updated": 155,
     "session": 140,
-    "last_commit_session": 148,
-    "last_commit_date": "2026-05-23",
-    "last_commit_message": "feat: context refactor Phase 2 — lessons/agents shard + Advisory-1 규칙 명문화 (PT-S146-CONTEXT-REFACTOR-PHASE2)"
+    "last_commit_session": 154,
+    "last_commit_date": "2026-05-25",
+    "last_commit_message": "refactor: RULE-5 F-13 — run_pipeline 분리 (156줄→120줄) _pipeline_pre_validate/_pipeline_finalize (S154)",
+    "commits_this_session": [],
+    "last_updated_session": 155
   },
   "code_health": {
     "briefings_issued": [
@@ -279,21 +281,54 @@
             "status": "CLEAR"
           },
           "RULE-3": {
-            "current_count": 22,
-            "status": "PENDING"
+            "current_count": 0,
+            "status": "CLEAR",
+            "cleared_session": 153,
+            "note": "27건 이동 완료(tests/eps_v1_4/ + tests/session_context_gen/ + tests/). test_observation_e2e.py collect_ignore 처리."
           },
           "RULE-4": {
             "current_count": 0,
             "status": "CLEAR"
           },
           "RULE-5": {
-            "current_count": 20,
-            "review_count": 11,
-            "status": "PENDING"
+            "current_count": 10,
+            "review_count": 29,
+            "status": "IN_PROGRESS",
+            "completed_this_session": [
+              "F-05",
+              "F-06",
+              "F-10",
+              "F-12",
+              "F-13"
+            ],
+            "hold": [],
+            "excluded": [
+              "F-01",
+              "F-02",
+              "F-03"
+            ],
+            "note": "S155: AUDIT_PREPARATION_SESSION. F-A~F-E candidate 식별. enforcement gate 실행 후 canonical 확정 필요. S156 착수 조건: canonical FAIL list 확보.",
+            "candidate": [
+              "F-A",
+              "F-B",
+              "F-C",
+              "F-D",
+              "F-E"
+            ],
+            "candidate_provenance": {
+              "source_type": "manual_scan",
+              "verification_level": "CANDIDATE",
+              "canonical_verified": false,
+              "canonical_authority": "tools.code_health.enforcement_gate",
+              "evidence_hash": null,
+              "note": "S155 캐디 단독 탐색. enforcement gate 미실행. canonical authority 없음."
+            },
+            "current_count_status": "PROVISIONAL"
           },
           "RULE-6": {
             "current_count": 0,
-            "status": "CLEAR"
+            "status": "CLEAR",
+            "note": "S153: context_writer.py + close_bundle_validator.py fsync degraded signal 구조 수정. except OSError:pass 제거."
           },
           "RULE-7": {
             "fail_count": 2,
@@ -306,7 +341,8 @@
             "collision_pending": 4,
             "current_count": 84,
             "session_boot_pending": 4,
-            "status": "MAPPED_PENDING_ASSERTION"
+            "status": "MAPPED_PENDING_ASSERTION",
+            "note": "S153 Phase1: test_write_tier_policy/test_close_bundle_validator/test_context_writer 추가"
           }
         }
       },
@@ -341,7 +377,22 @@
           "target": "RULE-8-A test mapping placeholder (MAPPED_PENDING_ASSERTION)"
         }
       },
-      "status": "IN_PROGRESS — DAY 4 PARTIAL 완료 (RULE-7 validator 재설계), rename remediation 대기 (S78)"
+      "status": "IN_PROGRESS — DAY 4 PARTIAL 완료 (RULE-7 validator 재설계), rename remediation 대기 (S78)",
+      "phase1_completed_session": 153,
+      "phase1_completed_date": "2026-05-25",
+      "phase1_commits": [
+        "4a4ae88"
+      ],
+      "phase1_content": "RULE-6 fsync degraded signal + RULE-8 최소 테스트 매핑 3개",
+      "phase2_completed_session": 153,
+      "phase2_completed_date": "2026-05-25",
+      "phase2_commits": [
+        "8b40cb4",
+        "21ba0cb"
+      ],
+      "phase2_content": "RULE-3 27건 tests/ 이동 완료",
+      "phase3_status": "IN_PROGRESS — S155 F-A~F-E EAG 승인. S156 구현 예정.",
+      "phase3_content": "RULE-5 함수 분리 설계 목록 작성 (실행 제외). aiba_status_server.py::rpu_issue HIGH_RISK 유지."
     },
     "status": "REMEDIATION_IN_PROGRESS",
     "version": "v1.0"
@@ -387,7 +438,7 @@
     "migrated_at": "2026-05-10T00:00:00.000+09:00",
     "migrated_session": 114
   },
-  "generated_at": "2026-05-23T22:51:33.510035+09:00",
+  "generated_at": "2026-05-25T23:59:00.000+09:00",
   "hold_tasks": {
     "domain": "tasks.hold",
     "schema_version": "phase3_shard_v1",
@@ -410,10 +461,11 @@
     "domain": "lessons.lessons",
     "schema_version": "phase2_shard_v1",
     "item_count": 29,
-    "latest_session_ref": 147,
+    "latest_session_ref": 150,
     "status": "active",
     "body_ref": "context/lessons/lessons.json",
-    "_shard_hash": "a8b02788f7a61bc97355794bd3476a37771198153d4cabfd31b82805f7e9a053"
+    "_shard_hash": "a8b02788f7a61bc97355794bd3476a37771198153d4cabfd31b82805f7e9a053",
+    "last_updated_session": 150
   },
   "pending_tasks": {
     "domain": "tasks.pending",
@@ -465,7 +517,8 @@
       "SESSION_CONTEXT_S{n}.json + AIBA_Daily_Session_Report_S{n}.md 동시 생성 및 제시 (세션번호 버전 관리 정책)",
       "Daily Session Report 제출 전 Stabilization Metrics 섹션(M-01~M-07 전항목) 존재 여부 캐디 자가 검증 필수 — 누락 시 Report 제출 불가 (LESSON-021)",
       "Tier D 변동 확인 및 명시적 선언 필수 — 변동 없음: 직전 Archive 유효 선언 / 변동 있음: SESSION_CONTEXT_ARCHIVE_TIER_D_S{n}.json 생성 후 제시. 미선언 또는 미생성 시 세션 종료 선언 불가 (LESSON-022)",
-      "SESSION_CONTEXT 생성 방식: 반드시 bash_tool + json.load로 S(n-1) SESSION_CONTEXT 파일 전체 로드 후 Delta 적용. 전체 재작성 절대 금지. 업로드 파일 없으면 REPORT & WAIT — 생성 착수 금지. (S124~ 정식 적용 — PT-S115-BOOT-001 전환 완료)"
+      "SESSION_CONTEXT.json 생성 방식: 반드시 bash_tool + json.load로 /mnt/project/ 내 SESSION_CONTEXT_S{n-1}_FINAL.json 전체 로드 후 Delta 적용. 전체 재작성 절대 금지. 파일 미존재 시 REPORT & WAIT — 생성 착수 금지.",
+      "세션 종료 시 Close Bundle 생성 필수 — SESSION_CONTEXT_FINAL + SESSION_CONTEXT_POINTER + SESSION_CONTEXT_STALE_MANIFEST의 session_count / context_hash / updated_at 3-way 일치 후 VPS 배포. 일치 실패 시 HARD STOP. (Domi A-2 / PT-S150-CONTEXT-GATEWAY-ORCHESTRATION / S151)"
     ],
     "stabilization_metrics_enforcement": {
       "established_session": 115,
@@ -494,28 +547,41 @@
       "enforcement": "선언 누락 또는 생성 누락 시 세션 종료 선언 불가"
     }
   },
-  "session_count": 148,
+  "session_count": 154,
   "session_delta": {
-    "session": 148,
-    "date": "2026-05-23",
-    "summary": "Context Refactor Phase 3 완료 — tasks/metrics/vps shard 7개 배포 + pointer 교체",
-    "completed": [
-      "BRIEFING-DOMI-S148-CONTEXT-REFACTOR-003 발행 (EAG-1 비오 승인)",
-      "도미 FINAL DESIGN 확정 (tasks 4 + metrics 1 + vps 2, Option C 유지)",
-      "캐디 IMPLEMENTABLE=YES / STRUCTURAL_CHANGE=YES",
-      "제니 TRUST_READY PASS (T-1~T-10, S148 초기)",
-      "EAG-2 비오 승인",
-      "1차 배포: tasks(4) + metrics(1) shard + pytest T-1~T-11 PASS (commit 38328a3)",
-      "2차 배포: vps(2) shard (commit da21697)",
-      "제니 전체 시스템 Revalidation PASS (T-1~T-10, REVALIDATION_REQUIRED=NO)",
-      "EAG-3 비오 승인",
-      "SESSION_CONTEXT pointer 교체 완료 (8개 키 + visibility 6→1 통합)"
-    ],
-    "caddy_incidents": [
-      "SCP 배포 순서 오류 — pytest 선실행 시도 (파일 미배포 상태). PS1 스크립트 방식으로 해소."
-    ],
-    "pending": [
-      "session_open_rules [BOOT vNext ACTIVE] 규칙 현행화 — 별도 비오 지시 필요"
+    "session": 154,
+    "timestamp": "2026-05-25T23:59:00.000+09:00",
+    "changes": [
+      {
+        "type": "operational_environment",
+        "ref": "S155-OPS-ENV",
+        "detail": "3 에이전트 VPS 접근 가능 + 샌드박스 read/write 가능 확인. actor_id 권한 분기 실제 동작.",
+        "approved_by": "비오(Joshua)"
+      },
+      {
+        "type": "rule5_fail_identification",
+        "ref": "S155-RULE5-SCAN",
+        "detail": "캐디 단독 탐색. FAIL 5건 확인: run_shadow_pipeline(122)/2x_validate_domain(135)/classify_stage0(204)/ContextWriter.commit(121).",
+        "approved_by": "캐디 탐색"
+      },
+      {
+        "type": "rule5_design_complete",
+        "ref": "DESIGN-DOMI-S155-RULE5-001",
+        "detail": "도미 설계 완성. F-A~F-E Decision topology decomposition. 제니 TRUST_READY PASS 5항목.",
+        "approved_by": "비오(Joshua) EAG"
+      },
+      {
+        "type": "authority_recovery",
+        "ref": "RULE-AR-1~6",
+        "detail": "도미 [DESIGN] 반영. authority escalation by narration 사건 교훈. Observation/Authority Layer 분리 원칙 SESSION_CONTEXT 등록.",
+        "approved_by": "도미 [DESIGN] S155"
+      },
+      {
+        "type": "state_correction",
+        "ref": "S155-STATE-CORRECTION",
+        "detail": "eag_approved[F-A~F-E] → candidate[F-A~F-E] 강등. current_count PROVISIONAL 강등. TRUST_READY REVOKED.",
+        "approved_by": "도미 판단 + 제니 TRUST-ADVISORY"
+      }
     ]
   },
   "session_open_rules": {
@@ -535,9 +601,9 @@
       "GET /v1/system/time 호출 → session_time_lock 획득. 실패 시 비오님 브리핑 기준값 사용. 둘 다 없으면 캐디 날짜 판단 중단 후 비오님께 KST 시각 요청.",
       "session_time_lock 기준으로만 오늘 날짜·stable_days·경과일 판단. generated_at 기반 날짜 판단 금지.",
       "stable_days 계산 시 pending_tasks/note의 날짜 표현 신뢰 금지. session_time_lock 기준으로 직접 재계산 의무. (DIS-037)",
-      "[BOOT vNext WATCH] 세션 시작 시 M-01~M-07 현재값 + 직전 3세션 추이 출력 필수 (S117~). caddy_operational_rules.early_warning_system 참조.",
-      "[BOOT vNext ACTIVE] 세션 시작 시 비오님 업로드 파일: SESSION_BOOT.json + SESSION_STATE_RUNTIME.json. FULL 단일 파일 업로드 방식 폐지(S124~). SESSION_BOOT.json 누락 시 REPORT & WAIT.",
-      "[FRP v1.0 REV1 ACTIVE] 세션 시작 시 FRP_ACKNOWLEDGEMENT 출력 필수. caddy_operational_rules.force_read_protocol_v1 참조.",
+      "[BOOT vNext WATCH — ADVISORY] 세션 시작 시 M-01~M-07 현재값 출력 권고. 미출력 시 위반 아님.",
+      "[BOOT vNext ACTIVE — REV1] 세션 시작 시 /mnt/project/ SESSION_CONTEXT 파일 존재 확인 필수. 미존재 시 즉시 REPORT & WAIT — 세션 진행 불가. 존재 확인 후 shard integrity 및 chain.tip 일치 검증 수행.",
+      "[FRP v1.0 REV1 — ARCHIVED] completion bias 억제 목적. PRE-OUTPUT MANDATORY CHECK로 기능 대체 완료. 효력 정지.",
       "[SESSION_OPEN VERIFY] bash ls /mnt/project/ 및 /mnt/user-data/uploads/ 실행 → PATH_PROOF 출력 필수.",
       "[SESSION_OPEN VERIFY] SESSION_CONTEXT bash_tool + json.load 실행 → MERGE_PROOF 출력 필수.",
       "[SESSION_OPEN VERIFY] FORBIDDEN_RULES_ACK + PREVIOUS_INCIDENT_ACK 복창 필수.",
@@ -559,15 +625,13 @@
     }
   },
   "session_reentry": {
-    "resume_point": "Context Refactor Phase 3 COMPLETE. 차기 작업 대기.",
-    "current_state": {
-      "context_refactor": "PHASE_3_COMPLETE",
-      "shard_count": "1(runtime) + 7(governance/lessons/agents) + 7(tasks/metrics/vps) = 총 15개",
-      "chain_tip": "da21697",
-      "pytest_status": "T-1~T-11 PASS"
-    },
-    "first_action": "비오님 차기 지시 확인",
-    "note": "S148: Context Refactor Phase 1~3 전체 완료."
+    "resume_session": 154,
+    "first_action": "RULE-5 Phase 3 재개 — F-04/07/09/11/14 HOLD 해제 여부 확인 (S155 Time-box 점검).",
+    "pending_eag": null,
+    "priority_task": "RULE-5 Phase 3 재개 (S155 Time-box 점검 후)",
+    "last_session_summary": "S154: Verifier Bridge canonicalization COMPLETE(810ef03+a7d8046). RULE-5 Phase 3 F-05/06/10/12/13 완료. FAIL 15→10건. HOLD F-04/07/09/11/14 — S155 Verifier Bridge 완료 후 재개.",
+    "verifier_bridge_status": "COMPLETE — v0.3 단일 canonical authority 확정",
+    "rule5_phase3_status": "IN_PROGRESS — F-04/07/09/11/14 HOLD(S155 Time-box)"
   },
   "shadow_pipeline": {
     "approved_by": "비오(Joshua) EAG-3",
@@ -608,7 +672,7 @@
       "disabled_reason": "evolution_score SOFT_KILL DIS-049",
       "status": "DISABLED"
     },
-    "last_session_date": "2026-05-23",
+    "last_session_date": "2026-05-25",
     "manual_steps": 2,
     "prev_session_hash": "SESSION_CONTEXT_S70_FINAL.json SHA256 기준",
     "prev_session_hash_basis": "SESSION_CONTEXT_S65_FINAL.json 파일 전체 SHA256",
@@ -623,7 +687,7 @@
     "version": "v1.0"
   },
   "system_name": "AIBA Self-Evolution-Ready System",
-  "system_version": "AIBA-v3.2-S148",
+  "system_version": "AIBA-v3.2-S154",
   "vps_state": {
     "domain": "vps.state",
     "schema_version": "phase3_shard_v1",
@@ -731,16 +795,7 @@
     "phase_3b_blocked": false,
     "reason": "S105: PT-S99-GOV-002 COMPLETE. Complexity Governance v1.0 LOCKED. Phase 3C 계속 진행 가능."
   },
-  "next_session_first_action": {
-    "priority_1": {
-      "task": "PT-S115-OBS-001",
-      "action": "Visibility Metrics 정규 운용 계속"
-    },
-    "priority_2": {
-      "task": "session_open_rules 현행화",
-      "action": "[BOOT vNext ACTIVE] 규칙 삭제 검토 — 비오 지시 시"
-    }
-  },
+  "next_session_first_action": {},
   "stability_patch_s98": {
     "quarantine_status": "TIER_D",
     "archive_ref": "SESSION_CONTEXT_ARCHIVE_TIER_D_S114.json",
@@ -1278,14 +1333,14 @@
     "status": "DEACTIVATED"
   },
   "complexity_ceiling_status": {
-    "measured_session": 148,
-    "measured_date": "2026-05-23",
-    "top_level_key_count": 59,
-    "active_canonical_key_count": 47,
+    "measured_session": 154,
+    "measured_date": "2026-05-25",
+    "top_level_key_count": 67,
+    "active_canonical_key_count": 51,
     "tier_d_quarantined_count": 12,
     "ceiling_limit": 42,
     "status": "WITHIN_LIMIT",
-    "note": "S148: Context Refactor Phase 3 완료. visibility_metrics 6→1 통합. active canonical 47개.",
+    "note": "S154: verifier_bridge_canonicalization + rule5_phase3_hold_policy 신규 키 추가. active canonical 51개.",
     "action_required": "NONE — Stabilization Observation Phase 유지",
     "tier_d_quarantine": {
       "spec_id": "TIER-D-QUARANTINE-S114-v1.0",
@@ -1537,7 +1592,7 @@
     "unknown_purpose_policy": "FAIL_CLOSED"
   },
   "sandbox_collaboration": {
-    "status": "PHASE_0_INITIATED",
+    "status": "PHASE_0_COMPLETE",
     "initiated_session": 144,
     "initiated_date": "2026-05-23",
     "architecture_ref": "domi/active/proposals/AIBA-SANDBOX-COLLAB-FINAL-S144.md",
@@ -1545,9 +1600,27 @@
     "session_boot_contract_ref": "domi/active/proposals/SESSION-BOOT-CONTRACT-S144.md",
     "current_ticket": "TKT-S144-001",
     "ticket_path": "tools/sandbox/common/current_task_ticket.json",
-    "phase": "Phase 0 — Artifact Discipline",
+    "phase": "Phase 0 — Artifact Discipline COMPLETE",
     "confirmed_finding": "single-session persona simulation 확인 → artifact-first 전환 결정",
-    "next_phase": "Phase 1 Human-Gated Dispatch (Watchdog 설계 필요)"
+    "next_phase": "Phase A — Context Gateway 설계 (PT-S150-CONTEXT-GATEWAY-ORCHESTRATION)",
+    "s150_sandbox_artifact": {
+      "file": "tools/sandbox/caddy/active/notes/task-S150-001-caddy-final_draft.md",
+      "deployed_session": 150,
+      "deployed_date": "2026-05-24",
+      "content": "3자 합의 최종안 — Context Gateway + Sandbox Orchestration 기준선",
+      "status": "DRAFT",
+      "deployed_by": "비오(Joshua)"
+    },
+    "three_agent_debate_outcome": {
+      "session": 150,
+      "consensus": "REACHED",
+      "key_decisions": [
+        "자동화 완성 전 Context Gateway 우선 확립",
+        "Step 1: SESSION_CONTEXT VPS 배포 경량 PEC 후 실행",
+        "Projection Freshness Authority 설계 필요 — glob+mtime 구조적 취약점 확인",
+        "Watchdog/Write Plane Phase B/C로 분리 보류"
+      ]
+    }
   },
   "context_refactor_direction": {
     "status": "PHASE_3_COMPLETE",
@@ -1681,5 +1754,325 @@
       "제니 TRUST_READY PASS / REVALIDATION_REQUIRED=NO",
       "SESSION_BOOT.json 업로드 규칙 불필요 판단 — 현행화 예정"
     ]
+  },
+  "visibility_metrics_s149": {
+    "session": 149,
+    "date": "2026-05-23",
+    "pytest_result": "변경 없음 (S143 기준 769 passed / 16 failed(기존부채) / 158 skipped)",
+    "M-01_active_canonical_key_count": 47,
+    "M-02_tier_d_quarantine_key_count": 12,
+    "M-03_ceiling_utilization_rate": "47/42 (ceiling 초과 유지 — 추가 Tier D migration 권고)",
+    "M-04_session_delta_size": "SMALL (governance rule 재분류 — 코드/shard 변경 없음)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S149.json ACTIVE (Tier D 변동 없음)",
+    "M-06_active_task_load": 19,
+    "M-07_stabilization_compliance": "N/A (Stabilization Mode 해제됨 S120)",
+    "chain_tip": "da21697",
+    "key_decisions": [
+      "Governance Reality Reconciliation 완료 — session_open_rules 3개 규칙 재분류",
+      "PT-S115-OBS-001 ARCHIVED — 상시 운용 절차이므로 active task 부적합",
+      "[BOOT vNext ACTIVE REV1] Project Files 기반 MANDATORY 재정의",
+      "[FRP v1.0 REV1] ARCHIVED — PRE-OUTPUT MANDATORY CHECK 대체",
+      "session_close_rules core safety invariant 유지 확인 (도미 SELF-CRITIQUE 반영)"
+    ]
+  },
+  "context_gateway": {
+    "status": "PHASE_C_COMPLETE",
+    "phase_a_completed_session": 151,
+    "phase_a_completed_date": "2026-05-24",
+    "phase_a_approved_by": "비오(Joshua) EAG-1",
+    "phase_a_jeni_trust_ready": "PASS (A-1~A-5 전항목, S151)",
+    "phase_a_pytest": "26/26 PASS",
+    "phase_a_commits": [
+      "127b3eb",
+      "0594b20",
+      "ad986a7"
+    ],
+    "deployed_files": {
+      "pointer_manager": "tools/context_gateway/pointer_manager.py",
+      "manifest_manager": "tools/context_gateway/manifest_manager.py",
+      "init": "tools/context_gateway/__init__.py",
+      "projection_builder": "tools/projection_builder.py (pointer-first + role-scoped)",
+      "setup_script": "setup_context_gateway.py"
+    },
+    "vps_artifacts": {
+      "pointer": "SESSION_CONTEXT_POINTER.json",
+      "manifest": "SESSION_CONTEXT_STALE_MANIFEST.json",
+      "canonical_session": 150,
+      "canonical_file": "SESSION_CONTEXT_S150_FINAL.json",
+      "context_hash": "6f3cbc7f8c33a593008d7556384120a2c158c5381904027df66fc65b1371922a",
+      "previous_pointer_hash": "GENESIS"
+    },
+    "design_decisions": {
+      "A1": "Pointer-first canonical load — SESSION_CONTEXT_POINTER.json 권위",
+      "A2": "Close Bundle 3-way 일치 필수 (session_count/context_hash/updated_at)",
+      "A3": "Stale Manifest = 판단 차단용 신호판. write_back Phase C로 이연",
+      "A4": "역할별 Projection — 도미/제니/캐디 필드 분화",
+      "A5": "STALE_PROJECTION 차단 — 설계확정/TRUST_READY/EAG 금지"
+    },
+    "next_phase": "ALL PHASES COMPLETE (A/B/C)",
+    "phase_b_completed_session": 152,
+    "phase_b_completed_date": "2026-05-25",
+    "phase_b_approved_by": "비오(Joshua) EAG-1 (Step1) + EAG-2 (Step2)",
+    "phase_b_jeni_trust_ready": "PASS (B-1~B-5 전항목, S152)",
+    "phase_b_pytest": "37/37 PASS",
+    "phase_b_commits": [
+      "68906eb",
+      "96967fe"
+    ],
+    "phase_b_design_decisions": {
+      "B_CORE_01": "상태 계산자 / 상태 변경자 아님",
+      "B1": "EVENT+PERIODIC HYBRID — session_open_call(Step1) + close_bundle_event+deploy_completion_call(Step2)",
+      "B2": "Freshness Authority = VPS deployed consistency state (파일명 패턴 기반 session 번호 추출)",
+      "B3": "Watchdog = STALE_MANIFEST 갱신 권한만 (freshness annotator)",
+      "B4": "STALE → blocking_flags list[str] 전파 (FRESH/STALE/UNKNOWN/DEGRADED 4-state)",
+      "B5": "단일 watchdog.py (내부 함수 분리 5개 컴포넌트)"
+    },
+    "phase_b_deployed_files": {
+      "watchdog": "tools/context_gateway/watchdog.py",
+      "manifest_manager_patch": "tools/context_gateway/manifest_manager.py (+degraded status)",
+      "test": "tests/test_context_gateway_watchdog.py"
+    },
+    "phase_b_jeni_trust_advisory": "3-트리거 독립 진입점 구조로 Deadlock 위험 해소",
+    "phase_c_completed_session": 153,
+    "phase_c_completed_date": "2026-05-25",
+    "phase_c_approved_by": "비오(Joshua) EAG",
+    "phase_c_jeni_trust_ready": "PASS (B-1~B-5, S153)",
+    "phase_c_pytest": "21/21 PASS + 43/43 PASS (RULE-6 fix 포함)",
+    "phase_c_commits": [
+      "921310e",
+      "4a4ae88"
+    ],
+    "phase_c_deployed_files": {
+      "write_tier_policy": "tools/context_gateway/write_tier_policy.py",
+      "close_bundle_validator": "tools/context_gateway/close_bundle_validator.py",
+      "context_writer": "tools/context_gateway/context_writer.py",
+      "test_write_tier_policy": "tests/test_write_tier_policy.py",
+      "test_close_bundle_validator": "tests/test_close_bundle_validator.py",
+      "test_context_writer": "tests/test_context_writer.py"
+    },
+    "phase_c_design_decisions": {
+      "C1": "Pointer write-back = context_writer 독점 / Close Bundle의 일부로만 수행",
+      "C2": "Manifest STALE→FRESH = context_writer가 Close Bundle 성공 후 수행",
+      "C3": "FINAL→POINTER→MANIFEST→3-way check 원자적 트랜잭션",
+      "C4": "Tier 1=canonical write(EAG필수) / Tier 2=non-canonical write(자율)",
+      "C5": "Phase A/B 컴포넌트 write 권한 확장 금지 — 별도 writer layer"
+    },
+    "phase_c_jeni_advisory": "Error Injection 테스트 권고 — Phase C 전면 가동 전 단계적 검증"
+  },
+  "visibility_metrics_s151": {
+    "session": 151,
+    "date": "2026-05-24",
+    "pytest_result": "26/26 PASS (test_context_gateway_pointer + test_context_gateway_manifest)",
+    "M-01_active_canonical_key_count": 48,
+    "M-02_tier_d_quarantine_key_count": 12,
+    "M-03_ceiling_utilization_rate": "48/42 (ceiling 초과 — context_gateway 신규 키 추가)",
+    "M-04_session_delta_size": "LARGE (Context Gateway Phase A 구현 + 운영 전환 — 3 commits)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S151.json ACTIVE (Tier D 변동 없음)",
+    "M-06_active_task_load": 10,
+    "M-07_stabilization_compliance": "N/A (Stabilization Mode 해제됨 S120)",
+    "chain_tip": "ad986a7",
+    "key_decisions": [
+      "Context Gateway Phase A COMPLETE — pointer_manager/manifest_manager/projection_builder 구현",
+      "SESSION_CONTEXT_POINTER.json(GENESIS)+MANIFEST(fresh) VPS 배포 완료",
+      "Domi A-2 규칙 session_close_rules 추가",
+      "context_gateway 신규 최상위 키 등록",
+      "제니 TRUST_READY PASS / REVALIDATION_REQUIRED=NO"
+    ]
+  },
+  "visibility_metrics_s152": {
+    "session": 152,
+    "date": "2026-05-25",
+    "pytest_result": "37/37 PASS (test_context_gateway_watchdog Step1+Step2)",
+    "M-01_active_canonical_key_count": 48,
+    "M-02_tier_d_quarantine_key_count": 12,
+    "M-03_ceiling_utilization_rate": "48/42 (ceiling 초과 유지 — context_gateway Phase B 키 추가)",
+    "M-04_session_delta_size": "LARGE (Phase B 설계+구현 2-Step)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S152.json ACTIVE (Tier D 변동 없음)",
+    "M-06_active_task_load": 10,
+    "M-07_stabilization_compliance": "N/A (Stabilization Mode 해제됨 S120)",
+    "chain_tip": "96967fe",
+    "key_decisions": [
+      "Context Gateway Phase B COMPLETE — watchdog.py 3-트리거 독립 구조",
+      "제니 TRUST-ADVISORY 준수 — Deadlock 위험 구조적 제거",
+      "manifest_manager.py degraded 상태 추가 (Phase A 하위호환 유지)",
+      "Phase C (Write Plane 2-tier) 다음 세션 착수 예정"
+    ]
+  },
+  "visibility_metrics_s153": {
+    "session": 153,
+    "date": "2026-05-25",
+    "pytest_result": "21/21 PASS (Phase C) + 43/43 PASS (RULE-6 fix) + 185/186 PASS (RULE-3 이동, 1건 기존부채)",
+    "M-01_active_canonical_key_count": 49,
+    "M-02_tier_d_quarantine_key_count": 12,
+    "M-03_ceiling_utilization_rate": "49/42 (ceiling 초과 — context_gateway Phase C 키 추가)",
+    "M-04_session_delta_size": "LARGE (Phase C + Code Health Phase1~2)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S152.json ACTIVE (Tier D 변동 없음)",
+    "M-06_active_task_load": 10,
+    "M-07_stabilization_compliance": "N/A (Stabilization Mode 해제됨 S120)",
+    "chain_tip": "21ba0cb",
+    "key_decisions": [
+      "Context Gateway Phase C COMPLETE — write_tier_policy/close_bundle_validator/context_writer",
+      "Code Health Phase 1 — RULE-6 fsync degraded signal 구조 수정 (#noqa 기각)",
+      "Code Health Phase 2 — RULE-3 27건 tests/ 이동 완료",
+      "Code Health Phase 3 — RULE-5 설계 목록 S154 착수 예정",
+      "제니 GOVERNANCE_BYPASS_ATTEMPT 판정 — #noqa 방식 완전 기각",
+      "Context Gateway A/B/C 전 Phase 완료"
+    ]
+  },
+  "verifier_bridge_canonicalization": {
+    "status": "COMPLETE",
+    "completed_session": 154,
+    "completed_date": "2026-05-25",
+    "phase_a_commit": "810ef03",
+    "phase_b_commit": "a7d8046",
+    "phase_c_status": "VERIFIED",
+    "canonical_verifier": "scripts/workflow/vps_verifier_bridge.py (v0.3)",
+    "legacy_verifier": "vps_verifier_bridge.py (v0.2, superseded)",
+    "jeni_trust_ready": "PASS",
+    "note": "Split-Brain 해소. 모든 활성 호출자 v0.3 단일 참조 확인."
+  },
+  "rule5_phase3_hold_policy": {
+    "status": "CANDIDATE_IDENTIFIED",
+    "established_session": 154,
+    "design_session": 155,
+    "time_box": "S155",
+    "hard_lock": false,
+    "hold_items": [
+      "F-A",
+      "F-B",
+      "F-C",
+      "F-D",
+      "F-E"
+    ],
+    "implementation_session": 156,
+    "implementation_order": [
+      "F-C",
+      "F-B",
+      "F-E",
+      "F-A",
+      "F-D"
+    ],
+    "design_ref": "DESIGN-DOMI-S155-RULE5-001",
+    "jeni_trust_ready": "PASS (5항목 전건, S155)",
+    "fail_functions": {
+      "F-A": {
+        "file": "tools/delta_context/shadow_pipeline.py",
+        "func": "run_shadow_pipeline",
+        "lines": 122
+      },
+      "F-B": {
+        "file": "tools/delta_context/index_validator.py",
+        "func": "_validate_domain",
+        "lines": 135
+      },
+      "F-C": {
+        "file": "tools/delta_context/stage0_idempotency_classifier.py",
+        "func": "classify_stage0",
+        "lines": 204
+      },
+      "F-D": {
+        "file": "tools/context_gateway/context_writer.py",
+        "func": "ContextWriter.commit",
+        "lines": 121
+      },
+      "F-E": {
+        "file": "tools/auto_loader/index_validator.py",
+        "func": "_validate_domain",
+        "lines": 135
+      }
+    },
+    "key_design_decisions": [
+      "Race condition lock: classify_stage0 전담, 서브 함수는 fail_signal dict만 반환",
+      "fsync_ok: _execute_bundle_write 내부 처리 후 fsync_warning key로 병합",
+      "F-B/F-E 독립 분리: 공통 모듈화 배제 (도메인 결합도 최소화)",
+      "Public signature 전원 유지: 호출부 변경 없음"
+    ],
+    "resume_condition": "COMPLETED",
+    "overdue_action": "N/A",
+    "candidate_status": {
+      "verification_level": "CANDIDATE",
+      "canonical_verified": false,
+      "eag_design_approved": true,
+      "eag_implementation_approved": false,
+      "blocking_condition": "enforcement_gate raw output 확보 전 구현 BLOCK",
+      "note": "도미 설계 = DESIGN_CANDIDATE. 제니 TRUST_READY = REVOKED. canonical 확보 후 재개."
+    }
+  },
+  "visibility_metrics_s154": {
+    "session": 154,
+    "date": "2026-05-25",
+    "pytest_result": "12 failed(기존부채) / 911 passed / 158 skipped",
+    "M-01_active_canonical_key_count": 51,
+    "M-02_tier_d_quarantine_key_count": 12,
+    "M-03_ceiling_utilization_rate": "51/42 (ceiling 초과 — verifier_bridge_canonicalization + rule5_phase3_hold_policy 신규 키)",
+    "M-04_session_delta_size": "LARGE (Verifier Bridge Phase A~C + RULE-5 F-05/06/10/12/13)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S154.json ACTIVE (Tier D 변동 없음)",
+    "M-06_active_task_load": 10,
+    "M-07_stabilization_compliance": "N/A (Stabilization Mode 해제됨 S120)",
+    "chain_tip": "153ce7c",
+    "key_decisions": [
+      "Verifier Bridge Split-Brain 해소 — v0.3 canonical authority 확정",
+      "RULE-5 Phase 3 F-05/06/10/12/13 완료 (FAIL 15→10건)",
+      "F-04/07/09/11/14 HOLD — S155 Time-box Hard Lock",
+      "도미+제니+캐디 3자 합의 / 비오 EAG-1 승인",
+      "SESSION_CONTEXT_ARCHIVE.json 복원 (F-12 패치 부작용 수정)"
+    ]
+  },
+  "visibility_metrics_s155": {
+    "session": 155,
+    "date": "2026-05-25",
+    "pytest_result": "S155 코드 변경 없음 — 기존 12 failed / 911 passed / 158 skipped 유지",
+    "M-01_active_canonical_key_count": 53,
+    "M-02_tier_d_quarantine_key_count": 12,
+    "M-03_ceiling_utilization_rate": "53/42 (ceiling 초과 — authority_recovery_protocol 신규 키)",
+    "M-04_session_delta_size": "MEDIUM (탐색+설계+EAG, 코드 변경 없음)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S155.json ACTIVE (Tier D 변동 없음)",
+    "M-06_active_task_load": 10,
+    "M-07_stabilization_compliance": "N/A (Stabilization Mode 해제됨 S120)",
+    "chain_tip": "153ce7c",
+    "key_decisions": [
+      "3 에이전트 VPS 접근 구조 확인 — Shared substrate 기반 multi-role sequential orchestration",
+      "actor_id ≠ independent agent 원칙 확립",
+      "RULE-5 FAIL 5건 캐디 단독 탐색 확인",
+      "도미 설계 DESIGN-DOMI-S155-RULE5-001 완성",
+      "제니 TRUST_READY PASS 5항목 전건",
+      "비오님 EAG = EAG-DESIGN (canonical 없음). eag_approved → candidate 정정.",
+      "AIBA Authority Recovery Protocol v1.0 수립 (RULE-AR-1~6)",
+      "S155 = AUDIT_PREPARATION_SESSION 재분류"
+    ]
+  },
+  "authority_recovery_protocol": {
+    "version": "v1.0",
+    "established_session": 155,
+    "established_by": "도미 [DESIGN] S155",
+    "trigger": "S155 authority escalation by narration 사건",
+    "session_mode": "AUDIT_PREPARATION_SESSION",
+    "rules": {
+      "RULE-AR-1": "Observation과 Authority 분리. 모든 결과는 반드시 [OBSERVED / CANDIDATE / PROVISIONAL / VERIFIED / CANONICAL / REVOKED] 중 하나로 분류. grep/AST/manual scan은 무조건 OBSERVED 또는 CANDIDATE만 기록 가능.",
+      "RULE-AR-2": "SESSION_CONTEXT 모든 상태 필드에 provenance 필수 (source_type / verification_level / canonical_verified / evidence_hash).",
+      "RULE-AR-3": "Canonical Authority Registry: RULE-5=enforcement_gate / pytest=pytest raw summary / deployment=git commit+VPS hash.",
+      "RULE-AR-4": "TRUST_READY 최소 조건: raw output + artifact + hash + commit id + pytest summary + deployment evidence 중 필요 항목 충족.",
+      "RULE-AR-5": "canonical mismatch / authority ambiguity / narrative escalation / SSOT contradiction 발생 시 자동 AUDIT MODE 전환. 신규 설계/구현 금지.",
+      "RULE-AR-6": "EAG 상태 계층 분리: EAG-DESIGN / EAG-CANDIDATE / EAG-IMPLEMENTATION / EAG-CANONICAL."
+    },
+    "core_lesson": "탐색은 자유롭게, 공식 상태는 엄격하게. Observation Layer와 Authority Layer 분리.",
+    "s156_precondition": "enforcement_gate --full raw output + hash 확보 → FAIL list canonical 확정 → 설계 재평가 → TRUST_READY → EAG-IMPLEMENTATION",
+    "core_principle": "탐색은 자유롭게, 공식 상태는 엄격하게.",
+    "narration_vector_warning": "언어 자체가 authority를 생성할 수 있다. 후보→확정처럼 보이는 narration 흐름 자체가 authority escalation 벡터다.",
+    "ssot_authority_definition": "SESSION_CONTEXT는 단순 기록 저장소가 아니라 권위 레이어(authority layer)다. 기록된 모든 상태는 provenance가 명시되어야 한다.",
+    "aiba_evolution_note": "S155 사건은 AIBA가 Zero-Trust Governance를 실제 운영에서 처음 체험한 사건. 실행 능력 부족 단계를 넘어 권위(authority) 통제 단계에 진입했음을 의미한다."
+  },
+  "observation_layer_registry": {
+    "status_levels": {
+      "OBSERVED": "grep / AST / manual scan 결과. 공식 상태 불가.",
+      "CANDIDATE": "OBSERVED 기반 추론. canonical verification 필요.",
+      "PROVISIONAL": "CANDIDATE 중 EAG-DESIGN 수준 승인. canonical 미확정.",
+      "VERIFIED": "canonical authority 실행 완료. hash 보유.",
+      "CANONICAL": "VERIFIED + git commit + VPS 배포 + pytest PASS.",
+      "REVOKED": "이전 상태가 취소됨. 재검증 필요."
+    },
+    "rule5_current_level": "CANDIDATE",
+    "enforcement_gate_required_for": "PROVISIONAL → VERIFIED 전환",
+    "established_session": 155
   }
 }

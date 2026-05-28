@@ -1,0 +1,10 @@
+{
+  "snapshot_id": "MCP-WRITE-SNAP-102B3E94D944",
+  "target_path": "/opt/arss/engine/arss-protocol/tools/sandbox/e2e_test_s142.txt",
+  "created_at": "2026-05-19T11:10:10.819553+00:00",
+  "hash_algorithm": "SHA-256",
+  "hash_before": null,
+  "content_before": null,
+  "approval_id": "EAG-WRITE-20260519110945-5B8AD83F",
+  "write_token_id": "WRITE-TOKEN-4E50E9E79AC64D3ABBE83010A15F659B"
+}

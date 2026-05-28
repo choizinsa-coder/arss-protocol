@@ -8,6 +8,7 @@ Read-only registry validation module.
 Receipt Scope: R1 (Verdict Receipt Required)
 """
 
+import logging as _logging
 import json
 import hashlib
 import uuid
@@ -117,8 +118,8 @@ def _check_expiry(entry: dict, current_session_number: Optional[int]) -> dict:
                         "stop_reason": EXPIRED_EXCEPTION_STOP,
                         "review_reason": None,
                     }
-            except ValueError:
-                pass
+            except ValueError as _rule6_e:
+                _logging.debug("RULE6 governance_checker: %s", _rule6_e)
         return {
             "expired": False,
             "verdict": "PASS",

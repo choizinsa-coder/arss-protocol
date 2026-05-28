@@ -4,6 +4,7 @@ AIBA SANDBOX Write Validator — Layer 2 (L2-3, L2-7)
 SSOT: BRIEFING-DOMI-S142-DESIGN-REQUEST-FINAL
 """
 
+import logging as _logging
 import os
 import re
 import mimetypes
@@ -261,8 +262,8 @@ def validate_write(
         try:
             real.relative_to(TMP_PATH)
             return ValidationResult(False, 403, "SAFE_PASS_DENIED\nREASON=TMP_PATH_EXCLUDED")
-        except ValueError:
-            pass
+        except ValueError as _rule6_e:
+            _logging.debug("RULE6 sandbox_validator: %s", _rule6_e)
 
     # ── Step 12: write 허용 ─────────────────────────────────────────────
     return ValidationResult(True, 200, "ALLOW")
@@ -297,8 +298,8 @@ def check_safe_pass_batch(
         try:
             Path(os.path.realpath(path_str)).relative_to(TMP_PATH)
             return ValidationResult(False, 403, "SAFE_PASS_DENIED\nREASON=TMP_PATH_EXCLUDED")
-        except ValueError:
-            pass
+        except ValueError as _rule6_e:
+            _logging.debug("RULE6 sandbox_validator: %s", _rule6_e)
         # sandbox 내부 여부
         try:
             Path(os.path.realpath(path_str)).relative_to(SANDBOX_ROOT)

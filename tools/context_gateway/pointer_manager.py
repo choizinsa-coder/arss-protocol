@@ -9,6 +9,7 @@ SSOT: Domi Phase A Design / EAG-1 Approved (S151)
   - glob/mtime 방식 대체
 """
 
+import logging as _logging
 import json
 import hashlib
 from datetime import datetime, timezone, timedelta
@@ -215,8 +216,8 @@ def load_canonical_context(fallback_glob: bool = True) -> tuple[Optional[dict], 
                     try:
                         with open(context_path, "r", encoding="utf-8") as f:
                             return json.load(f), "POINTER"
-                    except Exception:
-                        pass
+                    except Exception as _rule6_e:
+                        _logging.debug("RULE6 pointer_manager: %s", _rule6_e)
 
     # Pointer 실패 → glob fallback
     if fallback_glob:
@@ -229,7 +230,7 @@ def load_canonical_context(fallback_glob: bool = True) -> tuple[Optional[dict], 
             if candidates:
                 with open(candidates[0], "r", encoding="utf-8") as f:
                     return json.load(f), "GLOB_FALLBACK"
-        except Exception:
-            pass
+        except Exception as _rule6_e:
+            _logging.debug("RULE6 pointer_manager: %s", _rule6_e)
 
     return None, "NONE"

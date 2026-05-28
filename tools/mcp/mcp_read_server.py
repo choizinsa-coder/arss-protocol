@@ -12,6 +12,7 @@ Version: 1.0.0
 - READ capability must not become operational steering capability
 """
 
+import logging as _logging
 import os
 import re
 import json
@@ -122,7 +123,8 @@ def _validate_path(path: Path, allowed_roots: list[Path], max_depth: int) -> Pat
             if len(rel.parts) > max_depth:
                 raise DenyResult("PATH_DEPTH_EXCEEDED")
             break
-        except ValueError:
+        except ValueError as _rule6_e:
+            _logging.debug("RULE6 mcp_read_server: %s", _rule6_e)
             continue
 
     # 금지 패턴 확인
@@ -330,7 +332,8 @@ class ReadOnlyServer:
                             results.append({"file": str(f), "line": i, "text": line})
                             if len(results) >= max_results:
                                 break
-                except Exception:
+                except Exception as _rule6_e:
+                    _logging.debug("RULE6 mcp_read_server: %s", _rule6_e)
                     continue
                 if len(results) >= max_results:
                     break

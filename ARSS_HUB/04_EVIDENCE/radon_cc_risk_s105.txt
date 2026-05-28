@@ -1,0 +1,91 @@
+aiba_status_server.py.bak_s95
+    F 329:0 rpu_issue - F (49)
+vps_verifier_bridge.py
+    F 138:0 verify_production_chain - D (28)
+aiba_status_server.py
+    F 338:0 rpu_issue - F (49)
+aiba_status_server.py.bak_wrapper_prepatch
+    F 322:0 rpu_issue - F (49)
+tests/test_boundary_enforcement_validator.py
+    ERROR: 'utf-8' codec can't decode byte 0xca in position 1959: invalid continuation byte
+tests/test_generation_pipeline_phase2.py
+    F 105:0 test_tc1_pipeline_success_runtime_first - C (11)
+tools/rpu_atomic_issuer.py
+    F 674:0 rollback - C (15)
+    F 734:0 main - C (12)
+    F 81:0 step0_precondition - C (11)
+    F 308:0 step5_machine_pec - C (11)
+tools/arss_gatekeeper.py
+    F 97:0 validate - D (25)
+tools/auto_loader/source_adapter.py
+    F 90:0 valid_source_ref - C (11)
+tools/auto_loader/activation_runner.py
+    M 81:4 ActivationRunner._validate_token - C (13)
+tools/auto_loader/auto_loader.py
+    M 97:4 AutoLoader._validate - C (12)
+tools/auto_loader/index_validator.py
+    F 73:0 _validate_domain - D (24)
+tools/delta_context/phase2_validator.py
+    F 58:0 check_source_collapse - C (19)
+tools/delta_context/shadow_pipeline.py
+    F 38:0 run_shadow_pipeline - E (35)
+tools/delta_context/tx_recovery.py
+    F 64:0 step4_validate - C (12)
+tools/delta_context/stage0_idempotency_classifier.py
+    F 143:0 classify_stage0 - E (34)
+tools/delta_context/divergence_recorder.py
+    F 152:0 get_divergence_summary - C (11)
+tools/delta_context/index_validator.py
+    F 73:0 _validate_domain - D (24)
+tools/governance/governance_checker.py
+    F 74:0 _check_expiry - C (13)
+tools/eps_v1_3_d/baseline_selector.py
+    F 39:0 select_last_known_good_receipt - C (11)
+tools/eps_v1_3_d/verification_receipt.py
+    F 51:0 write_verification_receipt - C (19)
+tools/task_structure/migration_validator.py
+    F 25:0 validate - D (26)
+tools/code_health/principle_validator.py
+    F 233:0 check_rule7_mutation_explicitness - C (18)
+    F 211:0 _has_state_mutation_ast - C (16)
+    F 37:0 check_rule2_imports - C (13)
+    F 107:0 check_rule4_version_declaration - C (12)
+tools/session_context_gen/recovery_manager.py
+    F 46:0 validate_r1_package_integrity - C (16)
+tools/session_context_gen/phase2_receipt_emitter.py
+    F 115:0 validate_receipt - C (17)
+tools/session_context_gen/state_events_normalizer.py
+    F 17:0 normalize_events - C (11)
+tools/session_context_gen/boot_generator.py.bak_s87
+    F 139:0 generate - C (15)
+tools/session_context_gen/boundary_enforcement_validator.py
+    F 24:0 validate_agent_boundaries - D (21)
+tools/session_context_gen/boot_generator.py
+    F 138:0 generate - C (15)
+tools/session_context_gen/phase2_status_update.py
+    F 94:0 validate_status_update_package - C (13)
+tools/session_context_gen/baseline_selector.py
+    F 52:0 select_baseline - C (17)
+tools/session_context_gen/pair_validator.py
+    F 14:0 validate_boot_runtime_pair - C (15)
+tools/session_context_gen/contract_validator.py
+    F 73:0 validate_boot_contract - C (17)
+    F 196:0 validate_pair_contract - C (14)
+tools/session_context_gen/generation_pipeline.py
+    F 124:0 run_pipeline - C (17)
+tools/session_context_gen/boot_validator.py
+    F 76:0 validate_and_mutate_state - D (30)
+tools/session_context_gen/tests/test_state_events_normalizer.py
+    F 7:0 test_T6_normalization_zero_data_loss - C (15)
+scripts/workflow/vps_verifier_bridge.py
+    F 138:0 verify_production_chain - D (28)
+    F 435:0 verify_with_candidate - C (16)
+scripts/workflow/trs_v1.py
+    F 30:0 recompute - C (15)
+scripts/workflow/vps_verifier_bridge.py.bak_20260407
+    F 136:0 verify_production_chain - D (28)
+reference-verifier/src/verifier.py
+    F 84:0 verify_chain - C (18)
+reference-generator/src/arss_generator_v1.py
+    F 187:0 verify_rpu - C (13)
+    F 20:0 canonical_json - C (11)

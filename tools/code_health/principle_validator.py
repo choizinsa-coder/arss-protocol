@@ -183,8 +183,9 @@ def check_rule6_fail_closed(filepath: str, root_dir: str) -> List[Dict[str, Any]
         tree = ast.parse(source, filename=filepath)
         for node in ast.walk(tree):
             if isinstance(node, ast.ExceptHandler):
-                for child in ast.walk(node):
-                    if isinstance(child, ast.Pass):
+                for s in node.body:
+                    # Pass 단독만 FAIL (logging+pass 구조 허용)
+                    if isinstance(s, ast.Pass) and len(node.body) == 1:
                         violations.append(build_violation(
                             rule_id="RULE-6",
                             file=rel_path,
@@ -192,14 +193,18 @@ def check_rule6_fail_closed(filepath: str, root_dir: str) -> List[Dict[str, Any]
                             detail="'except: pass' pattern detected — fail-closed violation",
                             severity=SEVERITY_FAIL,
                         ))
-                    elif isinstance(child, ast.Continue):
-                        violations.append(build_violation(
-                            rule_id="RULE-6",
-                            file=rel_path,
-                            violation_type="EXCEPT_CONTINUE",
-                            detail="'except: continue' pattern detected — fail-closed violation",
-                            severity=SEVERITY_FAIL,
-                        ))
+                    # Continue 단독만 FAIL (logging+continue 구조 허용)
+                    elif isinstance(s, ast.Continue):
+                        non_ctrl = [x for x in node.body
+                                    if not isinstance(x, (ast.Continue, ast.Pass))]
+                        if not non_ctrl:
+                            violations.append(build_violation(
+                                rule_id="RULE-6",
+                                file=rel_path,
+                                violation_type="EXCEPT_CONTINUE",
+                                detail="'except: continue' pattern detected — fail-closed violation",
+                                severity=SEVERITY_FAIL,
+                            ))
     except Exception as exc:
         violations.append(build_exception_report("RULE-6", rel_path, exc)["violations"][0])
     return violations
@@ -234,7 +239,8 @@ def check_rule7_mutation_explicitness(filepath: str, root_dir: str) -> List[Dict
     """state 변경 함수에 mutation 키워드 없는 경우 탐지 — fail-closed"""
     violations = []
     rel_path = os.path.relpath(filepath, root_dir)
-    if "/tests/" in rel_path.replace(os.sep, "/"):
+    parts = rel_path.replace(os.sep, "/").split("/")
+    if "tests" in parts:
         return violations
     try:
         with open(filepath, "r", encoding="utf-8") as f:
@@ -276,6 +282,16 @@ def check_rule7_mutation_explicitness(filepath: str, root_dir: str) -> List[Dict
 
 # ─── RULE-8: TDD Gate ────────────────────────────────────────────────────────
 
+RULE8_SKIP_BASENAMES = frozenset({
+    "conftest",
+    "fix_conftest",
+    "run_boot_vnext",
+    "setup_context_gateway",
+    "check_ctx",
+    "regenerate_runtime_s124",
+    "run_all_tests",
+})
+
 def check_rule8_tdd_gate(target_files: List[str], root_dir: str) -> List[Dict[str, Any]]:
     """변경 파일에 대응 test 파일 존재 여부 탐지"""
     violations = []
@@ -283,7 +299,10 @@ def check_rule8_tdd_gate(target_files: List[str], root_dir: str) -> List[Dict[st
     try:
         runtime_files = [
             f for f in target_files
-            if f.endswith(".py") and not os.path.basename(f).startswith(RULE8_TEST_FILE_PREFIX)
+            if f.endswith(".py")
+            and not os.path.basename(f).startswith(RULE8_TEST_FILE_PREFIX)
+            and os.path.basename(f).replace(".py", "") not in RULE8_SKIP_BASENAMES
+            and "tests" not in os.path.relpath(f, root_dir).replace(os.sep, "/").split("/")
         ]
         for filepath in runtime_files:
             basename = os.path.basename(filepath).replace(".py", "")

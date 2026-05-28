@@ -1,0 +1,10 @@
+{
+  "containment_active": false,
+  "trigger_id": "HC-T-04",
+  "entered_at": "2026-05-15T07:08:01+09:00",
+  "incident_id": "HC-INC-9916F2FF",
+  "recovery_status": "RELEASED",
+  "status_updated_at": "2026-05-16T11:50:18+09:00",
+  "observation_entered_at": "2026-05-16T11:50:18+09:00",
+  "released_at": "2026-05-16T11:50:18+09:00"
+}

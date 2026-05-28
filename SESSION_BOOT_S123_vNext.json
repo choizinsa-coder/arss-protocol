@@ -1,0 +1,68 @@
+{
+  "boot_meta": {
+    "schema_version": "vnext-1.0",
+    "boot_id": "BOOT-S122",
+    "generated_session": 122,
+    "runtime_pair_hash": "dccec82e2b4e2a868a2688d0955d1d842610e70e95b03aa4a04e9cb41ef18e80",
+    "authority_mode": "STABILIZATION",
+    "boot_generation_mode": "POLICY_DRIVEN_VNEXT"
+  },
+  "canonical_governance": {
+    "governance_mode": {
+      "_ref_class": "GOVERNANCE",
+      "value": "DEP_V1_2"
+    },
+    "active_constraints": [
+      "FAIL_CLOSED",
+      "EAG_ORDERING",
+      "SSOT_PRIORITY"
+    ],
+    "approved_authority_layers": {
+      "_ref_class": "GOVERNANCE",
+      "value": [
+        "L1",
+        "L2",
+        "L3",
+        "L4"
+      ]
+    },
+    "enforcement_state": "active",
+    "canonical_priority": [
+      "SESSION_CONTEXT",
+      "SSOI",
+      "INTERPRETATION_RULE"
+    ]
+  },
+  "operational_awareness": {
+    "saturation_level": "WITHIN_LIMIT",
+    "threshold_visibility": {
+      "TRG_04": 68,
+      "TRG_05": 82
+    },
+    "operational_pressure": "42",
+    "observability_state": "M01_M07_ACTIVE"
+  },
+  "dependency_visibility": {
+    "retrieval_mode": {
+      "_ref_class": "DEPENDENCY",
+      "value": "v1.1"
+    },
+    "dependency_risk_level": "STANDARD",
+    "approved_reference_classes": {
+      "_ref_class": "DEPENDENCY",
+      "value": [
+        "CLASS-A",
+        "CLASS-B"
+      ]
+    },
+    "unresolved_dependency_state": "NONE"
+  },
+  "historical_reference": {
+    "tier_d_reference": {
+      "_ref_class": "HISTORICAL",
+      "value": "SESSION_CONTEXT_ARCHIVE_TIER_D_S114.json"
+    },
+    "historical_anchor_hash": "eeffbe715b4877158529339fc7b6487af6a384adc0a261ba58f2413e13be9ecd",
+    "archive_visibility": "POINTER_ONLY"
+  }
+}

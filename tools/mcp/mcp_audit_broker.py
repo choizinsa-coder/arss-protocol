@@ -13,6 +13,7 @@ EAG:   EAG-2 비오(Joshua) 승인 (S128) / EAG-3 비오(Joshua) 승인 (S130)
 import hashlib
 import json
 import logging
+_logging = logging
 import os
 import queue
 import sys
@@ -100,7 +101,8 @@ class AuditBroker:
                     self._logger.error("AUDIT_WRITE_ERROR: %s", exc)
                 finally:
                     confirmed.set()
-            except queue.Empty:
+            except queue.Empty as _rule6_e:
+                _logging.debug("RULE6 mcp_audit_broker: %s", _rule6_e)
                 continue
             except Exception as exc:
                 self._logger.error("AUDIT_BROKER_WORKER_ERROR: %s", exc)
@@ -120,8 +122,8 @@ def _trigger_hct05() -> None:
         # 순환 import 방지: 런타임 import
         from mcp_containment_state import enter_containment
         enter_containment("HC-T-05")
-    except Exception:
-        pass
+    except Exception as _rule6_e:
+        _logging.debug("RULE6 mcp_audit_broker: %s", _rule6_e)
 
 
 def write_audit(agent_id, requested_shard, returned_scope, decision, reason,
@@ -178,6 +180,6 @@ def read_audit_log(log_path=None):
             if line:
                 try:
                     records.append(json.loads(line))
-                except json.JSONDecodeError:
-                    pass
+                except json.JSONDecodeError as _rule6_e:
+                    _logging.debug("RULE6 mcp_audit_broker: %s", _rule6_e)
     return records

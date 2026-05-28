@@ -92,6 +92,9 @@ RULE7_READONLY_PREFIXES = [
     "_load_", "_get_", "_validate_", "_check_", "_verify_",
     "test_", "_make_", "_base_", "_setup", "_ctx",
     "step", "main", "run", "execute", "emit",
+    # S160: false positive — HTTP handler / F-A/F-C 분해 서브함수 / final_ack
+    "do_", "_fail_", "_run_", "_detect_", "classify_", "generate_",
+    "_execute_", "final_",
 ]
 
 # RULE-7: 생성자 예외 (Constructor Exception)

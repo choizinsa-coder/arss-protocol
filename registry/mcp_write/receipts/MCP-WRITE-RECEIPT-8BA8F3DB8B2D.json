@@ -1,0 +1,23 @@
+{
+  "schema": "MCP_WRITE_RESULT_RECEIPT_v1",
+  "receipt_id": "MCP-WRITE-RECEIPT-8BA8F3DB8B2D",
+  "event_id": "06db84d2ed6c49329a3c88ccb9fb308a",
+  "approval_id": "EAG-WRITE-20260519110945-5B8AD83F",
+  "write_token_id": "WRITE-TOKEN-4E50E9E79AC64D3ABBE83010A15F659B",
+  "created_at": "2026-05-19T11:10:10.820510+00:00",
+  "actor": "caddy",
+  "target_path": "/opt/arss/engine/arss-protocol/tools/sandbox/e2e_test_s142.txt",
+  "operation": "WRITE",
+  "result": "PASS",
+  "status": "PENDING_BEO_REVIEW",
+  "hash_algorithm": "SHA-256",
+  "expected_content_hash": "8cd44a43427f635ab20f356552d333239bdbed2c451449fd0261d6aaff95cab8",
+  "actual_content_hash": "8cd44a43427f635ab20f356552d333239bdbed2c451449fd0261d6aaff95cab8",
+  "hash_match": true,
+  "hash_before": null,
+  "hash_after": "8cd44a43427f635ab20f356552d333239bdbed2c451449fd0261d6aaff95cab8",
+  "snapshot_id": "MCP-WRITE-SNAP-102B3E94D944",
+  "audit_event_id": "06db84d2ed6c49329a3c88ccb9fb308a",
+  "fc_tier": "NONE",
+  "failure_reason": null
+}

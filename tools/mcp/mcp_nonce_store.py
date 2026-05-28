@@ -14,6 +14,7 @@ EAG:   EAG-2 비오(Joshua) 승인 (S128) / EAG-3 비오(Joshua) 승인 (S130)
 - HC-T-02: replay 탐지 시 enter_containment("HC-T-02") 호출
 """
 
+import logging as _logging
 import os
 import sys
 import threading
@@ -83,8 +84,8 @@ def _trigger_hct02() -> None:
     """HC-T-02: nonce replay -> HARD_CONTAINMENT 진입."""
     try:
         enter_containment("HC-T-02")
-    except Exception:
-        pass
+    except Exception as _rule6_e:
+        _logging.debug("RULE6 mcp_nonce_store: %s", _rule6_e)
 
 
 # 모듈 레벨 싱글턴

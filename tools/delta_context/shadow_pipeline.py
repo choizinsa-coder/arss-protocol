@@ -438,102 +438,12 @@ def _run_phase2_validation(
 
 
 # ---------------------------------------------------------------------------
-# Orchestrator
+# Orchestrator helpers (S160 2nd decomposition)
 # ---------------------------------------------------------------------------
-def run_shadow_pipeline(
-    session_number,
-    delta_requests,
-    generated_at,
-    ssot_payload_provider=None,
+def _initialize_shadow_pipeline_context(
+    session_number, written_deltas, generated_at, ssot_payload_provider
 ):
-    """
-    Shadow Mode session close pipeline.
-
-    Returns:
-        {"success": True, "commit_id": str, "delta_count": int, ...}
-        {"success": False, "hard_stop": True, "reason": str, "stage": str}
-    """
-    # Stage 0
-    gate_result = _run_pre_delta_gate(session_number, delta_requests, generated_at)
-    if not gate_result["success"]:
-        _gate_fail = {
-            "success":   False,
-            "hard_stop": True,
-            "reason":    gate_result["reason"],
-            "stage":     gate_result.get("pipeline_stage", "PRE_DELTA_IDEMPOTENCY_GATE"),
-        }
-        if "state" in gate_result:
-            _gate_fail["state"] = gate_result["state"]
-        if "hash_check" in gate_result:
-            _gate_fail["hash_check"] = gate_result["hash_check"]
-        return _gate_fail
-    if gate_result["gate_status"] == "ALLOW_ALREADY_COMPLETED":
-        return {
-            "success": True,
-            "reason":  "ALREADY_COMPLETED",
-            "stage":   "PRE_DELTA_IDEMPOTENCY_GATE",
-        }
-
-    # Stage 1+2
-    write_result = _execute_delta_write_pipeline(
-        session_number=session_number,
-        delta_requests=delta_requests,
-        generated_at=generated_at,
-        stage0_metadata=gate_result["stage0_metadata"],
-    )
-    if not write_result["success"]:
-        return {
-            "success":    False,
-            "hard_stop":  True,
-            "reason":     write_result["reason"],
-            "stage":      str(write_result["stage"]),
-            "failed_req": write_result.get("failed_req"),
-            "quarantine": write_result.get("quarantine"),
-            "message":    write_result.get("message"),
-        }
-    written_deltas = write_result["delta_results"]
-    delta_count    = write_result["delta_count"]
-
-    # Stage 3~6
-    tx_result = _execute_transaction_commit_flow(
-        session_number=session_number,
-        delta_count=delta_count,
-        delta_results=written_deltas,
-        index_update_results=write_result["index_update_results"],
-        generated_at=generated_at,
-    )
-    if not tx_result["success"]:
-        return {
-            "success":   False,
-            "hard_stop": True,
-            "reason":    tx_result["reason"],
-            "stage":     str(tx_result["stage"]),
-        }
-    tx_id     = tx_result["tx_id"]
-    commit_id = tx_result["commit_id"]
-
-    # Stage 6.5
-    meta_result = _register_commit_metadata(
-        tx_id=tx_id,
-        commit_id=commit_id,
-        delta_count=delta_count,
-        generated_at=generated_at,
-    )
-    if not meta_result["success"]:
-        result = {
-            "success":         False,
-            "hard_stop":       True,
-            "reason":          meta_result["reason"],
-            "stage":           "6.5",
-            "commit_id":       meta_result.get("commit_id"),
-            "delta_count":     meta_result.get("delta_count"),
-            "rollback_status": meta_result.get("rollback_status"),
-        }
-        if meta_result.get("rollback_status") == "ROLLBACK_FAILED":
-            result["state_risk"] = "UNSAFE_PARTIAL_MUTATION"
-        return result
-
-    # Stage 7: ssot_payload 준비
+    """ssot_payload_provider 초기화 및 ssot_payload 생성."""
     if ssot_payload_provider is None:
         from tools.delta_context.ssot_time_payload_provider import provide as _default_provider
         ssot_payload_provider = _default_provider
@@ -551,28 +461,93 @@ def run_shadow_pipeline(
             "stage":     "PHASE2_VALIDATION",
             "error":     str(e),
         }
+    return {"success": True, "ssot_payload": ssot_payload}
 
-    phase2_result = _run_phase2_validation(
-        session_number=session_number,
-        commit_id=commit_id,
-        delta_count=delta_count,
+
+def _execute_shadow_pipeline_stages(session_number, delta_requests, generated_at):
+    """Stage 0~6.5 실행. fail-closed propagation만 담당, 판단 로직 없음."""
+    # Stage 0
+    gate_result = _run_pre_delta_gate(session_number, delta_requests, generated_at)
+    if not gate_result["success"]:
+        fail = {
+            "success":   False, "hard_stop": True,
+            "reason":    gate_result["reason"],
+            "stage":     gate_result.get("pipeline_stage", "PRE_DELTA_IDEMPOTENCY_GATE"),
+        }
+        if "state" in gate_result:
+            fail["state"] = gate_result["state"]
+        if "hash_check" in gate_result:
+            fail["hash_check"] = gate_result["hash_check"]
+        return fail
+    if gate_result["gate_status"] == "ALLOW_ALREADY_COMPLETED":
+        return {"success": True, "already_completed": True}
+
+    # Stage 1+2
+    write_result = _execute_delta_write_pipeline(
+        session_number=session_number, delta_requests=delta_requests,
+        generated_at=generated_at, stage0_metadata=gate_result["stage0_metadata"],
+    )
+    if not write_result["success"]:
+        return {
+            "success":    False, "hard_stop":  True,
+            "reason":     write_result["reason"], "stage": str(write_result["stage"]),
+            "failed_req": write_result.get("failed_req"),
+            "quarantine": write_result.get("quarantine"),
+            "message":    write_result.get("message"),
+        }
+    written_deltas = write_result["delta_results"]
+    delta_count    = write_result["delta_count"]
+
+    # Stage 3~6
+    tx_result = _execute_transaction_commit_flow(
+        session_number=session_number, delta_count=delta_count,
         delta_results=written_deltas,
-        ssot_payload=ssot_payload,
+        index_update_results=write_result["index_update_results"],
         generated_at=generated_at,
     )
+    if not tx_result["success"]:
+        return {"success": False, "hard_stop": True,
+                "reason": tx_result["reason"], "stage": str(tx_result["stage"])}
+
+    # Stage 6.5
+    meta_result = _register_commit_metadata(
+        tx_id=tx_result["tx_id"], commit_id=tx_result["commit_id"],
+        delta_count=delta_count, generated_at=generated_at,
+    )
+    if not meta_result["success"]:
+        result = {
+            "success": False, "hard_stop": True,
+            "reason": meta_result["reason"], "stage": "6.5",
+            "commit_id": meta_result.get("commit_id"),
+            "delta_count": meta_result.get("delta_count"),
+            "rollback_status": meta_result.get("rollback_status"),
+        }
+        if meta_result.get("rollback_status") == "ROLLBACK_FAILED":
+            result["state_risk"] = "UNSAFE_PARTIAL_MUTATION"
+        return result
+
+    return {
+        "success": True, "already_completed": False,
+        "tx_id": tx_result["tx_id"], "commit_id": tx_result["commit_id"],
+        "delta_count": delta_count, "written_deltas": written_deltas,
+    }
+
+
+def _finalize_shadow_pipeline_result(
+    phase2_result, commit_id, tx_id, delta_count, generated_at
+):
+    """phase2 결과 기반 최종 반환 dict 조립."""
     if not phase2_result["success"]:
-        _p2_fail = {
-            "success":   False,
-            "hard_stop": True,
-            "reason":    phase2_result["reason"],
-            "stage":     str(phase2_result["stage"]),
+        fail = {
+            "success": False, "hard_stop": True,
+            "reason": phase2_result["reason"],
+            "stage":  str(phase2_result["stage"]),
         }
         if "missing" in phase2_result:
-            _p2_fail["missing"] = phase2_result["missing"]
+            fail["missing"] = phase2_result["missing"]
         if "field" in phase2_result:
-            _p2_fail["field"] = phase2_result["field"]
-        return _p2_fail
-
+            fail["field"] = phase2_result["field"]
+        return fail
     return {
         "success":         True,
         "commit_id":       commit_id,
@@ -584,3 +559,60 @@ def run_shadow_pipeline(
         "divergence_id":   phase2_result["divergence_id"],
         "phase3_blocked":  phase2_result["phase3_blocked"],
     }
+
+
+# ---------------------------------------------------------------------------
+# Orchestrator
+# ---------------------------------------------------------------------------
+def run_shadow_pipeline(
+    session_number,
+    delta_requests,
+    generated_at,
+    ssot_payload_provider=None,
+):
+    """
+    Shadow Mode session close pipeline.
+
+    Returns:
+        {"success": True, "commit_id": str, "delta_count": int, ...}
+        {"success": False, "hard_stop": True, "reason": str, "stage": str}
+    """
+    stage_result = _execute_shadow_pipeline_stages(
+        session_number=session_number,
+        delta_requests=delta_requests,
+        generated_at=generated_at,
+    )
+    if not stage_result["success"]:
+        return stage_result
+    if stage_result.get("already_completed"):
+        return {
+            "success": True,
+            "reason":  "ALREADY_COMPLETED",
+            "stage":   "PRE_DELTA_IDEMPOTENCY_GATE",
+        }
+
+    ctx_result = _initialize_shadow_pipeline_context(
+        session_number=session_number,
+        written_deltas=stage_result["written_deltas"],
+        generated_at=generated_at,
+        ssot_payload_provider=ssot_payload_provider,
+    )
+    if not ctx_result["success"]:
+        return ctx_result
+
+    phase2_result = _run_phase2_validation(
+        session_number=session_number,
+        commit_id=stage_result["commit_id"],
+        delta_count=stage_result["delta_count"],
+        delta_results=stage_result["written_deltas"],
+        ssot_payload=ctx_result["ssot_payload"],
+        generated_at=generated_at,
+    )
+
+    return _finalize_shadow_pipeline_result(
+        phase2_result=phase2_result,
+        commit_id=stage_result["commit_id"],
+        tx_id=stage_result["tx_id"],
+        delta_count=stage_result["delta_count"],
+        generated_at=generated_at,
+    )

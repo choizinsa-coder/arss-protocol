@@ -113,18 +113,18 @@
       }
     },
     "test_s71": {
-      "delta_count": 62,
+      "delta_count": 132,
       "latest_content_hash": "193e42f4364b763cac8c6ae1b25b9c1f057be2a2862ff74d39247c1f2115172f",
       "latest_delta_id": "DELTA-S9006-TEST_S71-0001",
       "latest_summary": {
         "event_type": "agent_focus_updated",
-        "generated_at": "2026-05-09T11:54:50.107+09:00",
+        "generated_at": "2026-05-28T16:37:49.563+09:00",
         "target_key": "agent_focus"
       },
       "sessions": {}
     }
   },
-  "last_updated": "2026-05-09T11:54:50.107+09:00",
+  "last_updated": "2026-05-28T16:37:49.563+09:00",
   "schema_version": "1.0",
   "transactions": [
     {

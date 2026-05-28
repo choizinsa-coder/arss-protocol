@@ -10,6 +10,7 @@ v1.2.0 (S141): NORMAL → RECOVERY_MODE 조건부 전이 추가
   - 도미 S141-002 설계 + 제니 TRUST_READY PASS(T-1~T-6) + EAG-2 비오(Joshua) 승인
 """
 
+import logging as _logging
 import hashlib
 import json
 import os
@@ -164,7 +165,8 @@ class MCP_WriteGatekeeper:
                 if r.get("status") == "PENDING_BEO_REVIEW":
                     r["_file_path"] = fpath
                     unconfirmed.append(r)
-            except Exception:
+            except Exception as _rule6_e:
+                _logging.debug("RULE6 mcp_write_gatekeeper: %s", _rule6_e)
                 continue
 
         if not unconfirmed:
@@ -540,8 +542,8 @@ class MCP_WriteGatekeeper:
                     expected_content_hash, actual_content_hash,
                     "FAIL", fc.tier, fc.reason,
                 )
-            except Exception:
-                pass
+            except Exception as _rule6_e:
+                _logging.debug("RULE6 mcp_write_gatekeeper: %s", _rule6_e)
 
         audit_event = {
             "event_id": event_id,
@@ -560,8 +562,8 @@ class MCP_WriteGatekeeper:
         }
         try:
             self._append_audit(audit_event)
-        except FailClosedError:
-            pass
+        except FailClosedError as _rule6_e:
+            _logging.debug("RULE6 mcp_write_gatekeeper: %s", _rule6_e)
 
     # ── Recovery (비오님 전용) ─────────────────────────────────────────
 

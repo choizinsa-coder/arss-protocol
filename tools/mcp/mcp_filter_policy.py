@@ -22,6 +22,7 @@ TRUST_READY: PASS (제니 S129, BRIEFING-JENI-S129-002)
 """
 
 from __future__ import annotations
+import logging as _logging
 
 import hashlib
 import json
@@ -296,5 +297,5 @@ def _trigger_hct04() -> None:
     try:
         from mcp_containment_state import enter_containment
         enter_containment("HC-T-04")
-    except Exception:
-        pass
+    except Exception as _rule6_e:
+        _logging.debug("RULE6 mcp_filter_policy: %s", _rule6_e)

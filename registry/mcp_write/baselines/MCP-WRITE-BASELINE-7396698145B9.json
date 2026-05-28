@@ -1,0 +1,20 @@
+{
+  "schema": "MCP_WRITE_SANDBOX_BASELINE_v1",
+  "baseline_id": "MCP-WRITE-BASELINE-7396698145B9",
+  "created_at": "2026-05-19T11:10:10.820223+00:00",
+  "scope": [
+    "/opt/arss/engine/arss-protocol/tools/sandbox/",
+    "/opt/arss/engine/arss-protocol/tools/tmp/",
+    "/opt/arss/engine/arss-protocol/tests/sandbox/"
+  ],
+  "file_count": 1,
+  "files": [
+    {
+      "path": "/opt/arss/engine/arss-protocol/tools/sandbox/e2e_test_s142.txt",
+      "hash_algorithm": "SHA-256",
+      "hash": "8cd44a43427f635ab20f356552d333239bdbed2c451449fd0261d6aaff95cab8",
+      "size_bytes": 66
+    }
+  ],
+  "baseline_hash": "80ec7ba39d51a525f0c040cdd6271e6fbd1bbcd04ff767486d872aab85c128b3"
+}
