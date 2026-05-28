@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-ACTIVE_VERSION = "1.0.0"
+ACTIVE_VERSION = "1.1.0"
 VERSION_STATUS = "active"
 """
 vps_verifier_bridge.py
-ARSS VPS Production Chain Verifier — Bridge v0.2
+ARSS VPS Production Chain Verifier — Bridge v0.3
+Refactored for RULE-5 compliance per BRIEFING-DOMI-S159-VL2VL3-001 (S159, EAG approved)
 
 Purpose:
     Verify the production RPU chain stored at VPS
@@ -132,6 +133,152 @@ def load_ledger(chain_dir: Path) -> dict:
 
 
 # ─────────────────────────────────────────────
+# VL-2 decomposition helpers
+# Design: BRIEFING-DOMI-S159-VL2VL3-001
+# fail_signal dict 반환만 / loop ownership verify_production_chain 전담
+# ─────────────────────────────────────────────
+
+def _load_chain_ledger(chain_dir: Path) -> dict:
+    """
+    Load ledger.json and extract chain_tip.
+
+    Returns:
+        {"fail_signal": None, "ledger_tip": str | None}
+    NOTE: No fail_signal — ledger absence is a WARNING, not a hard failure.
+    """
+    ledger = load_ledger(chain_dir)
+    if ledger is None:
+        print("WARNING: ledger.json not found — tip validation skipped")
+        return {"fail_signal": None, "ledger_tip": None}
+    return {"fail_signal": None, "ledger_tip": ledger.get("chain_tip")}
+
+
+def _collect_sorted_rpus(chain_dir: Path) -> dict:
+    """
+    Collect and sort RPU-XXXX.json files by numeric suffix.
+
+    Returns:
+        {"fail_signal": {"error": str} | None, "rpu_files": list}
+    NOTE: Does NOT manage result dict. Caller sets result["error"] on fail_signal.
+    """
+    try:
+        rpu_files = sorted(
+            [f for f in chain_dir.iterdir()
+             if f.name.upper().startswith("RPU-") and f.name.endswith(".json")
+             and f.name != "RPU-ledger.json"],
+            key=lambda f: int(f.stem.split("-")[1])
+        )
+    except (ValueError, IndexError) as e:
+        return {
+            "fail_signal": {"error": f"RPU filename parse error: {e}"},
+            "rpu_files": [],
+        }
+    if not rpu_files:
+        return {
+            "fail_signal": {"error": f"No RPU files (RPU-XXXX.json) found in {chain_dir}"},
+            "rpu_files": [],
+        }
+    return {"fail_signal": None, "rpu_files": rpu_files}
+
+
+def _verify_single_rpu(rpu_file: Path, prev_chain_hash, is_first: bool) -> dict:
+    """
+    Steps 1-6: single RPU verification.
+
+    Returns:
+        {
+            "rpu_result":          dict,
+            "updated_chain_hash":  str | None,
+            "fail_signal":         {"error": str} | None,
+        }
+    NOTE: Does NOT manage loop state or result dict. Caller owns prev_chain_hash threading.
+    """
+    rpu = load_json(rpu_file)
+    rpu_result = {
+        "file":           rpu_file.name,
+        "rpu_id":         rpu.get("rpu_id", "?"),
+        "event_type":     rpu.get("payload", {}).get("event_type", "UNKNOWN"),
+        "schema_version": None,
+        "payload_hash":   None,
+        "prev_hash":      None,
+        "chain_hash":     None,
+        "pass":           False,
+    }
+
+    all_ok = []
+
+    # Step 1: schema_version
+    schema_ver = rpu.get("schema_version", "")
+    schema_ok = schema_ver == PRODUCTION_SCHEMA
+    rpu_result["schema_version"] = "PASS" if schema_ok else f"FAIL (got: {schema_ver})"
+    all_ok.append(schema_ok)
+
+    # Step 2: payload existence
+    if "payload" not in rpu:
+        return {"rpu_result": rpu_result, "updated_chain_hash": None,
+                "fail_signal": {"error": f"Missing payload in {rpu_file.name}"}}
+
+    # Step 3: chain block existence
+    if "chain" not in rpu:
+        return {"rpu_result": rpu_result, "updated_chain_hash": None,
+                "fail_signal": {"error": f"Missing chain block in {rpu_file.name}"}}
+
+    payload     = rpu["payload"]
+    chain_block = rpu["chain"]
+
+    # Step 4: payload_hash recomputation
+    try:
+        recomputed_ph = compute_payload_hash(payload)
+    except ValueError as e:
+        return {"rpu_result": rpu_result, "updated_chain_hash": None,
+                "fail_signal": {"error": f"payload canonicalization error in {rpu_file.name}: {e}"}}
+
+    declared_ph = chain_block.get("payload_hash", "")
+    ph_ok = recomputed_ph == declared_ph
+    rpu_result["payload_hash"] = "PASS" if ph_ok else "FAIL"
+    all_ok.append(ph_ok)
+
+    # Step 5: prev_chain_hash continuity
+    declared_prev = chain_block.get("prev_chain_hash", "")
+    if is_first:
+        current_prev = declared_prev
+        prev_ok = True
+    else:
+        current_prev = prev_chain_hash
+        prev_ok = declared_prev == current_prev
+    rpu_result["prev_hash"] = "PASS" if prev_ok else "FAIL"
+    all_ok.append(prev_ok)
+
+    # Step 6: chain_hash recomputation
+    is_genesis_rpu = (declared_prev == "GENESIS" or declared_prev == "")
+    recomputed_ch  = compute_chain_hash(current_prev, recomputed_ph, is_genesis=is_genesis_rpu)
+    declared_ch    = chain_block.get("chain_hash", "")
+    ch_ok = recomputed_ch == declared_ch
+    rpu_result["chain_hash"] = "PASS" if ch_ok else "FAIL"
+    all_ok.append(ch_ok)
+
+    rpu_result["pass"] = all(all_ok)
+    return {
+        "rpu_result":         rpu_result,
+        "updated_chain_hash": declared_ch,
+        "fail_signal":        None,
+    }
+
+
+def _cross_validate_ledger_tip(ledger_tip, final_chain_hash) -> bool:
+    """
+    Ledger tip cross-validation.
+
+    Returns:
+        bool (match result) if both values present, None otherwise.
+    NOTE: Caller sets result["ledger_tip_match"] only when return is not None.
+    """
+    if ledger_tip and final_chain_hash:
+        return ledger_tip == final_chain_hash
+    return None
+
+
+# ─────────────────────────────────────────────
 # Core verification — Production schema ARSS-RPU-1.0
 # ─────────────────────────────────────────────
 
@@ -151,142 +298,52 @@ def verify_production_chain(chain_dir: Path) -> dict:
     All layers must pass for all_pass = True.
     """
     result = {
-        "bridge_version": BRIDGE_VERSION,
+        "bridge_version":   BRIDGE_VERSION,
         "production_schema": PRODUCTION_SCHEMA,
-        "chain_dir": str(chain_dir),
-        "verified_at": datetime.now(timezone.utc).isoformat(),
-        "rpus": [],
-        "all_pass": False,
+        "chain_dir":        str(chain_dir),
+        "verified_at":      datetime.now(timezone.utc).isoformat(),
+        "rpus":             [],
+        "all_pass":         False,
         "final_chain_hash": None,
         "ledger_tip_match": None,
-        "error": None
+        "error":            None,
     }
 
     # ── Load ledger ──
-    ledger = load_ledger(chain_dir)
-    if ledger is None:
-        print("WARNING: ledger.json not found — tip validation skipped")
-        ledger_tip = None
-    else:
-        ledger_tip = ledger.get("chain_tip")
+    ledger_info = _load_chain_ledger(chain_dir)
+    ledger_tip  = ledger_info["ledger_tip"]
 
-    # ── Collect RPU files — uppercase RPU-XXXX.json, numeric sort ──
-    try:
-        rpu_files = sorted(
-            [f for f in chain_dir.iterdir()
-             if f.name.upper().startswith("RPU-") and f.name.endswith(".json")
-             and f.name != "RPU-ledger.json"],
-            key=lambda f: int(f.stem.split("-")[1])
-        )
-    except (ValueError, IndexError) as e:
-        result["error"] = f"RPU filename parse error: {e}"
+    # ── Collect RPU files ──
+    rpu_collection = _collect_sorted_rpus(chain_dir)
+    if rpu_collection["fail_signal"]:
+        result["error"] = rpu_collection["fail_signal"]["error"]
         return result
 
-    if not rpu_files:
-        result["error"] = f"No RPU files (RPU-XXXX.json) found in {chain_dir}"
-        return result
-
-    all_pass = True
+    all_pass        = True
     prev_chain_hash = None
     final_chain_hash = None
-    is_first = True
+    is_first        = True
 
-    for rpu_file in rpu_files:
-        rpu = load_json(rpu_file)
-        rpu_id = rpu.get("rpu_id", "?")
-        event_type = rpu.get("payload", {}).get("event_type", "UNKNOWN")
+    for rpu_file in rpu_collection["rpu_files"]:
+        step = _verify_single_rpu(rpu_file, prev_chain_hash, is_first)
+        result["rpus"].append(step["rpu_result"])
 
-        rpu_result = {
-            "file": rpu_file.name,
-            "rpu_id": rpu_id,
-            "event_type": event_type,
-            "schema_version": None,
-            "payload_hash": None,
-            "prev_hash": None,
-            "chain_hash": None,
-            "pass": False
-        }
-
-        # Step 1: schema_version check
-        schema_ver = rpu.get("schema_version", "")
-        schema_ok = schema_ver == PRODUCTION_SCHEMA
-        rpu_result["schema_version"] = "PASS" if schema_ok else \
-            f"FAIL (got: {schema_ver})"
-        if not schema_ok:
-            all_pass = False
-
-        # Step 2: payload 존재 확인
-        if "payload" not in rpu:
-            result["error"] = f"Missing payload in {rpu_file.name}"
-            result["rpus"].append(rpu_result)
+        if step["fail_signal"]:
+            result["error"] = step["fail_signal"]["error"]
             return result
 
-        # Step 3: chain 블록 존재 확인
-        if "chain" not in rpu:
-            result["error"] = f"Missing chain block in {rpu_file.name}"
-            result["rpus"].append(rpu_result)
-            return result
-
-        payload = rpu["payload"]
-        chain_block = rpu["chain"]
-
-        # Step 4: payload_hash 재계산 (보정 1)
-        try:
-            recomputed_ph = compute_payload_hash(payload)
-        except ValueError as e:
-            result["error"] = f"payload canonicalization error in " \
-                              f"{rpu_file.name}: {e}"
-            result["rpus"].append(rpu_result)
-            return result
-
-        declared_ph = chain_block.get("payload_hash", "")
-        ph_ok = recomputed_ph == declared_ph
-        rpu_result["payload_hash"] = "PASS" if ph_ok else "FAIL"
-        if not ph_ok:
+        if not step["rpu_result"]["pass"]:
             all_pass = False
 
-        # Step 5: prev_chain_hash continuity (보정 2 — current_prev 분리)
-        declared_prev = chain_block.get("prev_chain_hash", "")
-        if is_first:
-            # Genesis 처리 명시화
-            # 첫 번째 RPU의 prev_chain_hash를 프로덕션 체인 시작점으로 수용.
-            # Phase 1: genesis anchor 독립 검증 미구현 — 신뢰 수용 후 진행.
-            # TODO: Phase 2 — ARSS-RPU-Production-Spec-v1.0 확정 후
-            #        genesis anchor 독립 재계산 검증 추가 예정.
-            current_prev = declared_prev
-            prev_ok = True
-            is_first = False
-        else:
-            current_prev = prev_chain_hash
-            prev_ok = declared_prev == current_prev
-        rpu_result["prev_hash"] = "PASS" if prev_ok else "FAIL"
-        if not prev_ok:
-            all_pass = False
-
-        # Step 6: chain_hash 재계산
-        # Genesis 판별: prev_chain_hash가 "GENESIS" 또는 빈값이면 genesis 처리
-        is_genesis_rpu = (declared_prev == "GENESIS" or declared_prev == "")
-        recomputed_ch = compute_chain_hash(
-            current_prev, recomputed_ph, is_genesis=is_genesis_rpu
-        )
-        declared_ch = chain_block.get("chain_hash", "")
-        ch_ok = recomputed_ch == declared_ch
-        rpu_result["chain_hash"] = "PASS" if ch_ok else "FAIL"
-        if not ch_ok:
-            all_pass = False
-
-        rpu_result["pass"] = schema_ok and ph_ok and prev_ok and ch_ok
-        result["rpus"].append(rpu_result)
-
-        # [보정 2] prev_chain_hash 갱신 — 계산 완료 후 업데이트
-        prev_chain_hash = declared_ch
-        final_chain_hash = declared_ch
+        prev_chain_hash  = step["updated_chain_hash"]
+        final_chain_hash = step["updated_chain_hash"]
+        is_first = False
 
     result["final_chain_hash"] = final_chain_hash
 
     # ── Ledger tip cross-validation ──
-    if ledger_tip and final_chain_hash:
-        tip_match = (ledger_tip == final_chain_hash)
+    tip_match = _cross_validate_ledger_tip(ledger_tip, final_chain_hash)
+    if tip_match is not None:
         result["ledger_tip_match"] = tip_match
         if not tip_match:
             all_pass = False
@@ -364,45 +421,39 @@ def main():
     )
     args = parser.parse_args()
 
-
-    # --single 모드: single candidate precheck (generator 연동용)
-    # full chain verification 아님 — prev_hash 연결 검증 skip
-    # payload_hash + chain_hash 재계산만 수행
+    # --single mode: single candidate precheck (generator 연동용)
     if args.single:
         single_path = Path(args.single)
         if not single_path.exists():
             print(json.dumps({"ok": False, "errors": [f"File not found: {args.single}"]}))
             sys.exit(1)
         try:
-            candidate = load_json(single_path)
-            errors = []
-
-            # 후보 RPU 구조: payload_hash/chain_hash는 chain 블록 안에 위치
-            chain_block = candidate.get("chain", {})
-            payload_obj = candidate.get("payload", candidate)
-
+            candidate  = load_json(single_path)
+            errors     = []
+            chain_block  = candidate.get("chain", {})
+            payload_obj  = candidate.get("payload", candidate)
             computed_payload = compute_payload_hash(payload_obj)
-            declared_ph = chain_block.get("payload_hash")
+            declared_ph      = chain_block.get("payload_hash")
             if computed_payload != declared_ph:
-                errors.append("payload_hash mismatch: expected " + computed_payload + ", got " + str(declared_ph))
-
-            prev_hash = chain_block.get("prev_chain_hash", "")
+                errors.append("payload_hash mismatch: expected "
+                               + computed_payload + ", got " + str(declared_ph))
+            prev_hash     = chain_block.get("prev_chain_hash", "")
             computed_chain = compute_chain_hash(prev_hash, computed_payload)
-            declared_ch = chain_block.get("chain_hash")
+            declared_ch   = chain_block.get("chain_hash")
             if computed_chain != declared_ch:
-                errors.append("chain_hash mismatch: expected " + computed_chain + ", got " + str(declared_ch))
-
+                errors.append("chain_hash mismatch: expected "
+                               + computed_chain + ", got " + str(declared_ch))
             result = {
-                "ok": len(errors) == 0,
+                "ok":   len(errors) == 0,
                 "mode": "single_candidate_precheck",
                 "note": "prev_hash chain continuity not verified — generator precheck only",
-                "errors": errors
+                "errors": errors,
             }
             print(json.dumps(result))
             sys.exit(0 if result["ok"] else 1)
-
         except Exception as e:
-            print(json.dumps({"ok": False, "mode": "single_candidate_precheck", "errors": [str(e)]}))
+            print(json.dumps({"ok": False, "mode": "single_candidate_precheck",
+                               "errors": [str(e)]}))
             sys.exit(1)
 
     chain_dir = Path(args.chain_dir)
@@ -420,8 +471,6 @@ def main():
     sys.exit(0 if result["all_pass"] else 1)
 
 
-
-
 # =============================================================================
 # BRIDGE-MODE EXTENSION v1.0 — Candidate State Verification
 # Added: 2026-04-09 | EAG-2 Approved
@@ -431,6 +480,145 @@ def main():
 import argparse as _argparse
 import json as _json
 import sys as _sys
+
+
+# ─────────────────────────────────────────────
+# VL-3 decomposition helpers
+# Design: BRIEFING-DOMI-S159-VL2VL3-001
+# fail_signal dict 반환만 / verify_production_chain 호출 관계 verify_with_candidate 전담
+# ─────────────────────────────────────────────
+
+def _load_candidate_rpu(candidate_rpu_path: Path) -> dict:
+    """
+    Step 1: Load candidate RPU JSON.
+
+    Returns:
+        {"fail_signal": {"error": str} | None, "candidate_rpu": dict | None}
+    """
+    try:
+        candidate_rpu = load_json(candidate_rpu_path)
+        return {"fail_signal": None, "candidate_rpu": candidate_rpu}
+    except Exception as e:
+        return {"fail_signal": {"error": f"CANDIDATE_RPU_LOAD_FAILED: {e}"},
+                "candidate_rpu": None}
+
+
+def _load_candidate_ledger(candidate_ledger_path: Path) -> dict:
+    """
+    Step 2: Load candidate ledger JSON.
+
+    Returns:
+        {"fail_signal": {"error": str} | None, "candidate_ledger": dict | None}
+    """
+    try:
+        candidate_ledger = load_json(candidate_ledger_path)
+        return {"fail_signal": None, "candidate_ledger": candidate_ledger}
+    except Exception as e:
+        return {"fail_signal": {"error": f"CANDIDATE_LEDGER_LOAD_FAILED: {e}"},
+                "candidate_ledger": None}
+
+
+def _verify_candidate_integrity(
+    candidate_rpu: dict,
+    base_final_hash: str,
+) -> dict:
+    """
+    Steps 4-7: candidate schema, hash length, flat leakage, continuity,
+               payload hash, chain hash.
+
+    Returns:
+        {
+            "fail_signal":       {"error": str} | None,
+            "schema_valid":      bool,
+            "chain_continuity":  bool,
+            "declared_ch":       str | None,
+        }
+    NOTE: Does NOT manage result dict. Caller sets result flags on return.
+    """
+    # Step 4a: schema_version
+    schema_ver = candidate_rpu.get("schema_version", "")
+    if schema_ver != PRODUCTION_SCHEMA:
+        return {"fail_signal": {"error": f"SCHEMA_MISMATCH: {schema_ver}"},
+                "schema_valid": False, "chain_continuity": False, "declared_ch": None}
+
+    chain_block = candidate_rpu.get("chain")
+    if not chain_block:
+        return {"fail_signal": {"error": "CANDIDATE_MISSING_CHAIN_BLOCK"},
+                "schema_valid": False, "chain_continuity": False, "declared_ch": None}
+
+    declared_ph   = chain_block.get("payload_hash", "")
+    declared_prev = chain_block.get("prev_chain_hash", "")
+    declared_ch   = chain_block.get("chain_hash", "")
+
+    # Step 4b: hash length validation
+    if len(declared_ph) != 64 or len(declared_prev) != 64 or len(declared_ch) != 64:
+        return {"fail_signal": {"error": "CANDIDATE_HASH_LENGTH_INVALID"},
+                "schema_valid": False, "chain_continuity": False, "declared_ch": None}
+
+    # Step 4c: flat schema leakage check
+    forbidden_flat_keys = {"payload_hash", "prev_chain_hash", "chain_hash",
+                            "event_type", "content"}
+    flat_leakage = set(candidate_rpu.keys()) & forbidden_flat_keys
+    if flat_leakage:
+        return {"fail_signal": {"error": f"FLAT_SCHEMA_DETECTED: {flat_leakage}"},
+                "schema_valid": False, "chain_continuity": False, "declared_ch": None}
+
+    # Step 5: prev_chain_hash continuity
+    if declared_prev != base_final_hash:
+        return {
+            "fail_signal": {"error": (
+                f"CHAIN_CONTINUITY_BROKEN: "
+                f"candidate.prev={declared_prev[:16]}... "
+                f"base_final={base_final_hash[:16] if base_final_hash else 'None'}..."
+            )},
+            "schema_valid": True, "chain_continuity": False, "declared_ch": None,
+        }
+
+    # Step 6: payload hash recomputation
+    payload = candidate_rpu.get("payload")
+    if payload is None:
+        return {"fail_signal": {"error": "CANDIDATE_MISSING_PAYLOAD"},
+                "schema_valid": True, "chain_continuity": True, "declared_ch": declared_ch}
+
+    recomputed_ph = compute_payload_hash(payload)
+    if recomputed_ph != declared_ph:
+        return {"fail_signal": {"error": "CANDIDATE_PAYLOAD_HASH_MISMATCH"},
+                "schema_valid": True, "chain_continuity": True, "declared_ch": declared_ch}
+
+    # Step 7: chain hash recomputation
+    recomputed_ch = compute_chain_hash(declared_prev, recomputed_ph, is_genesis=False)
+    if recomputed_ch != declared_ch:
+        return {"fail_signal": {"error": "CANDIDATE_CHAIN_HASH_MISMATCH"},
+                "schema_valid": True, "chain_continuity": True, "declared_ch": declared_ch}
+
+    return {
+        "fail_signal":      None,
+        "schema_valid":     True,
+        "chain_continuity": True,
+        "declared_ch":      declared_ch,
+    }
+
+
+def _verify_candidate_ledger_tip(candidate_ledger: dict, declared_ch: str) -> dict:
+    """
+    Step 8: Validate candidate ledger chain_tip against declared_ch.
+
+    Returns:
+        {"fail_signal": {"error": str} | None}
+    """
+    candidate_tip = candidate_ledger.get("chain_tip")
+    if candidate_tip != declared_ch:
+        return {"fail_signal": {"error": (
+            f"LEDGER_TIP_MISMATCH: "
+            f"ledger={candidate_tip[:16] if candidate_tip else 'None'}... "
+            f"candidate_ch={declared_ch[:16]}..."
+        )}}
+    return {"fail_signal": None}
+
+
+# ─────────────────────────────────────────────
+# Bridge-Mode — Candidate State Verification (VL-3 orchestrator)
+# ─────────────────────────────────────────────
 
 def verify_with_candidate(
     chain_dir: Path,
@@ -454,106 +642,61 @@ def verify_with_candidate(
     }
     """
     result = {
-        "status": "FAIL",
-        "all_pass": False,
-        "ledger_tip_match": False,
-        "schema_valid": False,
-        "chain_continuity": False,
+        "status":            "FAIL",
+        "all_pass":          False,
+        "ledger_tip_match":  False,
+        "schema_valid":      False,
+        "chain_continuity":  False,
         "checked_rpu_count": 0,
-        "candidate_rpu": None,
-        "error": None
+        "candidate_rpu":     None,
+        "error":             None,
     }
 
     try:
-        # Step 1: candidate RPU 로드
-        candidate_rpu = load_json(candidate_rpu_path)
+        # Step 1: load candidate RPU
+        rpu_load = _load_candidate_rpu(candidate_rpu_path)
+        if rpu_load["fail_signal"]:
+            result["error"] = rpu_load["fail_signal"]["error"]
+            return result
+        candidate_rpu = rpu_load["candidate_rpu"]
         result["candidate_rpu"] = candidate_rpu.get("rpu_id", str(candidate_rpu_path))
 
-        # Step 2: candidate ledger 로드
-        candidate_ledger = load_json(candidate_ledger_path)
+        # Step 2: load candidate ledger
+        ledger_load = _load_candidate_ledger(candidate_ledger_path)
+        if ledger_load["fail_signal"]:
+            result["error"] = ledger_load["fail_signal"]["error"]
+            return result
+        candidate_ledger = ledger_load["candidate_ledger"]
 
-        # Step 3: 기존 체인 전체 검증 (production chain 실측)
+        # Step 3: verify base production chain (단방향 신뢰 의존성 유지)
         base_result = verify_production_chain(chain_dir)
         if not base_result.get("all_pass"):
             result["error"] = "BASE_CHAIN_VERIFICATION_FAILED"
             return result
 
         base_final_hash = base_result.get("final_chain_hash")
-        base_rpu_count = len(base_result.get("rpus", []))
+        base_rpu_count  = len(base_result.get("rpus", []))
 
-        # Step 4: candidate schema 검증
-        schema_ver = candidate_rpu.get("schema_version", "")
-        if schema_ver != PRODUCTION_SCHEMA:
-            result["error"] = f"SCHEMA_MISMATCH: {schema_ver}"
+        # Steps 4-7: candidate integrity
+        integrity = _verify_candidate_integrity(candidate_rpu, base_final_hash)
+        result["schema_valid"]     = integrity["schema_valid"]
+        result["chain_continuity"] = integrity["chain_continuity"]
+        if integrity["fail_signal"]:
+            result["error"] = integrity["fail_signal"]["error"]
             return result
 
-        chain_block = candidate_rpu.get("chain")
-        if not chain_block:
-            result["error"] = "CANDIDATE_MISSING_CHAIN_BLOCK"
-            return result
-
-        declared_ph = chain_block.get("payload_hash", "")
-        declared_prev = chain_block.get("prev_chain_hash", "")
-        declared_ch = chain_block.get("chain_hash", "")
-
-        if len(declared_ph) != 64 or len(declared_prev) != 64 or len(declared_ch) != 64:
-            result["error"] = "CANDIDATE_HASH_LENGTH_INVALID"
-            return result
-
-        # flat schema 흔적 검사
-        forbidden_flat_keys = {"payload_hash", "prev_chain_hash", "chain_hash",
-                               "event_type", "content"}
-        top_keys = set(candidate_rpu.keys())
-        flat_leakage = top_keys & forbidden_flat_keys
-        if flat_leakage:
-            result["error"] = f"FLAT_SCHEMA_DETECTED: {flat_leakage}"
-            return result
-
-        result["schema_valid"] = True
-
-        # Step 5: prev_chain_hash continuity 검증
-        # candidate.prev_chain_hash == 기존 체인 final hash
-        if declared_prev != base_final_hash:
-            result["error"] = (
-                f"CHAIN_CONTINUITY_BROKEN: "
-                f"candidate.prev={declared_prev[:16]}... "
-                f"base_final={base_final_hash[:16] if base_final_hash else 'None'}..."
-            )
-            return result
-
-        result["chain_continuity"] = True
-
-        # Step 6: candidate payload_hash 재계산
-        payload = candidate_rpu.get("payload")
-        if payload is None:
-            result["error"] = "CANDIDATE_MISSING_PAYLOAD"
-            return result
-
-        recomputed_ph = compute_payload_hash(payload)
-        if recomputed_ph != declared_ph:
-            result["error"] = "CANDIDATE_PAYLOAD_HASH_MISMATCH"
-            return result
-
-        # Step 7: candidate chain_hash 재계산
-        recomputed_ch = compute_chain_hash(declared_prev, recomputed_ph, is_genesis=False)
-        if recomputed_ch != declared_ch:
-            result["error"] = "CANDIDATE_CHAIN_HASH_MISMATCH"
-            return result
-
-        # Step 8: candidate ledger chain_tip 검증
-        candidate_tip = candidate_ledger.get("chain_tip")
-        if candidate_tip != declared_ch:
-            result["error"] = (
-                f"LEDGER_TIP_MISMATCH: "
-                f"ledger={candidate_tip[:16] if candidate_tip else 'None'}... "
-                f"candidate_ch={declared_ch[:16]}..."
-            )
+        # Step 8: candidate ledger tip
+        ledger_check = _verify_candidate_ledger_tip(
+            candidate_ledger, integrity["declared_ch"]
+        )
+        if ledger_check["fail_signal"]:
+            result["error"] = ledger_check["fail_signal"]["error"]
             return result
 
         result["ledger_tip_match"] = True
         result["checked_rpu_count"] = base_rpu_count + 1
         result["all_pass"] = True
-        result["status"] = "PASS"
+        result["status"]   = "PASS"
 
     except Exception as e:
         result["error"] = f"EXCEPTION: {str(e)}"
@@ -583,7 +726,6 @@ def _bridge_mode_main():
 
 
 # Bridge-Mode 진입 감지: --candidate-rpu 인자 존재 시 bridge mode 실행
-
 if __name__ == "__main__":
     import sys as _entry_check
     if "--candidate-rpu" in _entry_check.argv:
