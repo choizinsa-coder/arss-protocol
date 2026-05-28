@@ -1,9 +1,10 @@
-ACTIVE_VERSION = "1.0.0"
+ACTIVE_VERSION = "1.1.0"
 VERSION_STATUS = "active"
 # tools/delta_context/stage0_idempotency_classifier.py
 # AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2
 # Stage 0 PRE_DELTA_IDEMPOTENCY_GATE — classifier/validator module
 # Separated from shadow_pipeline.py per PT-S73-003 FINAL DESIGN + ADDENDUM
+# Refactored for RULE-5 compliance per DESIGN-DOMI-S155-RULE5-001 (S159, EAG approved)
 #
 # State Model:
 #   COMPLETED    : DELTA valid + COMMIT valid
@@ -137,6 +138,256 @@ COMMIT_REQUIRED_FIELDS = ["session_number"]
 
 
 # ---------------------------------------------------------------------------
+# RULE-5 decomposition helpers
+# Design: DESIGN-DOMI-S155-RULE5-001
+# Race condition lock management: classify_stage0 전담
+# Sub-functions: fail_signal dict 반환만, _LOCKED_FAIL_SESSIONS 호출 없음
+# ---------------------------------------------------------------------------
+
+def _detect_state_files(
+    session_number: int,
+    domains: list,
+    delta_log_base: str,
+    tx_base_path: str,
+    commit_base_path: str,
+) -> dict:
+    """
+    STEP 1: Detect existence of delta directory, TX file, and COMMIT file.
+
+    Returns:
+        {
+            "delta_dir_exists": bool,
+            "tx_path":          str,
+            "commit_path":      str,
+            "tx_exists":        bool,
+            "commit_exists":    bool,
+        }
+    """
+    delta_dir_exists = any(
+        os.path.isdir(os.path.join(delta_log_base, domain, f"S{session_number}"))
+        for domain in domains
+    )
+    tx_path     = os.path.join(tx_base_path,     f"TX-S{session_number}.json")
+    commit_path = os.path.join(commit_base_path, f"COMMIT-S{session_number}.json")
+
+    return {
+        "delta_dir_exists": delta_dir_exists,
+        "tx_path":          tx_path,
+        "commit_path":      commit_path,
+        "tx_exists":        os.path.exists(tx_path),
+        "commit_exists":    os.path.exists(commit_path),
+    }
+
+
+def _run_integrity_checks(
+    delta_dir_exists: bool,
+    tx_exists: bool,
+    tx_path: str,
+    commit_exists: bool,
+    commit_path: str,
+    stage: str,
+) -> dict:
+    """
+    STEP 2: Run basic_integrity_check for TX and COMMIT files.
+
+    Returns:
+        {
+            "fail_signal":      dict | None,
+            "delta_integrity":  dict,
+            "commit_integrity": dict,
+        }
+    NOTE: Does NOT manage _LOCKED_FAIL_SESSIONS. Caller is responsible for lock.
+    """
+    delta_integrity  = {"valid": True, "reason": None}
+    commit_integrity = {"valid": True, "reason": None}
+
+    try:
+        if delta_dir_exists and not tx_exists:
+            delta_integrity = {"valid": False, "reason": "TX_FILE_MISSING"}
+        elif delta_dir_exists and tx_exists:
+            delta_integrity = _check_file_integrity(tx_path, DELTA_REQUIRED_FIELDS)
+
+        if commit_exists:
+            commit_integrity = _check_file_integrity(commit_path, COMMIT_REQUIRED_FIELDS)
+
+    except Exception as e:
+        return {
+            "fail_signal": {
+                "state":      "UNKNOWN",
+                "gate":       "FAIL_CLOSED",
+                "reason":     f"INTEGRITY_CHECK_EXCEPTION:{e}",
+                "hash_check": {},
+                "stage":      stage,
+            },
+            "delta_integrity":  delta_integrity,
+            "commit_integrity": commit_integrity,
+        }
+
+    if delta_dir_exists and not delta_integrity["valid"]:
+        return {
+            "fail_signal": {
+                "state":      "UNKNOWN",
+                "gate":       "FAIL_CLOSED",
+                "reason":     f"DELTA_INTEGRITY_FAIL:{delta_integrity['reason']}",
+                "hash_check": {},
+                "stage":      stage,
+            },
+            "delta_integrity":  delta_integrity,
+            "commit_integrity": commit_integrity,
+        }
+
+    if commit_exists and not commit_integrity["valid"]:
+        return {
+            "fail_signal": {
+                "state":      "UNKNOWN",
+                "gate":       "FAIL_CLOSED",
+                "reason":     f"COMMIT_INTEGRITY_FAIL:{commit_integrity['reason']}",
+                "hash_check": {},
+                "stage":      stage,
+            },
+            "delta_integrity":  delta_integrity,
+            "commit_integrity": commit_integrity,
+        }
+
+    return {
+        "fail_signal":      None,
+        "delta_integrity":  delta_integrity,
+        "commit_integrity": commit_integrity,
+    }
+
+
+def _run_hash_checks(
+    delta_dir_exists: bool,
+    tx_exists: bool,
+    tx_path: str,
+    delta_integrity: dict,
+    commit_exists: bool,
+    commit_path: str,
+    commit_integrity: dict,
+    expected_delta_hash,
+    expected_commit_hash,
+    stage: str,
+) -> dict:
+    """
+    STEP 3: Run optional_hash_check for TX and COMMIT files.
+
+    Returns:
+        {
+            "fail_signal":      dict | None,
+            "hash_check_result": dict,
+        }
+    NOTE: Does NOT manage _LOCKED_FAIL_SESSIONS. Caller is responsible for lock.
+    """
+    delta_hash_result  = {"result": "SKIPPED", "detail": "delta_not_present"}
+    commit_hash_result = {"result": "SKIPPED", "detail": "commit_not_present"}
+
+    try:
+        if delta_dir_exists and tx_exists and delta_integrity["valid"]:
+            delta_hash_result = _optional_hash_check(tx_path, expected_delta_hash)
+
+        if commit_exists and commit_integrity["valid"]:
+            commit_hash_result = _optional_hash_check(commit_path, expected_commit_hash)
+
+    except Exception as e:
+        hc = {"delta": delta_hash_result, "commit": commit_hash_result}
+        return {
+            "fail_signal": {
+                "state":      "UNKNOWN",
+                "gate":       "FAIL_CLOSED",
+                "reason":     f"HASH_CHECK_EXCEPTION:{e}",
+                "hash_check": hc,
+                "stage":      stage,
+            },
+            "hash_check_result": hc,
+        }
+
+    hash_check_result = {"delta": delta_hash_result, "commit": commit_hash_result}
+
+    if delta_hash_result["result"] == "MISMATCH":
+        return {
+            "fail_signal": {
+                "state":      "UNKNOWN",
+                "gate":       "FAIL_CLOSED",
+                "reason":     f"DELTA_HASH_MISMATCH:{delta_hash_result['detail']}",
+                "hash_check": hash_check_result,
+                "stage":      stage,
+            },
+            "hash_check_result": hash_check_result,
+        }
+
+    if commit_hash_result["result"] == "MISMATCH":
+        return {
+            "fail_signal": {
+                "state":      "UNKNOWN",
+                "gate":       "FAIL_CLOSED",
+                "reason":     f"COMMIT_HASH_MISMATCH:{commit_hash_result['detail']}",
+                "hash_check": hash_check_result,
+                "stage":      stage,
+            },
+            "hash_check_result": hash_check_result,
+        }
+
+    return {
+        "fail_signal":       None,
+        "hash_check_result": hash_check_result,
+    }
+
+
+def _classify_state(delta_valid: bool, commit_valid: bool) -> str:
+    """
+    STEP 4: Classify session state from delta/commit validity flags.
+
+    Returns:
+        state string: COMPLETED | INVALID | PARTIAL_STATE | NOT_STARTED | UNKNOWN
+    """
+    if delta_valid and commit_valid:
+        return "COMPLETED"
+    if delta_valid and not commit_valid:
+        return "INVALID"
+    if not delta_valid and commit_valid:
+        return "PARTIAL_STATE"
+    if not delta_valid and not commit_valid:
+        return "NOT_STARTED"
+    return "UNKNOWN"
+
+
+def _build_gate_result(state: str, hash_check_result: dict, stage: str) -> dict:
+    """
+    STEP 5: Build gate decision result dict.
+
+    Returns:
+        gate result dict.
+    NOTE: Does NOT manage _LOCKED_FAIL_SESSIONS. Caller is responsible for lock.
+    """
+    if state == "COMPLETED":
+        return {
+            "state":      "COMPLETED",
+            "gate":       "ALLOW_ALREADY_COMPLETED",
+            "reason":     "DELTA_AND_COMMIT_VALID",
+            "hash_check": hash_check_result,
+            "stage":      stage,
+        }
+
+    if state == "NOT_STARTED":
+        return {
+            "state":      "NOT_STARTED",
+            "gate":       "ALLOW_NEW_RUN",
+            "reason":     "NO_DELTA_NO_COMMIT",
+            "hash_check": hash_check_result,
+            "stage":      stage,
+        }
+
+    # INVALID / PARTIAL_STATE / UNKNOWN -> FAIL-CLOSED
+    return {
+        "state":      state,
+        "gate":       "FAIL_CLOSED",
+        "reason":     f"STATE_{state}_DETECTED",
+        "hash_check": hash_check_result,
+        "stage":      stage,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -178,7 +429,7 @@ def classify_stage0(
     """
     stage = "PRE_DELTA_IDEMPOTENCY_GATE"
 
-    # Race Condition Defense
+    # Race Condition Defense — lock check (classify_stage0 전담)
     if session_number in _LOCKED_FAIL_SESSIONS:
         return {
             "state":      "UNKNOWN",
@@ -188,161 +439,46 @@ def classify_stage0(
             "stage":      stage,
         }
 
-    # ------------------------------------------------------------------
     # STEP 1: detect
-    # ------------------------------------------------------------------
-    delta_dir_exists = any(
-        os.path.isdir(os.path.join(delta_log_base, domain, f"S{session_number}"))
-        for domain in domains
+    detection = _detect_state_files(
+        session_number, domains, delta_log_base, tx_base_path, commit_base_path,
     )
-    tx_path     = os.path.join(tx_base_path,     f"TX-S{session_number}.json")
-    commit_path = os.path.join(commit_base_path, f"COMMIT-S{session_number}.json")
 
-    tx_exists     = os.path.exists(tx_path)
-    commit_exists = os.path.exists(commit_path)
-
-    hash_check_result = {}
-
-    # ------------------------------------------------------------------
-    # STEP 2: basic_integrity_check
-    # ------------------------------------------------------------------
-    delta_integrity  = {"valid": True, "reason": None}
-    commit_integrity = {"valid": True, "reason": None}
-
-    try:
-        if delta_dir_exists and not tx_exists:
-            # delta directory exists but TX file missing -> integrity fail
-            delta_integrity = {"valid": False, "reason": "TX_FILE_MISSING"}
-        elif delta_dir_exists and tx_exists:
-            delta_integrity = _check_file_integrity(tx_path, DELTA_REQUIRED_FIELDS)
-
-        if commit_exists:
-            commit_integrity = _check_file_integrity(commit_path, COMMIT_REQUIRED_FIELDS)
-
-    except Exception as e:
+    # STEP 2: integrity checks
+    integrity = _run_integrity_checks(
+        detection["delta_dir_exists"], detection["tx_exists"], detection["tx_path"],
+        detection["commit_exists"], detection["commit_path"], stage,
+    )
+    if integrity["fail_signal"]:
         _LOCKED_FAIL_SESSIONS.add(session_number)
-        return {
-            "state":      "UNKNOWN",
-            "gate":       "FAIL_CLOSED",
-            "reason":     f"INTEGRITY_CHECK_EXCEPTION:{e}",
-            "hash_check": hash_check_result,
-            "stage":      stage,
-        }
+        return integrity["fail_signal"]
 
-    if delta_dir_exists and not delta_integrity["valid"]:
+    # STEP 3: hash checks
+    hash_result = _run_hash_checks(
+        detection["delta_dir_exists"], detection["tx_exists"], detection["tx_path"],
+        integrity["delta_integrity"],
+        detection["commit_exists"], detection["commit_path"],
+        integrity["commit_integrity"],
+        expected_delta_hash, expected_commit_hash, stage,
+    )
+    if hash_result["fail_signal"]:
         _LOCKED_FAIL_SESSIONS.add(session_number)
-        return {
-            "state":      "UNKNOWN",
-            "gate":       "FAIL_CLOSED",
-            "reason":     f"DELTA_INTEGRITY_FAIL:{delta_integrity['reason']}",
-            "hash_check": hash_check_result,
-            "stage":      stage,
-        }
+        return hash_result["fail_signal"]
 
-    if commit_exists and not commit_integrity["valid"]:
-        _LOCKED_FAIL_SESSIONS.add(session_number)
-        return {
-            "state":      "UNKNOWN",
-            "gate":       "FAIL_CLOSED",
-            "reason":     f"COMMIT_INTEGRITY_FAIL:{commit_integrity['reason']}",
-            "hash_check": hash_check_result,
-            "stage":      stage,
-        }
-
-    # ------------------------------------------------------------------
-    # STEP 3: optional_hash_check
-    # ------------------------------------------------------------------
-    try:
-        delta_hash_result  = {"result": "SKIPPED", "detail": "delta_not_present"}
-        commit_hash_result = {"result": "SKIPPED", "detail": "commit_not_present"}
-
-        delta_file_present = delta_dir_exists and tx_exists
-
-        if delta_file_present and delta_integrity["valid"]:
-            delta_hash_result = _optional_hash_check(tx_path, expected_delta_hash)
-
-        if commit_exists and commit_integrity["valid"]:
-            commit_hash_result = _optional_hash_check(commit_path, expected_commit_hash)
-
-        hash_check_result = {
-            "delta":  delta_hash_result,
-            "commit": commit_hash_result,
-        }
-
-        if delta_hash_result["result"] == "MISMATCH":
-            _LOCKED_FAIL_SESSIONS.add(session_number)
-            return {
-                "state":      "UNKNOWN",
-                "gate":       "FAIL_CLOSED",
-                "reason":     f"DELTA_HASH_MISMATCH:{delta_hash_result['detail']}",
-                "hash_check": hash_check_result,
-                "stage":      stage,
-            }
-
-        if commit_hash_result["result"] == "MISMATCH":
-            _LOCKED_FAIL_SESSIONS.add(session_number)
-            return {
-                "state":      "UNKNOWN",
-                "gate":       "FAIL_CLOSED",
-                "reason":     f"COMMIT_HASH_MISMATCH:{commit_hash_result['detail']}",
-                "hash_check": hash_check_result,
-                "stage":      stage,
-            }
-
-    except Exception as e:
-        _LOCKED_FAIL_SESSIONS.add(session_number)
-        return {
-            "state":      "UNKNOWN",
-            "gate":       "FAIL_CLOSED",
-            "reason":     f"HASH_CHECK_EXCEPTION:{e}",
-            "hash_check": hash_check_result,
-            "stage":      stage,
-        }
-
-    # ------------------------------------------------------------------
     # STEP 4: classify
-    # ------------------------------------------------------------------
-    delta_valid  = delta_dir_exists and tx_exists and delta_integrity["valid"]
-    commit_valid = commit_exists                   and commit_integrity["valid"]
+    delta_valid = (
+        detection["delta_dir_exists"]
+        and detection["tx_exists"]
+        and integrity["delta_integrity"]["valid"]
+    )
+    commit_valid = (
+        detection["commit_exists"]
+        and integrity["commit_integrity"]["valid"]
+    )
+    state = _classify_state(delta_valid, commit_valid)
 
-    if delta_valid and commit_valid:
-        state = "COMPLETED"
-    elif delta_valid and not commit_valid:
-        state = "INVALID"
-    elif not delta_valid and commit_valid:
-        state = "PARTIAL_STATE"
-    elif not delta_valid and not commit_valid:
-        state = "NOT_STARTED"
-    else:
-        state = "UNKNOWN"
-
-    # ------------------------------------------------------------------
-    # STEP 5: validate + gate decision
-    # ------------------------------------------------------------------
-    if state == "COMPLETED":
-        return {
-            "state":      "COMPLETED",
-            "gate":       "ALLOW_ALREADY_COMPLETED",
-            "reason":     "DELTA_AND_COMMIT_VALID",
-            "hash_check": hash_check_result,
-            "stage":      stage,
-        }
-
-    if state == "NOT_STARTED":
-        return {
-            "state":      "NOT_STARTED",
-            "gate":       "ALLOW_NEW_RUN",
-            "reason":     "NO_DELTA_NO_COMMIT",
-            "hash_check": hash_check_result,
-            "stage":      stage,
-        }
-
-    # INVALID / PARTIAL_STATE / UNKNOWN -> FAIL-CLOSED
-    _LOCKED_FAIL_SESSIONS.add(session_number)
-    return {
-        "state":      state,
-        "gate":       "FAIL_CLOSED",
-        "reason":     f"STATE_{state}_DETECTED",
-        "hash_check": hash_check_result,
-        "stage":      stage,
-    }
+    # STEP 5: gate decision
+    result = _build_gate_result(state, hash_result["hash_check_result"], stage)
+    if result["gate"] == "FAIL_CLOSED":
+        _LOCKED_FAIL_SESSIONS.add(session_number)
+    return result
