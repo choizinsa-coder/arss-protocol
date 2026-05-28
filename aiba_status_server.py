@@ -333,191 +333,210 @@ def _save_pec_failure(pec_data: dict):
     return path
 
 
-@app.route('/rpu/issue', methods=['POST'])
-@require_auth(require_write=True)
-def rpu_issue():
-    """
-    WF-05 v2 오케스트레이션 엔드포인트
-    Step 0: 인증 (require_auth 데코레이터가 처리)
-    Step 1: 입력 필드 완결성 검사
-    Step 2: event_type 허용 목록 확인 (LESSON-013)
-    Step 3: PEC 캡처
-    Step 4: rpu_atomic_issuer.py subprocess 호출
-    Step 5: vps_verifier_bridge.py 후검증
-    """
-    pec_log = {
-        'endpoint': 'POST /rpu/issue',
-        'requested_at': datetime.datetime.utcnow().isoformat() + 'Z',
-        'failed_at_step': None,
-        'reason': None,
-    }
+class PecContext:
+    """PEC 상태 변경 경계 캡슐화 — rpu_issue() 실행 주기 내부 전용 (RULE-7 해소)"""
 
-    # ── Revalidation Contract R1~R4 ──────────────────────────────────
-    approval_id = data.get('approval_id') if 'data' in dir() else None
-    _data = request.get_json(force=True, silent=True) or {}
-    approval_id = _data.get('approval_id')
+    def __init__(self):
+        self._log = {
+            'endpoint': 'POST /rpu/issue',
+            'requested_at': datetime.datetime.utcnow().isoformat() + 'Z',
+            'failed_at_step': None,
+            'reason': None,
+        }
 
-    if approval_id:
-        import glob as _glob
+    def add_failure(self, step: str, reason: str):
+        self._log['failed_at_step'] = step
+        self._log['reason'] = reason
 
-        # R1: 존재 증명 — approval_id → eag_approvals/ record 존재 확인
-        approval_files = _glob.glob(
-            os.path.join(BASE_DIR, 'evidence', 'eag_approvals', '*.json')
-        )
-        approval_record = None
-        for af in approval_files:
-            try:
-                with open(af) as f:
-                    rec = json.load(f)
-                    if rec.get('approval_id') == approval_id:
-                        approval_record = rec
-                        break
-            except Exception as _e:
-                import logging; logging.warning("approval_record parse failed: %s", _e)
+    def add_revalidation(self, result: str):
+        self._log['revalidation'] = result
 
-        if not approval_record:
-            pec_log['failed_at_step'] = 'R1_EXISTENCE'
-            pec_log['reason'] = f'approval_id {approval_id} not found in eag_approvals/'
-            _save_pec_failure(pec_log)
-            return jsonify({'status': 'FAILED_CLOSED', 'stage': 'R1_EXISTENCE',
-                            'reason': pec_log['reason']}), 403
+    def add_snapshot(self, pec: dict):
+        self._log['pec'] = pec
 
-        # R2: 결속 증명 — approval record ↔ .approval_token hash binding
-        token_path = TOKEN_PATH
+    def add_input(self, input_info: dict):
+        self._log['input'] = input_info
+
+    def add_issuer_result(self, result: dict):
+        self._log['issuer_result'] = result
+
+    def add_verifier_result(self, result: dict):
+        self._log['verifier_result'] = result
+
+    def to_dict(self) -> dict:
+        return dict(self._log)
+
+
+def _revalidate_approval_contract(data: dict, context: PecContext):
+    """R1~R4 approval_id 검증 — 보안 경계. 축약/생략 금지."""
+    approval_id = data.get('approval_id')
+    if not approval_id:
+        return {'ok': True}
+
+    import glob as _glob
+
+    # R1: approval_id → eag_approvals/ 레코드 존재 확인
+    approval_files = _glob.glob(
+        os.path.join(BASE_DIR, 'evidence', 'eag_approvals', '*.json')
+    )
+    approval_record = None
+    for af in approval_files:
         try:
-            with open(token_path) as f:
-                token_data = json.load(f)
-            if token_data.get('approval_hash') != approval_record.get('approval_hash'):
-                raise ValueError('approval_hash mismatch')
-        except Exception as e:
-            pec_log['failed_at_step'] = 'R2_BINDING'
-            pec_log['reason'] = str(e)
-            _save_pec_failure(pec_log)
-            return jsonify({'status': 'FAILED_CLOSED', 'stage': 'R2_BINDING',
-                            'reason': pec_log['reason']}), 403
+            with open(af) as f:
+                rec = json.load(f)
+                if rec.get('approval_id') == approval_id:
+                    approval_record = rec
+                    break
+        except Exception as _e:
+            import logging; logging.warning("approval_record parse failed: %s", _e)
 
-        # R3: 범위 증명 — approval record 기준 event_type → approval source_ref 범위 확인
-        req_event_type = approval_record.get('event_type', '')
-        approved_source_ref = approval_record.get('source_ref', '')
-        # source_ref 미존재 시 패스 (하위 호환)
-        if approved_source_ref and req_event_type and req_event_type not in approved_source_ref:
-            pec_log['failed_at_step'] = 'R3_SCOPE'
-            pec_log['reason'] = f'event_type {req_event_type} out of approval scope {approved_source_ref}'
-            _save_pec_failure(pec_log)
-            return jsonify({'status': 'FAILED_CLOSED', 'stage': 'R3_SCOPE',
-                            'reason': pec_log['reason']}), 403
+    if not approval_record:
+        reason = f'approval_id {approval_id} not found in eag_approvals/'
+        context.add_failure('R1_EXISTENCE', reason)
+        return {'ok': False, 'step': 'R1_EXISTENCE', 'reason': reason,
+                'http_status': 403,
+                'response': {'status': 'FAILED_CLOSED', 'stage': 'R1_EXISTENCE', 'reason': reason}}
 
-        # R4: 무결성 증명 — approval record 기준 canonical payload hash 확인
-        import hashlib as _hashlib
-        payload_str = json.dumps({
-            'event_type': approval_record.get('event_type', ''),
-            'content': approval_record.get('content', ''),
-            'actor_id': approval_record.get('actor_id', ''),
-        }, sort_keys=True, ensure_ascii=False)
-        payload_hash = 'sha256:' + _hashlib.sha256(payload_str.encode()).hexdigest()
-        if token_data.get('event_hash') and payload_hash != token_data.get('event_hash'):
-            pec_log['failed_at_step'] = 'R4_INTEGRITY'
-            pec_log['reason'] = f'payload hash {payload_hash} != token event_hash'
-            _save_pec_failure(pec_log)
-            return jsonify({'status': 'FAILED_CLOSED', 'stage': 'R4_INTEGRITY',
-                            'reason': pec_log['reason']}), 403
-
-        pec_log['revalidation'] = 'R1~R4 ALL PASS'
-
-    # ── Step 1: 입력 필드 완결성 검사 ────────────────────────────────────────
+    # R2: approval record ↔ .approval_token hash binding
+    token_data = None
     try:
-        body = _data
-        if body is None:
-            raise ValueError('JSON body 없음')
-        if body is None:
-            raise ValueError('JSON body 없음')
+        with open(TOKEN_PATH) as f:
+            token_data = json.load(f)
+        if token_data.get('approval_hash') != approval_record.get('approval_hash'):
+            raise ValueError('approval_hash mismatch')
     except Exception as e:
-        pec_log.update({'failed_at_step': 'Step 1', 'reason': f'JSON 파싱 실패: {e}'})
-        _save_pec_failure(pec_log)
-        return jsonify({'status': 'FAIL', 'failed_at_step': 'Step 1',
-                        'reason': pec_log['reason']}), 400
+        context.add_failure('R2_BINDING', str(e))
+        return {'ok': False, 'step': 'R2_BINDING', 'reason': str(e),
+                'http_status': 403,
+                'response': {'status': 'FAILED_CLOSED', 'stage': 'R2_BINDING', 'reason': str(e)}}
+
+    # R3: event_type → approval source_ref 범위 확인
+    req_event_type    = approval_record.get('event_type', '')
+    approved_source_ref = approval_record.get('source_ref', '')
+    if approved_source_ref and req_event_type and req_event_type not in approved_source_ref:
+        reason = f'event_type {req_event_type} out of approval scope {approved_source_ref}'
+        context.add_failure('R3_SCOPE', reason)
+        return {'ok': False, 'step': 'R3_SCOPE', 'reason': reason,
+                'http_status': 403,
+                'response': {'status': 'FAILED_CLOSED', 'stage': 'R3_SCOPE', 'reason': reason}}
+
+    # R4: canonical payload hash 무결성 확인 (문자열 조립/정렬/인코딩 기준 불변)
+    import hashlib as _hashlib
+    payload_str  = json.dumps({
+        'event_type': approval_record.get('event_type', ''),
+        'content':    approval_record.get('content', ''),
+        'actor_id':   approval_record.get('actor_id', ''),
+    }, sort_keys=True, ensure_ascii=False)
+    payload_hash = 'sha256:' + _hashlib.sha256(payload_str.encode()).hexdigest()
+    if token_data.get('event_hash') and payload_hash != token_data.get('event_hash'):
+        reason = f'payload hash {payload_hash} != token event_hash'
+        context.add_failure('R4_INTEGRITY', reason)
+        return {'ok': False, 'step': 'R4_INTEGRITY', 'reason': reason,
+                'http_status': 403,
+                'response': {'status': 'FAILED_CLOSED', 'stage': 'R4_INTEGRITY', 'reason': reason}}
+
+    context.add_revalidation('R1~R4 ALL PASS')
+    return {'ok': True, 'approval_record': approval_record}
+
+
+def _validate_rpu_issue_input(data: dict, context: PecContext):
+    """Step 1: 입력 필드 완결성 검사 + 필드 추출"""
+    if data is None:
+        context.add_failure('Step 1', 'JSON body 없음')
+        return {'ok': False, 'step': 'Step 1', 'reason': 'JSON body 없음',
+                'http_status': 400,
+                'response': {'status': 'FAIL', 'failed_at_step': 'Step 1', 'reason': 'JSON body 없음'}}
 
     required_fields = ['content', 'event_type', 'session_id']
-    missing = [f for f in required_fields if not body.get(f)]
+    missing = [fld for fld in required_fields if not data.get(fld)]
     if missing:
-        pec_log.update({'failed_at_step': 'Step 1', 'reason': f'필수 필드 누락: {missing}'})
-        _save_pec_failure(pec_log)
-        return jsonify({'status': 'FAIL', 'failed_at_step': 'Step 1',
-                        'reason': pec_log['reason'], 'missing_fields': missing}), 400
+        reason = f'필수 필드 누락: {missing}'
+        context.add_failure('Step 1', reason)
+        return {'ok': False, 'step': 'Step 1', 'reason': reason,
+                'http_status': 400,
+                'response': {'status': 'FAIL', 'failed_at_step': 'Step 1',
+                               'reason': reason, 'missing_fields': missing}}
 
-    actor_id   = body['actor_id']
-    content    = body['content']
-    event_type = body['event_type']
-    session_id = body['session_id']
-    source_ref = body.get('source_ref', '')
-    dry_run    = bool(body.get('dry_run', False))
-
-    pec_log['input'] = {
-        'actor_id': actor_id,
-        'event_type': event_type,
-        'session_id': session_id,
-        'source_ref': source_ref,
-        'dry_run': dry_run,
-        'content_length': len(content),
+    return {
+        'ok':        True,
+        'actor_id':  data.get('actor_id', ''),
+        'content':   data['content'],
+        'event_type': data['event_type'],
+        'session_id': data['session_id'],
+        'source_ref': data.get('source_ref', ''),
+        'dry_run':   bool(data.get('dry_run', False)),
     }
 
-    # ── Step 2: event_type 허용 목록 확인 (LESSON-013) ───────────────────────
+
+def _check_rpu_event_type_allowlist(event_type: str, context: PecContext):
+    """Step 2: event_type 허용 목록 확인 (LESSON-013)"""
     try:
         allowed = _get_allowed_event_types()
     except Exception as e:
-        pec_log.update({'failed_at_step': 'Step 2', 'reason': f'허용 목록 로딩 실패: {e}'})
-        _save_pec_failure(pec_log)
-        return jsonify({'status': 'FAIL', 'failed_at_step': 'Step 2',
-                        'reason': pec_log['reason']}), 500
+        reason = f'허용 목록 로딩 실패: {e}'
+        context.add_failure('Step 2', reason)
+        return {'ok': False, 'step': 'Step 2', 'reason': reason,
+                'http_status': 500,
+                'response': {'status': 'FAIL', 'failed_at_step': 'Step 2', 'reason': reason}}
 
     if event_type not in allowed:
-        pec_log.update({'failed_at_step': 'Step 2',
-                        'reason': f'event_type "{event_type}" 허용 목록 미포함. 허용: {allowed}'})
-        _save_pec_failure(pec_log)
-        return jsonify({'status': 'FAIL', 'failed_at_step': 'Step 2',
-                        'reason': pec_log['reason']}), 422
+        reason = f'event_type "{event_type}" 허용 목록 미포함. 허용: {allowed}'
+        context.add_failure('Step 2', reason)
+        return {'ok': False, 'step': 'Step 2', 'reason': reason,
+                'http_status': 422,
+                'response': {'status': 'FAIL', 'failed_at_step': 'Step 2', 'reason': reason}}
 
-    # ── Step 3: PEC 캡처 ──────────────────────────────────────────────────────
+    return {'ok': True}
+
+
+def _capture_rpu_issue_pec_snapshot(context: PecContext):
+    """Step 3: chain_tip + 파일 존재 확인"""
     try:
         chain_tip = _get_chain_tip()
-        pec_log['pec'] = {
-            'captured_at': datetime.datetime.utcnow().isoformat() + 'Z',
-            'chain_tip': chain_tip,
+        context.add_snapshot({
+            'captured_at':      datetime.datetime.utcnow().isoformat() + 'Z',
+            'chain_tip':        chain_tip,
             'chain_tip_length': len(chain_tip),
-            'issuer_path': ISSUER_PATH,
-            'verifier_path': VERIFIER_PATH,
-            'evidence_dir': EVIDENCE_DIR,
-            'issuer_exists': os.path.exists(ISSUER_PATH),
-            'verifier_exists': os.path.exists(VERIFIER_PATH),
-            'ledger_exists': os.path.exists(SCORING_LEDGER_PATH),
-        }
+            'issuer_path':      ISSUER_PATH,
+            'verifier_path':    VERIFIER_PATH,
+            'evidence_dir':     EVIDENCE_DIR,
+            'issuer_exists':    os.path.exists(ISSUER_PATH),
+            'verifier_exists':  os.path.exists(VERIFIER_PATH),
+            'ledger_exists':    os.path.exists(SCORING_LEDGER_PATH),
+        })
     except Exception as e:
-        pec_log.update({'failed_at_step': 'Step 3', 'reason': f'PEC 캡처 실패: {e}'})
-        _save_pec_failure(pec_log)
-        return jsonify({'status': 'FAIL', 'failed_at_step': 'Step 3',
-                        'reason': pec_log['reason']}), 500
+        reason = f'PEC 캡처 실패: {e}'
+        context.add_failure('Step 3', reason)
+        return {'ok': False, 'step': 'Step 3', 'reason': reason,
+                'http_status': 500,
+                'response': {'status': 'FAIL', 'failed_at_step': 'Step 3', 'reason': reason}}
 
-    # issuer / verifier 파일 존재 확인
     for label, path in [('issuer', ISSUER_PATH), ('verifier', VERIFIER_PATH)]:
         if not os.path.exists(path):
-            pec_log.update({'failed_at_step': 'Step 3',
-                            'reason': f'{label} 파일 없음: {path}'})
-            _save_pec_failure(pec_log)
-            return jsonify({'status': 'FAIL', 'failed_at_step': 'Step 3',
-                            'reason': pec_log['reason']}), 500
+            reason = f'{label} 파일 없음: {path}'
+            context.add_failure('Step 3', reason)
+            return {'ok': False, 'step': 'Step 3', 'reason': reason,
+                    'http_status': 500,
+                    'response': {'status': 'FAIL', 'failed_at_step': 'Step 3', 'reason': reason}}
 
-    # ── Step 4: rpu_atomic_issuer.py subprocess 호출 ─────────────────────────
+    return {'ok': True, 'chain_tip': chain_tip}
+
+
+def _invoke_rpu_atomic_issuer(input_state: dict, context: PecContext):
+    """Step 4: rpu_atomic_issuer.py subprocess 호출. tmp_event 생성/삭제 동일 함수 내 완결."""
     import tempfile, json as _json
+
+    tmp_path = None
     try:
-        issuer_env = os.environ.copy()
         event_payload = {
-            'actor_id':   actor_id,
-            'content':    content,
-            'event_type': event_type,
-            'session_id': session_id,
+            'actor_id':   input_state['actor_id'],
+            'content':    input_state['content'],
+            'event_type': input_state['event_type'],
+            'session_id': input_state['session_id'],
         }
-        if source_ref:
-            event_payload['source_ref'] = source_ref
+        if input_state['source_ref']:
+            event_payload['source_ref'] = input_state['source_ref']
+
         tmp_event = tempfile.NamedTemporaryFile(
             mode='w', suffix='.json', delete=False,
             dir='/tmp', encoding='utf-8'
@@ -525,9 +544,10 @@ def rpu_issue():
         _json.dump(event_payload, tmp_event, ensure_ascii=False)
         tmp_event.flush()
         tmp_event.close()
-        # session_count: SESSION_CONTEXT.json에서 로드
+        tmp_path = tmp_event.name
+
+        # session_count: approval_token session_id에서 파싱
         try:
-            # approval_token session_id에서 session_count 파싱 (SESSION_CONTEXT 대신)
             with open(TOKEN_PATH, 'r', encoding='utf-8') as _tk:
                 _tk_data = json.load(_tk)
             _token_sid = _tk_data.get('session_id', '')
@@ -537,41 +557,42 @@ def rpu_issue():
                 raise ValueError(f'session_id 파싱 실패: {_token_sid}')
             _session_count = int(_m.group(1))
         except Exception as e:
-            return jsonify({"status": "error", "reason": f"SESSION_COUNT_LOAD_FAILED: {e}"}), 500
+            reason = f'SESSION_COUNT_LOAD_FAILED: {e}'
+            context.add_failure('Step 4', reason)
+            return {'ok': False, 'step': 'Step 4', 'reason': reason,
+                    'http_status': 500,
+                    'response': {'status': 'error', 'reason': reason}}
+
         cmd = ['python3', ISSUER_PATH,
-               '--event-file',     tmp_event.name,
+               '--event-file',     tmp_path,
                '--approval-token', TOKEN_PATH,
                '--session-count',  str(_session_count),
-               '--actor-id',       actor_id]
-        if dry_run:
+               '--actor-id',       input_state['actor_id']]
+        if input_state['dry_run']:
             cmd += ['--dry-run']
 
         result = subprocess.run(
             cmd,
-            capture_output=True,
-            text=True,
-            timeout=60,
-            cwd=BASE_DIR,
-            env=issuer_env
+            capture_output=True, text=True,
+            timeout=60, cwd=BASE_DIR,
+            env=os.environ.copy()
         )
-        pec_log['issuer_result'] = {
-            'returncode': result.returncode,
-            'stdout_tail': result.stdout[-500:] if result.stdout else '',
-            'stderr_tail': result.stderr[-500:] if result.stderr else '',
-        }
+        context.add_issuer_result({
+            'returncode':   result.returncode,
+            'stdout_tail':  result.stdout[-500:] if result.stdout else '',
+            'stderr_tail':  result.stderr[-500:] if result.stderr else '',
+        })
 
         if result.returncode != 0:
-            pec_log.update({'failed_at_step': 'Step 4',
-                            'reason': f'issuer 실패 (returncode={result.returncode})'})
-            _save_pec_failure(pec_log)
-            return jsonify({
-                'status': 'FAIL',
-                'failed_at_step': 'Step 4',
-                'reason': pec_log['reason'],
-                'issuer_stderr': result.stderr[-500:],
-            }), 500
+            reason = f'issuer 실패 (returncode={result.returncode})'
+            context.add_failure('Step 4', reason)
+            return {'ok': False, 'step': 'Step 4', 'reason': reason,
+                    'http_status': 500,
+                    'response': {'status': 'FAIL', 'failed_at_step': 'Step 4',
+                                   'reason': reason,
+                                   'issuer_stderr': result.stderr[-500:]}}
 
-        # issuer stdout에서 rpu_id, new_chain_tip 파싱 시도
+        # stdout에서 rpu_id, new_chain_tip 파싱 (LESSON-011: 64자 full hash)
         rpu_id = None
         new_chain_tip = None
         for line in result.stdout.splitlines():
@@ -583,76 +604,144 @@ def rpu_issue():
             if 'chain_tip' in line.lower() or 'chain_hash' in line.lower():
                 try:
                     candidate = line.split(':', 1)[1].strip().strip('"').strip("'").strip(',')
-                    if len(candidate) == 64:  # LESSON-011: 64자 full hash 확인
+                    if len(candidate) == 64:
                         new_chain_tip = candidate
                 except Exception as _e:
                     import logging; logging.debug("chain_tip parse skip: %s", _e)
 
+        return {'ok': True, 'rpu_id': rpu_id, 'new_chain_tip': new_chain_tip}
+
     except subprocess.TimeoutExpired:
-        pec_log.update({'failed_at_step': 'Step 4', 'reason': 'issuer subprocess timeout (60s)'})
-        _save_pec_failure(pec_log)
-        return jsonify({'status': 'FAIL', 'failed_at_step': 'Step 4',
-                        'reason': pec_log['reason']}), 500
+        reason = 'issuer subprocess timeout (60s)'
+        context.add_failure('Step 4', reason)
+        return {'ok': False, 'step': 'Step 4', 'reason': reason,
+                'http_status': 500,
+                'response': {'status': 'FAIL', 'failed_at_step': 'Step 4', 'reason': reason}}
     except Exception as e:
-        pec_log.update({'failed_at_step': 'Step 4', 'reason': f'issuer 호출 예외: {e}'})
-        _save_pec_failure(pec_log)
-        return jsonify({'status': 'FAIL', 'failed_at_step': 'Step 4',
-                        'reason': pec_log['reason']}), 500
+        reason = f'issuer 호출 예외: {e}'
+        context.add_failure('Step 4', reason)
+        return {'ok': False, 'step': 'Step 4', 'reason': reason,
+                'http_status': 500,
+                'response': {'status': 'FAIL', 'failed_at_step': 'Step 4', 'reason': reason}}
+    finally:
+        # tmp_event cleanup — 성공/실패 무관 항상 수행. cleanup 실패가 issuer 결과 덮어쓰기 금지.
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except Exception as _ce:
+                import logging; logging.warning("tmp_event cleanup failed: %s", _ce)
 
-    # ── Step 5: vps_verifier_bridge.py 후검증 ────────────────────────────────
-    # dry_run이면 체인 변경 없으므로 verifier 후검증 skip (성공으로 처리)
-    verifier_result = 'SKIPPED_DRY_RUN'
-    if not dry_run:
-        try:
-            v_result = subprocess.run(
-                ['python3', VERIFIER_PATH,
-                 '--chain-dir', EVIDENCE_DIR],
-                capture_output=True,
-                text=True,
-                timeout=30,
-                cwd=BASE_DIR,
-                env=os.environ.copy()
-            )
-            pec_log['verifier_result'] = {
-                'returncode': v_result.returncode,
-                'stdout_tail': v_result.stdout[-300:] if v_result.stdout else '',
-            }
 
-            if v_result.returncode != 0:
-                pec_log.update({'failed_at_step': 'Step 5',
-                                'reason': f'verifier FAIL (returncode={v_result.returncode})'})
-                _save_pec_failure(pec_log)
-                return jsonify({
-                    'status': 'FAIL',
-                    'failed_at_step': 'Step 5',
-                    'reason': pec_log['reason'],
-                    'verifier_stdout': v_result.stdout[-300:],
-                }), 500
+def _verify_rpu_post_issuance(dry_run: bool, context: PecContext):
+    """Step 5: vps_verifier_bridge.py 후검증. dry_run=False 시 우회 경로 없음."""
+    if dry_run:
+        return {'ok': True, 'verifier_result': 'SKIPPED_DRY_RUN'}
 
-            verifier_result = 'PASS'
+    try:
+        v_result = subprocess.run(
+            ['python3', VERIFIER_PATH, '--chain-dir', EVIDENCE_DIR],
+            capture_output=True, text=True,
+            timeout=30, cwd=BASE_DIR,
+            env=os.environ.copy()
+        )
+        context.add_verifier_result({
+            'returncode':  v_result.returncode,
+            'stdout_tail': v_result.stdout[-300:] if v_result.stdout else '',
+        })
 
-        except subprocess.TimeoutExpired:
-            pec_log.update({'failed_at_step': 'Step 5',
-                            'reason': 'verifier subprocess timeout (30s)'})
-            _save_pec_failure(pec_log)
-            return jsonify({'status': 'FAIL', 'failed_at_step': 'Step 5',
-                            'reason': pec_log['reason']}), 500
-        except Exception as e:
-            pec_log.update({'failed_at_step': 'Step 5',
-                            'reason': f'verifier 호출 예외: {e}'})
-            _save_pec_failure(pec_log)
-            return jsonify({'status': 'FAIL', 'failed_at_step': 'Step 5',
-                            'reason': pec_log['reason']}), 500
+        if v_result.returncode != 0:
+            reason = f'verifier FAIL (returncode={v_result.returncode})'
+            context.add_failure('Step 5', reason)
+            return {'ok': False, 'step': 'Step 5', 'reason': reason,
+                    'http_status': 500,
+                    'response': {'status': 'FAIL', 'failed_at_step': 'Step 5',
+                                   'reason': reason,
+                                   'verifier_stdout': v_result.stdout[-300:]}}
 
-    # ── 성공 반환 ─────────────────────────────────────────────────────────────
+        return {'ok': True, 'verifier_result': 'PASS'}
+
+    except subprocess.TimeoutExpired:
+        reason = 'verifier subprocess timeout (30s)'
+        context.add_failure('Step 5', reason)
+        return {'ok': False, 'step': 'Step 5', 'reason': reason,
+                'http_status': 500,
+                'response': {'status': 'FAIL', 'failed_at_step': 'Step 5', 'reason': reason}}
+    except Exception as e:
+        reason = f'verifier 호출 예외: {e}'
+        context.add_failure('Step 5', reason)
+        return {'ok': False, 'step': 'Step 5', 'reason': reason,
+                'http_status': 500,
+                'response': {'status': 'FAIL', 'failed_at_step': 'Step 5', 'reason': reason}}
+
+
+@app.route('/rpu/issue', methods=['POST'])
+@require_auth(require_write=True)
+def rpu_issue():
+    """
+    WF-05 v2 오케스트레이션 엔드포인트 (Orchestrator — RULE-5 분해 S161)
+    Step 0: 인증 (require_auth 데코레이터가 처리)
+    Step 1: 입력 필드 완결성 검사
+    Step 2: event_type 허용 목록 확인 (LESSON-013)
+    Step 3: PEC 캡처
+    Step 4: rpu_atomic_issuer.py subprocess 호출
+    Step 5: vps_verifier_bridge.py 후검증
+    """
+    context = PecContext()
+    data    = request.get_json(force=True, silent=True) or {}
+
+    # R1~R4 Revalidation Contract
+    rv = _revalidate_approval_contract(data, context)
+    if not rv['ok']:
+        _save_pec_failure(context.to_dict())
+        return jsonify(rv['response']), rv['http_status']
+
+    # Step 1: 입력 검증
+    input_state = _validate_rpu_issue_input(data, context)
+    if not input_state['ok']:
+        _save_pec_failure(context.to_dict())
+        return jsonify(input_state['response']), input_state['http_status']
+
+    context.add_input({
+        'actor_id':       input_state['actor_id'],
+        'event_type':     input_state['event_type'],
+        'session_id':     input_state['session_id'],
+        'source_ref':     input_state['source_ref'],
+        'dry_run':        input_state['dry_run'],
+        'content_length': len(input_state['content']),
+    })
+
+    # Step 2: event_type 허용 목록
+    allow_state = _check_rpu_event_type_allowlist(input_state['event_type'], context)
+    if not allow_state['ok']:
+        _save_pec_failure(context.to_dict())
+        return jsonify(allow_state['response']), allow_state['http_status']
+
+    # Step 3: PEC 캡처
+    pec_state = _capture_rpu_issue_pec_snapshot(context)
+    if not pec_state['ok']:
+        _save_pec_failure(context.to_dict())
+        return jsonify(pec_state['response']), pec_state['http_status']
+
+    # Step 4: issuer subprocess
+    issuer_state = _invoke_rpu_atomic_issuer(input_state, context)
+    if not issuer_state['ok']:
+        _save_pec_failure(context.to_dict())
+        return jsonify(issuer_state['response']), issuer_state['http_status']
+
+    # Step 5: 후검증 (dry_run=False 시 우회 불가)
+    verify_state = _verify_rpu_post_issuance(input_state['dry_run'], context)
+    if not verify_state['ok']:
+        _save_pec_failure(context.to_dict())
+        return jsonify(verify_state['response']), verify_state['http_status']
+
     return jsonify({
         'status':            'SUCCESS',
-        'rpu_id':            rpu_id,
-        'chain_tip':         new_chain_tip or chain_tip,
-        'publication_state': 'DRY_RUN' if dry_run else 'PUSHED',
-        'verifier_result':   verifier_result,
-        'pec_captured_at':   pec_log['pec']['captured_at'],
-        'dry_run':           dry_run,
+        'rpu_id':            issuer_state.get('rpu_id'),
+        'chain_tip':         issuer_state.get('new_chain_tip') or pec_state['chain_tip'],
+        'publication_state': 'DRY_RUN' if input_state['dry_run'] else 'PUSHED',
+        'verifier_result':   verify_state['verifier_result'],
+        'pec_captured_at':   context.to_dict()['pec']['captured_at'],
+        'dry_run':           input_state['dry_run'],
     }), 200
 
 
