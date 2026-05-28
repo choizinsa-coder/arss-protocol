@@ -489,7 +489,7 @@ def _check_rpu_event_type_allowlist(event_type: str, context: PecContext):
     return {'ok': True}
 
 
-def _capture_rpu_issue_pec_snapshot(context: PecContext):
+def _update_pec_snapshot(context: PecContext):
     """Step 3: chain_tip + 파일 존재 확인"""
     try:
         chain_tip = _get_chain_tip()
@@ -522,7 +522,7 @@ def _capture_rpu_issue_pec_snapshot(context: PecContext):
     return {'ok': True, 'chain_tip': chain_tip}
 
 
-def _invoke_rpu_atomic_issuer(input_state: dict, context: PecContext):
+def _execute_rpu_atomic_issuer(input_state: dict, context: PecContext):
     """Step 4: rpu_atomic_issuer.py subprocess 호출. tmp_event 생성/삭제 동일 함수 내 완결."""
     import tempfile, json as _json
 
@@ -717,13 +717,13 @@ def rpu_issue():
         return jsonify(allow_state['response']), allow_state['http_status']
 
     # Step 3: PEC 캡처
-    pec_state = _capture_rpu_issue_pec_snapshot(context)
+    pec_state = _update_pec_snapshot(context)
     if not pec_state['ok']:
         _save_pec_failure(context.to_dict())
         return jsonify(pec_state['response']), pec_state['http_status']
 
     # Step 4: issuer subprocess
-    issuer_state = _invoke_rpu_atomic_issuer(input_state, context)
+    issuer_state = _execute_rpu_atomic_issuer(input_state, context)
     if not issuer_state['ok']:
         _save_pec_failure(context.to_dict())
         return jsonify(issuer_state['response']), issuer_state['http_status']
