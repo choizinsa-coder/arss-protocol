@@ -66,3 +66,19 @@ DELTA_LOG/transactions/
 
 # LEGACY directory
 99_LEGACY/
+
+# === S161 .gitignore 정비 ===
+# SESSION_CONTEXT 이력/아카이브 파일
+**/SESSION_CONTEXT_S*.json
+**/SESSION_CONTEXT_ARCHIVE_*.json
+SESSION_CONTEXT_POINTER.json
+SESSION_CONTEXT_STALE_MANIFEST.json
+# sandbox 아티팩트
+tools/sandbox/.tokens
+tools/sandbox/audit/
+tools/sandbox/caddy/
+tools/sandbox/common/
+tools/sandbox/e2e_test_*.txt
+tools/sandbox/domi/
+# 일회성 스크립트
+**/regenerate_runtime_*.py
