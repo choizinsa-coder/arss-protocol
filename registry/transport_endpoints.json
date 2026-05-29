@@ -1,0 +1,19 @@
+{
+  "version": "TRANSPORT_REGISTRY_v1",
+  "created_session": 169,
+  "note": "P3-T3 n8n Transport Layer — Endpoint Registry (S169 초기 설정)",
+  "endpoints": {
+    "DEPLOYMENT_EVENT": {
+      "url": "http://localhost:5678/webhook/aiba-deployment",
+      "active": true,
+      "workflow": "WF-05",
+      "description": "DEPLOYMENT_RECEIPT Tier 1 전송 → n8n WF-05"
+    },
+    "SYNC_EVENT": {
+      "url": "http://localhost:5678/webhook/aiba-sync",
+      "active": true,
+      "workflow": "WF-05",
+      "description": "SYNC_EVENT 전송 → n8n WF-05"
+    }
+  }
+}
