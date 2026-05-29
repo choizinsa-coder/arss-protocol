@@ -91,9 +91,16 @@ def sandbox_path(tmp_path):
 
 
 @pytest.fixture
-def ops_path(tmp_path):
-    """Tier 2 금지 운영 경로."""
-    return tmp_path / "tools" / "governance" / "policy.json"
+def ops_path():
+    """
+    Tier 2 금지 운영 경로 — VPS 스타일 고정 절대 경로.
+
+    주의: tmp_path 사용 불가.
+    tmp_path는 /tmp/pytest-... 형태로, classify_path가 "tmp" 부분을
+    TIER_2_ALLOWED_DIRS["tmp"]와 오매칭하여 TIER_2로 잘못 판정함.
+    VPS 스타일 경로는 parts에 "tmp"/"sandbox" 없음 → UNKNOWN → 차단 정상.
+    """
+    return Path("/opt/arss/engine/arss-protocol/tools/governance/policy.json")
 
 
 @pytest.fixture
