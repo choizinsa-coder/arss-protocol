@@ -1,0 +1,21 @@
+{
+  "version": "FALLBACK_REGISTRY_v1",
+  "created_session": 170,
+  "note": "P3-T4 Fallback Layer — Exception Path Endpoint Registry (S170 초기 설정). secondary_enabled=false: secondary endpoint 비활성 (별도 EAG 승인 필요). manual_escalation_required=true: 장애 발생 시 비오(Joshua) 수동 경로만 허용.",
+  "endpoints": {
+    "DEPLOYMENT_EVENT": {
+      "secondary_enabled": false,
+      "secondary_endpoint": null,
+      "manual_escalation_required": true,
+      "approved_by": null,
+      "approval_ref": null
+    },
+    "SYNC_EVENT": {
+      "secondary_enabled": false,
+      "secondary_endpoint": null,
+      "manual_escalation_required": true,
+      "approved_by": null,
+      "approval_ref": null
+    }
+  }
+}
