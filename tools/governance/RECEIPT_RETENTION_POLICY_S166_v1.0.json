@@ -1,0 +1,59 @@
+{
+  "schema": "RECEIPT_RETENTION_POLICY_v1.0",
+  "spec_id": "GOV-001",
+  "status": "LOCKED",
+  "locked_session": 166,
+  "locked_date": "2026-05-29",
+  "approved_by": "비오(Joshua)",
+  "eag_stage": "EAG-1_COMPLETE",
+  "design_ref": "BRIEFING-DOMI-S166-GOV-001 (R1)",
+  "trust_ready_ref": "BRIEFING-JENI-S166-GOV-001-REVALIDATION (T-1~T-5 PASS)",
+  "generated_at": "2026-05-29T15:04:02+09:00",
+  "retention_clock": {
+    "standard": "created_at",
+    "note": "Retention Clock Starts At = created_at (최초 생성 시점). 전 등급 공통 적용."
+  },
+  "retention_tiers": {
+    "R3": {
+      "name": "Trust Chain Receipt",
+      "scope": "SESSION_CONTEXT, BOOT/RUNTIME, chain, TX, COMMIT, recovery, quarantine",
+      "vps_retention": "PERMANENT",
+      "drive_retention": "PERMANENT",
+      "early_deletion": "PROHIBITED",
+      "retroactive": true,
+      "note": "PASS/FAIL/VOID/ORPHANED/REJECTED 모든 status 동일 보존. 상태별 차등 삭제 금지."
+    },
+    "R2": {
+      "name": "Mutation Receipt",
+      "scope": "파일 생성/수정, state 변경, chain write",
+      "vps_retention_days": 365,
+      "drive_retention_years": 5,
+      "early_deletion": "없음 (법적/감사 사유 제외)",
+      "retroactive": true,
+      "note": "운영 장애 역추적 + 변경 책임 추적 + 연간 감사 범위 확보 기준."
+    },
+    "R1": {
+      "name": "Verdict Receipt",
+      "scope": "검증기, validator, checker (PASS/FAIL/ALLOW/DENY/VALIDATION 결과)",
+      "vps_retention_days": 90,
+      "drive_retention_years": 2,
+      "early_deletion": "상위 R2/R3 Receipt가 완전 참조(Data Lineage 바인딩)하는 경우만 허용",
+      "retroactive": true,
+      "note": "대부분의 운영 분쟁은 90일 내 발생. 장기 보존 가치는 R2보다 낮음."
+    },
+    "R0": {
+      "name": "Exception Disposal Rule",
+      "scope": "순수 계산 함수, formatter, static helper",
+      "classification": "NOT_A_RETENTION_TIER",
+      "rule": "비정규(Non-Canonical) 영수증 자동 폐기 규칙. 30일 이하 자동 제거.",
+      "receipt_required": false,
+      "retroactive": true,
+      "note": "R0는 영수증 생성 없음(No Receipt Required). Disposal Rule은 잘못 생성된 임시 영수증 처리용."
+    }
+  },
+  "scope": {
+    "current_session": "S166 EAG = 수치 LOCK만.",
+    "drive_migration_impl": "별도 태스크 파생 예정. 이번 EAG 범위 외.",
+    "existing_receipts": "소급 적용. VOID/REJECTED/ORPHANED 실물 포함."
+  }
+}
