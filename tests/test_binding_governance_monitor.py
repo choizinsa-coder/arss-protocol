@@ -2,6 +2,7 @@
 test_binding_governance_monitor.py
 P4-B Binding Governance Layer — binding_governance_monitor 검증
 SSOT: Domi P4-B Design (S173) / EAG-1/2 Approved 비오(Joshua)
+P4-C1 패치 (S174): TC-10 failure path 보강 (_save_index 실패 graceful 처리)
 
 TC-1: run_once — 빈 index → acknowledged_count=0
 TC-2: run_once — NEW alert 1건 → ACKNOWLEDGED 전환 + queue 등재
@@ -12,6 +13,7 @@ TC-6: get_pending_observations — ACKNOWLEDGED queue 항목 반환
 TC-7: get_monitor_status — 필수 필드 구조 검증
 TC-8: _find_active_alert_entry — ACTIVE 상태 탐지 (binding_guard 연동)
 TC-9: _find_active_alert_entry — RESOLVED 상태는 탐지 안 됨
+TC-10: run_once — _save_index 실패(False) 시 acknowledged_ids 정상 반환 (RULE-8 failure path)
 """
 
 import sys
@@ -194,3 +196,21 @@ def test_tc9_find_active_alert_entry_terminal():
         index = _make_index([_make_alert("ALERT_Y", "DEPLOYMENT_EVENT", status)])
         result = _find_active_alert_entry(index, "DEPLOYMENT_EVENT")
         assert result is None, f"status={status} 는 ACTIVE가 아님"
+
+
+# ── TC-10: _save_index 실패 시 graceful 처리 (RULE-8 failure path) ─────────
+
+def test_tc10_run_once_save_failure_graceful():
+    """_save_index 실패(False 반환) 시에도 run_once acknowledged_ids 정상 반환 (RULE-8 failure path)"""
+    alert = _make_alert("ALERT_010", "DEPLOYMENT_EVENT", "NEW")
+    index = _make_index([alert])
+    queue_data = _make_queue([])
+    with patch("tools.sync_layer.governance.binding_governance_monitor._load_index", return_value=index), \
+         patch("tools.sync_layer.governance.binding_governance_monitor._load_action_queue", return_value=queue_data), \
+         patch("tools.sync_layer.governance.binding_governance_monitor._save_index", return_value=False) as mock_save_idx, \
+         patch("tools.sync_layer.governance.binding_governance_monitor._save_action_queue", return_value=False):
+        result = run_once()
+    # 저장 실패에도 acknowledged_ids는 정상 반환 (외부 I/O 실패는 내부 전환 상태에 영향 없음)
+    assert result["acknowledged_count"] == 1
+    assert "ALERT_010" in result["acknowledged_ids"]
+    mock_save_idx.assert_called_once()

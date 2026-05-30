@@ -2,15 +2,16 @@
 test_p4t2.py
 P4-T2: binding_guard + receiver_receipt 단위 테스트
 EAG-2 Approved (비오(Joshua), S172)
+P4-C1 패치 (S174): Layer E failure path 보강 (E4, E5) + Layer A RULE-8_NOT_APPLICABLE 처리
 
 테스트 구조:
-  Layer A: binding_guard 상태 조회 (3)
+  Layer A: binding_guard 상태 조회 (3) — RULE-8_NOT_APPLICABLE (순수 상태 조회 R0급)
   Layer B: binding_guard probe 로직 (3)
   Layer C: binding_guard 전체 검증 (3)
   Layer D: receiver_receipt 생성 (3)
-  Layer E: receiver_receipt 저장 (3)
+  Layer E: receiver_receipt 저장 (5) ← P4-C1: E4/E5 failure path 추가
   Layer F: 통합 — 차단 흐름 (3)
-  Total: 18
+  Total: 20
 """
 
 import json
@@ -82,6 +83,9 @@ MOCK_INACTIVE_ENDPOINTS = {
 
 
 # ── Layer A: binding_guard 상태 조회 ────────────────────────────────────────
+# RULE-8_NOT_APPLICABLE: 순수 상태 딕셔너리 반환 함수 (R0급).
+# 부작용 없음 / 외부 I/O 없음 / 상태 변경 없음.
+# failure path assertion 대상 아님 (P4-C1 S174 확정).
 
 class TestLayerA_BindingGuardStatus(unittest.TestCase):
 
@@ -271,6 +275,40 @@ class TestLayerE_ReceiptSave(unittest.TestCase):
         for key in ["component", "p4_task", "receipt_type", "receipt_dir", "deploy_executor_coupling"]:
             self.assertIn(key, status)
         self.assertEqual(status["deploy_executor_coupling"], "NONE — 독립 타입")
+
+    def test_E4_save_receipt_fsync_failure_returns_false(self):
+        """_fsync_write 실패 → save_receiver_receipt False 반환 (RULE-8 failure path)"""
+        receipt = create_receiver_receipt(
+            receiver="WF-T1",
+            event_type="DEPLOYMENT_EVENT",
+            endpoint_id="aiba-deployment",
+            binding_status=BINDING_MATCH,
+            schema_status=SCHEMA_PASS,
+            result=RESULT_ACCEPTED,
+        )
+        with patch(
+            "tools.sync_layer.transport.receiver_receipt._fsync_write",
+            return_value=False,
+        ):
+            saved = save_receiver_receipt(receipt)
+        self.assertFalse(saved)
+
+    def test_E5_create_and_save_fsync_failure_returns_false_tuple(self):
+        """_fsync_write 실패 → create_and_save_receipt (receipt, False) 반환 (RULE-8 failure path)"""
+        with patch(
+            "tools.sync_layer.transport.receiver_receipt._fsync_write",
+            return_value=False,
+        ):
+            receipt, saved = create_and_save_receipt(
+                receiver="WF-T1",
+                event_type="DEPLOYMENT_EVENT",
+                endpoint_id="aiba-deployment",
+                binding_status=BINDING_MATCH,
+                schema_status=SCHEMA_PASS,
+                result=RESULT_ACCEPTED,
+            )
+        self.assertIsInstance(receipt, dict)
+        self.assertFalse(saved)
 
 
 # ── Layer F: 통합 — 차단 흐름 ───────────────────────────────────────────────
