@@ -333,3 +333,133 @@
 {"event_type": "TOOL_DENY", "tool_name": "fetch_state", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T07:37:46.019401+00:00"}
 {"event_type": "TOOL_DENY", "tool_name": "_hang_tool", "layer": "DENY", "result_summary": "DENIED reason=T2_TOOL_EXECUTION_TIMEOUT", "phase": "PHASE-B", "timestamp": "2026-05-28T07:37:47.259007+00:00"}
 {"event_type": "TOOL_DENY", "tool_name": "nonexistent_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T07:37:48.288291+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-28T09:24:42.055592+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_all_context", "layer": "DENY", "result_summary": "DENIED reason=FORBIDDEN_TOOLS", "phase": "PHASE-B", "timestamp": "2026-05-28T09:24:42.057588+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "mystery_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:24:42.059327+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-28T09:24:42.061912+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "new_tool", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:24:42.065616+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "read_all", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:24:42.065872+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_context", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:24:42.066023+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "fetch_state", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:24:42.066157+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "_hang_tool", "layer": "DENY", "result_summary": "DENIED reason=T2_TOOL_EXECUTION_TIMEOUT", "phase": "PHASE-B", "timestamp": "2026-05-28T09:24:43.301877+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "nonexistent_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:24:44.326969+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-28T09:27:07.824720+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_all_context", "layer": "DENY", "result_summary": "DENIED reason=FORBIDDEN_TOOLS", "phase": "PHASE-B", "timestamp": "2026-05-28T09:27:07.826122+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "mystery_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:27:07.827482+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-28T09:27:07.830040+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "new_tool", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:27:07.834191+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "read_all", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:27:07.834481+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_context", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:27:07.834656+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "fetch_state", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:27:07.834791+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "_hang_tool", "layer": "DENY", "result_summary": "DENIED reason=T2_TOOL_EXECUTION_TIMEOUT", "phase": "PHASE-B", "timestamp": "2026-05-28T09:27:09.090466+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "nonexistent_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:27:10.125608+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-28T09:53:20.539772+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_all_context", "layer": "DENY", "result_summary": "DENIED reason=FORBIDDEN_TOOLS", "phase": "PHASE-B", "timestamp": "2026-05-28T09:53:20.542298+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "mystery_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:53:20.544354+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-28T09:53:20.547713+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "new_tool", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:53:20.552364+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "read_all", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:53:20.552669+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_context", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:53:20.552931+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "fetch_state", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:53:20.553121+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "_hang_tool", "layer": "DENY", "result_summary": "DENIED reason=T2_TOOL_EXECUTION_TIMEOUT", "phase": "PHASE-B", "timestamp": "2026-05-28T09:53:21.797456+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "nonexistent_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-28T09:53:22.822588+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-29T12:34:45.626762+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_all_context", "layer": "DENY", "result_summary": "DENIED reason=FORBIDDEN_TOOLS", "phase": "PHASE-B", "timestamp": "2026-05-29T12:34:45.629342+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "mystery_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-29T12:34:45.631695+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-29T12:34:45.634737+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "new_tool", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-29T12:34:45.639058+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "read_all", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-29T12:34:45.639365+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_context", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-29T12:34:45.639574+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "fetch_state", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-29T12:34:45.639751+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "_hang_tool", "layer": "DENY", "result_summary": "DENIED reason=T2_TOOL_EXECUTION_TIMEOUT", "phase": "PHASE-B", "timestamp": "2026-05-29T12:34:46.885817+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "nonexistent_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-29T12:34:47.912638+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-29T12:39:26.709126+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_all_context", "layer": "DENY", "result_summary": "DENIED reason=FORBIDDEN_TOOLS", "phase": "PHASE-B", "timestamp": "2026-05-29T12:39:26.711453+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "mystery_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-29T12:39:26.713733+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-29T12:39:26.716963+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "new_tool", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-29T12:39:26.721712+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "read_all", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-29T12:39:26.722003+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_context", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-29T12:39:26.722252+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "fetch_state", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-29T12:39:26.722468+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "_hang_tool", "layer": "DENY", "result_summary": "DENIED reason=T2_TOOL_EXECUTION_TIMEOUT", "phase": "PHASE-B", "timestamp": "2026-05-29T12:39:27.964569+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "nonexistent_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-29T12:39:28.992596+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T01:35:24.888546+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_all_context", "layer": "DENY", "result_summary": "DENIED reason=FORBIDDEN_TOOLS", "phase": "PHASE-B", "timestamp": "2026-05-30T01:35:24.890698+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "mystery_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:35:24.892358+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T01:35:24.895262+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "new_tool", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:35:24.899301+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "read_all", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:35:24.899595+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_context", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:35:24.899773+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "fetch_state", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:35:24.899952+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "_hang_tool", "layer": "DENY", "result_summary": "DENIED reason=T2_TOOL_EXECUTION_TIMEOUT", "phase": "PHASE-B", "timestamp": "2026-05-30T01:35:26.135303+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "nonexistent_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:35:27.162572+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T01:36:59.064698+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_all_context", "layer": "DENY", "result_summary": "DENIED reason=FORBIDDEN_TOOLS", "phase": "PHASE-B", "timestamp": "2026-05-30T01:36:59.067030+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "mystery_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:36:59.069577+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T01:36:59.072799+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "new_tool", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:36:59.077385+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "read_all", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:36:59.077674+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_context", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:36:59.077849+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "fetch_state", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:36:59.078012+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "_hang_tool", "layer": "DENY", "result_summary": "DENIED reason=T2_TOOL_EXECUTION_TIMEOUT", "phase": "PHASE-B", "timestamp": "2026-05-30T01:37:00.323338+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "nonexistent_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:37:01.352411+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T01:38:38.446775+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_all_context", "layer": "DENY", "result_summary": "DENIED reason=FORBIDDEN_TOOLS", "phase": "PHASE-B", "timestamp": "2026-05-30T01:38:38.448194+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "mystery_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:38:38.449918+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T01:38:38.452406+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "new_tool", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:38:38.455888+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "read_all", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:38:38.456109+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_context", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:38:38.456237+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "fetch_state", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:38:38.456377+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "_hang_tool", "layer": "DENY", "result_summary": "DENIED reason=T2_TOOL_EXECUTION_TIMEOUT", "phase": "PHASE-B", "timestamp": "2026-05-30T01:38:39.695591+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "nonexistent_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T01:38:40.721095+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T04:57:57.161961+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_all_context", "layer": "DENY", "result_summary": "DENIED reason=FORBIDDEN_TOOLS", "phase": "PHASE-B", "timestamp": "2026-05-30T04:57:57.165561+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "mystery_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T04:57:57.168016+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T04:57:57.170962+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "new_tool", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T04:57:57.175835+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "read_all", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T04:57:57.176138+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_context", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T04:57:57.176314+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "fetch_state", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T04:57:57.176481+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "_hang_tool", "layer": "DENY", "result_summary": "DENIED reason=T2_TOOL_EXECUTION_TIMEOUT", "phase": "PHASE-B", "timestamp": "2026-05-30T04:57:58.420082+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "nonexistent_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T04:57:59.448847+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T05:31:52.788441+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_all_context", "layer": "DENY", "result_summary": "DENIED reason=FORBIDDEN_TOOLS", "phase": "PHASE-B", "timestamp": "2026-05-30T05:31:52.790072+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "mystery_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:31:52.792079+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T05:31:52.794408+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "new_tool", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:31:52.797890+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "read_all", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:31:52.798159+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_context", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:31:52.798348+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "fetch_state", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:31:52.798488+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "_hang_tool", "layer": "DENY", "result_summary": "DENIED reason=T2_TOOL_EXECUTION_TIMEOUT", "phase": "PHASE-B", "timestamp": "2026-05-30T05:31:54.033819+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "nonexistent_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:31:55.061086+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T05:42:00.824491+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_all_context", "layer": "DENY", "result_summary": "DENIED reason=FORBIDDEN_TOOLS", "phase": "PHASE-B", "timestamp": "2026-05-30T05:42:00.827742+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "mystery_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:42:00.830394+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T05:42:00.833235+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "new_tool", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:42:00.837789+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "read_all", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:42:00.838098+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_context", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:42:00.838326+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "fetch_state", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:42:00.838500+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "_hang_tool", "layer": "DENY", "result_summary": "DENIED reason=T2_TOOL_EXECUTION_TIMEOUT", "phase": "PHASE-B", "timestamp": "2026-05-30T05:42:02.084303+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "nonexistent_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:42:03.113893+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T05:51:17.847906+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_all_context", "layer": "DENY", "result_summary": "DENIED reason=FORBIDDEN_TOOLS", "phase": "PHASE-B", "timestamp": "2026-05-30T05:51:17.850653+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "mystery_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:51:17.853155+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T05:51:17.855622+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "new_tool", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:51:17.859552+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "read_all", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:51:17.859821+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_context", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:51:17.859987+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "fetch_state", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:51:17.860141+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "_hang_tool", "layer": "DENY", "result_summary": "DENIED reason=T2_TOOL_EXECUTION_TIMEOUT", "phase": "PHASE-B", "timestamp": "2026-05-30T05:51:19.094812+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "nonexistent_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T05:51:20.121030+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T06:57:46.757227+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_all_context", "layer": "DENY", "result_summary": "DENIED reason=FORBIDDEN_TOOLS", "phase": "PHASE-B", "timestamp": "2026-05-30T06:57:46.759334+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "mystery_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T06:57:46.761635+00:00"}
+{"event_type": "TOOL_CALL", "tool_name": "ping", "layer": "L0", "result_summary": "ok", "phase": "PHASE-B", "timestamp": "2026-05-30T06:57:46.764500+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "new_tool", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T06:57:46.768984+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "read_all", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T06:57:46.769306+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "get_context", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T06:57:46.769527+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "fetch_state", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T06:57:46.769705+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "_hang_tool", "layer": "DENY", "result_summary": "DENIED reason=T2_TOOL_EXECUTION_TIMEOUT", "phase": "PHASE-B", "timestamp": "2026-05-30T06:57:48.011182+00:00"}
+{"event_type": "TOOL_DENY", "tool_name": "nonexistent_tool_xyz", "layer": "DENY", "result_summary": "DENIED reason=NOT_IN_REGISTRY", "phase": "PHASE-B", "timestamp": "2026-05-30T06:57:49.039817+00:00"}

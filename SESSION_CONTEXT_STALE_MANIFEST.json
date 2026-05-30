@@ -1,28 +1,9 @@
 {
-  "manifest_session": 152,
-  "context_hash": "b97b6d91b4b3c38a1439aaa8fa34e0a69efdce94ad432f8a4f7a895e9730b264",
-  "pointer_hash": "f34314ec8db3445338c7ecc97bc768ac1778cca15805a52ea12ba2581bc47941",
-  "generated_at": "2026-05-25T10:01:55.231535+09:00",
-  "generated_by": "caddy",
-  "projection_status": "fresh",
-  "shard_status_summary": {
-    "context/tasks/active.json": "fresh",
-    "context/tasks/hold.json": "fresh",
-    "context/tasks/blocked.json": "fresh",
-    "context/tasks/pending.json": "fresh",
-    "context/lessons/lessons.json": "fresh",
-    "context/metrics/visibility_history.json": "fresh",
-    "context/vps/state.json": "fresh",
-    "context/vps/deployed.json": "fresh"
-  },
-  "role_projection_status": {
-    "domi": "fresh",
-    "jeni": "fresh",
-    "caddy": "fresh"
-  },
+  "version": "STALE_MANIFEST_v1",
+  "session_count": 174,
+  "context_hash": "d9e0f6dc1b0a6775ae83b89f0ff6fb5aaf5a4ce36d9ef113ff40e5e4b182961b",
+  "updated_at": "2026-05-30T15:08:21.811380+09:00",
   "blocking_flags": [],
-  "stale_blocked_actions": [],
-  "phase": "B",
-  "watchdog_trigger": "close_bundle_event",
-  "write_back_allowed": false
+  "freshness_status": "FRESH",
+  "updated_by": "caddy_close_bundle_S174"
 }

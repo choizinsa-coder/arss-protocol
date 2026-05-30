@@ -1,0 +1,14 @@
+{
+  "receipt_id": "TRCPT-WF-T2-20260530T033449Z-AD2697",
+  "receipt_type": "TRANSPORT_RECEIVER_RECEIPT",
+  "receipt_version": "TRANSPORT_RECEIVER_RECEIPT_v1",
+  "receiver": "WF-T2",
+  "event_type": "SYNC_EVENT",
+  "endpoint_id": "aiba-sync",
+  "binding_status": "MATCH",
+  "schema_status": "PASS",
+  "received_at": "2026-05-30T12:34:49.944272+09:00",
+  "result": "ACCEPTED",
+  "reason": "HG-2 E2E 실측 S172",
+  "session": 172
+}

@@ -1,0 +1,11 @@
+{
+  "event_id": "UNKNOWN",
+  "event_type": "DEPLOYMENT_EVENT",
+  "endpoint": "",
+  "failure_reason": "PAYLOAD_INVALID: MISSING_FIELDS: ['approval_id', 'artifact_hash', 'deployment_id', 'result', 'session', 'target', 'timestamp']",
+  "payload_hash": "ce98a1d991136b4fa713cf96dafb0572301489e0b60f8db1456a8c17d63e1c17",
+  "session": 0,
+  "timestamp": "2026-05-30T15:57:49.709374+09:00",
+  "record_version": "TRANSPORT_FAILURE_RECORD_v1",
+  "p3_task": "P3-T3"
+}

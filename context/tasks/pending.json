@@ -1,7 +1,7 @@
 {
   "domain": "tasks.pending",
   "schema_version": "phase3_shard_v1",
-  "session_ref": 148,
+  "session_ref": 163,
   "items": [
     {
       "note": "Phase 2-C 이후 구현. Constitution/RGO 변경 시 자동 감지 및 통보. 캐디가 Phase 2-C 진입 시 의제로 올릴 것.",
@@ -64,8 +64,12 @@
       "note": "ARSS_HUB Drive 폴더 구조 A안 재편. B2 자동화 파이프라인 Drive 쪽 완결 작업. EAG-1 비오(Joshua) 승인 완료(S27). EAG-2 대기. S58 우선순위 상향(비오 결정 — 자동화 완성 관련 핵심 작업).",
       "owner": "비오(EAG-1) → 도미(WF-03 후처리 설계) → 캐디→Claude Code",
       "priority": "HIGH",
-      "status": "EAG-2_PENDING",
-      "task": "AIBA Structure Consolidation A안 — EAG-1 승인 및 실행"
+      "status": "SUPERSEDED",
+      "task": "AIBA Structure Consolidation A안 — EAG-1 승인 및 실행",
+      "superseded_session": 163,
+      "superseded_date": "2026-05-29",
+      "superseded_by": "WF-05 B2 자동화 운영 (RPU-0043, ACTIVE)",
+      "superseded_note": "EAG-1 승인(S27) 후 97세션 EAG-2 미내려짐. B2 자동화(WF-05 ACTIVE)로 핵심 목적 기달성. Drive 폴더 A안 재편 실익 소멸. S163 비오(Joshua) SUPERSEDED 확정."
     },
     {
       "briefing_ref": "BRIEFING-DOMI-S58-001",
@@ -215,8 +219,12 @@
       "note": "BOOT v2 candidate. boot_is_ssot=false. 10/10 PASS. EAG 대기.",
       "owner": "캐디",
       "priority": "MEDIUM",
-      "status": "EAG_PENDING",
-      "task": "SESSION_BOOT_SPLIT_V2_CANDIDATE.json 생성"
+      "status": "SUPERSEDED",
+      "task": "SESSION_BOOT_SPLIT_V2_CANDIDATE.json 생성",
+      "superseded_session": 163,
+      "superseded_date": "2026-05-29",
+      "superseded_by": "PT-S115-BOOT-001 (S122~S124 EAG-4 완료)",
+      "superseded_note": "PT-S115-BOOT-001로 SESSION_BOOT vNext(boot_vnext_schema/contract/validator/generator) S122~S124에서 이미 배포 완료. 이 후보 파일은 불필요. S163 비오(Joshua) SUPERSEDED 확정."
     },
     {
       "created_session": 63,
@@ -247,8 +255,12 @@
         "tests/test_eag2_atomic_sync.py",
         "tests/test_eag2_shadow_mode.py"
       ],
-      "status": "IN_PROGRESS",
-      "task": "AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2 — EAG-2 구현 실행 (Shadow Mode Phase 1)"
+      "status": "SUPERSEDED",
+      "task": "AIBA DELTA-ONLY CONTEXT ARCHITECTURE v1.2 — EAG-2 구현 실행 (Shadow Mode Phase 1)",
+      "superseded_session": 163,
+      "superseded_date": "2026-05-29",
+      "superseded_by": "PT-S146-CONTEXT-REFACTOR-PHASE1/2/3 (S146~S148 완료)",
+      "superseded_note": "PT-S146~S148 Context Sharding으로 더 발전된 분산 저장 완료. 93세션 미착수. S163 비오(Joshua) SUPERSEDED 확정."
     },
     {
       "id": "PT-S134-VPS-OBS-001",

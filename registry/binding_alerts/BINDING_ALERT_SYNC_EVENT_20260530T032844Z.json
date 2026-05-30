@@ -1,0 +1,8 @@
+{
+  "alert_type": "BINDING_MISMATCH",
+  "endpoint_id": "SYNC_EVENT",
+  "url": "http://localhost:5678/webhook/aiba-sync",
+  "reason": "WEBHOOK_NOT_REGISTERED",
+  "timestamp": "2026-05-30T12:28:44.747793+09:00",
+  "action_required": "비오(Joshua) EAG 승인 후 transport_endpoints.json 갱신"
+}
