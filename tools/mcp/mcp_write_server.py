@@ -203,6 +203,99 @@ def handle_receipt_finalize(receipt_id: str, target_state: str) -> tuple:
     }
 
 
+# ── Recovery 진입 핸들러 (비오님 전용) ──────────────────────────────
+
+def _find_pending_receipts(receipts_dir: str):
+    """
+    RECEIPTS_DIR에서 PENDING_BEO_REVIEW 상태 receipt 수를 반환.
+    Returns:
+        (count: int, error: None) — 정상
+        (None, error_msg: str)   — scan 실패 (fail-closed)
+    """
+    try:
+        if not os.path.exists(receipts_dir):
+            return 0, None
+        count = 0
+        for fname in os.listdir(receipts_dir):
+            if not fname.endswith(".json"):
+                continue
+            fpath = os.path.join(receipts_dir, fname)
+            try:
+                with open(fpath, encoding="utf-8") as f:
+                    r = f.read()
+                import json as _json
+                data = _json.loads(r)
+                if data.get("status") == "PENDING_BEO_REVIEW":
+                    count += 1
+            except Exception as _e:
+                return None, f"receipt scan error: {_e}"
+        return count, None
+    except Exception as e:
+        return None, f"receipts_dir scan failed: {e}"
+
+
+def handle_recovery_enter() -> tuple:
+    """
+    POST /internal/recovery/enter — recovery 진입 (비오님 전용).
+
+    NORMAL 상태: PENDING receipt 수 확인 후 조건부 진입
+    LOCKED/HOLD 상태: 무조건 진입 (FAULT_RECOVERY)
+
+    Returns:
+        (http_status: int, body: dict)
+    """
+    gk = get_gatekeeper()
+    state = gk.get_state()
+
+    # NORMAL 상태: pending receipt 스캔 필요
+    if state == state.__class__.NORMAL:
+        pending_count, scan_error = _find_pending_receipts(RECEIPTS_DIR)
+
+        # N-4: scan 실패 → FAIL-CLOSED
+        if scan_error is not None:
+            _log("ERROR", f"recovery_enter FAIL-CLOSED: {scan_error}")
+            return 500, {
+                "ok": False,
+                "error": f"FAIL-CLOSED: receipt scan 실패 — {scan_error}",
+            }
+
+        # N-2: pending 없음 → deny
+        if pending_count == 0:
+            _log("WARN", "recovery_enter DENY: NORMAL 상태에서 PENDING receipt 없음")
+            return 400, {
+                "ok": False,
+                "error": "NORMAL 상태에서 PENDING receipt 없음 — RECOVERY_MODE 진입 불가",
+            }
+
+        # N-1/N-3: pending 존재 → 진입
+        try:
+            entry_reason = gk.beo_enter_recovery_mode(pending_count=pending_count)
+        except ValueError as e:
+            # N-7: gatekeeper deny 전파
+            _log("WARN", f"recovery_enter gatekeeper deny: {e}")
+            return 400, {"ok": False, "error": str(e)}
+
+        _log("INFO", f"recovery_enter OK: NORMAL reason={entry_reason} pending={pending_count}")
+        return 200, {
+            "ok": True,
+            "entry_reason": entry_reason,
+            "pending_receipt_count": pending_count,
+        }
+
+    # LOCKED / HOLD 상태: 무조건 진입 (N-5/N-6)
+    try:
+        entry_reason = gk.beo_enter_recovery_mode(pending_count=0)
+    except ValueError as e:
+        _log("WARN", f"recovery_enter gatekeeper deny: {e}")
+        return 400, {"ok": False, "error": str(e)}
+
+    _log("INFO", f"recovery_enter OK: {state.value} reason={entry_reason}")
+    return 200, {
+        "ok": True,
+        "entry_reason": entry_reason,
+    }
+
+
 # ── 상태 관리 핸들러 (비오님 전용) ──────────────────────────────────
 
 def handle_set_state(target_state_str: str, reason: str = "") -> tuple:
