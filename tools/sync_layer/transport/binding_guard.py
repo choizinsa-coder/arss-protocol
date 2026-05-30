@@ -96,19 +96,30 @@ def _load_endpoints() -> dict:
 
 def _probe_endpoint(url: str) -> tuple:
     """
-    HEAD 요청으로 endpoint 활성화 여부 probe.
+    POST 요청으로 endpoint 활성화 여부 probe.
     반환: (binding_status, http_status_or_None, failure_reason_or_None)
-    n8n: 미등록 webhook → 404, 등록 webhook → 200/405
+
+    n8n POST-only webhook 특성:
+      미등록 → 404 / 등록 → 200~299
+      HEAD 요청은 등록 여부와 무관하게 404 반환 → POST 방식 필수.
+
+    probe payload: {"probe": true} (최소 유효 JSON)
     CC=4
     """
+    probe_body = json.dumps({"probe": True}).encode("utf-8")
     try:
-        req = urllib.request.Request(url, method="HEAD")
+        req = urllib.request.Request(
+            url,
+            data=probe_body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
         with urllib.request.urlopen(req, timeout=BINDING_PROBE_TIMEOUT) as resp:
             return BINDING_STATUS_MATCH, resp.status, None
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
             return BINDING_STATUS_MISMATCH, 404, "WEBHOOK_NOT_REGISTERED"
-        # 404 외 HTTPError(405 등) → webhook 존재하나 HEAD 미지원 → MATCH
+        # 404 외 HTTPError → webhook 존재하나 처리 오류 → MATCH (등록은 됨)
         return BINDING_STATUS_MATCH, exc.code, None
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         return BINDING_STATUS_UNKNOWN, None, f"PROBE_ERROR: {type(exc).__name__}"

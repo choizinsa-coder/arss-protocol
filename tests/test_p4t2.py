@@ -117,11 +117,11 @@ class TestLayerB_ProbeLogic(unittest.TestCase):
         self.assertEqual(status, BINDING_STATUS_MISMATCH)
         self.assertEqual(code, 404)
 
-    def test_B2_probe_405_returns_match(self):
-        """405 응답 → webhook 존재(HEAD 미지원) → MATCH"""
+    def test_B2_probe_non404_httperror_returns_match(self):
+        """404 외 HTTPError(500 등) → webhook 등록됨(처리 오류) → MATCH"""
         with patch("urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.side_effect = urllib.error.HTTPError(
-                url="http://test", code=405, msg="Method Not Allowed",
+                url="http://test", code=500, msg="Internal Server Error",
                 hdrs=None, fp=None,
             )
             status, code, reason = _probe_endpoint("http://localhost:5678/webhook/test")
