@@ -1,12 +1,15 @@
 """
 binding_guard.py
-AIBA Sync Layer — Transport Dynamic Binding Guard (P4-T2)
+AIBA Sync Layer — Transport Dynamic Binding Guard (P4-T2 / P4-B patch)
 SSOT: Domi P4-T1 Design (S172) / EAG-2 Approved (비오(Joshua))
+P4-B patch: duplicate guard + index 연동 (S173 EAG-1/2 Approved)
 
 역할:
   - transport_endpoints.json 등록값 vs 실제 n8n webhook URL 일치 여부 검증
   - 불일치 시: endpoint active=false 처리 + 비동기 예외 신호 전파 (Jeni TA)
   - transport_client는 MISMATCH endpoint로 전송 금지
+  - [P4-B] duplicate guard: 동일 endpoint ACTIVE alert 존재 시 중복 생성 금지
+    → duplicate_detected receipt 기록 + duplicate_count/last_seen_at 누적
 
 Binding 검증 방법:
   HEAD 요청 → 404 = MISMATCH / 비-404 = MATCH
@@ -42,6 +45,9 @@ BINDING_STATUS_UNKNOWN = "UNKNOWN"
 VPS_ROOT = Path("/opt/arss/engine/arss-protocol")
 ENDPOINTS_PATH = VPS_ROOT / "registry" / "transport_endpoints.json"
 BINDING_ALERT_DIR = VPS_ROOT / "registry" / "binding_alerts"
+ALERT_INDEX_PATH = BINDING_ALERT_DIR / "index.json"
+
+ACTIVE_ALERT_STATUSES = {"NEW", "ACKNOWLEDGED", "EAG_PENDING"}
 
 
 # ── 결과 타입 ───────────────────────────────────────────────────────────────
@@ -125,32 +131,128 @@ def _probe_endpoint(url: str) -> tuple:
         return BINDING_STATUS_UNKNOWN, None, f"PROBE_ERROR: {type(exc).__name__}"
 
 
+# ── P4-B: Alert Index 연동 헬퍼 ────────────────────────────────────────────
+
+def _load_alert_index() -> dict:
+    """
+    binding_alerts/index.json 로드.
+    미존재 시 초기 구조 반환.
+    CC=2
+    """
+    default = {"version": "1.0", "last_updated": _now_kst(), "alerts": []}
+    try:
+        with open(ALERT_INDEX_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return default
+
+
+def _save_alert_index(index: dict) -> None:
+    """
+    binding_alerts/index.json 저장.
+    CC=2
+    """
+    index["last_updated"] = _now_kst()
+    try:
+        with open(ALERT_INDEX_PATH, "w", encoding="utf-8") as f:
+            json.dump(index, f, ensure_ascii=False, indent=2)
+    except OSError as exc:
+        logger.error("ALERT_INDEX_SAVE_FAILED: %s", exc)
+
+
+def _find_active_alert_entry(index: dict, endpoint_id: str) -> Optional[dict]:
+    """
+    index에서 endpoint_id의 ACTIVE(NEW/ACKNOWLEDGED/EAG_PENDING) alert 탐색.
+    존재 시 항목 반환 (참조). 없으면 None.
+    CC=3
+    """
+    for alert in index.get("alerts", []):
+        if (alert.get("endpoint_id") == endpoint_id
+                and alert.get("status") in ACTIVE_ALERT_STATUSES):
+            return alert
+    return None
+
+
+def _record_duplicate_receipt(endpoint_id: str, url: str, active_alert_id: str) -> None:
+    """
+    중복 Alert 발생 시 duplicate_detected receipt 기록.
+    감사 추적성 유지 목적 (Domi GAP-P4B-003 확정).
+    CC=2
+    """
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    receipt_path = BINDING_ALERT_DIR / f"DUPLICATE_RECEIPT_{endpoint_id}_{ts}.json"
+    receipt = {
+        "receipt_type": "duplicate_detected",
+        "endpoint_id": endpoint_id,
+        "url": url,
+        "active_alert_id": active_alert_id,
+        "detected_at": _now_kst(),
+    }
+    try:
+        with open(receipt_path, "w", encoding="utf-8") as f:
+            json.dump(receipt, f, ensure_ascii=False, indent=2)
+    except OSError as exc:
+        logger.error("DUPLICATE_RECEIPT_WRITE_FAILED: %s", exc)
+
+
 def _emit_binding_alert(endpoint_id: str, url: str, reason: str) -> None:
     """
     바인딩 불일치 발생 시 비동기 예외 신호 전파 (Jeni TA 필수).
-    BINDING_ALERT_DIR에 알림 파일 기록 → 상위 레이어 감지용.
-    CC=2
+    [P4-B] duplicate guard: 동일 endpoint ACTIVE alert 존재 시
+      → duplicate_count/last_seen_at 누적 + duplicate_detected receipt 기록.
+    신규 alert: BINDING_ALERT_DIR에 파일 기록 + index.json 등재.
+    CC=5
     """
     BINDING_ALERT_DIR.mkdir(parents=True, exist_ok=True)
+    index = _load_alert_index()
+    active = _find_active_alert_entry(index, endpoint_id)
+
+    if active:
+        active["duplicate_count"] = active.get("duplicate_count", 0) + 1
+        active["last_seen_at"] = _now_kst()
+        _save_alert_index(index)
+        _record_duplicate_receipt(endpoint_id, url, active["alert_id"])
+        logger.warning(
+            "BINDING_ALERT_DUPLICATE: endpoint_id=%s alert_id=%s count=%d",
+            endpoint_id, active["alert_id"], active["duplicate_count"],
+        )
+        return
+
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    alert_path = BINDING_ALERT_DIR / f"BINDING_ALERT_{endpoint_id}_{ts}.json"
-    alert = {
+    alert_id = f"BINDING_ALERT_{endpoint_id}_{ts}"
+    alert_path = BINDING_ALERT_DIR / f"{alert_id}.json"
+    now_kst = _now_kst()
+    alert_file = {
         "alert_type": "BINDING_MISMATCH",
         "endpoint_id": endpoint_id,
         "url": url,
         "reason": reason,
-        "timestamp": _now_kst(),
+        "timestamp": now_kst,
         "action_required": "비오(Joshua) EAG 승인 후 transport_endpoints.json 갱신",
     }
     try:
         with open(alert_path, "w", encoding="utf-8") as f:
-            json.dump(alert, f, ensure_ascii=False, indent=2)
-        logger.warning(
-            "BINDING_ALERT_EMITTED: endpoint_id=%s url=%s reason=%s",
-            endpoint_id, url, reason,
-        )
+            json.dump(alert_file, f, ensure_ascii=False, indent=2)
     except OSError as exc:
         logger.error("BINDING_ALERT_WRITE_FAILED: %s", exc)
+        return
+
+    index.setdefault("alerts", []).append({
+        "alert_id": alert_id,
+        "endpoint_id": endpoint_id,
+        "url": url,
+        "reason": reason,
+        "status": "NEW",
+        "created_at": now_kst,
+        "last_seen_at": now_kst,
+        "duplicate_count": 0,
+        "file_path": f"registry/binding_alerts/{alert_id}.json",
+    })
+    _save_alert_index(index)
+    logger.warning(
+        "BINDING_ALERT_EMITTED: endpoint_id=%s url=%s reason=%s",
+        endpoint_id, url, reason,
+    )
 
 
 # ── 메인 검증 진입점 ────────────────────────────────────────────────────────
@@ -266,9 +368,10 @@ def get_binding_guard_status() -> dict:
     return {
         "component": "binding_guard",
         "layer": "sync_layer/transport",
-        "p4_task": "P4-T2",
+        "p4_task": "P4-T2 / P4-B patch",
         "endpoints_path": str(ENDPOINTS_PATH),
         "alert_dir": str(BINDING_ALERT_DIR),
+        "alert_index_path": str(ALERT_INDEX_PATH),
         "probe_timeout_seconds": BINDING_PROBE_TIMEOUT,
         "binding_statuses": [
             BINDING_STATUS_MATCH,
@@ -276,5 +379,7 @@ def get_binding_guard_status() -> dict:
             BINDING_STATUS_UNKNOWN,
         ],
         "fail_closed": True,
+        "duplicate_guard": True,
+        "active_alert_statuses": sorted(ACTIVE_ALERT_STATUSES),
         "jeni_advisory": "MISMATCH 차단 시 비동기 alert 전파 — 데드락 방지",
     }

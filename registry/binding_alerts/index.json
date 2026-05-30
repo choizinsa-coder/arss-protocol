@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-05-30T00:00:00+09:00",
+  "alerts": [
+    {
+      "alert_id": "BINDING_ALERT_DEPLOYMENT_EVENT_20260530T032844Z",
+      "endpoint_id": "DEPLOYMENT_EVENT",
+      "url": "http://localhost:5678/webhook/aiba-deployment",
+      "reason": "WEBHOOK_NOT_REGISTERED",
+      "status": "NEW",
+      "created_at": "2026-05-30T12:28:44.740348+09:00",
+      "last_seen_at": "2026-05-30T12:28:44.740348+09:00",
+      "duplicate_count": 0,
+      "file_path": "registry/binding_alerts/BINDING_ALERT_DEPLOYMENT_EVENT_20260530T032844Z.json"
+    },
+    {
+      "alert_id": "BINDING_ALERT_SYNC_EVENT_20260530T032844Z",
+      "endpoint_id": "SYNC_EVENT",
+      "url": "http://localhost:5678/webhook/aiba-sync",
+      "reason": "WEBHOOK_NOT_REGISTERED",
+      "status": "NEW",
+      "created_at": "2026-05-30T12:28:44.747793+09:00",
+      "last_seen_at": "2026-05-30T12:28:44.747793+09:00",
+      "duplicate_count": 0,
+      "file_path": "registry/binding_alerts/BINDING_ALERT_SYNC_EVENT_20260530T032844Z.json"
+    }
+  ]
+}
