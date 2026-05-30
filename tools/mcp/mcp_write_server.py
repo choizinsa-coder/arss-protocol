@@ -1,6 +1,12 @@
 """
-mcp_write_server.py — MCP Write Plane Server v3.0.0
+mcp_write_server.py — MCP Write Plane Server v3.0.1
 EAG-1 (S164): Write Plane Restore
+
+v3.0.1 (S178):
+  - handle_receipt_finalize 추가 (P4-C4 Batch-6, EAG-1 비오 승인)
+  - RECEIPTS_DIR 변수 추가
+  - get_gatekeeper import 추가 (하위 호환)
+  - 기존 v3.0.0 코드 변경 없음
 
 v3.0.0 (S164):
   - mcp_write_gatekeeper 의존 완전 제거
@@ -33,11 +39,18 @@ from tools.mcp_write.tier_router import (
 )
 from tools.mcp_write.tier1_handler import handle_tier1_write, Tier1DenyError
 from tools.mcp_write.tier2_handler import handle_tier2_write, Tier2DenyError
+from mcp_write_gatekeeper import get_gatekeeper
+from mcp_write_config import RECEIPTS_DIR, TOKEN_TTL
 
-WRITE_SERVER_VERSION = "3.0.0"
+WRITE_SERVER_VERSION = "3.0.1"
 WRITE_SERVER_PORT = 8444
 WRITE_SERVER_HOST = "127.0.0.1"
 MAX_REQUEST_BODY_BYTES = 65536
+
+# finalize 허용 target_state
+_FINALIZE_VALID_TARGET_STATES = {"CONFIRMED", "REJECTED"}
+# terminal 상태 (불변)
+_FINALIZE_TERMINAL_STATUSES = {"CONFIRMED", "REJECTED", "EXPIRED"}
 
 
 # ── 로그 ──────────────────────────────────────────────────────────────
@@ -107,6 +120,87 @@ def handle_get_write_plane_state() -> dict:
     state = get_write_plane_state()
     _log("INFO", f"get_write_plane_state: {state.value}")
     return {"ok": True, "write_plane_state": state.value}
+
+
+def handle_receipt_finalize(receipt_id: str, target_state: str) -> tuple:
+    """
+    POST /internal/receipt/finalize — receipt 상태 전이 (비오님 전용).
+
+    RECOVERY_MODE 상태에서만 허용.
+    PENDING_BEO_REVIEW → CONFIRMED / REJECTED (TTL 초과 시 EXPIRED 강제).
+    terminal 상태(CONFIRMED/REJECTED/EXPIRED)는 불변.
+
+    Returns:
+        (http_status: int, body: dict)
+    """
+    gk = get_gatekeeper()
+    state = gk.get_state()
+
+    # 상태 검증: RECOVERY_MODE만 허용
+    if state != state.__class__.RECOVERY_MODE:
+        return 400, {
+            "ok": False,
+            "error": f"RECOVERY_MODE 상태에서만 finalize 가능. 현재: {state.value}",
+        }
+
+    # target_state 검증
+    if target_state not in _FINALIZE_VALID_TARGET_STATES:
+        return 400, {
+            "ok": False,
+            "error": (
+                f"유효하지 않은 target_state: {target_state}. "
+                f"허용: {sorted(_FINALIZE_VALID_TARGET_STATES)}"
+            ),
+        }
+
+    # receipt 로드
+    receipt_path = os.path.join(RECEIPTS_DIR, f"{receipt_id}.json")
+    if not os.path.exists(receipt_path):
+        return 404, {"ok": False, "error": f"receipt not found: {receipt_id}"}
+
+    with open(receipt_path, encoding="utf-8") as f:
+        receipt = json.load(f)
+
+    current_status = receipt.get("status")
+
+    # terminal immutability
+    if current_status in _FINALIZE_TERMINAL_STATUSES:
+        return 400, {
+            "ok": False,
+            "error": f"terminal 상태 변경 불가: {current_status}",
+        }
+
+    # PENDING_BEO_REVIEW 검증
+    if current_status != "PENDING_BEO_REVIEW":
+        return 400, {
+            "ok": False,
+            "error": (
+                f"finalize 대상은 PENDING_BEO_REVIEW 상태여야 함. "
+                f"현재: {current_status}"
+            ),
+        }
+
+    # TTL 검사
+    created_at = datetime.fromisoformat(receipt["created_at"])
+    elapsed = (datetime.now(timezone.utc) - created_at).total_seconds()
+    ttl_expired = elapsed > TOKEN_TTL
+
+    final_status = "EXPIRED" if ttl_expired else target_state
+
+    # receipt 업데이트 및 저장
+    receipt["status"] = final_status
+    receipt["finalized_by"] = "Beo"
+    receipt["finalized_at"] = datetime.now(timezone.utc).isoformat()
+    with open(receipt_path, "w", encoding="utf-8") as f:
+        json.dump(receipt, f, indent=2, ensure_ascii=False)
+
+    _log("INFO", f"receipt_finalize OK: {receipt_id} → {final_status} ttl_expired={ttl_expired}")
+    return 200, {
+        "ok": True,
+        "receipt_id": receipt_id,
+        "current_status": final_status,
+        "ttl_expired": ttl_expired,
+    }
 
 
 # ── 상태 관리 핸들러 (비오님 전용) ──────────────────────────────────
@@ -195,6 +289,26 @@ class WriteServerHandler(BaseHTTPRequestHandler):
                 _json_response(self, 400, {"ok": False, "error": "state field required"})
                 return
             status, resp = handle_set_state(target_state, reason)
+            _json_response(self, status, resp)
+            return
+
+        # receipt finalize (비오님 전용)
+        if self.path == "/internal/receipt/finalize":
+            body_bytes, err = _read_body(self)
+            if err:
+                _json_response(self, 400, err)
+                return
+            try:
+                body = json.loads(body_bytes.decode("utf-8"))
+            except Exception:
+                _json_response(self, 400, {"ok": False, "error": "invalid JSON body"})
+                return
+            receipt_id = body.get("receipt_id")
+            target_state = body.get("target_state")
+            if not receipt_id or not target_state:
+                _json_response(self, 400, {"ok": False, "error": "receipt_id and target_state required"})
+                return
+            status, resp = handle_receipt_finalize(receipt_id, target_state)
             _json_response(self, status, resp)
             return
 
