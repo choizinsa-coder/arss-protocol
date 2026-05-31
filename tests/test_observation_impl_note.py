@@ -3,6 +3,13 @@ test_observation_impl_note.py
 IMPL-NOTE-03/04 검증 테스트 — PT-S142-SANDBOX-LAYER1-LAYER2-001 EAG-2
 TC-01~TC-10
 RULE-3 이동: tools/ → tests/ (S153)
+
+S180 수정: Incident-L14 Group D 수습
+  - TC-04 (test_tc04_stale_projection_still_returned):
+    Phase A(S151) 이후 projection_builder.py에서 _load_session_context가
+    load_canonical_context()로 교체됨.
+    patch 대상: pb._load_session_context → load_canonical_context
+    반환값: fake_ctx → (fake_ctx, "MOCK") 튜플로 변경
 """
 
 import json
@@ -78,10 +85,21 @@ class TestImplNote03ActiveFileCount(unittest.TestCase):
         self.assertTrue(result["eag_ready_blocked"])
 
     def test_tc04_stale_projection_still_returned(self):
+        """
+        S180 Incident-L14 Group D 수습:
+        Phase A(S151) 이후 _load_session_context → load_canonical_context 교체.
+        patch 대상 변경:
+          이전: patch.object(pb, "_load_session_context", return_value=fake_ctx)
+          현재: patch("tools.context_gateway.pointer_manager.load_canonical_context",
+                      return_value=(fake_ctx, "MOCK"))
+        """
         _make_fake_sandbox(self.tmp, "caddy", 15)
         fake_ctx = {"system_name": "AIBA", "system_version": "v3.2", "session_count": 143}
         with patch.object(pb, "SANDBOX_ROOT", self.tmp), \
-             patch.object(pb, "_load_session_context", return_value=fake_ctx):
+             patch(
+                 "tools.context_gateway.pointer_manager.load_canonical_context",
+                 return_value=(fake_ctx, "MOCK")
+             ):
             _reset_projection_cache()
             projection, is_stale_flag = pb.get_projection()
         self.assertIsNotNone(projection)
