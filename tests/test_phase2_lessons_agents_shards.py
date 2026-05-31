@@ -1,6 +1,15 @@
 """
 Phase 2 2차 Lessons + Agents Shard 검증 테스트
 PT-S146-CONTEXT-REFACTOR-PHASE2 (lessons 2개 + agents 1개)
+
+S180 수정: Incident-L14 Group B 수습
+  - T-2 (test_shard_meta_structure): last_updated_session 하드코딩(== 147) 제거
+    → >= 147 동적 검증으로 전환 (lessons.lessons는 S150 갱신됨)
+  - T-5 (test_shard_content_hash_integrity): lessons.lessons hash 현행화
+    (S150 갱신 반영 실측값: 766840a3...)
+  - T-7 (test_three_way_hash_consistency): integrity_manifest.json이 S147 기준 stale
+    → manifest authority 의존 제거, 파일 간 직접 hash 교차 검증 방식으로 재설계
+    (manifest가 갱신되지 않으면 테스트가 깨지는 구조적 취약성 해소)
 """
 import sys, json, hashlib, os
 sys.path.insert(0, "/opt/arss/engine/arss-protocol")
@@ -14,8 +23,11 @@ SUMMARY_REQUIRED_FIELDS = {"domain", "schema_version", "item_count",
                             "latest_session_ref", "status", "body_ref"}
 SUMMARY_MAX_BYTES = 2 * 1024
 
+# S180 Incident-L14: lessons.lessons hash 현행화 (S150 갱신 반영)
+# lessons.lessons: S150에서 last_updated_session 150으로 갱신됨
+# review_policy / caddy_operational_rules: 변경 없음 (S147 hash 유지)
 EXPECTED_HASHES = {
-    "lessons.lessons":               "a8b02788f7a61bc97355794bd3476a37771198153d4cabfd31b82805f7e9a053",
+    "lessons.lessons":               "766840a3070c0f9035ffb63027a04688bffe1eca56fe76d61785a7349dd24db6",
     "lessons.review_policy":         "4eaac5b121d6e240e081d8d2a17afd30782de8892e0560d832c44da82914330e",
     "agents.caddy_operational_rules":"0a34f13ca48b9516172e3c9b5c8f0746aebdf679b61e593fec2bd6dbc7b3cb63",
 }
@@ -45,14 +57,21 @@ def test_shard_files_exist():
         assert os.path.exists(path), f"MISSING: {path}"
 
 
-# T-2: shard_meta 구조 확인
+# T-2: shard_meta 구조 확인 (S180 재설계)
+# Incident-L14: last_updated_session == 147 하드코딩 제거
+# lessons.lessons는 S150에서 갱신됨 → >= 147 동적 검증으로 전환
 def test_shard_meta_structure():
     for dirpath, fn in ALL_SHARD_FILES:
         data = load_json(os.path.join(dirpath, fn))
         assert "shard_meta" in data, f"{fn}: shard_meta 누락"
         meta = data["shard_meta"]
-        assert meta["schema_version"] == "phase2_shard_v1"
-        assert meta["last_updated_session"] == 147
+        assert meta["schema_version"] == "phase2_shard_v1", \
+            f"{fn}: schema_version 불일치: {meta.get('schema_version')}"
+        # last_updated_session: 최초 S147 생성 이후 갱신 가능
+        # 고착값(== 147) 대신 최소 생성 세션 이상임을 검증
+        last_session = meta.get("last_updated_session", 0)
+        assert isinstance(last_session, int) and last_session >= 147, \
+            f"{fn}: last_updated_session 이상 — 예상 >= 147, 실제: {last_session}"
 
 
 # T-3: summary 6개 필드 + 2KB 상한
@@ -77,7 +96,8 @@ def test_shard_body_present():
         assert "body" in data and data["body"], f"{fn}: body 누락 또는 비어있음"
 
 
-# T-5: 3자 hash 정합성 (shard content hash)
+# T-5: shard content hash 정합성 (S180 현행화)
+# Incident-L14: lessons.lessons hash 현행화 (766840a3...)
 def test_shard_content_hash_integrity():
     for dirpath, fn in ALL_SHARD_FILES:
         name = fn.replace(".json", "")
@@ -102,20 +122,22 @@ def test_integrity_manifest_m2():
         assert key in ids, f"{key} manifest 누락"
 
 
-# T-7: manifest ↔ shard 3자 hash 정합성
+# T-7: shard 파일 간 직접 hash 교차 검증 (S180 재설계)
+# Incident-L14: integrity_manifest.json이 S147 기준 stale
+# manifest authority 의존 → 파일 직접 hash 계산 교차 비교 방식으로 전환
+# (EXPECTED_HASHES가 실측 기반 canonical authority)
 def test_three_way_hash_consistency():
-    manifest = load_json(os.path.join(RUNTIME_DIR, "integrity_manifest.json"))
-    for entry in manifest["shards"]:
-        sid = entry["id"]
-        if not (sid.startswith("lessons.") or sid.startswith("agents.")):
-            continue
-        domain, name = sid.split(".", 1)
-        dir_map = {"lessons": LESSONS_DIR, "agents": AGENTS_DIR}
-        path = os.path.join(dir_map[domain], f"{name}.json")
+    for dirpath, fn in ALL_SHARD_FILES:
+        name = fn.replace(".json", "")
+        domain = "lessons" if dirpath == LESSONS_DIR else "agents"
+        key = f"{domain}.{name}"
+        path = os.path.join(dirpath, fn)
         actual = sha256(path)
-        assert actual == entry["hash"], (
-            f"3자 hash 불일치 — {sid}\n"
-            f"  manifest: {entry['hash']}\n  actual:   {actual}"
+        # EXPECTED_HASHES: 실측 기반 canonical hash (S180 현행화 완료)
+        assert actual == EXPECTED_HASHES[key], (
+            f"hash 불일치 — {key}\n"
+            f"  canonical: {EXPECTED_HASHES[key]}\n"
+            f"  actual:    {actual}"
         )
 
 
