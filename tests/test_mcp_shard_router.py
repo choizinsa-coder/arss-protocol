@@ -7,6 +7,16 @@ sys.path.insert(0, "/opt/arss/engine/arss-protocol")
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _isolate_containment(monkeypatch):
+    # S183: route_shard 의 HC-T-03 트리거가 프로덕션 mcp_containment_state.json 을
+    # 오염시키지 않도록 enter_containment 를 무력화. 본 테스트는 route_shard 반환값
+    # (allowed/reason)만 검증하므로 테스트 동작/결과에 영향 없음.
+    monkeypatch.setattr(
+        "tools.mcp.mcp_shard_router.enter_containment", lambda *a, **k: None
+    )
+
+
 def _route(agent_id, shard):
     from tools.mcp.mcp_shard_router import route_shard
     return route_shard(agent_id, shard)
