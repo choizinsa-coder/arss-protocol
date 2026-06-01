@@ -164,15 +164,17 @@ def _audit_allow(gov_ctx: dict, returned_scope: str, reason: str) -> None:
 
 
 def _audit_deny(gov_ctx: dict, reason: str) -> None:
-    write_deny_audit(
-        agent_id=gov_ctx["actor_id"],
-        requested_shard="mcp_endpoint",
-        returned_scope="NONE",
-        decision="DENY",
-        reason=reason,
-        load_state=gov_ctx["bridge_state"],
-        retrieval_class="CLASS-D",
-    )
+    # 감사 실패 != 전송 실패: write_deny_audit 예외가 denial 응답을 막지 못하도록 호출 전체를 격리.
+    # 정본 시그니처 정합: write_deny_audit(agent_id, requested_shard, reason, nonce=None, log_path=None)
+    # 제거된 returned_scope/decision/load_state/retrieval_class 는 브로커 내부에서 자체 설정됨.
+    try:
+        write_deny_audit(
+            agent_id=gov_ctx["actor_id"],
+            requested_shard="mcp_endpoint",
+            reason=reason,
+        )
+    except Exception as _audit_err:
+        print("[audit_deny best-effort failure]", repr(_audit_err), file=sys.stderr)
 
 
 # ── READ 도구 내부 HMAC 생성 ──────────────────────────────────────────────────
