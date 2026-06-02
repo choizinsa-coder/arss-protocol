@@ -47,6 +47,17 @@ BRIDGE_HOST = "127.0.0.1"
 BRIDGE_PORT = 8443
 BRIDGE_VERSION = "2.2.0"
 
+# ── OAuth Compatibility Layer (S184 EAG-2) ───────────────────────────────────
+import secrets as _secrets
+_OAUTH_TOKENS: dict = {}          # token → {"client_id": ..., "expires_at": ...}
+_OAUTH_CLIENTS: dict = {}         # client_id → {"client_secret": ...}
+_OAUTH_TOKEN_TTL = 3600           # 1시간
+
+OAUTH_ISSUER = "https://arss-protocol.org"
+OAUTH_TOKEN_ENDPOINT = "https://arss-protocol.org/token"
+OAUTH_REGISTRATION_ENDPOINT = "https://arss-protocol.org/register"
+# ─────────────────────────────────────────────────────────────────────────────
+
 INTERNAL_ACTOR_ID = "claude_ai_remote_connector"
 INTERNAL_ACTOR_SOURCE = "claude.ai"
 INTERNAL_CONNECTOR_NAME = "ARSS Protocol"
@@ -163,6 +174,76 @@ def _audit_allow(gov_ctx: dict, returned_scope: str, reason: str) -> None:
     )
 
 
+
+# ── OAuth 헬퍼 ────────────────────────────────────────────────────────────────
+
+def _oauth_protected_resource_meta() -> dict:
+    """/.well-known/oauth-protected-resource 응답 — RFC 9396"""
+    return {
+        "resource": "https://arss-protocol.org/mcp",
+        "authorization_servers": [OAUTH_ISSUER],
+        "bearer_methods_supported": ["header"],
+        "resource_documentation": "https://arss-protocol.org/mcp",
+    }
+
+def _oauth_server_meta() -> dict:
+    """/.well-known/oauth-authorization-server 응답 — RFC 8414"""
+    return {
+        "issuer": OAUTH_ISSUER,
+        "token_endpoint": OAUTH_TOKEN_ENDPOINT,
+        "registration_endpoint": OAUTH_REGISTRATION_ENDPOINT,
+        "grant_types_supported": ["client_credentials"],
+        "token_endpoint_auth_methods_supported": ["client_secret_post"],
+        "response_types_supported": ["token"],
+        "scopes_supported": ["mcp:read"],
+    }
+
+def _oauth_register(body: dict) -> dict:
+    """Dynamic Client Registration (RFC 7591) — claude connector 전용"""
+    import time as _time
+    client_id = "claude-" + _secrets.token_hex(8)
+    client_secret = _secrets.token_hex(32)
+    _OAUTH_CLIENTS[client_id] = {
+        "client_secret": client_secret,
+        "client_name": body.get("client_name", "claude-connector"),
+        "registered_at": _time.time(),
+    }
+    return {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "client_id_issued_at": int(_time.time()),
+        "client_secret_expires_at": 0,
+        "grant_types": ["client_credentials"],
+        "token_endpoint_auth_method": "client_secret_post",
+    }
+
+def _oauth_token(form_body: str) -> tuple:
+    """POST /token — client_credentials grant. returns (status_code, body_dict)"""
+    import time as _time, urllib.parse as _up
+    params = dict(_up.parse_qsl(form_body))
+    grant_type = params.get("grant_type", "")
+    client_id = params.get("client_id", "")
+    client_secret = params.get("client_secret", "")
+
+    if grant_type != "client_credentials":
+        return 400, {"error": "unsupported_grant_type"}
+
+    client = _OAUTH_CLIENTS.get(client_id)
+    if not client or client["client_secret"] != client_secret:
+        return 401, {"error": "invalid_client"}
+
+    token = _secrets.token_hex(32)
+    expires_at = _time.time() + _OAUTH_TOKEN_TTL
+    _OAUTH_TOKENS[token] = {"client_id": client_id, "expires_at": expires_at}
+
+    return 200, {
+        "access_token": token,
+        "token_type": "bearer",
+        "expires_in": _OAUTH_TOKEN_TTL,
+        "scope": "mcp:read",
+    }
+
+# ─────────────────────────────────────────────────────────────────────────────
 def _audit_deny(gov_ctx: dict, reason: str) -> None:
     # 감사 실패 != 전송 실패: write_deny_audit 예외가 denial 응답을 막지 못하도록 호출 전체를 격리.
     # 정본 시그니처 정합: write_deny_audit(agent_id, requested_shard, reason, nonce=None, log_path=None)
@@ -739,6 +820,14 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 _audit_allow(gov_ctx, "sse_stream", "SSE_STREAM_CLOSE")
             return
 
+        # OAuth well-known endpoints (S184 EAG-2)
+        if self.path in ("/.well-known/oauth-protected-resource/mcp",
+                         "/.well-known/oauth-protected-resource"):
+            self._send_json(200, _oauth_protected_resource_meta())
+            return
+        if self.path == "/.well-known/oauth-authorization-server":
+            self._send_json(200, _oauth_server_meta())
+            return
         self._send_json(403, {"error": "forbidden"})
 
     def _sse_send_heartbeat(self) -> None:
@@ -748,6 +837,23 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self.wfile.flush()
 
     def do_POST(self):
+        # OAuth DCR + token endpoints (S184 EAG-2)
+        if self.path == "/register":
+            content_length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(content_length) if content_length > 0 else b"{}"
+            try:
+                body = json.loads(raw)
+            except Exception:
+                body = {}
+            result = _oauth_register(body)
+            self._send_json(201, result)
+            return
+        if self.path == "/token":
+            content_length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(content_length) if content_length > 0 else b""
+            status, result = _oauth_token(raw.decode("utf-8", errors="replace"))
+            self._send_json(status, result)
+            return
         if self.path == "/mcp":
             bridge_state = _get_bridge_state()
             if bridge_state in ("INACTIVE", "ROLLED_BACK"):
