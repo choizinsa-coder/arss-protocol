@@ -1,8 +1,8 @@
 {
-  "version": "POINTER_v1",
-  "canonical_session": 174,
-  "canonical_file": "SESSION_CONTEXT_S174_FINAL.json",
-  "context_hash": "d9e0f6dc1b0a6775ae83b89f0ff6fb5aaf5a4ce36d9ef113ff40e5e4b182961b",
-  "updated_at": "2026-05-30T15:08:21.811380+09:00",
-  "updated_by": "caddy_close_bundle_S174"
+  "canonical_source": "SESSION_CONTEXT_S190_FINAL.json",
+  "session_count": 190,
+  "chain_tip": "ebc765c",
+  "context_hash": "69a1df5fb3707110d615b2f080544a7e4d8f2ade103d266f4bc3372c99442236",
+  "updated_at": "2026-06-04T16:11:26+09:00",
+  "vps_path": "/opt/arss/engine/arss-protocol/SESSION_CONTEXT.json"
 }

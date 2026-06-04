@@ -1,9 +1,7 @@
 {
-  "version": "STALE_MANIFEST_v1",
-  "session_count": 174,
-  "context_hash": "d9e0f6dc1b0a6775ae83b89f0ff6fb5aaf5a4ce36d9ef113ff40e5e4b182961b",
-  "updated_at": "2026-05-30T15:08:21.811380+09:00",
-  "blocking_flags": [],
-  "freshness_status": "FRESH",
-  "updated_by": "caddy_close_bundle_S174"
+  "session_count": 190,
+  "context_hash": "69a1df5fb3707110d615b2f080544a7e4d8f2ade103d266f4bc3372c99442236",
+  "updated_at": "2026-06-04T16:11:26+09:00",
+  "status": "FRESH",
+  "blocking_flags": []
 }
