@@ -1,7 +1,7 @@
 {
-  "session_count": 190,
-  "context_hash": "69a1df5fb3707110d615b2f080544a7e4d8f2ade103d266f4bc3372c99442236",
-  "updated_at": "2026-06-04T16:11:26+09:00",
-  "status": "FRESH",
+  "session_count": 193,
+  "context_hash": "298653a1732899ea09d718eb35b0c1bdd4655cd9dfb9c36865a00614764d639e",
+  "updated_at": "2026-06-04T22:00:00+09:00",
+  "freshness": "FRESH",
   "blocking_flags": []
 }

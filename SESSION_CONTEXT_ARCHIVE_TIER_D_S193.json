@@ -1,0 +1,53 @@
+{
+  "schema_version": "tier_d_archive_v1",
+  "archive_session": 192,
+  "archive_date": "2026-06-04",
+  "archive_description": "S192 Tier D Archive — Tier D 변동 없음. HC-T Isolation Guard + 세션 종료 프로토콜 개선. chain.tip=29d7422.",
+  "tier_d_change_declaration": "변동 없음 — S191 Archive 유효. 신규 키 system_changes_s192/caddy_governance_record_s192/visibility_metrics_s192 Tier D 미이관.",
+  "prev_archive": "SESSION_CONTEXT_ARCHIVE_TIER_D_S191.json",
+  "visibility_metrics": {
+    "session": 192,
+    "M-01_active_canonical_key_count": 42,
+    "M-02_tier_d_quarantine_key_count": 66,
+    "M-03_ceiling_utilization_rate": "42/42 (Tier D 변동 없음)",
+    "M-04_session_delta_size": "LARGE (HC-T Isolation Guard + 세션 종료 프로토콜 개선)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S192.json (변동 없음 기반)",
+    "M-06_active_task_load": 9,
+    "M-07_stabilization_compliance": "N/A (S120 해제)",
+    "chain_tip": "29d7422",
+    "pytest_result": "0 failed / 1409 passed / 96 skipped",
+    "date": "2026-06-04"
+  },
+  "tier_d_registry": {
+    "total_quarantined_keys": 66,
+    "archive_refs": [
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S114.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S162.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S165.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S166.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S167.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S169.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S171.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S172.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S173.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S174.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S175.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S176.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S178.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S180.json"
+    ],
+    "note": "S192 신규 미이관 키: system_changes_s192, caddy_governance_record_s192, visibility_metrics_s192 — 활성 canonical 유지"
+  },
+  "session_summary": {
+    "completed": [
+      "HC-T Isolation Guard — conftest v2.0.0 + ENV=test gate + containment_write_guard autouse (commit 29d7422)",
+      "pytest.ini markers: isolated / integration 추가",
+      "nonce_store HC-T-02 미모킹 수정 (Guard 자동 검출)",
+      "세션 종료 프로토콜 개선 — MCP read_file primary / B1 fallback (EAG-1)"
+    ],
+    "pytest": "0 failed / 1409 passed / 96 skipped",
+    "chain_tip": "29d7422",
+    "eag_count": 2,
+    "incident_count": 0
+  }
+}
