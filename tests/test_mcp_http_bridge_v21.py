@@ -6,7 +6,7 @@ S145 수정: PT-S143-TEST-DEBT-001 Group A 수습
   - sys.modules module-level 주입 → pytest fixture(scope='module') 전환
     근거: collection-time 주입이 test_mcp_http_bridge_v2.py / poc 파일 오염
     patch.dict 사용으로 fixture 종료 시 sys.modules 자동 복원 보장
-  - TC-B14: serverInfo.version 기대값 2.1.0 → 2.2.0 현행화
+  - TC-B14: serverInfo.version 기대값 2.1.0 → 2.3.2 현행화
 """
 
 import sys
@@ -208,7 +208,7 @@ def test_tcb13_jeni_actor_allowed():
     assert mock_instance.read_audit_event.called
 
 # ── TC-B14: initialize 정상 ───────────────────────────────────────
-# S145: 기대값 2.1.0 → 2.2.0 현행화 (bridge v2.2.0 배포 이후)
+# S145: 기대값 2.1.0 → 2.3.2 현행화 (bridge v2.3.2 배포 이후)
 def test_tcb14_initialize():
     gov_ctx = _build_governance_context({})
     body = {
@@ -217,7 +217,7 @@ def test_tcb14_initialize():
         "params": {"protocolVersion": "2024-11-05"},
     }
     result = _handle_jsonrpc(body, gov_ctx)
-    assert result["result"]["serverInfo"]["version"] == "2.2.0"
+    assert result["result"]["serverInfo"]["version"] == "2.3.2"
 
 # ── TC-B15: notification (id=None) → None 반환 ───────────────────
 def test_tcb15_notification_returns_none():

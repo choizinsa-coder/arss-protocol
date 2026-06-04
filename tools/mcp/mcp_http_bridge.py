@@ -1,19 +1,42 @@
 """
-mcp_http_bridge.py v2.2.0
+mcp_http_bridge.py v2.3.2
 MCP Streamable HTTP Bridge — PT-S131-MCP-REG-001 + PT-S134-VPS-OBS-001 + PT-S139-MCP-WRITE-BRIDGE-001
 
 변경 이력:
-  v2.0.0 (S133): MCP Streamable HTTP endpoint 재정의
-  v2.1.0 (S134): PT-S134-VPS-OBS-001 Phase 1 READ ONLY OBSERVABILITY 통합
-                 ReadOnlyServer 9종 도구 추가
-                 Bridge 내부 HMAC 생성 → ReadOnlyServer 3요소 인증 유지
-                 actor_id arguments 경유 수신 (domi/jeni/caddy 차등 권한)
+  v2.3.2 (S189): EAG-1 승인 (비오(Joshua))
+                 ask_jeni 도구 추가 — PT-S189-JENI-RUNTIME-001
+                 caddy가 제니(Gemini)에게 질문하는 FORWARD_ONLY 경로
+                 bridge → aiba-jeni-runtime(127.0.0.1:8445) 포워딩
+                 actor 제한: caddy only. FAIL_CLOSED. timeout 60초.
+  v2.3.1 (S189): EAG-1 승인 (비오(Joshua))
+                 _load_agent_clients_from_env caddy 추가
+                 AIBA_CADDY_CLIENT_ID, AIBA_CADDY_CLIENT_SECRET 환경변수 지원
+  v2.3.0 (S187): EAG-1 승인 (비오(Joshua))
+                 1. OAuth client 영속성 — 환경변수 기반 사전 등록
+                    AIBA_DOMI_CLIENT_ID/SECRET, AIBA_JENI_CLIENT_ID/SECRET
+                    파일 저장 시 secret_hash만 기록, 원문 저장 금지
+                 2. /domi/* audit mandatory gate — pre/post 2단계 Fail-Closed
+                    pre FAIL → HTTP 500 / ACCESS_DENIED
+                    post FAIL → HTTP 500 / RESULT_WITHHELD
+                 3. /domi/write_file 엔드포인트 — Tier2 Sandbox 한정
+                    actor=domi 강제, realpath 경계 검증
+                 4. /jeni/* REST Wrapper 신규 — 읽기 5종 + Tier2 쓰기
+                    actor=jeni 강제, audit mandatory gate 동일 적용
+                 5. actor별 write whitelist — sandbox 상호 격리
+                    domi: sandbox/domi/ + common/collab/
+                    jeni: sandbox/jeni/ + common/collab/
+                 6. CLOSED thread 30일 ARCHIVED 전환 정책 적용
   v2.2.0 (S139): PT-S139-MCP-WRITE-BRIDGE-001 Write Plane 브릿지 연결
                  write_file / get_write_plane_state 추가
                  Bridge = FORWARD_ONLY (approval 검증은 Write Server 단독 책임)
                  actor 제한: caddy only
                  payload size 상한: 65536 bytes
                  timeout: 30초 NO_RETRY FAIL_CLOSED
+  v2.1.0 (S134): PT-S134-VPS-OBS-001 Phase 1 READ ONLY OBSERVABILITY 통합
+                 ReadOnlyServer 9종 도구 추가
+                 Bridge 내부 HMAC 생성 → ReadOnlyServer 3요소 인증 유지
+                 actor_id arguments 경유 수신 (domi/jeni/caddy 차등 권한)
+  v2.0.0 (S133): MCP Streamable HTTP endpoint 재정의
 """
 
 from __future__ import annotations
@@ -45,17 +68,24 @@ from mcp_read_server import ReadOnlyServer, AGENT_ROOT_ALLOWLIST
 
 BRIDGE_HOST = "127.0.0.1"
 BRIDGE_PORT = 8443
-BRIDGE_VERSION = "2.2.0"
+BRIDGE_VERSION = "2.3.2"
 
-# ── OAuth Compatibility Layer (S184 EAG-2) ───────────────────────────────────
+# ── OAuth Compatibility Layer (S184 EAG-2, S187 EAG-1) ───────────────────────
 import secrets as _secrets
-_OAUTH_TOKENS: dict = {}          # token → {"client_id": ..., "expires_at": ...}
-_OAUTH_CLIENTS: dict = {}         # client_id → {"client_secret": ...}
-_OAUTH_TOKEN_TTL = 3600           # 1시간
+_OAUTH_TOKENS: dict = {}          # token → {client_id, expires_at}  — 인메모리 유지
+_OAUTH_CLIENTS: dict = {}         # client_id → {client_secret, client_name, ...}
+_OAUTH_TOKEN_TTL = 3600
+_OAUTH_CODE_TTL = 60
+_OAUTH_CODES: dict = {}           # auth_code → {client_id, redirect_uri, expires_at}
+
+# OAuth client 영속성 파일 경로 (secret_hash만 저장, 원문 금지)
+_OAUTH_CLIENT_REGISTRY_PATH = "/opt/arss/engine/arss-protocol/registry/oauth_clients.json"
+_DYNAMIC_CLIENT_REGISTRY_PATH = "/opt/arss/engine/arss-protocol/registry/dynamic_clients.json"
 
 OAUTH_ISSUER = "https://arss-protocol.org"
 OAUTH_TOKEN_ENDPOINT = "https://arss-protocol.org/token"
 OAUTH_REGISTRATION_ENDPOINT = "https://arss-protocol.org/register"
+OAUTH_AUTHORIZE_ENDPOINT = "https://arss-protocol.org/authorize"
 # ─────────────────────────────────────────────────────────────────────────────
 
 INTERNAL_ACTOR_ID = "claude_ai_remote_connector"
@@ -63,58 +93,68 @@ INTERNAL_ACTOR_SOURCE = "claude.ai"
 INTERNAL_CONNECTOR_NAME = "ARSS Protocol"
 EXTERNAL_PAYLOAD_ACTOR_TRUSTED = False
 
-# Bridge 내부 HMAC secret (환경변수 필수)
 READ_HMAC_SECRET = os.environ.get("AIBA_READ_HMAC_SECRET", "")
 INTERNAL_CONNECTOR_IDENTITY = "claude.ai-arss-protocol"
 
-# 허용 actor_id (READ 도구용)
 READ_ALLOWED_ACTORS = frozenset(AGENT_ROOT_ALLOWLIST.keys())  # domi, jeni, caddy
 
 # Write Plane 상수 (PT-S139-MCP-WRITE-BRIDGE-001)
 WRITE_ALLOWED_ACTOR = "caddy"
 WRITE_SERVER_URL = "http://127.0.0.1:8444/mcp/write"
-WRITE_SERVER_TIMEOUT = 30       # seconds, NO_RETRY
-WRITE_MAX_PAYLOAD_BYTES = 65536 # Write Server MAX_REQUEST_BODY_BYTES와 동일
+WRITE_SERVER_TIMEOUT = 30
+WRITE_MAX_PAYLOAD_BYTES = 65536
 
 WRITE_TOOLS = frozenset({"write_file", "get_write_plane_state"})
 
-# ALLOWED_TOOLS — 기존 2종 + READ 9종 + WRITE 2종
+# Jeni Runtime 상수 (PT-S189-JENI-RUNTIME-001, S189 EAG-1)
+JENI_RUNTIME_URL = "http://127.0.0.1:8447/ask"
+JENI_RUNTIME_TIMEOUT = 200
+ASK_JENI_ALLOWED_ACTOR = "caddy"
+ASK_JENI_MAX_PROMPT_BYTES = 32768
+ASK_TOOLS = frozenset({"ask_jeni"})
+
 ALLOWED_TOOLS = frozenset({
-    "ping",
-    "get_load_state",
-    # Phase 1 READ ONLY OBSERVABILITY
-    "read_file",
-    "list_dir",
-    "grep_scoped",
-    "read_log",
-    "check_service_state",
-    "read_pytest_result",
-    "read_audit_event",
-    "read_metadata",
-    "get_runtime_snapshot",
-    # Write Plane (v2.2.0)
-    "write_file",
-    "get_write_plane_state",
+    "ping", "get_load_state",
+    "read_file", "list_dir", "grep_scoped", "read_log", "check_service_state",
+    "read_pytest_result", "read_audit_event", "read_metadata", "get_runtime_snapshot",
+    "write_file", "get_write_plane_state",
+    "ask_jeni",
 })
 
 READ_TOOLS = frozenset({
-    "read_file",
-    "list_dir",
-    "grep_scoped",
-    "read_log",
-    "check_service_state",
-    "read_pytest_result",
-    "read_audit_event",
-    "read_metadata",
-    "get_runtime_snapshot",
+    "read_file", "list_dir", "grep_scoped", "read_log", "check_service_state",
+    "read_pytest_result", "read_audit_event", "read_metadata", "get_runtime_snapshot",
 })
+
+# ── Agent REST Wrapper 허용 도구 ───────────────────────────────────────────────
+_AGENT_READ_TOOLS = frozenset({
+    "read_file", "list_dir", "grep_scoped", "read_log", "get_runtime_snapshot"
+})
+_AGENT_WRITE_TOOLS = frozenset({"write_file"})
+_AGENT_ALLOWED_TOOLS = _AGENT_READ_TOOLS | _AGENT_WRITE_TOOLS
+
+# ── actor별 Tier2 write whitelist ─────────────────────────────────────────────
+_ARSS_ROOT = "/opt/arss/engine/arss-protocol"
+_ACTOR_WRITE_WHITELIST: dict = {
+    "domi": [
+        os.path.realpath(f"{_ARSS_ROOT}/tools/sandbox/domi"),
+        os.path.realpath(f"{_ARSS_ROOT}/tools/sandbox/common/collab"),
+        os.path.realpath(f"{_ARSS_ROOT}/tools/tmp"),
+        os.path.realpath(f"{_ARSS_ROOT}/tests/sandbox"),
+    ],
+    "jeni": [
+        os.path.realpath(f"{_ARSS_ROOT}/tools/sandbox/jeni"),
+        os.path.realpath(f"{_ARSS_ROOT}/tools/sandbox/common/collab"),
+        os.path.realpath(f"{_ARSS_ROOT}/tools/tmp"),
+        os.path.realpath(f"{_ARSS_ROOT}/tests/sandbox"),
+    ],
+}
 
 CONTAINMENT_ERROR_CODE = -32000
 CONTAINMENT_ERROR_MESSAGE = "AIBA containment active"
 CONTAINMENT_ERROR_REASON = "CONTAINMENT_ACTIVE"
 SSE_HEARTBEAT_INTERVAL = 15
 
-# ReadOnlyServer 인스턴스 (싱글턴)
 _read_server = ReadOnlyServer()
 
 # ── Bridge 상태 ────────────────────────────────────────────────────────────────
@@ -134,6 +174,103 @@ def _set_bridge_state(state: str) -> None:
     with _bridge_state_lock:
         global _bridge_state
         _bridge_state = state
+
+
+# ── OAuth client 영속성 (S187 EAG-1, S189 EAG-1) ─────────────────────────────
+
+def _hash_secret(secret: str) -> str:
+    """client_secret SHA-256 hash — 원문 저장 금지."""
+    return hashlib.sha256(secret.encode("utf-8")).hexdigest()
+
+
+def _load_agent_clients_from_env() -> None:
+    """
+    환경변수 기반 domi/jeni/caddy client 사전 등록.
+    AIBA_DOMI_CLIENT_ID, AIBA_DOMI_CLIENT_SECRET
+    AIBA_JENI_CLIENT_ID, AIBA_JENI_CLIENT_SECRET
+    AIBA_CADDY_CLIENT_ID, AIBA_CADDY_CLIENT_SECRET
+    bridge 시작 시 1회 호출.
+    """
+    for actor in ("domi", "jeni", "caddy"):
+        cid_key = f"AIBA_{actor.upper()}_CLIENT_ID"
+        csec_key = f"AIBA_{actor.upper()}_CLIENT_SECRET"
+        client_id = os.environ.get(cid_key, "")
+        client_secret = os.environ.get(csec_key, "")
+        if client_id and client_secret:
+            _OAUTH_CLIENTS[client_id] = {
+                "client_secret": client_secret,
+                "client_name": f"{actor}-connector",
+                "actor_id": actor,
+                "scopes": ["mcp:read"],
+                "secret_hash": _hash_secret(client_secret),
+                "revoked": False,
+            }
+            print(f"[OAUTH] {actor} client loaded from env: {client_id}", file=sys.stderr)
+
+
+def _persist_client_registry() -> None:
+    """
+    client registry를 파일로 저장 — secret 원문 제외, secret_hash만 기록.
+    파일은 bridge 재시작 시 참조용 (인증은 환경변수 우선).
+    """
+    try:
+        os.makedirs(os.path.dirname(_OAUTH_CLIENT_REGISTRY_PATH), exist_ok=True)
+        safe_clients = {}
+        for cid, info in _OAUTH_CLIENTS.items():
+            safe_clients[cid] = {
+                k: v for k, v in info.items()
+                if k not in ("client_secret",)  # 원문 제외
+            }
+        with open(_OAUTH_CLIENT_REGISTRY_PATH, "w", encoding="utf-8") as f:
+            json.dump(safe_clients, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"[OAUTH] client registry persist WARN: {e}", file=sys.stderr)
+
+
+def _persist_dynamic_client(client_id: str, info: dict) -> None:
+    """
+    동적 등록 client를 파일로 즉시 영속화.
+    secret 원문 제외, secret_hash만 저장.
+    bridge 재시작 후 _load_dynamic_clients_from_file()로 복원.
+    """
+    try:
+        os.makedirs(os.path.dirname(_DYNAMIC_CLIENT_REGISTRY_PATH), exist_ok=True)
+        try:
+            with open(_DYNAMIC_CLIENT_REGISTRY_PATH, "r", encoding="utf-8") as f:
+                registry = json.load(f)
+        except Exception:
+            registry = {}
+        registry[client_id] = {
+            k: v for k, v in info.items()
+            if k not in ("client_secret",)
+        }
+        with open(_DYNAMIC_CLIENT_REGISTRY_PATH, "w", encoding="utf-8") as f:
+            json.dump(registry, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"[OAUTH] dynamic client persist WARN: {e}", file=sys.stderr)
+
+
+def _load_dynamic_clients_from_file() -> None:
+    """
+    bridge 시작 시 동적 등록 client를 파일에서 복원.
+    secret_hash만 저장되어 있으므로 재인증 시 새 secret 발급 필요.
+    단, client_id 존재 여부만으로 /authorize 허용 — secret은 /token에서 검증.
+    """
+    if not os.path.exists(_DYNAMIC_CLIENT_REGISTRY_PATH):
+        return
+    try:
+        with open(_DYNAMIC_CLIENT_REGISTRY_PATH, "r", encoding="utf-8") as f:
+            registry = json.load(f)
+        for cid, info in registry.items():
+            if cid not in _OAUTH_CLIENTS:
+                _OAUTH_CLIENTS[cid] = {
+                    **info,
+                    "client_secret": "",   # 재인증 시 갱신됨
+                    "restored_from_file": True,
+                }
+        print(f"[OAUTH] dynamic clients restored: {len(registry)} entries", file=sys.stderr)
+    except Exception as e:
+        print(f"[OAUTH] dynamic client load WARN: {e}", file=sys.stderr)
 
 
 # ── Governance Adapter ────────────────────────────────────────────────────────
@@ -174,80 +311,7 @@ def _audit_allow(gov_ctx: dict, returned_scope: str, reason: str) -> None:
     )
 
 
-
-# ── OAuth 헬퍼 ────────────────────────────────────────────────────────────────
-
-def _oauth_protected_resource_meta() -> dict:
-    """/.well-known/oauth-protected-resource 응답 — RFC 9396"""
-    return {
-        "resource": "https://arss-protocol.org/mcp",
-        "authorization_servers": [OAUTH_ISSUER],
-        "bearer_methods_supported": ["header"],
-        "resource_documentation": "https://arss-protocol.org/mcp",
-    }
-
-def _oauth_server_meta() -> dict:
-    """/.well-known/oauth-authorization-server 응답 — RFC 8414"""
-    return {
-        "issuer": OAUTH_ISSUER,
-        "token_endpoint": OAUTH_TOKEN_ENDPOINT,
-        "registration_endpoint": OAUTH_REGISTRATION_ENDPOINT,
-        "grant_types_supported": ["client_credentials"],
-        "token_endpoint_auth_methods_supported": ["client_secret_post"],
-        "response_types_supported": ["token"],
-        "scopes_supported": ["mcp:read"],
-    }
-
-def _oauth_register(body: dict) -> dict:
-    """Dynamic Client Registration (RFC 7591) — claude connector 전용"""
-    import time as _time
-    client_id = "claude-" + _secrets.token_hex(8)
-    client_secret = _secrets.token_hex(32)
-    _OAUTH_CLIENTS[client_id] = {
-        "client_secret": client_secret,
-        "client_name": body.get("client_name", "claude-connector"),
-        "registered_at": _time.time(),
-    }
-    return {
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "client_id_issued_at": int(_time.time()),
-        "client_secret_expires_at": 0,
-        "grant_types": ["client_credentials"],
-        "token_endpoint_auth_method": "client_secret_post",
-    }
-
-def _oauth_token(form_body: str) -> tuple:
-    """POST /token — client_credentials grant. returns (status_code, body_dict)"""
-    import time as _time, urllib.parse as _up
-    params = dict(_up.parse_qsl(form_body))
-    grant_type = params.get("grant_type", "")
-    client_id = params.get("client_id", "")
-    client_secret = params.get("client_secret", "")
-
-    if grant_type != "client_credentials":
-        return 400, {"error": "unsupported_grant_type"}
-
-    client = _OAUTH_CLIENTS.get(client_id)
-    if not client or client["client_secret"] != client_secret:
-        return 401, {"error": "invalid_client"}
-
-    token = _secrets.token_hex(32)
-    expires_at = _time.time() + _OAUTH_TOKEN_TTL
-    _OAUTH_TOKENS[token] = {"client_id": client_id, "expires_at": expires_at}
-
-    return 200, {
-        "access_token": token,
-        "token_type": "bearer",
-        "expires_in": _OAUTH_TOKEN_TTL,
-        "scope": "mcp:read",
-    }
-
-# ─────────────────────────────────────────────────────────────────────────────
 def _audit_deny(gov_ctx: dict, reason: str) -> None:
-    # 감사 실패 != 전송 실패: write_deny_audit 예외가 denial 응답을 막지 못하도록 호출 전체를 격리.
-    # 정본 시그니처 정합: write_deny_audit(agent_id, requested_shard, reason, nonce=None, log_path=None)
-    # 제거된 returned_scope/decision/load_state/retrieval_class 는 브로커 내부에서 자체 설정됨.
     try:
         write_deny_audit(
             agent_id=gov_ctx["actor_id"],
@@ -258,20 +322,241 @@ def _audit_deny(gov_ctx: dict, reason: str) -> None:
         print("[audit_deny best-effort failure]", repr(_audit_err), file=sys.stderr)
 
 
+# ── Agent REST Wrapper — Audit Mandatory Gate (S187 EAG-1) ───────────────────
+
+def _agent_audit_pre(actor_id: str, tool_name: str, purpose: str, endpoint: str) -> bool:
+    """
+    audit pre-record — mandatory gate.
+    실패 시 False 반환 → 호출자가 HTTP 500 / ACCESS_DENIED 반환.
+    성공 시 True.
+    """
+    try:
+        write_audit(
+            agent_id=actor_id,
+            requested_shard=f"{endpoint}/{tool_name}",
+            returned_scope=tool_name,
+            decision="PRE_RECORD",
+            reason=f"agent_rest_wrapper pre: purpose={purpose}",
+            load_state=_get_bridge_state(),
+            retrieval_class="CLASS-B",
+        )
+        return True
+    except Exception as e:
+        print(f"[audit_pre FAIL] {actor_id}/{tool_name}: {e}", file=sys.stderr)
+        return False
+
+
+def _agent_audit_post(actor_id: str, tool_name: str, endpoint: str, success: bool, detail: str = "") -> bool:
+    """
+    audit post-record — mandatory gate.
+    실패 시 False 반환 → 호출자가 HTTP 500 / RESULT_WITHHELD 반환.
+    성공 시 True.
+    """
+    try:
+        decision = "POST_ALLOW" if success else "POST_DENY"
+        write_audit(
+            agent_id=actor_id,
+            requested_shard=f"{endpoint}/{tool_name}",
+            returned_scope=tool_name,
+            decision=decision,
+            reason=f"agent_rest_wrapper post: success={success} {detail}".strip(),
+            load_state=_get_bridge_state(),
+            retrieval_class="CLASS-B",
+        )
+        return True
+    except Exception as e:
+        print(f"[audit_post FAIL] {actor_id}/{tool_name}: {e}", file=sys.stderr)
+        return False
+
+
+# ── agent write — Tier2 realpath 경계 검증 (S187 EAG-1) ──────────────────────
+
+def _is_safe_write_path(actor_id: str, target_path: str) -> tuple:
+    """
+    actor별 write whitelist + realpath 경계 검증.
+    Returns: (is_safe: bool, reason: str)
+    """
+    whitelist = _ACTOR_WRITE_WHITELIST.get(actor_id, [])
+    if not whitelist:
+        return False, f"actor '{actor_id}' has no write whitelist"
+
+    try:
+        real_target = os.path.realpath(os.path.abspath(target_path))
+    except Exception as e:
+        return False, f"path resolution error: {e}"
+
+    for allowed_base in whitelist:
+        real_base = os.path.realpath(allowed_base)
+        if real_target == real_base or real_target.startswith(real_base + os.sep):
+            return True, f"path within whitelist: {real_base}"
+
+    return False, f"path '{real_target}' not in actor '{actor_id}' whitelist"
+
+
+def _handle_agent_write_file(actor_id: str, req_body: dict) -> dict:
+    """
+    /domi/write_file, /jeni/write_file 처리.
+    Tier2 Sandbox 한정, actor 강제 주입, realpath 검증.
+    """
+    target_path = req_body.get("target_path", "")
+    content = req_body.get("content", "")
+
+    if not target_path:
+        return {"isError": True, "content": [{"type": "text", "text": "DENY: target_path required"}]}
+
+    # realpath 경계 검증
+    is_safe, reason = _is_safe_write_path(actor_id, target_path)
+    if not is_safe:
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: {reason}"}]}
+
+    # 실제 파일 쓰기
+    try:
+        real_path = os.path.realpath(os.path.abspath(target_path))
+        os.makedirs(os.path.dirname(real_path), exist_ok=True)
+        with open(real_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return {
+            "isError": False,
+            "content": [{"type": "text", "text": json.dumps({
+                "status": "ALLOW",
+                "written_path": real_path,
+                "bytes_written": len(content.encode("utf-8")),
+                "actor": actor_id,
+            }, ensure_ascii=False)}],
+        }
+    except Exception as e:
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: write error: {e}"}]}
+
+
+# ── OAuth 헬퍼 ────────────────────────────────────────────────────────────────
+
+def _oauth_protected_resource_meta() -> dict:
+    return {
+        "resource": "https://arss-protocol.org/mcp",
+        "authorization_servers": [OAUTH_ISSUER],
+        "bearer_methods_supported": ["header"],
+        "resource_documentation": "https://arss-protocol.org/mcp",
+    }
+
+def _oauth_server_meta() -> dict:
+    return {
+        "issuer": OAUTH_ISSUER,
+        "authorization_endpoint": OAUTH_AUTHORIZE_ENDPOINT,
+        "token_endpoint": OAUTH_TOKEN_ENDPOINT,
+        "registration_endpoint": OAUTH_REGISTRATION_ENDPOINT,
+        "grant_types_supported": ["client_credentials", "authorization_code"],
+        "token_endpoint_auth_methods_supported": ["client_secret_post"],
+        "response_types_supported": ["code"],
+        "scopes_supported": ["mcp:read"],
+    }
+
+def _oauth_authorize(query_string: str) -> tuple:
+    import time as _time, urllib.parse as _up
+    params = dict(_up.parse_qsl(query_string))
+    response_type = params.get("response_type", "")
+    client_id     = params.get("client_id", "")
+    redirect_uri  = params.get("redirect_uri", "")
+    state         = params.get("state", "")
+    if response_type != "code":
+        return 400, None, {"error": "unsupported_response_type"}
+    if not client_id:
+        return 400, None, {"error": "invalid_request", "error_description": "client_id required"}
+    if not redirect_uri:
+        return 400, None, {"error": "invalid_request", "error_description": "redirect_uri required"}
+    if client_id not in _OAUTH_CLIENTS:
+        _OAUTH_CLIENTS[client_id] = {"client_secret": "", "client_name": "auto", "actor_id": "domi", "scopes": ["mcp:read"], "revoked": False, "auto_registered": True}
+    auth_code  = _secrets.token_hex(16)
+    expires_at = _time.time() + _OAUTH_CODE_TTL
+    _OAUTH_CODES[auth_code] = {"client_id": client_id, "redirect_uri": redirect_uri, "expires_at": expires_at}
+    qs_params = {"code": auth_code}
+    if state:
+        qs_params["state"] = state
+    import urllib.parse as _up2
+    location = redirect_uri + "?" + _up2.urlencode(qs_params)
+    return 302, location, None
+
+
+def _oauth_register(body: dict) -> dict:
+    import time as _time
+    client_id = "claude-" + _secrets.token_hex(8)
+    client_secret = _secrets.token_hex(32)
+    _OAUTH_CLIENTS[client_id] = {
+        "client_secret": client_secret,
+        "client_name": body.get("client_name", "claude-connector"),
+        "actor_id": "external",
+        "scopes": ["mcp:read"],
+        "secret_hash": _hash_secret(client_secret),
+        "revoked": False,
+    }
+    _persist_client_registry()
+    _persist_dynamic_client(client_id, _OAUTH_CLIENTS[client_id])
+    return {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "client_id_issued_at": int(_time.time()),
+        "client_secret_expires_at": 0,
+        "grant_types": ["client_credentials", "authorization_code"],
+        "token_endpoint_auth_method": "client_secret_post",
+    }
+
+def _oauth_token(form_body: str) -> tuple:
+    import time as _time, urllib.parse as _up
+    params = dict(_up.parse_qsl(form_body))
+    grant_type    = params.get("grant_type", "")
+    client_id     = params.get("client_id", "")
+    client_secret = params.get("client_secret", "")
+
+    if grant_type == "authorization_code":
+        code         = params.get("code", "")
+        redirect_uri = params.get("redirect_uri", "")
+        entry = _OAUTH_CODES.get(code)
+        if not entry:
+            return 400, {"error": "invalid_grant", "error_description": "code not found"}
+        if _time.time() > entry["expires_at"]:
+            del _OAUTH_CODES[code]
+            return 400, {"error": "invalid_grant", "error_description": "code expired"}
+        if entry["client_id"] != client_id:
+            return 401, {"error": "invalid_client"}
+        if entry["redirect_uri"] != redirect_uri:
+            return 400, {"error": "invalid_grant", "error_description": "redirect_uri mismatch"}
+        del _OAUTH_CODES[code]
+        client = _OAUTH_CLIENTS.get(client_id)
+        if not client or client.get("revoked"):
+            return 401, {"error": "invalid_client"}
+        if client.get("auto_registered") and client["client_secret"] == "":
+            client["client_secret"] = client_secret
+            client["auto_registered"] = False
+        if client["client_secret"] != client_secret:
+            return 401, {"error": "invalid_client"}
+        token = _secrets.token_hex(32)
+        _OAUTH_TOKENS[token] = {"client_id": client_id, "expires_at": _time.time() + _OAUTH_TOKEN_TTL}
+        return 200, {"access_token": token, "token_type": "bearer", "expires_in": _OAUTH_TOKEN_TTL, "scope": "mcp:read"}
+
+    if grant_type != "client_credentials":
+        return 400, {"error": "unsupported_grant_type"}
+    client = _OAUTH_CLIENTS.get(client_id)
+    if not client or client.get("revoked"):
+        return 401, {"error": "invalid_client"}
+    # 파일 복원 client: secret이 비어 있으면 새 secret으로 갱신 허용
+    if client.get("restored_from_file") and client["client_secret"] == "":
+        client["client_secret"] = client_secret
+        client["restored_from_file"] = False
+        _persist_dynamic_client(client_id, client)
+    if client["client_secret"] != client_secret:
+        return 401, {"error": "invalid_client"}
+    token = _secrets.token_hex(32)
+    _OAUTH_TOKENS[token] = {"client_id": client_id, "expires_at": _time.time() + _OAUTH_TOKEN_TTL}
+    return 200, {"access_token": token, "token_type": "bearer", "expires_in": _OAUTH_TOKEN_TTL, "scope": "mcp:read"}
+
+
 # ── READ 도구 내부 HMAC 생성 ──────────────────────────────────────────────────
 
 def _make_internal_hmac(actor_id: str, nonce: str, ts: float, payload: str) -> str:
-    """Bridge 내부 HMAC 생성 — ReadOnlyServer 3요소 인증용."""
     msg = f"{actor_id}:{INTERNAL_CONNECTOR_IDENTITY}:{nonce}:{ts}:{payload}"
-    return hmac_lib.new(
-        READ_HMAC_SECRET.encode(),
-        msg.encode(),
-        hashlib.sha256,
-    ).hexdigest()
+    return hmac_lib.new(READ_HMAC_SECRET.encode(), msg.encode(), hashlib.sha256).hexdigest()
 
 
 def _build_read_kwargs(actor_id: str, payload: str) -> dict:
-    """ReadOnlyServer 호출용 공통 kwargs 생성."""
     ts = time.time()
     nonce = str(uuid.uuid4())
     return dict(
@@ -284,459 +569,232 @@ def _build_read_kwargs(actor_id: str, payload: str) -> dict:
     )
 
 
-# ── Write 도구 중계 핸들러 (v2.2.0) ──────────────────────────────────────────
+# ── Write 도구 중계 핸들러 (v2.2.0 유지) ─────────────────────────────────────
 
-# write_file 허용 필드 화이트리스트
 _WRITE_FILE_ALLOWED_FIELDS = frozenset({"approval_id", "target_path", "content"})
 
 def _handle_write_tool(tool_name: str, arguments: dict) -> dict:
-    """
-    Write 도구 실행 — Write Server FORWARD_ONLY.
-    브릿지 책임: actor 확인 + 형식 제한 + 전달 + audit
-    approval 검증: Write Server 단독 책임
-    """
-
-    # actor 검증 (caddy only)
     actor_id = arguments.get("actor_id", "")
     if actor_id != WRITE_ALLOWED_ACTOR:
-        return {
-            "isError": True,
-            "content": [{"type": "text", "text": f"DENY: write tool actor must be '{WRITE_ALLOWED_ACTOR}', got '{actor_id}'"}],
-        }
-
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: write tool actor must be '{WRITE_ALLOWED_ACTOR}', got '{actor_id}'"}]}
     if tool_name == "write_file":
-        # 필수 필드 존재 확인
         approval_id = arguments.get("approval_id")
         target_path = arguments.get("target_path")
         content = arguments.get("content", "")
-
         if not approval_id:
-            return {
-                "isError": True,
-                "content": [{"type": "text", "text": "DENY: approval_id required"}],
-            }
+            return {"isError": True, "content": [{"type": "text", "text": "DENY: approval_id required"}]}
         if not target_path:
-            return {
-                "isError": True,
-                "content": [{"type": "text", "text": "DENY: target_path required"}],
-            }
-
-        # unknown_field → DENY
+            return {"isError": True, "content": [{"type": "text", "text": "DENY: target_path required"}]}
         unknown = set(arguments.keys()) - _WRITE_FILE_ALLOWED_FIELDS - {"actor_id"}
         if unknown:
-            return {
-                "isError": True,
-                "content": [{"type": "text", "text": f"DENY: unknown fields: {sorted(unknown)}"}],
-            }
-
-        forward_params = {
-            "approval_id": approval_id,
-            "target_path": target_path,
-            "content": content,
-        }
-
+            return {"isError": True, "content": [{"type": "text", "text": f"DENY: unknown fields: {sorted(unknown)}"}]}
+        forward_params = {"approval_id": approval_id, "target_path": target_path, "content": content}
     elif tool_name == "get_write_plane_state":
         forward_params = {}
-
     else:
-        return {
-            "isError": True,
-            "content": [{"type": "text", "text": f"DENY: unknown write tool: {tool_name}"}],
-        }
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: unknown write tool: {tool_name}"}]}
 
-    # payload size 검증
     forward_body = json.dumps({"tool": tool_name, "params": forward_params}).encode("utf-8")
     if len(forward_body) > WRITE_MAX_PAYLOAD_BYTES:
-        return {
-            "isError": True,
-            "content": [{"type": "text", "text": f"DENY: payload size {len(forward_body)} exceeds limit {WRITE_MAX_PAYLOAD_BYTES}"}],
-        }
-
-    # Write Server HTTP 포워딩 (NO_RETRY, FAIL_CLOSED)
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: payload size {len(forward_body)} exceeds limit {WRITE_MAX_PAYLOAD_BYTES}"}]}
     try:
-        req = urllib.request.Request(
-            WRITE_SERVER_URL,
-            data=forward_body,
-            headers={"Content-Type": "application/json", "Content-Length": str(len(forward_body))},
-            method="POST",
-        )
+        req = urllib.request.Request(WRITE_SERVER_URL, data=forward_body,
+            headers={"Content-Type": "application/json", "Content-Length": str(len(forward_body))}, method="POST")
         with urllib.request.urlopen(req, timeout=WRITE_SERVER_TIMEOUT) as resp:
             resp_body = resp.read().decode("utf-8")
             result = json.loads(resp_body)
-            is_error = not result.get("ok", False)
-            return {
-                "isError": is_error,
-                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
-            }
-
+            return {"isError": not result.get("ok", False), "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]}
     except urllib.error.URLError as e:
-        return {
-            "isError": True,
-            "content": [{"type": "text", "text": f"FAIL_CLOSED: write server unreachable — {e}"}],
-        }
+        return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: write server unreachable — {e}"}]}
     except TimeoutError:
-        return {
-            "isError": True,
-            "content": [{"type": "text", "text": f"FAIL_CLOSED: write server timeout ({WRITE_SERVER_TIMEOUT}s)"}],
-        }
+        return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: write server timeout ({WRITE_SERVER_TIMEOUT}s)"}]}
     except Exception as e:
-        return {
-            "isError": True,
-            "content": [{"type": "text", "text": f"FAIL_CLOSED: unexpected error — {e}"}],
-        }
+        return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: unexpected error — {e}"}]}
+
+
+# ── ask_jeni 핸들러 (PT-S189-JENI-RUNTIME-001, S189 EAG-1) ───────────────────
+
+def _handle_ask_jeni(arguments: dict) -> dict:
+    """
+    ask_jeni — 캐디가 제니(Gemini)에게 질문.
+    Connector Layer 전용 FORWARD_ONLY. caddy actor 강제.
+    Jeni Runtime 다운 시 FAIL_CLOSED (bridge 자체는 정상 유지 — 장애 격리).
+    """
+    actor_id = arguments.get("actor_id", "")
+    if actor_id != ASK_JENI_ALLOWED_ACTOR:
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: ask_jeni actor must be '{ASK_JENI_ALLOWED_ACTOR}', got '{actor_id}'"}]}
+
+    prompt = arguments.get("prompt", "")
+    context = arguments.get("context", "")
+    if not prompt:
+        return {"isError": True, "content": [{"type": "text", "text": "DENY: prompt required"}]}
+
+    forward_body = json.dumps({"prompt": prompt, "context": context}).encode("utf-8")
+    if len(forward_body) > ASK_JENI_MAX_PROMPT_BYTES:
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: prompt size {len(forward_body)} exceeds limit {ASK_JENI_MAX_PROMPT_BYTES}"}]}
+
+    try:
+        req = urllib.request.Request(JENI_RUNTIME_URL, data=forward_body,
+            headers={"Content-Type": "application/json", "Content-Length": str(len(forward_body))}, method="POST")
+        with urllib.request.urlopen(req, timeout=JENI_RUNTIME_TIMEOUT) as resp:
+            resp_body = resp.read().decode("utf-8")
+            result = json.loads(resp_body)
+            if result.get("ok"):
+                return {"isError": False, "content": [{"type": "text", "text": result.get("text", "")}]}
+            return {"isError": True, "content": [{"type": "text", "text": f"JENI_ERROR: {result.get('error', 'unknown')}"}]}
+    except urllib.error.URLError as e:
+        return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: jeni runtime unreachable — {e}"}]}
+    except TimeoutError:
+        return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: jeni runtime timeout ({JENI_RUNTIME_TIMEOUT}s)"}]}
+    except Exception as e:
+        return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: unexpected error — {e}"}]}
 
 
 # ── AIBA Tool Layer ───────────────────────────────────────────────────────────
 
 def _build_base_tool_entries() -> list:
-    """ping/get_load_state 기본 도구 목록 반환."""
     return [
-        {
-            "name": "ping",
-            "description": "AIBA bridge connectivity check",
-            "inputSchema": {"type": "object", "properties": {}, "required": []},
-        },
-        {
-            "name": "get_load_state",
-            "description": "Returns bridge load state (visibility only)",
-            "inputSchema": {"type": "object", "properties": {}, "required": []},
-        },
+        {"name": "ping", "description": "AIBA bridge connectivity check", "inputSchema": {"type": "object", "properties": {}, "required": []}},
+        {"name": "get_load_state", "description": "Returns bridge load state (visibility only)", "inputSchema": {"type": "object", "properties": {}, "required": []}},
     ]
 
 
 def _build_read_tool_entries_fs() -> list:
-    """파일시스템/서비스 계열 READ 도구 (read_file~check_service_state) 반환."""
     return [
-        {
-            "name": "read_file",
-            "description": "[READ] 단일 파일 읽기 (whitelist 경로 전용)",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "path": {"type": "string"},
-                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
-                    "purpose": {"type": "string"},
-                },
-                "required": ["path", "actor_id", "purpose"],
-            },
-        },
-        {
-            "name": "list_dir",
-            "description": "[READ] 디렉토리 목록 (depth=1, recursive 금지)",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "path": {"type": "string"},
-                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
-                    "purpose": {"type": "string"},
-                },
-                "required": ["path", "actor_id", "purpose"],
-            },
-        },
-        {
-            "name": "grep_scoped",
-            "description": "[READ] 허용 경로 내 텍스트 검색 (depth=2)",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "path": {"type": "string"},
-                    "pattern": {"type": "string"},
-                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
-                    "purpose": {"type": "string"},
-                    "max_results": {"type": "integer"},
-                },
-                "required": ["path", "pattern", "actor_id", "purpose"],
-            },
-        },
-        {
-            "name": "read_log",
-            "description": "[READ] 로그 파일 tail 읽기 (최대 200줄)",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "path": {"type": "string"},
-                    "tail_lines": {"type": "integer"},
-                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
-                    "purpose": {"type": "string"},
-                },
-                "required": ["path", "tail_lines", "actor_id", "purpose"],
-            },
-        },
-        {
-            "name": "check_service_state",
-            "description": "[READ] 허용 서비스 상태 확인 (상태 조회만, 제어 금지)",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "service_name": {"type": "string"},
-                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
-                    "purpose": {"type": "string"},
-                },
-                "required": ["service_name", "actor_id", "purpose"],
-            },
-        },
+        {"name": "read_file", "description": "[READ] 단일 파일 읽기 (whitelist 경로 전용)",
+         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["path", "actor_id", "purpose"]}},
+        {"name": "list_dir", "description": "[READ] 디렉토리 목록 (depth=1, recursive 금지)",
+         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["path", "actor_id", "purpose"]}},
+        {"name": "grep_scoped", "description": "[READ] 허용 경로 내 텍스트 검색 (depth=2)",
+         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "pattern": {"type": "string"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}, "max_results": {"type": "integer"}}, "required": ["path", "pattern", "actor_id", "purpose"]}},
+        {"name": "read_log", "description": "[READ] 로그 파일 tail 읽기 (최대 200줄)",
+         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "tail_lines": {"type": "integer"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["path", "tail_lines", "actor_id", "purpose"]}},
+        {"name": "check_service_state", "description": "[READ] 허용 서비스 상태 확인 (상태 조회만, 제어 금지)",
+         "inputSchema": {"type": "object", "properties": {"service_name": {"type": "string"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["service_name", "actor_id", "purpose"]}},
     ]
 
 
 def _build_read_tool_entries_meta() -> list:
-    """메타데이터/감사 계열 READ 도구 (read_pytest_result~get_runtime_snapshot) 반환."""
     return [
-        {
-            "name": "read_pytest_result",
-            "description": "[READ] pytest result artifact 읽기 (실행 아님)",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "artifact_path": {"type": "string"},
-                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
-                    "purpose": {"type": "string"},
-                },
-                "required": ["artifact_path", "actor_id", "purpose"],
-            },
-        },
-        {
-            "name": "read_audit_event",
-            "description": "[READ] audit event 읽기 (최대 100건, bulk dump 금지)",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "log_path": {"type": "string"},
-                    "event_range": {"type": "integer"},
-                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
-                    "purpose": {"type": "string"},
-                },
-                "required": ["log_path", "event_range", "actor_id", "purpose"],
-            },
-        },
-        {
-            "name": "read_metadata",
-            "description": "[READ] SESSION_CONTEXT / SESSION_BOOT / sync metadata 읽기",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "path": {"type": "string"},
-                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
-                    "purpose": {"type": "string"},
-                },
-                "required": ["path", "actor_id", "purpose"],
-            },
-        },
-        {
-            "name": "get_runtime_snapshot",
-            "description": "[READ] 사전 정의된 read-only snapshot projection",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)},
-                    "purpose": {"type": "string"},
-                },
-                "required": ["actor_id", "purpose"],
-            },
-        },
+        {"name": "read_pytest_result", "description": "[READ] pytest result artifact 읽기 (실행 아님)",
+         "inputSchema": {"type": "object", "properties": {"artifact_path": {"type": "string"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["artifact_path", "actor_id", "purpose"]}},
+        {"name": "read_audit_event", "description": "[READ] audit event 읽기 (최대 100건, bulk dump 금지)",
+         "inputSchema": {"type": "object", "properties": {"log_path": {"type": "string"}, "event_range": {"type": "integer"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["log_path", "event_range", "actor_id", "purpose"]}},
+        {"name": "read_metadata", "description": "[READ] SESSION_CONTEXT / SESSION_BOOT / sync metadata 읽기",
+         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["path", "actor_id", "purpose"]}},
+        {"name": "get_runtime_snapshot", "description": "[READ] 사전 정의된 read-only snapshot projection",
+         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["actor_id", "purpose"]}},
     ]
 
 
 def _build_write_tool_entries() -> list:
-    """Write Plane 도구 목록 반환 (v2.2.0)."""
     return [
-        {
-            "name": "write_file",
-            "description": "[WRITE] EAG approval 기반 sandbox 파일 쓰기 (caddy only)",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "actor_id": {"type": "string", "enum": [WRITE_ALLOWED_ACTOR]},
-                    "approval_id": {"type": "string"},
-                    "target_path": {"type": "string"},
-                    "content": {"type": "string"},
-                },
-                "required": ["actor_id", "approval_id", "target_path", "content"],
-            },
-        },
-        {
-            "name": "get_write_plane_state",
-            "description": "[WRITE] Write Plane 현재 상태 조회 (caddy only)",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "actor_id": {"type": "string", "enum": [WRITE_ALLOWED_ACTOR]},
-                },
-                "required": ["actor_id"],
-            },
-        },
+        {"name": "write_file", "description": "[WRITE] EAG approval 기반 sandbox 파일 쓰기 (caddy only)",
+         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [WRITE_ALLOWED_ACTOR]}, "approval_id": {"type": "string"}, "target_path": {"type": "string"}, "content": {"type": "string"}}, "required": ["actor_id", "approval_id", "target_path", "content"]}},
+        {"name": "get_write_plane_state", "description": "[WRITE] Write Plane 현재 상태 조회 (caddy only)",
+         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [WRITE_ALLOWED_ACTOR]}}, "required": ["actor_id"]}},
+        {"name": "ask_jeni", "description": "[ASK] 제니(Gemini Governance Auditor)에게 질문 (caddy only)",
+         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [ASK_JENI_ALLOWED_ACTOR]}, "prompt": {"type": "string"}, "context": {"type": "string"}}, "required": ["actor_id", "prompt"]}},
     ]
 
 
 def _build_read_tool_entries() -> list:
-    """READ ONLY OBSERVABILITY 전체 도구 목록 반환 (FS계열 + 메타계열)."""
     return _build_read_tool_entries_fs() + _build_read_tool_entries_meta()
 
 
 def _handle_tool_list() -> dict:
-    """BASE + READ + WRITE 도구 목록 조합 반환."""
     tools = _build_base_tool_entries() + _build_read_tool_entries() + _build_write_tool_entries()
     return {"tools": tools}
 
 
 def _handle_read_tool(tool_name: str, arguments: dict) -> dict:
-    """READ 도구 실행 — ReadOnlyServer 위임."""
     if not READ_HMAC_SECRET:
-        return {
-            "isError": True,
-            "content": [{"type": "text", "text": "DENY: READ_HMAC_SECRET not configured"}],
-        }
-
+        return {"isError": True, "content": [{"type": "text", "text": "DENY: READ_HMAC_SECRET not configured"}]}
     actor_id = arguments.get("actor_id", "")
     purpose = arguments.get("purpose", "")
-
     if actor_id not in READ_ALLOWED_ACTORS:
-        return {
-            "isError": True,
-            "content": [{"type": "text", "text": f"DENY: unknown actor_id={actor_id}"}],
-        }
-
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: unknown actor_id={actor_id}"}]}
     try:
         if tool_name == "read_file":
             path = arguments.get("path", "")
             kwargs = _build_read_kwargs(actor_id, path)
             result = _read_server.read_file(path, purpose=purpose, **kwargs)
-
         elif tool_name == "list_dir":
             path = arguments.get("path", "")
             kwargs = _build_read_kwargs(actor_id, path)
             result = _read_server.list_dir(path, purpose=purpose, **kwargs)
-
         elif tool_name == "grep_scoped":
             path = arguments.get("path", "")
             pattern = arguments.get("pattern", "")
             max_results = arguments.get("max_results", 50)
             kwargs = _build_read_kwargs(actor_id, f"{path}:{pattern}")
-            result = _read_server.grep_scoped(
-                path, pattern, purpose=purpose,
-                max_results=max_results, **kwargs
-            )
-
+            result = _read_server.grep_scoped(path, pattern, purpose=purpose, max_results=max_results, **kwargs)
         elif tool_name == "read_log":
             path = arguments.get("path", "")
             tail_lines = arguments.get("tail_lines", 50)
             kwargs = _build_read_kwargs(actor_id, path)
-            result = _read_server.read_log(
-                path, tail_lines=tail_lines, purpose=purpose, **kwargs
-            )
-
+            result = _read_server.read_log(path, tail_lines=tail_lines, purpose=purpose, **kwargs)
         elif tool_name == "check_service_state":
             service_name = arguments.get("service_name", "")
             kwargs = _build_read_kwargs(actor_id, service_name)
-            result = _read_server.check_service_state(
-                service_name, purpose=purpose, **kwargs
-            )
-
+            result = _read_server.check_service_state(service_name, purpose=purpose, **kwargs)
         elif tool_name == "read_pytest_result":
             artifact_path = arguments.get("artifact_path", "")
             kwargs = _build_read_kwargs(actor_id, artifact_path)
-            result = _read_server.read_pytest_result(
-                artifact_path, purpose=purpose, **kwargs
-            )
-
+            result = _read_server.read_pytest_result(artifact_path, purpose=purpose, **kwargs)
         elif tool_name == "read_audit_event":
             log_path = arguments.get("log_path", "")
             event_range = arguments.get("event_range", 10)
             kwargs = _build_read_kwargs(actor_id, log_path)
-            result = _read_server.read_audit_event(
-                log_path, event_range=event_range, purpose=purpose, **kwargs
-            )
-
+            result = _read_server.read_audit_event(log_path, event_range=event_range, purpose=purpose, **kwargs)
         elif tool_name == "read_metadata":
             path = arguments.get("path", "")
             kwargs = _build_read_kwargs(actor_id, path)
             result = _read_server.read_metadata(path, purpose=purpose, **kwargs)
-
         elif tool_name == "get_runtime_snapshot":
             kwargs = _build_read_kwargs(actor_id, "runtime_snapshot")
             result = _read_server.get_runtime_snapshot(purpose=purpose, **kwargs)
-
         else:
-            return {
-                "isError": True,
-                "content": [{"type": "text", "text": f"DENY: unknown read tool={tool_name}"}],
-            }
-
+            return {"isError": True, "content": [{"type": "text", "text": f"DENY: unknown read tool={tool_name}"}]}
         is_error = result.get("status") == "DENY"
-        return {
-            "isError": is_error,
-            "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
-        }
-
+        return {"isError": is_error, "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]}
     except Exception as e:
-        return {
-            "isError": True,
-            "content": [{"type": "text", "text": f"DENY: internal error={str(e)}"}],
-        }
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: internal error={str(e)}"}]}
 
 
 def _handle_tool_call(tool_name: str, arguments: dict) -> dict:
     if tool_name not in ALLOWED_TOOLS:
-        return {
-            "isError": True,
-            "content": [{"type": "text", "text": f"Tool '{tool_name}' not permitted"}],
-        }
+        return {"isError": True, "content": [{"type": "text", "text": f"Tool '{tool_name}' not permitted"}]}
     if tool_name == "ping":
         return {"content": [{"type": "text", "text": "pong"}]}
     if tool_name == "get_load_state":
-        return {
-            "content": [{"type": "text", "text": json.dumps({
-                "bridge_state": _get_bridge_state(),
-                "containment": containment_is_active(),
-                "version": BRIDGE_VERSION,
-            })}],
-        }
+        return {"content": [{"type": "text", "text": json.dumps({"bridge_state": _get_bridge_state(), "containment": containment_is_active(), "version": BRIDGE_VERSION})}]}
     if tool_name in READ_TOOLS:
         return _handle_read_tool(tool_name, arguments)
     if tool_name in WRITE_TOOLS:
         return _handle_write_tool(tool_name, arguments)
-    return {
-        "isError": True,
-        "content": [{"type": "text", "text": "Unknown tool"}],
-    }
+    if tool_name in ASK_TOOLS:
+        return _handle_ask_jeni(arguments)
+    return {"isError": True, "content": [{"type": "text", "text": "Unknown tool"}]}
 
 
 def _handle_jsonrpc(body: dict, gov_ctx: dict) -> Optional[dict]:
     method = body.get("method", "")
     request_id = body.get("id")
     params = body.get("params", {})
-
     if request_id is None:
         if gov_ctx["containment_active"]:
             _audit_deny(gov_ctx, f"CONTAINMENT_NOTIFICATION_DENIED:{method}")
         return None
-
     if gov_ctx["containment_active"]:
         _audit_deny(gov_ctx, f"CONTAINMENT_REQUEST_DENIED:{method}")
         return _containment_jsonrpc_error(request_id)
-
     if method == "initialize":
         _audit_allow(gov_ctx, "initialize", "MCP_INITIALIZE")
-        return {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "result": {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {"tools": {}},
-                "serverInfo": {
-                    "name": "ARSS Protocol MCP Bridge",
-                    "version": BRIDGE_VERSION,
-                },
-            },
-        }
-
+        return {"jsonrpc": "2.0", "id": request_id, "result": {"protocolVersion": "2024-11-05", "capabilities": {"tools": {}}, "serverInfo": {"name": "ARSS Protocol MCP Bridge", "version": BRIDGE_VERSION}}}
     if method == "tools/list":
         _audit_allow(gov_ctx, "tools/list", "MCP_TOOLS_LIST")
-        return {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "result": _handle_tool_list(),
-        }
-
+        return {"jsonrpc": "2.0", "id": request_id, "result": _handle_tool_list()}
     if method == "tools/call":
         tool_name = params.get("name", "")
         arguments = params.get("arguments", {})
@@ -746,13 +804,89 @@ def _handle_jsonrpc(body: dict, gov_ctx: dict) -> Optional[dict]:
             _audit_allow(gov_ctx, f"tool:{tool_name}", "MCP_TOOL_CALL")
         result = _handle_tool_call(tool_name, arguments)
         return {"jsonrpc": "2.0", "id": request_id, "result": result}
-
     _audit_deny(gov_ctx, f"UNKNOWN_METHOD:{method}")
-    return {
-        "jsonrpc": "2.0",
-        "id": request_id,
-        "error": {"code": -32601, "message": "Method not found"},
-    }
+    return {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32601, "message": "Method not found"}}
+
+
+# ── Agent REST Wrapper 공통 처리 (S187 EAG-1) ─────────────────────────────────
+
+def _verify_agent_bearer_token(auth_header: str) -> tuple:
+    """
+    Bearer token 검증.
+    Returns: (is_valid: bool, error_body: dict or None)
+    """
+    import time as _time
+    if not auth_header.startswith("Bearer "):
+        return False, {"error": "unauthorized", "error_description": "Bearer token required"}
+    token = auth_header[len("Bearer "):]
+    token_entry = _OAUTH_TOKENS.get(token)
+    if not token_entry:
+        return False, {"error": "invalid_token", "error_description": "Token not found"}
+    if _time.time() > token_entry.get("expires_at", 0):
+        del _OAUTH_TOKENS[token]
+        return False, {"error": "invalid_token", "error_description": "Token expired"}
+    return True, None
+
+
+def _handle_agent_request(handler, actor_id: str, endpoint_prefix: str) -> None:
+    """
+    /domi/* 및 /jeni/* 공통 처리 — audit mandatory gate 포함.
+    handler: BridgeHandler 인스턴스
+    actor_id: "domi" or "jeni"
+    endpoint_prefix: "/domi/" or "/jeni/"
+    """
+    # Bearer token 검증
+    auth_header = handler.headers.get("Authorization", "")
+    is_valid, err = _verify_agent_bearer_token(auth_header)
+    if not is_valid:
+        handler._send_json(401, err)
+        return
+
+    # body 파싱
+    content_length = int(handler.headers.get("Content-Length", 0))
+    raw_body = handler.rfile.read(content_length) if content_length > 0 else b"{}"
+    try:
+        req_body = json.loads(raw_body)
+    except json.JSONDecodeError:
+        handler._send_json(400, {"error": "invalid_json"})
+        return
+
+    # 도구명 추출
+    tool_name = handler.path.split(endpoint_prefix, 1)[1].split("?")[0].rstrip("/")
+
+    if tool_name not in _AGENT_ALLOWED_TOOLS:
+        handler._send_json(404, {"error": "not_found", "error_description": f"Tool '{tool_name}' not in {actor_id} allowlist"})
+        return
+
+    # actor_id 강제 주입
+    req_body["actor_id"] = actor_id
+    purpose = req_body.get("purpose", "OBSERVATION")
+    if "purpose" not in req_body:
+        req_body["purpose"] = purpose
+
+    # ── audit pre-record mandatory gate ──────────────────────────────────────
+    pre_ok = _agent_audit_pre(actor_id, tool_name, purpose, endpoint_prefix.strip("/"))
+    if not pre_ok:
+        handler._send_json(500, {"error": "ACCESS_DENIED", "error_description": "audit pre-record failed"})
+        return
+
+    # ── 도구 실행 ─────────────────────────────────────────────────────────────
+    if tool_name in _AGENT_READ_TOOLS:
+        result = _handle_read_tool(tool_name, req_body)
+    elif tool_name == "write_file":
+        result = _handle_agent_write_file(actor_id, req_body)
+    else:
+        result = {"isError": True, "content": [{"type": "text", "text": f"DENY: tool '{tool_name}' not implemented"}]}
+
+    success = not result.get("isError", False)
+
+    # ── audit post-record mandatory gate ─────────────────────────────────────
+    post_ok = _agent_audit_post(actor_id, tool_name, endpoint_prefix.strip("/"), success)
+    if not post_ok:
+        handler._send_json(500, {"error": "RESULT_WITHHELD", "error_description": "audit post-record failed"})
+        return
+
+    handler._send_json(200, result)
 
 
 # ── HTTP Handler ───────────────────────────────────────────────────────────────
@@ -771,41 +905,28 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def _fail_closed(self, reason: str) -> None:
-        gov_ctx = {
-            "actor_id": INTERNAL_ACTOR_ID,
-            "bridge_state": _get_bridge_state(),
-            "containment_active": True,
-        }
+        gov_ctx = {"actor_id": INTERNAL_ACTOR_ID, "bridge_state": _get_bridge_state(), "containment_active": True}
         _audit_deny(gov_ctx, reason)
         self._send_json(503, {"error": "bridge_unavailable"})
 
     def do_GET(self):
         if self.path == "/bridge/health":
-            self._send_json(200, {
-                "bridge_state": _get_bridge_state(),
-                "containment": containment_is_active(),
-                "version": BRIDGE_VERSION,
-            })
+            self._send_json(200, {"bridge_state": _get_bridge_state(), "containment": containment_is_active(), "version": BRIDGE_VERSION})
             return
-
         if self.path == "/mcp":
             bridge_state = _get_bridge_state()
             if bridge_state in ("INACTIVE", "ROLLED_BACK"):
                 self._fail_closed(f"BRIDGE_STATE:{bridge_state}")
                 return
-
             gov_ctx = _build_governance_context({})
             _audit_allow(gov_ctx, "sse_stream", "SSE_STREAM_OPEN")
-
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
             self.send_header("Connection", "keep-alive")
             self.end_headers()
-
             with _sse_clients_lock:
                 _sse_clients.append(self)
-
             try:
                 self._sse_send_heartbeat()
                 while True:
@@ -819,10 +940,18 @@ class BridgeHandler(BaseHTTPRequestHandler):
                         _sse_clients.remove(self)
                 _audit_allow(gov_ctx, "sse_stream", "SSE_STREAM_CLOSE")
             return
-
-        # OAuth well-known endpoints (S184 EAG-2)
-        if self.path in ("/.well-known/oauth-protected-resource/mcp",
-                         "/.well-known/oauth-protected-resource"):
+        if self.path.startswith("/authorize"):
+            query_string = self.path.split("?", 1)[1] if "?" in self.path else ""
+            status, location, error_body = _oauth_authorize(query_string)
+            if status == 302:
+                self.send_response(302)
+                self.send_header("Location", location)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            else:
+                self._send_json(status, error_body)
+            return
+        if self.path in ("/.well-known/oauth-protected-resource/mcp", "/.well-known/oauth-protected-resource"):
             self._send_json(200, _oauth_protected_resource_meta())
             return
         if self.path == "/.well-known/oauth-authorization-server":
@@ -837,7 +966,6 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self.wfile.flush()
 
     def do_POST(self):
-        # OAuth DCR + token endpoints (S184 EAG-2)
         if self.path == "/register":
             content_length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(content_length) if content_length > 0 else b"{}"
@@ -859,26 +987,31 @@ class BridgeHandler(BaseHTTPRequestHandler):
             if bridge_state in ("INACTIVE", "ROLLED_BACK"):
                 self._fail_closed(f"BRIDGE_STATE:{bridge_state}")
                 return
-
             content_length = int(self.headers.get("Content-Length", 0))
             raw_body = self.rfile.read(content_length) if content_length > 0 else b"{}"
-
             try:
                 body = json.loads(raw_body)
             except json.JSONDecodeError:
                 self._send_json(400, {"error": "invalid_json"})
                 return
-
             gov_ctx = _build_governance_context(body)
             result = _handle_jsonrpc(body, gov_ctx)
-
             if result is None:
                 self.send_response(202)
                 self.send_header("Content-Length", "0")
                 self.end_headers()
                 return
-
             self._send_json(200, result)
+            return
+
+        # ── /domi/* REST Wrapper (S186 EAG-1 + S187 EAG-1) ───────────────────
+        if self.path.startswith("/domi/"):
+            _handle_agent_request(self, "domi", "/domi/")
+            return
+
+        # ── /jeni/* REST Wrapper (S187 EAG-1 신규) ───────────────────────────
+        if self.path.startswith("/jeni/"):
+            _handle_agent_request(self, "jeni", "/jeni/")
             return
 
         self._send_json(403, {"error": "forbidden"})
@@ -895,15 +1028,16 @@ def main():
         _set_bridge_state("ROLLED_BACK")
         sys.exit(0)
 
+    # 환경변수 기반 agent client 로드 (S187 EAG-1, S189 EAG-1)
+    _load_agent_clients_from_env()
+    # 동적 등록 client 파일 복원 (S187 EAG-1 bugfix)
+    _load_dynamic_clients_from_file()
+
     _set_bridge_state("ACTIVE")
     signal.signal(signal.SIGTERM, _handle_shutdown)
     signal.signal(signal.SIGINT, _handle_shutdown)
 
-    gov_ctx = {
-        "actor_id": "SYSTEM",
-        "bridge_state": "ACTIVE",
-        "containment_active": False,
-    }
+    gov_ctx = {"actor_id": "SYSTEM", "bridge_state": "ACTIVE", "containment_active": False}
     _audit_allow(gov_ctx, "NONE", "BRIDGE_STARTUP")
 
     server = ThreadedHTTPServer((BRIDGE_HOST, BRIDGE_PORT), BridgeHandler)
