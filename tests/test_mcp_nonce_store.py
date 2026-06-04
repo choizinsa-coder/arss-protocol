@@ -1,11 +1,14 @@
 # RULE-8 ASSERTION — S181 Batch-11B
 # Module: mcp_nonce_store
 # Task: P4-C4 Phase-beta Batch-11B
+# S192: test_nonce_consume_rejects_reused_nonce — enter_containment 모킹 추가
+#       (HC-T Isolation Guard 대응 — HT-3 패턴 적용)
 import sys
 sys.path.insert(0, "/opt/arss/engine/arss-protocol")
 
 import pytest
 import time
+from unittest.mock import patch
 
 
 def _get_store():
@@ -19,7 +22,9 @@ def test_nonce_consume_rejects_reused_nonce():
     store = _get_store()
     nonce = "test-nonce-reuse-001"
     assert store.mark_used(nonce) is True   # 최초 등록 → True
-    assert store.mark_used(nonce) is False  # 재사용 → False
+    # 재사용 시 HC-T-02 enter_containment 호출 — production path 오염 방지 모킹
+    with patch("tools.mcp.mcp_nonce_store.enter_containment"):
+        assert store.mark_used(nonce) is False  # 재사용 → False
 
 
 def test_nonce_is_used_returns_true_after_consume():
