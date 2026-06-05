@@ -37,10 +37,10 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.0.1"
+RUNTIME_VERSION = "1.0.2"
 
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
-OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-5.5")
+OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
 OPENAI_TIMEOUT = 55
 OPENAI_MAX_OUTPUT_TOKENS = 4096
 
@@ -70,10 +70,10 @@ MEM_AUDITS_DIR = os.path.join(SANDBOX_ACTIVE, "audits")
 MEM_STATE_DIR = os.path.join(SANDBOX_ACTIVE, "state")
 MEM_STATE_FILE = os.path.join(MEM_STATE_DIR, "runtime_state.json")
 
-MAX_MEMORY_TURNS = 20
-MAX_FINDINGS_INJECT = 10
-MAX_DESIGNS_INJECT = 5
-MAX_AUDITS_INJECT = 5
+MAX_MEMORY_TURNS = 5
+MAX_FINDINGS_INJECT = 3
+MAX_DESIGNS_INJECT = 2
+MAX_AUDITS_INJECT = 2
 
 SANDBOX_QUOTA_BYTES = 50 * 1024 * 1024  # 50MB
 
