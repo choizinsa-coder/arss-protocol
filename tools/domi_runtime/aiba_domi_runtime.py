@@ -37,7 +37,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.0.0"
+RUNTIME_VERSION = "1.0.1"
 
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-5.5")
@@ -769,8 +769,10 @@ class DomiRuntimeHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"ok": False, "error": "prompt required"})
             return
         result = _run_design_loop(prompt, context, session)
-        code = 200 if result["ok"] else 502
-        self._send_json(code, result)
+        if not result.get("ok"):
+            print(f"[DOMI_RUNTIME] FAIL: {result.get('error', 'unknown')}",
+                  file=sys.stderr, flush=True)
+        self._send_json(200, result)
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
