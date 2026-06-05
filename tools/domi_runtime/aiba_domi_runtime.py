@@ -612,8 +612,7 @@ def _call_openai(messages: list) -> dict:
         "model": OPENAI_MODEL,
         "messages": messages,
         "tools": _build_tools(),
-        "temperature": 0.4,
-        "max_tokens": OPENAI_MAX_OUTPUT_TOKENS,
+        "max_completion_tokens": OPENAI_MAX_OUTPUT_TOKENS,
     }
     raw_body = json.dumps(body).encode("utf-8")
     req = urllib.request.Request(
