@@ -113,12 +113,19 @@ ASK_JENI_ALLOWED_ACTOR = "caddy"
 ASK_JENI_MAX_PROMPT_BYTES = 32768
 ASK_TOOLS = frozenset({"ask_jeni"})
 
+# Domi Runtime 상수 (PT-S194-DOMI-RUNTIME-001, S194 EAG-1)
+DOMI_RUNTIME_URL = "http://127.0.0.1:8448/ask"
+DOMI_RUNTIME_TIMEOUT = 200
+ASK_DOMI_ALLOWED_ACTOR = "caddy"
+ASK_DOMI_MAX_PROMPT_BYTES = 32768
+ASK_DOMI_TOOLS = frozenset({"ask_domi"})
+
 ALLOWED_TOOLS = frozenset({
     "ping", "get_load_state",
     "read_file", "list_dir", "grep_scoped", "read_log", "check_service_state",
     "read_pytest_result", "read_audit_event", "read_metadata", "get_runtime_snapshot",
     "write_file", "get_write_plane_state",
-    "ask_jeni",
+    "ask_jeni", "ask_domi",
 })
 
 READ_TOOLS = frozenset({
@@ -612,6 +619,44 @@ def _handle_write_tool(tool_name: str, arguments: dict) -> dict:
         return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: unexpected error — {e}"}]}
 
 
+# ── ask_domi 핸들러 (PT-S194-DOMI-RUNTIME-001, S194 EAG-1) ───────────────────
+
+def _handle_ask_domi(arguments: dict) -> dict:
+    """
+    ask_domi — 캐디가 도미(OpenAI)에게 설계를 의뢰.
+    Connector Layer 전용 FORWARD_ONLY. caddy actor 강제.
+    Domi Runtime 다운 시 FAIL_CLOSED (bridge 자체는 정상 유지 — 장애 격리).
+    """
+    actor_id = arguments.get("actor_id", "")
+    if actor_id != ASK_DOMI_ALLOWED_ACTOR:
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: ask_domi actor must be '{ASK_DOMI_ALLOWED_ACTOR}', got '{actor_id}'"}]}
+
+    prompt = arguments.get("prompt", "")
+    context = arguments.get("context", "")
+    if not prompt:
+        return {"isError": True, "content": [{"type": "text", "text": "DENY: prompt required"}]}
+
+    forward_body = json.dumps({"prompt": prompt, "context": context}).encode("utf-8")
+    if len(forward_body) > ASK_DOMI_MAX_PROMPT_BYTES:
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: prompt size {len(forward_body)} exceeds limit {ASK_DOMI_MAX_PROMPT_BYTES}"}]}
+
+    try:
+        req = urllib.request.Request(DOMI_RUNTIME_URL, data=forward_body,
+            headers={"Content-Type": "application/json", "Content-Length": str(len(forward_body))}, method="POST")
+        with urllib.request.urlopen(req, timeout=DOMI_RUNTIME_TIMEOUT) as resp:
+            resp_body = resp.read().decode("utf-8")
+            result = json.loads(resp_body)
+            if result.get("ok"):
+                return {"isError": False, "content": [{"type": "text", "text": result.get("text", "")}]}
+            return {"isError": True, "content": [{"type": "text", "text": f"DOMI_ERROR: {result.get('error', 'unknown')}"}]}
+    except urllib.error.URLError as e:
+        return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: domi runtime unreachable — {e}"}]}
+    except TimeoutError:
+        return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: domi runtime timeout ({DOMI_RUNTIME_TIMEOUT}s)"}]}
+    except Exception as e:
+        return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: unexpected error — {e}"}]}
+
+
 # ── ask_jeni 핸들러 (PT-S189-JENI-RUNTIME-001, S189 EAG-1) ───────────────────
 
 def _handle_ask_jeni(arguments: dict) -> dict:
@@ -695,6 +740,8 @@ def _build_write_tool_entries() -> list:
          "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [WRITE_ALLOWED_ACTOR]}}, "required": ["actor_id"]}},
         {"name": "ask_jeni", "description": "[ASK] 제니(Gemini Governance Auditor)에게 질문 (caddy only)",
          "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [ASK_JENI_ALLOWED_ACTOR]}, "prompt": {"type": "string"}, "context": {"type": "string"}}, "required": ["actor_id", "prompt"]}},
+        {"name": "ask_domi", "description": "[ASK] 도미(OpenAI Design Architect)에게 설계 의뢰 (caddy only)",
+         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [ASK_DOMI_ALLOWED_ACTOR]}, "prompt": {"type": "string"}, "context": {"type": "string"}}, "required": ["actor_id", "prompt"]}},
     ]
 
 
@@ -773,6 +820,8 @@ def _handle_tool_call(tool_name: str, arguments: dict) -> dict:
         return _handle_read_tool(tool_name, arguments)
     if tool_name in WRITE_TOOLS:
         return _handle_write_tool(tool_name, arguments)
+    if tool_name in ASK_DOMI_TOOLS:
+        return _handle_ask_domi(arguments)
     if tool_name in ASK_TOOLS:
         return _handle_ask_jeni(arguments)
     return {"isError": True, "content": [{"type": "text", "text": "Unknown tool"}]}
