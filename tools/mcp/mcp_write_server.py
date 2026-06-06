@@ -248,7 +248,7 @@ def handle_recovery_enter() -> tuple:
     state = gk.get_state()
 
     # NORMAL 상태: pending receipt 스캔 필요
-    if state == state.__class__.NORMAL:
+    if state == GatekeeperState.NORMAL:
         pending_count, scan_error = _find_pending_receipts(RECEIPTS_DIR)
 
         # N-4: scan 실패 → FAIL-CLOSED
