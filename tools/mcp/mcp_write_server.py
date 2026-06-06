@@ -39,7 +39,7 @@ from tools.mcp_write.tier_router import (
 )
 from tools.mcp_write.tier1_handler import handle_tier1_write, Tier1DenyError
 from tools.mcp_write.tier2_handler import handle_tier2_write, Tier2DenyError
-from mcp_write_gatekeeper import get_gatekeeper
+from mcp_write_gatekeeper import get_gatekeeper, WritePlaneState as GatekeeperState
 from mcp_write_config import RECEIPTS_DIR, TOKEN_TTL
 
 WRITE_SERVER_VERSION = "3.0.1"
@@ -137,7 +137,7 @@ def handle_receipt_finalize(receipt_id: str, target_state: str) -> tuple:
     state = gk.get_state()
 
     # 상태 검증: RECOVERY_MODE만 허용
-    if state != state.__class__.RECOVERY_MODE:
+    if state != GatekeeperState.RECOVERY_MODE:
         return 400, {
             "ok": False,
             "error": f"RECOVERY_MODE 상태에서만 finalize 가능. 현재: {state.value}",
