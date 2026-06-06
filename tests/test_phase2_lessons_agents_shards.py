@@ -29,7 +29,7 @@ SUMMARY_MAX_BYTES = 2 * 1024
 EXPECTED_HASHES = {
     "lessons.lessons":               "766840a3070c0f9035ffb63027a04688bffe1eca56fe76d61785a7349dd24db6",
     "lessons.review_policy":         "4eaac5b121d6e240e081d8d2a17afd30782de8892e0560d832c44da82914330e",
-    "agents.caddy_operational_rules":"0a34f13ca48b9516172e3c9b5c8f0746aebdf679b61e593fec2bd6dbc7b3cb63",
+    "agents.caddy_operational_rules":"cc946783c5499bc156763f8185b9395862c4334faf9f04ac4f4391c94d44b9f8",
 }
 
 ALL_SHARD_FILES = [

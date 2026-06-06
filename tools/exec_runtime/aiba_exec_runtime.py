@@ -1,6 +1,12 @@
 """
-aiba_exec_runtime.py v1.0.0
+aiba_exec_runtime.py v1.1.0
 AIBA Exec Runtime — exec_scoped 허용 명령 실행 서비스
+
+변경 이력:
+  v1.1.0 (S197): EAG-1 승인 (비오(Joshua)) — Rev.2 C-5
+                 session_audit_id 수신 및 audit log 기록 추가
+                 audit entry에 session_audit_id 필드 포함 (optional)
+                 backward compatible — session_audit_id 없으면 기존 동작 유지
 
 설계 근거: S196 EAG-1 비오(Joshua) 승인
 거버넌스 체인: 도미 Rev.2 설계 → 제니 TRUST_READY PASS → 비오 EAG-1
@@ -32,7 +38,7 @@ from typing import Any
 
 # ── 상수 ────────────────────────────────────────────────────────────────────
 
-EXEC_RUNTIME_VERSION = "1.0.0"
+EXEC_RUNTIME_VERSION = "1.1.0"
 EXEC_HOST = "127.0.0.1"
 EXEC_PORT = 8449
 
@@ -92,12 +98,14 @@ def _write_audit(
     approval_id: str,
     detail: str,
     exit_code: int | None = None,
+    session_audit_id: str | None = None,
 ) -> bool:
     """
     감사 로그 기록. 실패 시 False 반환 → 호출자가 실행 차단.
     stage: "PRE" | "POST_OK" | "POST_FAIL" | "DENY"
+    session_audit_id: bridge에서 발행한 병렬 묶음 ID (optional, v1.1.0)
     """
-    entry = {
+    entry: dict = {
         "audit_id": audit_id,
         "stage": stage,
         "command": command,
@@ -108,6 +116,10 @@ def _write_audit(
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
         "version": EXEC_RUNTIME_VERSION,
     }
+    # session_audit_id는 있을 때만 포함 (backward compatible)
+    if session_audit_id:
+        entry["session_audit_id"] = session_audit_id
+
     try:
         os.makedirs(os.path.dirname(AUDIT_LOG_PATH), exist_ok=True)
         with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
@@ -169,8 +181,6 @@ def _validate_and_build_cmd(command: str, params: dict) -> tuple[bool, str, list
                 return False, f"git_commit: file '{real_f}' outside ARSS_ROOT", []
             validated_files.append(real_f)
 
-        # git add + git commit 순차 실행은 런타임에서 처리
-        # 여기서는 add용 파일 목록 + commit 메시지 반환
         cmd = ["__GIT_COMMIT__", message] + validated_files
         return True, "", cmd
 
@@ -203,11 +213,9 @@ def _run_command(command: str, cmd_list: list[str], timeout: int) -> dict:
     """
     try:
         if command == "git_commit":
-            # __GIT_COMMIT__ 마커: 인덱스[1]=message, 인덱스[2:]=files
             message = cmd_list[1]
             files = cmd_list[2:]
 
-            # Step 1: git add (지정 파일만)
             add_result = subprocess.run(
                 ["git", "-C", ARSS_ROOT, "add"] + files,
                 capture_output=True, text=True, timeout=30, shell=False,
@@ -219,7 +227,6 @@ def _run_command(command: str, cmd_list: list[str], timeout: int) -> dict:
                     "exit_code": add_result.returncode,
                 }
 
-            # Step 2: git commit -m
             commit_result = subprocess.run(
                 ["git", "-C", ARSS_ROOT, "commit", "-m", message],
                 capture_output=True, text=True, timeout=30, shell=False,
@@ -296,6 +303,8 @@ class ExecHandler(BaseHTTPRequestHandler):
         params = body.get("params", {})
         approval_id = body.get("approval_id", "")
         actor_id = body.get("actor_id", "")
+        # v1.1.0: session_audit_id 수신 (optional — backward compatible)
+        session_audit_id: str | None = body.get("session_audit_id") or None
         audit_id = str(uuid.uuid4())
 
         # ── Gate 1: actor 검증 ───────────────────────────────────────────────
@@ -304,6 +313,7 @@ class ExecHandler(BaseHTTPRequestHandler):
                 audit_id=audit_id, stage="DENY", command=command,
                 actor_id=actor_id, approval_id=approval_id,
                 detail=f"actor '{actor_id}' not allowed",
+                session_audit_id=session_audit_id,
             )
             self._send_json(403, {"ok": False, "error": f"DENY: actor must be '{ALLOWED_ACTOR}'"})
             return
@@ -314,6 +324,7 @@ class ExecHandler(BaseHTTPRequestHandler):
                 audit_id=audit_id, stage="DENY", command=command,
                 actor_id=actor_id, approval_id="",
                 detail="approval_id missing",
+                session_audit_id=session_audit_id,
             )
             self._send_json(403, {"ok": False, "error": "DENY: approval_id required"})
             return
@@ -325,6 +336,7 @@ class ExecHandler(BaseHTTPRequestHandler):
                 audit_id=audit_id, stage="DENY", command=command,
                 actor_id=actor_id, approval_id=approval_id,
                 detail=reason,
+                session_audit_id=session_audit_id,
             )
             self._send_json(400, {"ok": False, "error": f"DENY: {reason}"})
             return
@@ -334,6 +346,7 @@ class ExecHandler(BaseHTTPRequestHandler):
             audit_id=audit_id, stage="PRE", command=command,
             actor_id=actor_id, approval_id=approval_id,
             detail=f"cmd_list={cmd_list[:3]}...",
+            session_audit_id=session_audit_id,
         )
         if not pre_ok:
             self._send_json(500, {"ok": False, "error": "FAIL_CLOSED: audit pre-record failed"})
@@ -341,7 +354,10 @@ class ExecHandler(BaseHTTPRequestHandler):
 
         # ── 명령 실행 ─────────────────────────────────────────────────────────
         timeout = COMMAND_TIMEOUTS.get(command, 30)
-        _log.info("EXEC command=%s approval_id=%s audit_id=%s", command, approval_id, audit_id)
+        _log.info(
+            "EXEC command=%s approval_id=%s audit_id=%s session_audit_id=%s",
+            command, approval_id, audit_id, session_audit_id or "none",
+        )
         exec_result = _run_command(command, cmd_list, timeout)
 
         success = exec_result["exit_code"] == 0
@@ -353,13 +369,14 @@ class ExecHandler(BaseHTTPRequestHandler):
             actor_id=actor_id, approval_id=approval_id,
             detail=f"exit_code={exec_result['exit_code']}",
             exit_code=exec_result["exit_code"],
+            session_audit_id=session_audit_id,
         )
         if not post_ok:
             self._send_json(500, {"ok": False, "error": "FAIL_CLOSED: audit post-record failed"})
             return
 
         # ── 응답 ─────────────────────────────────────────────────────────────
-        self._send_json(200, {
+        response: dict = {
             "ok": success,
             "command": command,
             "stdout": exec_result["stdout"],
@@ -367,7 +384,11 @@ class ExecHandler(BaseHTTPRequestHandler):
             "exit_code": exec_result["exit_code"],
             "audit_id": audit_id,
             "approval_id": approval_id,
-        })
+        }
+        if session_audit_id:
+            response["session_audit_id"] = session_audit_id
+
+        self._send_json(200, response)
 
 
 class ThreadedExecServer(ThreadingMixIn, HTTPServer):

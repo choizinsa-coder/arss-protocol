@@ -68,7 +68,7 @@ from mcp_read_server import ReadOnlyServer, AGENT_ROOT_ALLOWLIST
 
 BRIDGE_HOST = "127.0.0.1"
 BRIDGE_PORT = 8443
-BRIDGE_VERSION = "2.4.0"
+BRIDGE_VERSION = "2.5.0"
 
 # ── OAuth Compatibility Layer (S184 EAG-2, S187 EAG-1) ───────────────────────
 import secrets as _secrets
@@ -666,6 +666,7 @@ def _handle_ask_domi(arguments: dict) -> dict:
 
 
 # -- exec_scoped 핸들러 (PT-S196-EXEC-SCOPED-001, S196 EAG-1) -----------------
+# v2.5.0 (S197 EAG-1): session_audit_id 발행 — Rev.2 C-5 병렬 audit 통합
 
 def _handle_exec_scoped(arguments: dict) -> dict:
     actor_id = arguments.get("actor_id", "")
@@ -676,16 +677,25 @@ def _handle_exec_scoped(arguments: dict) -> dict:
         return {"isError": True, "content": [{"type": "text", "text": "DENY: approval_id required"}]}
     command = arguments.get("command", "")
     params = arguments.get("params", {})
+    # session_audit_id: 외부 주입 또는 bridge에서 신규 발행 (Rev.2 C-5)
+    session_audit_id: str = arguments.get("session_audit_id") or f"SA-{str(uuid.uuid4())[:8]}"
     VALID = frozenset({"pytest","git_commit","git_status","git_diff","systemctl_restart"})
     if command not in VALID:
         return {"isError": True, "content": [{"type": "text", "text": f"DENY: command {command} not in whitelist"}]}
-    body = json.dumps({"actor_id": actor_id, "approval_id": approval_id, "command": command, "params": params}).encode()
+    body = json.dumps({
+        "actor_id": actor_id,
+        "approval_id": approval_id,
+        "command": command,
+        "params": params,
+        "session_audit_id": session_audit_id,
+    }).encode()
     if len(body) > EXEC_MAX_PAYLOAD_BYTES:
         return {"isError": True, "content": [{"type": "text", "text": f"DENY: payload too large"}]}
     try:
         req = urllib.request.Request(EXEC_RUNTIME_URL, data=body, headers={"Content-Type":"application/json","Content-Length":str(len(body))}, method="POST")
         with urllib.request.urlopen(req, timeout=EXEC_RUNTIME_TIMEOUT) as resp:
             result = json.loads(resp.read().decode())
+            result["session_audit_id"] = session_audit_id
             return {"isError": not result.get("ok", False), "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]}
     except urllib.error.URLError as e:
         return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: exec runtime unreachable -- {e}"}]}
