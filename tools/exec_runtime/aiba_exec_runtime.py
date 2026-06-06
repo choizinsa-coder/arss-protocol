@@ -38,7 +38,7 @@ from typing import Any
 
 # ── 상수 ────────────────────────────────────────────────────────────────────
 
-EXEC_RUNTIME_VERSION = "1.1.0"
+EXEC_RUNTIME_VERSION = "1.2.0"
 EXEC_HOST = "127.0.0.1"
 EXEC_PORT = 8449
 
@@ -238,11 +238,13 @@ def _run_command(command: str, cmd_list: list[str], timeout: int) -> dict:
                 "exit_code": commit_result.returncode,
             }
 
+        _pytest_env = {**os.environ, "ENV": "test"}
         result = subprocess.run(
             cmd_list,
             capture_output=True, text=True,
             timeout=timeout, shell=False,
             cwd=ARSS_ROOT,
+            env=_pytest_env,
         )
         return {
             "stdout": result.stdout,
