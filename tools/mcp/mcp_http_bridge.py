@@ -1,5 +1,5 @@
 """
-mcp_http_bridge.py v2.3.2
+mcp_http_bridge.py v2.4.0
 MCP Streamable HTTP Bridge — PT-S131-MCP-REG-001 + PT-S134-VPS-OBS-001 + PT-S139-MCP-WRITE-BRIDGE-001
 
 변경 이력:
@@ -68,7 +68,7 @@ from mcp_read_server import ReadOnlyServer, AGENT_ROOT_ALLOWLIST
 
 BRIDGE_HOST = "127.0.0.1"
 BRIDGE_PORT = 8443
-BRIDGE_VERSION = "2.3.2"
+BRIDGE_VERSION = "2.4.0"
 
 # ── OAuth Compatibility Layer (S184 EAG-2, S187 EAG-1) ───────────────────────
 import secrets as _secrets
@@ -120,12 +120,20 @@ ASK_DOMI_ALLOWED_ACTOR = "caddy"
 ASK_DOMI_MAX_PROMPT_BYTES = 32768
 ASK_DOMI_TOOLS = frozenset({"ask_domi"})
 
+# Exec Runtime 상수 (PT-S196-EXEC-SCOPED-001, S196 EAG-1)
+EXEC_RUNTIME_URL = "http://127.0.0.1:8449/exec"
+EXEC_RUNTIME_TIMEOUT = 310
+EXEC_ALLOWED_ACTOR = "caddy"
+EXEC_MAX_PAYLOAD_BYTES = 8192
+EXEC_TOOLS = frozenset({"exec_scoped"})
+
 ALLOWED_TOOLS = frozenset({
     "ping", "get_load_state",
     "read_file", "list_dir", "grep_scoped", "read_log", "check_service_state",
     "read_pytest_result", "read_audit_event", "read_metadata", "get_runtime_snapshot",
     "write_file", "get_write_plane_state",
     "ask_jeni", "ask_domi",
+    "exec_scoped",
 })
 
 READ_TOOLS = frozenset({
@@ -657,6 +665,36 @@ def _handle_ask_domi(arguments: dict) -> dict:
         return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: unexpected error — {e}"}]}
 
 
+# -- exec_scoped 핸들러 (PT-S196-EXEC-SCOPED-001, S196 EAG-1) -----------------
+
+def _handle_exec_scoped(arguments: dict) -> dict:
+    actor_id = arguments.get("actor_id", "")
+    if actor_id != EXEC_ALLOWED_ACTOR:
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: actor must be caddy, got {actor_id}"}]}
+    approval_id = arguments.get("approval_id", "")
+    if not approval_id:
+        return {"isError": True, "content": [{"type": "text", "text": "DENY: approval_id required"}]}
+    command = arguments.get("command", "")
+    params = arguments.get("params", {})
+    VALID = frozenset({"pytest","git_commit","git_status","git_diff","systemctl_restart"})
+    if command not in VALID:
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: command {command} not in whitelist"}]}
+    body = json.dumps({"actor_id": actor_id, "approval_id": approval_id, "command": command, "params": params}).encode()
+    if len(body) > EXEC_MAX_PAYLOAD_BYTES:
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: payload too large"}]}
+    try:
+        req = urllib.request.Request(EXEC_RUNTIME_URL, data=body, headers={"Content-Type":"application/json","Content-Length":str(len(body))}, method="POST")
+        with urllib.request.urlopen(req, timeout=EXEC_RUNTIME_TIMEOUT) as resp:
+            result = json.loads(resp.read().decode())
+            return {"isError": not result.get("ok", False), "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]}
+    except urllib.error.URLError as e:
+        return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: exec runtime unreachable -- {e}"}]}
+    except TimeoutError:
+        return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: exec runtime timeout ({EXEC_RUNTIME_TIMEOUT}s)"}]}
+    except Exception as e:
+        return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: unexpected -- {e}"}]}
+
+
 # ── ask_jeni 핸들러 (PT-S189-JENI-RUNTIME-001, S189 EAG-1) ───────────────────
 
 def _handle_ask_jeni(arguments: dict) -> dict:
@@ -742,6 +780,8 @@ def _build_write_tool_entries() -> list:
          "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [ASK_JENI_ALLOWED_ACTOR]}, "prompt": {"type": "string"}, "context": {"type": "string"}}, "required": ["actor_id", "prompt"]}},
         {"name": "ask_domi", "description": "[ASK] 도미(OpenAI Design Architect)에게 설계 의뢰 (caddy only)",
          "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [ASK_DOMI_ALLOWED_ACTOR]}, "prompt": {"type": "string"}, "context": {"type": "string"}}, "required": ["actor_id", "prompt"]}},
+        {"name": "exec_scoped", "description": "[EXEC] EAG approval 기반 허용 명령 실행 (caddy only)",
+         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [EXEC_ALLOWED_ACTOR]}, "approval_id": {"type": "string"}, "command": {"type": "string", "enum": ["pytest","git_commit","git_status","git_diff","systemctl_restart"]}, "params": {"type": "object"}}, "required": ["actor_id", "approval_id", "command"]}},
     ]
 
 
@@ -824,6 +864,8 @@ def _handle_tool_call(tool_name: str, arguments: dict) -> dict:
         return _handle_ask_domi(arguments)
     if tool_name in ASK_TOOLS:
         return _handle_ask_jeni(arguments)
+    if tool_name in EXEC_TOOLS:
+        return _handle_exec_scoped(arguments)
     return {"isError": True, "content": [{"type": "text", "text": "Unknown tool"}]}
 
 
