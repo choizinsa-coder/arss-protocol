@@ -43,10 +43,10 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.2.0"
+RUNTIME_VERSION = "4.3.0"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
-GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.0-flash")
 GEMINI_TIMEOUT = 55
 GEMINI_MAX_OUTPUT_TOKENS = 4096
 
