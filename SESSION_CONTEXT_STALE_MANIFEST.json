@@ -1,7 +1,10 @@
 {
-  "session_count": 193,
-  "context_hash": "298653a1732899ea09d718eb35b0c1bdd4655cd9dfb9c36865a00614764d639e",
-  "updated_at": "2026-06-04T22:00:00+09:00",
-  "freshness": "FRESH",
-  "blocking_flags": []
+  "session": 202,
+  "generated_at": "2026-06-07T23:59:00.000000+09:00",
+  "stale_files": [
+    "SESSION_CONTEXT_S201_FINAL.json",
+    "SESSION_CONTEXT_ARCHIVE_TIER_D_S201.json"
+  ],
+  "current_canonical": "SESSION_CONTEXT_S202_FINAL.json",
+  "note": "S202 close — S201 FINAL은 stale로 표시됨"
 }

@@ -1,48 +1,44 @@
 {
-  "session_count": 198,
+  "session_count": 202,
   "chain": {
-    "session": 198,
-    "prev_tip": "cd2faec",
-    "tip": "a6066b6"
+    "session": 202,
+    "prev_tip": "a898b29",
+    "tip": "80ea4dc"
   },
   "session_reentry": {
-    "last_session": 198,
-    "resume_point": "BUG-S181 완전 해소 (81aff0c+7010911). exec_runtime v1.2.0 pytest 자율 실행 달성 (a6066b6). check_service_state whitelist 확장 + jeni_runtime Gemini 503 retry S199 이월.",
-    "eag_carryover": "없음 — S198 EAG-1~3 전항목 완료"
+    "last_session": 202,
+    "resume_point": "exec_runtime write_script TypeError bugfix(80ea4dc). pending.json 25→7건 재편(EAG-1). write_script/run_script 자율 파이프라인 검증 완료. 세션 리포트 VPS 저장 프로토콜 신설. S203: ALLOWED_SERVICES aiba-exec-runtime 추가 / OAuth Rev.2 / nginx warning.",
+    "eag_carryover": "없음 — S202 전항목 완료"
   },
   "next_steps": [
-    "GitHub MCP 재연결 후 git push 자율화",
-    "SESSION_CONTEXT Pruning 설계",
-    "OAuth per-call 마찰 -- Bridge Gateway Rev.2",
+    "ALLOWED_SERVICES에 aiba-exec-runtime 추가 (exec_runtime 자기 재시작 자율화 — INC-S201-003 완전 해소)",
+    "OAuth per-call 마찰 → Bridge Gateway Rev.2",
     "Incident-L15: VPS 방화벽 + ufw",
-    "Gemini API 키 폐기/재발급",
     "nginx conflicting server name warning 정리",
     "AES(AIBA Evidence Standard) 설계",
-    "AIBA 기반 투자 의사결정 지원 시스템 구축 검토 (시스템 완성 후 — 데이터 수집·도미 분석·제니 리스크·비오 EAG·exec_scoped 실행 파이프라인)",
-    "check_service_state whitelist 확장 — aiba-jeni-runtime/aiba-domi-runtime/aiba-exec-runtime 3종 추가",
-    "jeni_runtime Gemini 503 자동 재시도 1회 추가"
+    "AIBA 기반 투자 의사결정 지원 시스템 구축 검토"
   ],
   "agent_focus": {
-    "beo": "S198 -- BUG-S181 완전 해소. exec_scoped pytest 자율화 달성. S199: check_service_state whitelist 확장 + Gemini 503 retry",
-    "caddy": "BUG-S181 mcp_write_server.py GatekeeperState 명시적 비교 완료(81aff0c+7010911). exec_runtime v1.2.0 ENV=test 주입(a6066b6). exec_scoped pytest 자율 실행 최초 성공.",
-    "domi": "BUG-S181 수정 설계 + exec_runtime v1.2.0 ENV=test 주입 설계 완료.",
-    "jeni": "BUG-S181 TRUST_READY PASS. exec_runtime v1.2.0 TRUST_READY PASS. Gemini 503 일시 과부하 발생(재시도 후 정상)."
+    "beo": "S202 — pending.json 재편 EAG-1/2 일괄 승인. Jeni 면제 승인. exec_runtime 패치 SSH 실행. 세션 리포트 VPS 저장 프로토콜 신설 지시.",
+    "caddy": "PT-S58-001 pending.json 25→7건 재편 완료. exec_runtime write_script TypeError 근본 원인 발견·자율 수정. write_script→run_script→pytest→git_commit→git_push 완전 자율 실행. 세션 종료 VPS 저장 프로토콜 신설.",
+    "domi": "PT-S58-001 + Pruning 통합 설계(2차 갭 보완). exec_runtime write_script bugfix 설계 확인.",
+    "jeni": "VALIDATION_PARSE_FAILURE 3회 연속. 비오 직접 승인으로 면제."
   },
   "pytest_status": {
     "last_run_date": "2026-06-07",
-    "last_run_session": 198,
+    "last_run_session": 202,
     "regression_impact": "NONE",
     "total_failed": 0,
-    "total_passed": 1461,
+    "total_passed": 1467,
     "total_skipped": 96,
-    "note": "S198: BUG-S181 수정 + exec_runtime v1.2.0. 1461/0/96. exec_scoped pytest 자율 실행 최초 성공."
+    "note": "S202: exec_runtime write_script bugfix + pending hash 현행화. 1467/0/96."
   },
   "sync_meta": {
     "last_sync_date": "2026-06-07",
-    "last_sync_session": 198,
+    "last_sync_session": 202,
     "files": [
-      "SESSION_CONTEXT_S198_FINAL.json",
-      "SESSION_CONTEXT_ARCHIVE_TIER_D_S198.json"
+      "SESSION_CONTEXT_S202_FINAL.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S202.json"
     ],
     "sync_status": "PENDING_UPLOAD"
   },
@@ -65,50 +61,58 @@
       }
     }
   },
-  "updated_at": "2026-06-07T00:00:00.000000+09:00",
-  "generated_at": "2026-06-07T00:00:00.000000+09:00",
-  "context_hash": "536a5256fe5d1ac43a918c814e8a1c25187ccdc7433243ced5b7699b790b8268",
   "schema_version": "4.0",
   "system_name": "AIBA Self-Evolution-Ready System",
   "system_version": "AIBA-v3.2-S165",
-  "system_changes_s198": {
-    "deployed_session": 198,
+  "system_changes_s199": {
+    "deployed_session": 199,
     "commits": [
-      "81aff0c",
-      "7010911",
-      "a6066b6"
+      "bf378c2"
     ],
     "changes": [
-      "mcp_write_server.py: handle_receipt_finalize GatekeeperState 명시적 비교 (81aff0c, EAG-1)",
-      "mcp_write_server.py: handle_recovery_enter GatekeeperState.NORMAL 명시적 비교 (7010911, EAG-2)",
-      "aiba_exec_runtime.py v1.1.0→v1.2.0: pytest 분기 ENV=test 자동 주입 (a6066b6, EAG-3)",
-      "tests/test_orchestration_rev2.py: EXEC_RUNTIME_VERSION 1.1.0→1.2.0 현행화",
-      "exec_scoped pytest 자율 실행 최초 성공 확인"
+      "mcp_read_server.py: ALLOWED_SERVICES에 aiba-jeni-runtime/aiba-domi-runtime/aiba-exec-runtime 3종 추가 (EAG-1)",
+      "aiba_jeni_runtime.py v4.0.0→v4.1.0: _execute_gemini_request HTTP 503 감지 시 2초 대기 후 1회 재시도 (EAG-2)",
+      "tests/test_mcp_read_server.py: TC-21 신규",
+      "tests/test_jeni_runtime_ivloop.py: GR-01~03 신규",
+      "SESSION_CONTEXT.json: S198 FINAL 누락 shard pointer 8종 복원"
     ],
-    "exec_runtime_version": "1.2.0",
-    "bugfix_resolved": "BUG-S181-WS-RECOVERY-ENUM-MISMATCH"
+    "jeni_runtime_version": "4.1.0",
+    "gemini_503_retry": true,
+    "pytest_result": "1465 passed / 0 failed / 96 skipped"
   },
-  "caddy_governance_record_s198": {
-    "session": 198,
+  "caddy_governance_record_s199": {
+    "session": 199,
     "date": "2026-06-07",
     "eag_gates_this_session": [
-      "EAG-1: BUG-S181 handle_receipt_finalize GatekeeperState 명시적 비교",
-      "EAG-2: BUG-S181 잔존 handle_recovery_enter 동일 패턴 제거",
-      "EAG-3: exec_runtime v1.2.0 pytest ENV=test 자동 주입"
+      "EAG-1: mcp_read_server.py ALLOWED_SERVICES whitelist 3종 확장",
+      "EAG-2: aiba_jeni_runtime.py v4.1.0 Gemini 503 자동 재시도",
+      "EAG-shard: SESSION_CONTEXT shard pointer 복원 — Jeni 면제 비오 직접 승인"
     ],
-    "governance_cycle": "캐디관측→ask_domi→ask_jeni(Gemini 503 재시도)→비오EAG→구현→pytest→exec_scoped git_commit 자율실행",
+    "governance_cycle": "캐디관측→ask_domi→ask_jeni→비오EAG→구현→pytest→git commit",
     "incidents": [
       {
-        "id": "INC-S198-001",
-        "type": "EXEC_SCOPED_PARAMS_SCHEMA_UNVERIFIED",
-        "description": "exec_scoped pytest 첫 호출 시 params 스키마를 MCP schema만 보고 확인하지 않아 {args:[...]} 전달. exec_runtime 내부 스키마는 {path:..., options:[...]}. HTTP 400 발생 후 코드 확인으로 수정.",
-        "session": 198
+        "id": "INC-S199-001",
+        "type": "JENI_502_GEMINI_503_OVERLOAD",
+        "description": "ask_jeni 호출 시 Gemini API 일시적 503 과부하. 2회 발생.",
+        "session": 199
+      },
+      {
+        "id": "INC-S199-002",
+        "type": "JENI_TRUST_READY_CODE_MISMATCH",
+        "description": "Jeni EAG 전 설계 단계 TRUST_READY CODE_MISMATCH FAIL. 재요청 후 PASS.",
+        "session": 199
+      },
+      {
+        "id": "INC-S199-003",
+        "type": "SESSION_CONTEXT_SHARD_POINTER_MISSING",
+        "description": "S198 FINAL SESSION_CONTEXT 생성 시 shard pointer 8종 누락. S199에서 VPS 직접 패치로 복원.",
+        "session": 199
       }
     ],
-    "notable": "BUG-S181 완전 해소. exec_scoped pytest 자율 실행 최초 달성. 새 플로우(ask_domi→ask_jeni→EAG→exec_scoped) S198 첫 실전 검증 완료.",
+    "notable": "S199 이월 항목 2건 완료. jeni_runtime v4.1.0 Gemini 503 복원력 강화. SESSION_CONTEXT shard pointer 구조 복원.",
     "stabilization_metrics": {
       "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS -- ARSS MCP read_file",
+      "M02_session_context_load": "PASS — ARSS MCP read_file",
       "M03_eag_compliance": "PASS",
       "M04_file_path_bash_only": "PASS",
       "M05_delta_only_sc_update": "PASS",
@@ -116,47 +120,262 @@
       "M07_role_boundary": "PASS"
     }
   },
-  "visibility_metrics_s198": {
-    "session": 198,
+  "visibility_metrics_s199": {
+    "session": 199,
     "date": "2026-06-07",
-    "M-01_active_canonical_key_count": 42,
+    "M-01_active_canonical_key_count": 26,
     "M-02_tier_d_quarantine_key_count": 66,
     "M-03_ceiling_utilization_rate": "42/42 (Tier D 변동 없음)",
-    "M-04_session_delta_size": "LARGE (BUG-S181 해소 + exec_runtime v1.2.0 + 새 플로우 실전 검증)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S198.json (변동 없음 기반)",
+    "M-04_session_delta_size": "MEDIUM",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S199.json",
     "M-06_active_task_load": 8,
     "M-07_stabilization_compliance": "N/A (S120 해제)",
-    "chain_tip": "a6066b6",
-    "pytest_result": "0 failed / 1461 passed / 96 skipped",
+    "chain_tip": "bf378c2",
+    "pytest_result": "0 failed / 1465 passed / 96 skipped",
     "key_decisions": [
-      "BUG-S181 EAG-1: handle_receipt_finalize GatekeeperState (81aff0c)",
-      "BUG-S181 EAG-2: handle_recovery_enter GatekeeperState (7010911)",
-      "exec_runtime v1.2.0 ENV=test 주입 (a6066b6)",
-      "exec_scoped pytest 자율 실행 최초 성공",
-      "Gemini 503 근본원인 확인: 일시적 과부하 (서비스/키 문제 아님)",
-      "구조적 개선 2건 next_steps 등록"
+      "EAG-1 whitelist 3종",
+      "EAG-2 jeni 503 retry",
+      "shard pointer 복원"
     ]
   },
-  "session_delta": {
-    "session": 198,
-    "modified_keys": [
-      "session_count",
-      "updated_at",
-      "generated_at",
-      "chain",
-      "session_reentry",
-      "next_steps",
-      "agent_focus",
-      "pytest_status",
-      "sync_meta",
-      "on_the_horizon"
+  "system_changes_s200": {
+    "deployed_session": 200,
+    "commits": [
+      "47c37d1",
+      "312e248"
     ],
-    "added_keys": [
-      "system_changes_s198",
-      "caddy_governance_record_s198",
-      "visibility_metrics_s198"
+    "changes": [
+      "aiba_exec_runtime.py v1.2.0→v1.3.0: git_push 명령어 추가 (47c37d1, EAG-1)",
+      "tests/test_orchestration_rev2.py: EXEC_RUNTIME_VERSION 1.2.0→1.3.0 현행화 (312e248, EAG-2)"
     ],
-    "removed_keys": []
+    "exec_runtime_version": "1.3.0",
+    "git_push_autonomous": true,
+    "pytest_result": "1465 passed / 0 failed / 96 skipped"
+  },
+  "caddy_governance_record_s200": {
+    "session": 200,
+    "date": "2026-06-07",
+    "eag_gates_this_session": [
+      "EAG-1: exec_runtime v1.3.0 git_push 추가 (비오 승인) → 47c37d1",
+      "EAG-2: test_orchestration_rev2 EXEC_RUNTIME_VERSION 현행화 (비오 승인) → 312e248"
+    ],
+    "governance_cycle": "캐디관측→비오직접설계→캐디IMPLEMENTABLE→ask_jeni(비오전달)→비오EAG→구현→pytest→git commit",
+    "incidents": [
+      {
+        "id": "INC-S200-001",
+        "type": "AGENT_RELAY_VIA_BEO",
+        "description": "ask_domi/ask_jeni MCP 직접 호출 가능 상태임에도 비오님을 중개자로 사용. S201부터 직접 호출 전환 결정.",
+        "session": 200
+      },
+      {
+        "id": "INC-S200-002",
+        "type": "SCP_SKIPPED_BEFORE_PYTEST",
+        "description": "SCP 배포 전 pytest 및 git commit 실행 시도. 순서 재확인 후 정상 진행.",
+        "session": 200
+      },
+      {
+        "id": "INC-S200-003",
+        "type": "PYTEST_ENV_TEST_MISSING",
+        "description": "SSH pytest 실행 시 ENV=test 누락. conftest.py 보호 게이트 발동.",
+        "session": 200
+      },
+      {
+        "id": "INC-S200-004",
+        "type": "SED_QUOTE_ESCAPE_FAILURE",
+        "description": "PowerShell SSH 경유 sed에 따옴표 중첩 실패.",
+        "session": 200
+      }
+    ],
+    "notable": "S200 마일스톤. exec_scoped git_push 자율화 최초 완료. ask_domi/ask_jeni 직접 호출 전환 결정.",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS — ARSS MCP read_file (S199 FINAL VPS 기반)",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "PASS (ask_domi/ask_jeni 미직접호출은 INC-S200-001로 기록)"
+    }
+  },
+  "visibility_metrics_s200": {
+    "session": 200,
+    "date": "2026-06-07",
+    "M-01_active_canonical_key_count": 29,
+    "M-02_tier_d_quarantine_key_count": 66,
+    "M-03_ceiling_utilization_rate": "42/42 (Tier D 변동 없음)",
+    "M-04_session_delta_size": "SMALL",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S200.json (변동 없음 기반)",
+    "M-06_active_task_load": 8,
+    "M-07_stabilization_compliance": "N/A (S120 해제)",
+    "chain_tip": "312e248",
+    "pytest_result": "0 failed / 1465 passed / 96 skipped",
+    "key_decisions": [
+      "EAG-1: exec_runtime v1.3.0 git_push 자율화 (47c37d1)",
+      "EAG-2: test 버전 현행화 (312e248)",
+      "ask_domi/ask_jeni 직접 호출 전환 결정 (S201 적용)"
+    ]
+  },
+  "system_changes_s201": {
+    "deployed_session": 201,
+    "commits": [
+      "cd8ae31",
+      "b3af9ec",
+      "b58e32b",
+      "a898b29"
+    ],
+    "changes": [
+      "mcp_http_bridge.py: exec_scoped VALID + schema에 git_push 추가 (cd8ae31, EAG-1)",
+      "aiba_jeni_runtime.py v4.1.0→v4.2.0: 429 Retry-After 재시도 + HTTP 200 통일 (b3af9ec, EAG)",
+      "tests/test_jeni_runtime_ivloop.py: v4.2.0 429 재시도 테스트 현행화 (b3af9ec)",
+      "aiba_exec_runtime.py v1.3.0→v1.4.0: write_script + run_script 추가 (b58e32b, EAG)",
+      "mcp_http_bridge.py: VALID + schema + EXEC_MAX_PAYLOAD_BYTES 32768 확장 (b58e32b)",
+      "tests/test_orchestration_rev2.py: v1.4.0 현행화 (b58e32b)",
+      "aiba_exec_runtime.py: CADDY_SANDBOX 위치 bugfix ARSS_ROOT 이후로 이동 (a898b29, EAG-B)"
+    ],
+    "exec_runtime_version": "1.4.0",
+    "jeni_runtime_version": "4.2.0",
+    "git_push_autonomous": true,
+    "write_script_run_script": true,
+    "pytest_result": "1467 passed / 0 failed / 96 skipped"
+  },
+  "caddy_governance_record_s201": {
+    "session": 201,
+    "date": "2026-06-07",
+    "eag_gates_this_session": [
+      "EAG-1: mcp_http_bridge git_push VALID+schema 추가 → cd8ae31",
+      "EAG-2: aiba-mcp-bridge systemctl_restart (POST_OK)",
+      "EAG-3: exec_scoped git_push dry_run×3 + 실제 push",
+      "EAG-jeni-restart: aiba-jeni-runtime 재시작 (v4.2.0 로드)",
+      "EAG-jeni-v420: jeni_runtime v4.2.0 429+HTTP200 → b3af9ec",
+      "EAG-S201(exec_runtime v1.4.0 자율화): write_script+run_script → b58e32b",
+      "EAG-A: aiba-mcp-bridge 재시작 (write_script/run_script schema 로드)",
+      "EAG-B: CADDY_SANDBOX 위치 bugfix → a898b29 (자율 pytest+commit+push)"
+    ],
+    "governance_cycle": "캐디관측→ask_domi→캐디IMPLEMENTABLE→ask_jeni→비오EAG→구현→pytest→exec_scoped git_commit→exec_scoped git_push (완전 자율 체인 최초 달성)",
+    "incidents": [
+      {
+        "id": "INC-S201-001",
+        "type": "PYTEST_FAIL_BEFORE_COMMIT",
+        "description": "pytest 실패 상태에서 git commit 2회 실행 (b3af9ec, b58e32b). 비오님이 pytest 결과 미확인 후 즉시 commit 진행.",
+        "session": 201
+      },
+      {
+        "id": "INC-S201-002",
+        "type": "CADDY_SANDBOX_BEFORE_ARSS_ROOT",
+        "description": "CADDY_SANDBOX 상수를 ARSS_ROOT 정의 이전 위치에 삽입 → NameError 발생. ARSS_ROOT 이후로 재이동하여 해결.",
+        "session": 201
+      },
+      {
+        "id": "INC-S201-003",
+        "type": "EXEC_RUNTIME_SELF_RESTART_BLOCKED",
+        "description": "exec_runtime ALLOWED_SERVICES에 aiba-exec-runtime 미포함 → exec_scoped systemctl_restart 불가. 비오님 SSH 직접 재시작으로 해결. S202 이월.",
+        "session": 201
+      }
+    ],
+    "notable": "S201 마일스톤: exec_scoped git_push 활성화. Jeni 429 Rate Limit 근본 원인 특정 및 v4.2.0 해결. write_script+run_script 자율화 파이프라인 구축. pytest→git_commit→git_push 전 과정 Caddy 자율 최초 달성.",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS — ARSS MCP read_file (S200 VPS 기반)",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "PASS"
+    }
+  },
+  "visibility_metrics_s201": {
+    "session": 201,
+    "date": "2026-06-07",
+    "M-01_active_canonical_key_count": 35,
+    "M-02_tier_d_quarantine_key_count": 66,
+    "M-03_ceiling_utilization_rate": "35/42 (Pruning 미적용 — S202 이월)",
+    "M-04_session_delta_size": "LARGE (exec_runtime v1.4.0 + jeni v4.2.0 + 자율화 파이프라인)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S201.json",
+    "M-06_active_task_load": 8,
+    "M-07_stabilization_compliance": "N/A (S120 해제)",
+    "chain_tip": "a898b29",
+    "pytest_result": "0 failed / 1467 passed / 96 skipped",
+    "key_decisions": [
+      "EAG-1: exec_scoped git_push 활성화 (cd8ae31)",
+      "jeni_runtime v4.2.0 429 Retry-After (b3af9ec)",
+      "exec_runtime v1.4.0 write_script+run_script (b58e32b)",
+      "CADDY_SANDBOX bugfix + 자율 pytest/commit/push (a898b29)"
+    ]
+  },
+  "system_changes_s202": {
+    "deployed_session": 202,
+    "commits": [
+      "80ea4dc"
+    ],
+    "changes": [
+      "aiba_exec_runtime.py: write_script audit PRE TypeError 버그픽스 — isinstance(cmd_list,dict) 조건 추가 (80ea4dc, EAG)",
+      "tests/test_pt_s148_context_refactor_phase3.py: pending hash 현행화 c894c4→ef47915 (80ea4dc)",
+      "context/tasks/pending.json: 25→7건 재편 — stale 14건 Tier-D, DEFERRED 3건 제거 (EAG-1, SCP)"
+    ],
+    "exec_runtime_version": "1.4.0",
+    "write_script_verified": true,
+    "run_script_verified": true,
+    "pytest_result": "1467 passed / 0 failed / 96 skipped"
+  },
+  "caddy_governance_record_s202": {
+    "session": 202,
+    "date": "2026-06-07",
+    "eag_gates_this_session": [
+      "EAG-1: pending.json 재편 (25→7건) — 비오 승인",
+      "EAG-2: SESSION_CONTEXT Pruning (s198 3블록 Tier-D) — 비오 승인 → 세션 클로즈 반영",
+      "EAG-S202-VERIFY-WS-001: write_script/run_script 기능 검증",
+      "EAG-S202-TEST-HASH-FIX-001: exec_runtime write_script bugfix + pending hash 현행화 (Jeni 면제 — 비오 직접 승인)"
+    ],
+    "governance_cycle": "캐디관측→Domi설계→캐디IMPLEMENTABLE→Jeni(FAIL→재검증PASS)→비오EAG→구현→pytest→git_commit→git_push (완전 자율)",
+    "incidents": [
+      {
+        "id": "INC-S202-001",
+        "type": "SESSION_BOOT_3WAY_CHECK_OMITTED",
+        "description": "SESSION_BOOT 최초 출력 시 3-way consistency check 명시적 수행 누락. 비오님 지적 후 보완.",
+        "session": 202
+      },
+      {
+        "id": "INC-S202-002",
+        "type": "JENI_VALIDATION_PARSE_FAILURE_3X",
+        "description": "Jeni VALIDATION_PARSE_FAILURE 3회 연속 발생 → 비오님 직접 EAG 승인(면제). 런타임 파싱 오류.",
+        "session": 202
+      },
+      {
+        "id": "INC-S202-003",
+        "type": "AUTONOMOUS_PIPELINE_NOT_ATTEMPTED",
+        "description": "exec_runtime 패치 배포 시 캐디가 SCP 명령을 비오님께 제시. 부트스트랩 문제(write_script 자체가 고장)로 불가피했으나 초기에 자율 처리 시도 없이 바로 제시한 것은 개선 필요.",
+        "session": 202
+      }
+    ],
+    "notable": "PT-S58-001 완료. pending.json 25→7건 정리. write_script TypeError 근본 원인 발견·자율 수정. write_script→run_script→pytest→git_commit→git_push 자율 파이프라인 정상 작동 최초 확인. 세션 리포트 VPS 저장 프로토콜 신설.",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS — ARSS MCP read_file + 3-way consistency check (보완 후)",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "PASS"
+    }
+  },
+  "visibility_metrics_s202": {
+    "session": 202,
+    "date": "2026-06-07",
+    "M-01_active_canonical_key_count": 35,
+    "M-02_tier_d_quarantine_key_count": 69,
+    "M-03_ceiling_utilization_rate": "35/42 (EAG-2 Pruning 적용 — s198 3블록 제거, s202 3블록 추가)",
+    "M-04_session_delta_size": "MEDIUM (pending.json 재편 + exec_runtime bugfix)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S202.json",
+    "M-06_active_task_load": 6,
+    "M-07_stabilization_compliance": "N/A (S120 해제)",
+    "chain_tip": "80ea4dc",
+    "pytest_result": "0 failed / 1467 passed / 96 skipped",
+    "key_decisions": [
+      "EAG-1: pending.json 25→7건 재편 (PT-S58-001 완료)",
+      "EAG-2: SESSION_CONTEXT Pruning s198 3블록 Tier-D 이동",
+      "exec_runtime write_script TypeError bugfix (80ea4dc)",
+      "write_script/run_script 자율 파이프라인 최초 완전 검증"
+    ]
   },
   "active_tasks": {
     "_shard_hash": "9e69206d98864be39a4f5f40d61103d5dcfb9978c367cc8e8414e841af5e4d6a",
@@ -190,13 +409,13 @@
     "status": "active"
   },
   "pending_tasks": {
-    "_shard_hash": "43fb0ffa647dcd73fb1552ad34148ffa988df33dd8074d252ff62815d584c0e1",
+    "_shard_hash": "ef47915ce29b623f70be6ffea39ef645f38a43540f9d17a2c79b849e3bb106ce",
     "body_ref": "context/tasks/pending.json",
     "domain": "tasks.pending",
-    "item_count": 25,
-    "latest_session_ref": 148,
+    "item_count": 7,
+    "latest_session_ref": 202,
     "schema_version": "phase3_shard_v1",
-    "session_ref": 163,
+    "session_ref": 202,
     "status": "active"
   },
   "archived_tasks": {
@@ -238,5 +457,34 @@
     "migrated_at": "2026-05-29T14:19:39.000+09:00",
     "migrated_session": 165,
     "quarantine_status": "TIER_D"
-  }
+  },
+  "session_delta": {
+    "session": 202,
+    "modified_keys": [
+      "session_count",
+      "updated_at",
+      "generated_at",
+      "chain",
+      "session_reentry",
+      "next_steps",
+      "agent_focus",
+      "pytest_status",
+      "sync_meta",
+      "session_delta",
+      "pending_tasks"
+    ],
+    "added_keys": [
+      "system_changes_s202",
+      "caddy_governance_record_s202",
+      "visibility_metrics_s202"
+    ],
+    "removed_keys": [
+      "system_changes_s198",
+      "visibility_metrics_s198",
+      "caddy_governance_record_s198"
+    ]
+  },
+  "context_hash": "b7ffe477b0c78ac5ca1c83dcc79f36931a31f891b97b73942eaf15932d5335a5",
+  "updated_at": "2026-06-07T23:59:00.000000+09:00",
+  "generated_at": "2026-06-07T23:59:00.000000+09:00"
 }
