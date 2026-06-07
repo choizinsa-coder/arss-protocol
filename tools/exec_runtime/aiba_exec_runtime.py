@@ -87,9 +87,6 @@ ALLOWED_PYTEST_OPTIONS = frozenset({
     "-p", "no:warnings",
 })
 
-# caddy sandbox 경로 (write_script / run_script 전용)
-CADDY_SANDBOX = os.path.join(ARSS_ROOT, "tools/sandbox/caddy/active")
-
 # git_push allowlist (Fail-Closed)
 ALLOWED_GIT_REMOTES = frozenset({"origin"})
 ALLOWED_GIT_BRANCHES = frozenset({"main"})
@@ -99,6 +96,9 @@ ARSS_ROOT = "/opt/arss/engine/arss-protocol"
 
 # 감사 로그 경로 (bridge audit_trail 옆에 위치)
 AUDIT_LOG_PATH = os.path.join(ARSS_ROOT, "tools/mcp/exec_audit_trail.log")
+
+# caddy sandbox 경로 (write_script / run_script 전용, S201 EAG-B 위치 수정)
+CADDY_SANDBOX = os.path.join(ARSS_ROOT, "tools/sandbox/caddy/active")
 
 # ── 로깅 ─────────────────────────────────────────────────────────────────────
 
