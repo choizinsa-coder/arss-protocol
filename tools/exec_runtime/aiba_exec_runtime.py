@@ -1,5 +1,5 @@
 """
-aiba_exec_runtime.py v1.1.0
+aiba_exec_runtime.py v1.3.0
 AIBA Exec Runtime — exec_scoped 허용 명령 실행 서비스
 
 변경 이력:
@@ -8,8 +8,21 @@ AIBA Exec Runtime — exec_scoped 허용 명령 실행 서비스
                  audit entry에 session_audit_id 필드 포함 (optional)
                  backward compatible — session_audit_id 없으면 기존 동작 유지
 
-설계 근거: S196 EAG-1 비오(Joshua) 승인
-거버넌스 체인: 도미 Rev.2 설계 → 제니 TRUST_READY PASS → 비오 EAG-1
+  v1.2.0 (S198): EAG-3 승인 (비오(Joshua))
+                 pytest 분기 ENV=test 자동 주입
+
+  v1.3.0 (S200): EAG 승인 (비오(Joshua))
+                 git_push 명령어 추가.
+                 remote={"origin"}, branch={"main"} allowlist 고정 (Fail-Closed).
+                 dry_run bool 파라미터 추가 — git push --dry-run 검증 경로 제공.
+                 error_type 구조화 응답 추가:
+                   NON_FAST_FORWARD, REMOTE_REJECTED, AUTH_FAILED,
+                   NETWORK_ERROR, UNKNOWN_FAILURE, None.
+                 audit PRE/POST detail에 remote/branch/dry_run 포함.
+                 shell=False, approval_id 필수, Fail-Closed 원칙 유지.
+
+설계 근거: S200 비오(Joshua) 직접 설계 제공 + Jeni TRUST_READY PASS
+거버넌스 체인: 비오 설계 → 캐디 IMPLEMENTABLE 검토 → 제니 TRUST_READY PASS → 비오 EAG
 
 보안 원칙:
   - 정적 enum 화이트리스트 — 목록 외 명령 즉시 거부 (Fail-Closed)
@@ -38,7 +51,7 @@ from typing import Any
 
 # ── 상수 ────────────────────────────────────────────────────────────────────
 
-EXEC_RUNTIME_VERSION = "1.2.0"
+EXEC_RUNTIME_VERSION = "1.3.0"
 EXEC_HOST = "127.0.0.1"
 EXEC_PORT = 8449
 
@@ -50,6 +63,7 @@ COMMAND_TIMEOUTS: dict[str, int] = {
     "git_commit": 30,
     "git_status": 30,
     "git_diff": 30,
+    "git_push": 120,
     "systemctl_restart": 30,
 }
 
@@ -70,6 +84,10 @@ ALLOWED_PYTEST_OPTIONS = frozenset({
     "--no-header",
     "-p", "no:warnings",
 })
+
+# git_push allowlist (Fail-Closed)
+ALLOWED_GIT_REMOTES = frozenset({"origin"})
+ALLOWED_GIT_BRANCHES = frozenset({"main"})
 
 # ARSS 프로젝트 루트 (절대경로 고정)
 ARSS_ROOT = "/opt/arss/engine/arss-protocol"
@@ -132,11 +150,12 @@ def _write_audit(
 
 # ── 파라미터 검증 ─────────────────────────────────────────────────────────────
 
-def _validate_and_build_cmd(command: str, params: dict) -> tuple[bool, str, list[str]]:
+def _validate_and_build_cmd(command: str, params: dict) -> tuple[bool, str, list | dict]:
     """
-    화이트리스트 검증 + subprocess 인자 리스트 생성.
-    Returns: (ok, error_reason, cmd_list)
+    화이트리스트 검증 + subprocess 인자 리스트(또는 spec dict) 생성.
+    Returns: (ok, error_reason, cmd_list_or_spec)
     shell=False이므로 cmd_list는 문자열 토큰 리스트.
+    git_push의 경우 cmd_list 자리에 push_spec dict 반환.
     """
     if command == "pytest":
         path = params.get("path", "")
@@ -192,6 +211,35 @@ def _validate_and_build_cmd(command: str, params: dict) -> tuple[bool, str, list
         cmd = ["git", "-C", ARSS_ROOT, "diff"]
         return True, "", cmd
 
+    if command == "git_push":
+        remote = params.get("remote", "origin")
+        branch = params.get("branch", "main")
+        dry_run = params.get("dry_run", False)
+
+        if not isinstance(remote, str) or remote not in ALLOWED_GIT_REMOTES:
+            return False, f"git_push denied: remote not allowed: {remote!r}", {}
+
+        if not isinstance(branch, str) or branch not in ALLOWED_GIT_BRANCHES:
+            return False, f"git_push denied: branch not allowed: {branch!r}", {}
+
+        if not isinstance(dry_run, bool):
+            return False, "git_push denied: dry_run must be boolean", {}
+
+        push_spec = {
+            "command": "git_push",
+            "remote": remote,
+            "branch": branch,
+            "dry_run": dry_run,
+            "timeout": COMMAND_TIMEOUTS["git_push"],
+            "audit_detail": {
+                "command": "git_push",
+                "remote": remote,
+                "branch": branch,
+                "dry_run": dry_run,
+            },
+        }
+        return True, "", push_spec
+
     if command == "systemctl_restart":
         service = params.get("service", "")
         if not service:
@@ -206,10 +254,11 @@ def _validate_and_build_cmd(command: str, params: dict) -> tuple[bool, str, list
 
 # ── 명령 실행 ─────────────────────────────────────────────────────────────────
 
-def _run_command(command: str, cmd_list: list[str], timeout: int) -> dict:
+def _run_command(command: str, cmd_list: list | dict, timeout: int) -> dict:
     """
     subprocess.run(shell=False)으로 안전하게 실행.
     git_commit은 add → commit 2단계 처리.
+    git_push는 push_spec dict를 수신하여 처리.
     """
     try:
         if command == "git_commit":
@@ -236,6 +285,52 @@ def _run_command(command: str, cmd_list: list[str], timeout: int) -> dict:
                 "stdout": combined_stdout,
                 "stderr": commit_result.stderr,
                 "exit_code": commit_result.returncode,
+            }
+
+        if command == "git_push":
+            push_spec = cmd_list  # push_spec dict
+            remote = push_spec["remote"]
+            branch = push_spec["branch"]
+            dry_run = push_spec.get("dry_run", False)
+            push_timeout = push_spec.get("timeout", COMMAND_TIMEOUTS["git_push"])
+
+            git_cmd = ["git", "-C", ARSS_ROOT, "push"]
+            if dry_run:
+                git_cmd.append("--dry-run")
+            git_cmd.extend([remote, branch])
+
+            result = subprocess.run(
+                git_cmd,
+                capture_output=True,
+                text=True,
+                timeout=push_timeout,
+                shell=False,
+            )
+
+            stderr = result.stderr or ""
+            exit_code = result.returncode
+
+            if exit_code == 0:
+                error_type = None
+            elif "[non-fast-forward]" in stderr:
+                error_type = "NON_FAST_FORWARD"
+            elif "[rejected]" in stderr:
+                error_type = "REMOTE_REJECTED"
+            elif "Authentication failed" in stderr:
+                error_type = "AUTH_FAILED"
+            elif "Could not read" in stderr or "Connection" in stderr:
+                error_type = "NETWORK_ERROR"
+            else:
+                error_type = "UNKNOWN_FAILURE"
+
+            return {
+                "stdout": result.stdout,
+                "stderr": stderr,
+                "exit_code": exit_code,
+                "error_type": error_type,
+                "dry_run": dry_run,
+                "remote": remote,
+                "branch": branch,
             }
 
         _pytest_env = {**os.environ, "ENV": "test"}
@@ -344,10 +439,16 @@ class ExecHandler(BaseHTTPRequestHandler):
             return
 
         # ── Gate 4: audit PRE mandatory ──────────────────────────────────────
+        # git_push는 audit_detail dict를 JSON 직렬화하여 detail로 전달
+        if command == "git_push":
+            pre_detail = json.dumps(cmd_list["audit_detail"], ensure_ascii=False)
+        else:
+            pre_detail = f"cmd_list={cmd_list[:3]}..."
+
         pre_ok = _write_audit(
             audit_id=audit_id, stage="PRE", command=command,
             actor_id=actor_id, approval_id=approval_id,
-            detail=f"cmd_list={cmd_list[:3]}...",
+            detail=pre_detail,
             session_audit_id=session_audit_id,
         )
         if not pre_ok:
@@ -366,10 +467,14 @@ class ExecHandler(BaseHTTPRequestHandler):
 
         # ── Gate 5: audit POST mandatory ─────────────────────────────────────
         post_stage = "POST_OK" if success else "POST_FAIL"
+        post_detail = f"exit_code={exec_result['exit_code']}"
+        if command == "git_push":
+            post_detail += f" error_type={exec_result.get('error_type')} dry_run={exec_result.get('dry_run')}"
+
         post_ok = _write_audit(
             audit_id=audit_id, stage=post_stage, command=command,
             actor_id=actor_id, approval_id=approval_id,
-            detail=f"exit_code={exec_result['exit_code']}",
+            detail=post_detail,
             exit_code=exec_result["exit_code"],
             session_audit_id=session_audit_id,
         )
@@ -387,6 +492,13 @@ class ExecHandler(BaseHTTPRequestHandler):
             "audit_id": audit_id,
             "approval_id": approval_id,
         }
+        # git_push 전용 응답 필드 추가
+        if command == "git_push":
+            response["error_type"] = exec_result.get("error_type")
+            response["dry_run"] = exec_result.get("dry_run")
+            response["remote"] = exec_result.get("remote")
+            response["branch"] = exec_result.get("branch")
+
         if session_audit_id:
             response["session_audit_id"] = session_audit_id
 
