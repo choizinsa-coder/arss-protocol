@@ -309,3 +309,10 @@ def test_tc20_grep_scoped_allow(tmp_path):
         )
     assert result['status'] == 'ALLOW'
     assert len(result['matches']) >= 1
+
+
+# ── TC-21: S199 EAG-1 신규 서비스 whitelist 확인 ──────────────
+def test_tc21_new_services_in_allowlist():
+    assert "aiba-jeni-runtime" in ALLOWED_SERVICES
+    assert "aiba-domi-runtime" in ALLOWED_SERVICES
+    assert "aiba-exec-runtime" in ALLOWED_SERVICES

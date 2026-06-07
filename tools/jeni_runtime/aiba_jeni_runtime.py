@@ -1,5 +1,5 @@
 """
-aiba_jeni_runtime.py v4.0.0
+aiba_jeni_runtime.py v4.1.0
 AIBA Jeni Runtime — Persistent Autonomous Verification Agent
 PT-S193-JENI-PERSIST-001
 
@@ -16,7 +16,11 @@ PT-S193-JENI-PERSIST-001
     - 문제 5: Gemini Function Calling API 전환
     - 제니 제언 1: Memory Pruning — RESOLVED/CLOSED findings 주입 제외
     - 제니 제언 2: Quota Lock — sandbox 50MB 초과 시 오래된 audits 롤링 삭제
-  설계 근거: BRIEFING-DOMI-S193-002 Final
+  v4.1.0 (S199): Gemini 503 자동 재시도 1회 추가
+    - _execute_gemini_request: HTTP 503 감지 시 2초 대기 후 1회 재시도
+    - 재시도 후 503 지속 시 즉시 FAIL_CLOSED
+    - S199 EAG-2: 비오(Joshua) 승인
+  설계 근거: BRIEFING-DOMI-S193-002 Final / S199 Domi 설계
   EAG-1: 비오(Joshua) S193 승인
   Jeni TRUST_READY: PASS (BRIEFING-JENI-S193-003)
 """
@@ -38,7 +42,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.0.0"
+RUNTIME_VERSION = "4.1.0"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.5-flash")
@@ -46,6 +50,8 @@ GEMINI_TIMEOUT = 55
 GEMINI_MAX_OUTPUT_TOKENS = 4096
 
 GEMINI_API_KEY = os.environ.get("AIBA_GEMINI_API_KEY", "")
+
+GEMINI_503_RETRY_SLEEP = 2  # 503 재시도 대기 시간(초)
 
 MAX_TOOL_ROUNDS = 5
 MAX_TOTAL_SECONDS = 120
@@ -534,6 +540,7 @@ def _read_http_error_body(e: urllib.error.HTTPError) -> str:
 
 
 def _execute_gemini_request(req: urllib.request.Request) -> dict:
+    """Gemini API 단일 요청 실행. 503 발생 시 1회 자동 재시도 (S199 EAG-2)."""
     try:
         with urllib.request.urlopen(req, timeout=GEMINI_TIMEOUT) as resp:
             data = json.loads(resp.read().decode("utf-8"))
@@ -546,6 +553,26 @@ def _execute_gemini_request(req: urllib.request.Request) -> dict:
                     "function_calls": _extract_function_calls(parts),
                     "parts": parts, "error": None}
     except urllib.error.HTTPError as e:
+        if e.code == 503:
+            # 503 일시 과부하 — 2초 대기 후 1회 재시도
+            time.sleep(GEMINI_503_RETRY_SLEEP)
+            try:
+                with urllib.request.urlopen(req, timeout=GEMINI_TIMEOUT) as resp2:
+                    data2 = json.loads(resp2.read().decode("utf-8"))
+                    parts2 = _extract_parts(data2)
+                    if not parts2:
+                        finish2 = _extract_finish_reason(data2)
+                        return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                                "error": f"NO_PARTS: finish_reason={finish2}"}
+                    return {"ok": True, "text": _extract_text_from_parts(parts2),
+                            "function_calls": _extract_function_calls(parts2),
+                            "parts": parts2, "error": None}
+            except urllib.error.HTTPError as e2:
+                return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "error": f"HTTP_{e2.code}: {_read_http_error_body(e2)} (after_503_retry)"}
+            except Exception as e2:
+                return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "error": f"FAIL_CLOSED: retry error — {e2}"}
         return {"ok": False, "text": "", "function_calls": [], "parts": [],
                 "error": f"HTTP_{e.code}: {_read_http_error_body(e)}"}
     except urllib.error.URLError as e:
@@ -701,7 +728,8 @@ class JeniRuntimeHandler(BaseHTTPRequestHandler):
                 "model": GEMINI_MODEL, "key_present": bool(GEMINI_API_KEY),
                 "max_tool_rounds": MAX_TOOL_ROUNDS,
                 "max_total_seconds": MAX_TOTAL_SECONDS,
-                "persistent_memory": True, "function_calling": True})
+                "persistent_memory": True, "function_calling": True,
+                "gemini_503_retry": True})
             return
         self._send_json(403, {"error": "forbidden"})
 
@@ -744,7 +772,8 @@ def main():
 
     print(f"[JENI_RUNTIME] starting v{RUNTIME_VERSION} model={GEMINI_MODEL} "
           f"key={_mask_key(GEMINI_API_KEY)} max_tool_rounds={MAX_TOOL_ROUNDS} "
-          f"persistent_memory=True function_calling=True", file=sys.stderr)
+          f"persistent_memory=True function_calling=True "
+          f"gemini_503_retry=True sleep={GEMINI_503_RETRY_SLEEP}s", file=sys.stderr)
     if not GEMINI_API_KEY:
         print("[JENI_RUNTIME] WARN: AIBA_GEMINI_API_KEY not set — /ask will FAIL_CLOSED",
               file=sys.stderr)

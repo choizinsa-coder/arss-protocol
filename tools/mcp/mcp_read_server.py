@@ -64,10 +64,13 @@ FORBIDDEN_PATH_PATTERNS = [
     r"approval",
 ]
 
-# ── 허용 서비스 목록 ───────────────────────────────────────────────
+# ── 허용 서비스 목록 (S199 EAG-1: 3종 추가) ───────────────────────
 ALLOWED_SERVICES = {
     "aiba-mcp-bridge",
     "nginx",
+    "aiba-jeni-runtime",
+    "aiba-domi-runtime",
+    "aiba-exec-runtime",
 }
 
 # ── 에이전트별 허용 Semantic Root ──────────────────────────────────

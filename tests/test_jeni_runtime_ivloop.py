@@ -407,3 +407,45 @@ def test_loop_memory_injected(monkeypatch):
     result = _run_verification_loop("질문", "", "S193")
     assert result["ok"] is True
     assert captured["preamble_seen"] is True  # 메모리가 프롬프트에 주입됨
+
+
+import urllib.error
+from unittest.mock import MagicMock
+
+def test_execute_gemini_503_retry_success(monkeypatch):
+    call_count = {"n": 0}
+    def mock_urlopen(req, timeout):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            raise urllib.error.HTTPError(url="", code=503, msg="SU", hdrs={}, fp=None)
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        import json as _json
+        mock_resp.read.return_value = _json.dumps({"candidates":[{"content":{"parts":[{"text":"PASS"}]},"finishReason":"STOP"}]}).encode()
+        return mock_resp
+    monkeypatch.setattr(_runtime.urllib.request, "urlopen", mock_urlopen)
+    monkeypatch.setattr(_runtime.time, "sleep", lambda s: None)
+    result = _runtime._execute_gemini_request(MagicMock())
+    assert result["ok"] is True
+    assert call_count["n"] == 2
+
+def test_execute_gemini_503_retry_also_fails(monkeypatch):
+    def mock_urlopen(req, timeout):
+        raise urllib.error.HTTPError(url="", code=503, msg="SU", hdrs={}, fp=None)
+    monkeypatch.setattr(_runtime.urllib.request, "urlopen", mock_urlopen)
+    monkeypatch.setattr(_runtime.time, "sleep", lambda s: None)
+    result = _runtime._execute_gemini_request(MagicMock())
+    assert result["ok"] is False
+    assert "after_503_retry" in result["error"]
+
+def test_execute_gemini_non503_no_retry(monkeypatch):
+    call_count = {"n": 0}
+    def mock_urlopen(req, timeout):
+        call_count["n"] += 1
+        raise urllib.error.HTTPError(url="", code=429, msg="TMR", hdrs={}, fp=None)
+    monkeypatch.setattr(_runtime.urllib.request, "urlopen", mock_urlopen)
+    result = _runtime._execute_gemini_request(MagicMock())
+    assert result["ok"] is False
+    assert "HTTP_429" in result["error"]
+    assert call_count["n"] == 1
