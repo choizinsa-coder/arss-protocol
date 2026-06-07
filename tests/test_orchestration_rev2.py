@@ -115,7 +115,7 @@ class TestExecRuntimeSessionAuditId(unittest.TestCase):
         import importlib
         import aiba_exec_runtime as er
         importlib.reload(er)
-        self.assertEqual(er.EXEC_RUNTIME_VERSION, "1.4.0")
+        self.assertEqual(er.EXEC_RUNTIME_VERSION, "1.5.0")
 
     def test_c5_write_audit_accepts_session_audit_id(self):
         """C-5-2: _write_audit가 session_audit_id 파라미터를 수용한다"""
@@ -184,6 +184,15 @@ class TestExecRuntimeSessionAuditId(unittest.TestCase):
         finally:
             os.unlink(log_path)
 
+
+
+    def test_c5_allowed_services_contains_exec_runtime(self):
+        """S203 EAG-1: exec_runtime ALLOWED_SERVICES에 aiba-exec-runtime 포함 검증"""
+        import importlib
+        import aiba_exec_runtime as er
+        importlib.reload(er)
+        self.assertIn("aiba-exec-runtime", er.ALLOWED_SERVICES)
+        self.assertEqual(len(er.ALLOWED_SERVICES), 4)
 
 # ── C-5: bridge session_audit_id 발행 검증 ────────────────────────────────────
 

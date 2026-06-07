@@ -51,7 +51,7 @@ from typing import Any
 
 # ── 상수 ────────────────────────────────────────────────────────────────────
 
-EXEC_RUNTIME_VERSION = "1.4.0"
+EXEC_RUNTIME_VERSION = "1.5.0"
 EXEC_HOST = "127.0.0.1"
 EXEC_PORT = 8449
 
@@ -74,6 +74,7 @@ ALLOWED_SERVICES = frozenset({
     "aiba-mcp-bridge",
     "aiba-domi-runtime",
     "aiba-jeni-runtime",
+    "aiba-exec-runtime",
 })
 
 # pytest 허용 옵션 enum (쉘 인젝션 방어용)
