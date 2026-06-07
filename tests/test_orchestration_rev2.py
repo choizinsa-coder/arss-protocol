@@ -115,7 +115,7 @@ class TestExecRuntimeSessionAuditId(unittest.TestCase):
         import importlib
         import aiba_exec_runtime as er
         importlib.reload(er)
-        self.assertEqual(er.EXEC_RUNTIME_VERSION, "1.2.0")
+        self.assertEqual(er.EXEC_RUNTIME_VERSION, "1.3.0")
 
     def test_c5_write_audit_accepts_session_audit_id(self):
         """C-5-2: _write_audit가 session_audit_id 파라미터를 수용한다"""
