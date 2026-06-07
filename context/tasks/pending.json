@@ -11,25 +11,13 @@
       "task": "Boot 문서 자동 감지 시스템"
     },
     {
-      "note": "Phase 2-B 전환 완료(Apr 12). GitHub push는 별도 설계 필요. WF-05 재활성화 후 진행.",
+      "note": "gh_push_sc.py (EAG-S205-GH-PUSH-001) 구과. aiba-sc 브랜치, GitHub REST API, 3회 재시도, Fail-Closed. 세션 클로즈 Step 7 통합 완료.",
       "owner": "도미→캐디→Claude Code",
       "priority": "MEDIUM",
-      "status": "PLANNED",
-      "task": "Phase 2-B 설계 의뢰 — SESSION_CONTEXT.json GitHub 자동 push"
-    },
-    {
-      "note": "POST /generate 필수 필드(Authorization, actor_id, content, prev_chain_hash) 및 persist 미지원 사항 공식 스펙 문서 정리 필요.",
-      "owner": "캐디",
-      "priority": "MEDIUM",
-      "status": "PLANNED",
-      "task": "generator API 스펙 공식 문서화"
-    },
-    {
-      "note": "LESSON-014 기반. 필드 누락 skip 시 hash_match:null 또는 hash_match_skipped:true 반환으로 개선. 별도 EAG 필요.",
-      "owner": "캐디→Claude Code",
-      "priority": "LOW",
-      "status": "PLANNED",
-      "task": "flat_verifier.py hash_match 반환값 개선"
+      "status": "COMPLETED",
+      "task": "Phase 2-B 설계 의뢰 — SESSION_CONTEXT.json GitHub 자동 push",
+      "completed_session": 205,
+      "completed_date": "2026-06-08"
     },
     {
       "created_date": "2026-04-14",
@@ -56,5 +44,5 @@
       "task": "/sync 명령어 설계 — Command Layer v1.4 이월"
     }
   ],
-  "_shard_hash": "ad464b0ae09acf912ff4a4cb9c227de355e9e7927eae458ed02fc0581b89a3ce"
+  "_shard_hash": "509e60cbb1d1eb12672ad74c3c0d56c3e4d84d8be89e06d02de9d210aa683b6f"
 }

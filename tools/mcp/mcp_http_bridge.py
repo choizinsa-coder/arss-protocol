@@ -1,5 +1,5 @@
 """
-mcp_http_bridge.py v2.4.0
+mcp_http_bridge.py v2.6.0
 MCP Streamable HTTP Bridge — PT-S131-MCP-REG-001 + PT-S134-VPS-OBS-001 + PT-S139-MCP-WRITE-BRIDGE-001
 
 변경 이력:
@@ -68,7 +68,7 @@ from mcp_read_server import ReadOnlyServer, AGENT_ROOT_ALLOWLIST
 
 BRIDGE_HOST = "127.0.0.1"
 BRIDGE_PORT = 8443
-BRIDGE_VERSION = "2.5.0"
+BRIDGE_VERSION = "2.6.0"
 
 # ── OAuth Compatibility Layer (S184 EAG-2, S187 EAG-1) ───────────────────────
 import secrets as _secrets
@@ -127,6 +127,9 @@ EXEC_ALLOWED_ACTOR = "caddy"
 EXEC_MAX_PAYLOAD_BYTES = 32768  # v1.4.0: write_script content 수용
 EXEC_TOOLS = frozenset({"exec_scoped"})
 
+# Sync 도구 (EAG-S205-SYNC-001)
+SYNC_TOOLS = frozenset({"sync"})
+
 ALLOWED_TOOLS = frozenset({
     "ping", "get_load_state",
     "read_file", "list_dir", "grep_scoped", "read_log", "check_service_state",
@@ -134,6 +137,7 @@ ALLOWED_TOOLS = frozenset({
     "write_file", "get_write_plane_state",
     "ask_jeni", "ask_domi",
     "exec_scoped",
+    "sync",
 })
 
 READ_TOOLS = frozenset({
@@ -745,6 +749,61 @@ def _handle_ask_jeni(arguments: dict) -> dict:
         return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: unexpected error — {e}"}]}
 
 
+
+# ── sync 핸들러 (EAG-S205-SYNC-001) ────────────────────────────────────────────────────
+
+_ARSS_POINTER_PATH = os.path.join(_ARSS_ROOT, "SESSION_CONTEXT_POINTER.json")
+SYNC_ALLOWED_ACTORS = READ_ALLOWED_ACTORS
+
+
+def _handle_sync(arguments: dict) -> dict:
+    """
+    sync — SESSION_CONTEXT canonical 상태와 호출자 context_hash 비교.
+    read-only. SESSION_CONTEXT_POINTER.json 기준. Fail-Closed.
+    EAG-S205-SYNC-001
+    """
+    actor_id = arguments.get("actor_id", "")
+    if actor_id not in SYNC_ALLOWED_ACTORS:
+        return {"isError": True, "content": [{"type": "text", "text": f"DENY: unknown actor_id={actor_id}"}]}
+
+    context_hash = arguments.get("context_hash", "")
+    if (not context_hash
+            or len(context_hash) != 64
+            or not all(c in "0123456789abcdef" for c in context_hash.lower())):
+        return {"isError": True, "content": [{"type": "text", "text": "DENY: context_hash must be 64-char lowercase hex"}]}
+
+    try:
+        with open(_ARSS_POINTER_PATH, "r", encoding="utf-8") as _f:
+            pointer = json.load(_f)
+    except FileNotFoundError:
+        return {"isError": True, "content": [{"type": "text", "text": "FAIL_CLOSED: SESSION_CONTEXT_POINTER.json not found"}]}
+    except Exception as _e:
+        return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: pointer read error — {_e}"}]}
+
+    canonical_context_hash = pointer.get("context_hash", "")
+    canonical_chain_tip    = pointer.get("chain_tip", "")
+
+    if not canonical_context_hash:
+        return {"isError": True, "content": [{"type": "text", "text": "FAIL_CLOSED: context_hash missing in POINTER"}]}
+
+    match  = context_hash.lower() == canonical_context_hash.lower()
+    status = "SYNC_OK" if match else "SYNC_MISMATCH"
+
+    return {
+        "isError": False,
+        "content": [{
+            "type": "text",
+            "text": json.dumps({
+                "status": status,
+                "match": match,
+                "canonical_context_hash": canonical_context_hash,
+                "canonical_chain_tip": canonical_chain_tip,
+                "actor_id": actor_id,
+            }, ensure_ascii=False),
+        }],
+    }
+
+
 # ── AIBA Tool Layer ───────────────────────────────────────────────────────────
 
 def _build_base_tool_entries() -> list:
@@ -801,8 +860,21 @@ def _build_read_tool_entries() -> list:
     return _build_read_tool_entries_fs() + _build_read_tool_entries_meta()
 
 
+def _build_sync_tool_entries() -> list:
+    return [
+        {"name": "sync",
+         "description": "[SYNC] SESSION_CONTEXT canonical 상태 동기화 검증 (read-only, EAG-S205-SYNC-001)",
+         "inputSchema": {"type": "object", "properties": {
+             "actor_id": {"type": "string", "enum": list(SYNC_ALLOWED_ACTORS)},
+             "context_hash": {"type": "string",
+                              "description": "64-char hex — SHA256(canonical_json(SC_FINAL))"},
+         }, "required": ["actor_id", "context_hash"]}},
+    ]
+
+
 def _handle_tool_list() -> dict:
-    tools = _build_base_tool_entries() + _build_read_tool_entries() + _build_write_tool_entries()
+    tools = (_build_base_tool_entries() + _build_read_tool_entries()
+             + _build_write_tool_entries() + _build_sync_tool_entries())
     return {"tools": tools}
 
 
@@ -878,6 +950,8 @@ def _handle_tool_call(tool_name: str, arguments: dict) -> dict:
         return _handle_ask_jeni(arguments)
     if tool_name in EXEC_TOOLS:
         return _handle_exec_scoped(arguments)
+    if tool_name in SYNC_TOOLS:
+        return _handle_sync(arguments)
     return {"isError": True, "content": [{"type": "text", "text": "Unknown tool"}]}
 
 
