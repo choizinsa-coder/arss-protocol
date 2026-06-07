@@ -4,13 +4,6 @@
   "session_ref": 202,
   "items": [
     {
-      "note": "Phase 2-C 이후 구현. Constitution/RGO 변경 시 자동 감지 및 통보. 캐디가 Phase 2-C 진입 시 의제로 올릴 것.",
-      "owner": "도미→캐디→Claude Code",
-      "priority": "LOW",
-      "status": "PLANNED",
-      "task": "Boot 문서 자동 감지 시스템"
-    },
-    {
       "note": "gh_push_sc.py (EAG-S205-GH-PUSH-001) 구과. aiba-sc 브랜치, GitHub REST API, 3회 재시도, Fail-Closed. 세션 클로즈 Step 7 통합 완료.",
       "owner": "도미→캐디→Claude Code",
       "priority": "MEDIUM",
@@ -50,5 +43,5 @@
       "completed_date": "2026-06-08"
     }
   ],
-  "_shard_hash": "c9494c44771a1b6ed7a05d08d9f45e9eb8872cbc4f2124da670fc5a7985804b2"
+  "_shard_hash": "b9946a9b8f3855390701a8e1433f6947cfdb06a5947f3594d7bb6e9b3ddd02f1"
 }

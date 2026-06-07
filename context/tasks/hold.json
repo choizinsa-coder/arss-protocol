@@ -79,6 +79,19 @@
       "hold_session": 135,
       "hold_date": "2026-05-17",
       "executable": false
+    },
+    {
+      "id": "PT-BOOT-AUTODETECT-001",
+      "task": "Boot 문서 자동 감지 시스템",
+      "owner": "도미→캐디→Claude Code",
+      "priority": "LOW",
+      "status": "HOLD",
+      "deferred_session": 205,
+      "deferred_date": "2026-06-08",
+      "deferred_reason": "Phase 2-C 조건 미충족 (현재 Phase 2-B 완료 상태)",
+      "revisit_condition": "Phase 2-C 진입 시 캐디가 의제로 올릴 것",
+      "executable": false,
+      "note": "Phase 2-C 이후 구현. Constitution/RGO 변경 시 자동 감지 및 통보. 캐디가 Phase 2-C 진입 시 의제로 올릴 것."
     }
   ]
 }
