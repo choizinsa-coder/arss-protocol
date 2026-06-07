@@ -30,6 +30,7 @@ from __future__ import annotations
 import glob
 import json
 import os
+import re
 import sys
 import time
 import urllib.request
@@ -42,7 +43,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.1.0"
+RUNTIME_VERSION = "4.2.0"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.5-flash")
@@ -52,6 +53,7 @@ GEMINI_MAX_OUTPUT_TOKENS = 4096
 GEMINI_API_KEY = os.environ.get("AIBA_GEMINI_API_KEY", "")
 
 GEMINI_503_RETRY_SLEEP = 2  # 503 재시도 대기 시간(초)
+GEMINI_429_RETRY_MAX_SLEEP = 60  # 429 Retry-After 상한(초)
 
 MAX_TOOL_ROUNDS = 5
 MAX_TOTAL_SECONDS = 120
@@ -573,6 +575,30 @@ def _execute_gemini_request(req: urllib.request.Request) -> dict:
             except Exception as e2:
                 return {"ok": False, "text": "", "function_calls": [], "parts": [],
                         "error": f"FAIL_CLOSED: retry error — {e2}"}
+        elif e.code == 429:
+            # 429 Rate Limit — Retry-After 기반 대기 후 1회 재시도 (S201 EAG)
+            body_text = _read_http_error_body(e)
+            match = re.search(r'retry\s+in\s+([\d.]+)\s*s', body_text, re.IGNORECASE)
+            retry_delay = float(match.group(1)) if match else 30.0
+            retry_delay = min(retry_delay, GEMINI_429_RETRY_MAX_SLEEP)
+            time.sleep(retry_delay)
+            try:
+                with urllib.request.urlopen(req, timeout=GEMINI_TIMEOUT) as resp3:
+                    data3 = json.loads(resp3.read().decode("utf-8"))
+                    parts3 = _extract_parts(data3)
+                    if not parts3:
+                        finish3 = _extract_finish_reason(data3)
+                        return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                                "error": f"NO_PARTS: finish_reason={finish3} (after_429_retry)"}
+                    return {"ok": True, "text": _extract_text_from_parts(parts3),
+                            "function_calls": _extract_function_calls(parts3),
+                            "parts": parts3, "error": None}
+            except urllib.error.HTTPError as e3:
+                return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "error": f"HTTP_{e3.code}: {_read_http_error_body(e3)} (after_429_retry)"}
+            except Exception as e3:
+                return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "error": f"FAIL_CLOSED: 429 retry error — {e3}"}
         return {"ok": False, "text": "", "function_calls": [], "parts": [],
                 "error": f"HTTP_{e.code}: {_read_http_error_body(e)}"}
     except urllib.error.URLError as e:
@@ -751,8 +777,7 @@ class JeniRuntimeHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"ok": False, "error": "prompt required"})
             return
         result = _run_verification_loop(prompt, context, session)
-        code = 200 if result["ok"] else 502
-        self._send_json(code, result)
+        self._send_json(200, result)  # v4.2.0: 항상 200, ok=false 시 body에 error 포함
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
