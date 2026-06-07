@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-ACTIVE_VERSION = "1.0.0"
+ACTIVE_VERSION = "1.1.0"
 VERSION_STATUS = "active"
 """
 flat_verifier.py — AIBA Flat Schema Verifier
@@ -63,7 +63,7 @@ def validate(input_dir: str, range_str: str) -> dict:
         }
 
     field_ok = True
-    hash_ok = True
+    hash_ok = None  # None=머검증, True=PASS, False=FAIL
     chain_ok = True
     prev_hash = None
 
@@ -79,7 +79,9 @@ def validate(input_dir: str, range_str: str) -> dict:
         computed = compute_hash(rpu)
         if computed != rpu["hash"]:
             print(f"[FAIL] {filename} hash mismatch: expected {computed}, got {rpu['hash']}", file=sys.stderr)
-            hash_ok = False
+            hash_ok = False  # FAIL
+        elif hash_ok is None:
+            hash_ok = True   # 첫 번째 PASS 전이
 
         # Step 3: chain 연결 검증
         if prev_hash is not None and rpu["prev_hash"] != prev_hash:
@@ -107,7 +109,7 @@ def main():
     result = validate(args.input_dir, args.range)
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
-    if not result["hash_match"] or not result["chain_integrity"]:
+    if result["hash_match"] is not True or not result["chain_integrity"]:
         sys.exit(1)
     sys.exit(0)
 
