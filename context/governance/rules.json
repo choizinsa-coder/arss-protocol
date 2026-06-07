@@ -558,6 +558,37 @@
       "revalidation_required": "COMPLETE — S119 제니 REVALIDATION PASS (RV-1~RV-8 전항목)",
       "jeni_trust_ready": "PASS (T-1~T-8 전항목, S118)",
       "jeni_revalidation": "PASS (RV-1~RV-8 전항목, S119)"
+    },
+    "simple_change_rule": {
+      "adopted_session": 205,
+      "adopted_date": "2026-06-08",
+      "adopted_by": "비오(Joshua) 결정 (S205 태스크⑤ C안)",
+      "jeni_trust_ready": "PASS (S205)",
+      "description": "단순 변경은 캐디 자율 실행 + 비오 사후 확인. DEP v1.2 전체 체인 생략.",
+      "simple_change_criteria": [
+        "SC-1: 기존 테스트 파일 hash/버전 값 업데이트 (로직 변경 없음)",
+        "SC-2: 단순 버그픽스 (오탈자/파라미터명/경로 수정, 코드 로직 변경 없음)",
+        "SC-3: 기존 기능 범위 내 pytest TC 현행화 (신규 기능 없음)",
+        "SC-4: pending.json / context 파일 상태 마킹 (COMPLETED 등)",
+        "SC-5: 주석/문서 업데이트 (동작 변경 없음)"
+      ],
+      "complex_change_criteria": [
+        "CC-1: 신규 기능 추가",
+        "CC-2: 보안 관련 코드 수정 (인증/권한/암호화)",
+        "CC-3: 거버넌스 구조 변경 (역할/체인/SSOT)",
+        "CC-4: 외부 의존성 변경 (라이브러리 버전업 포함)",
+        "CC-5: API 스펙/계약 변경 (입출력 필드 추가/삭제)"
+      ],
+      "caddy_obligations": [
+        "OB-1: 실행 전 TECHNICAL-INTENT 블록 출력 (목적/대상/영향 3줄)",
+        "OB-2: pytest 통과 필수 (실패 시 자율 실행 즉시 중단)",
+        "OB-3: git_commit + git_push 후 세션 내 즉시 비오님께 결과 보고"
+      ],
+      "fail_closed": [
+        "FC-1: 단순/복잡 판단 애매 → 복잡 변경으로 간주, DEP v1.2 전체 적용",
+        "FC-2: pytest 실패 → 즉시 중단, 비오님 보고 후 다음 단계 진행 불가",
+        "FC-3: 비오님이 복잡으로 재판단 → 해당 변경 롤백 + DEP 재진행"
+      ]
     }
   }
 }

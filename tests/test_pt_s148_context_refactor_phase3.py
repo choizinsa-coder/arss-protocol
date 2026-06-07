@@ -35,7 +35,7 @@ EXPECTED_HASHES = {
     "active":   "84c5d69e3bd051c15b936e7602b217ee001e09fc2830f8bd4bc2899b213c7389",
     "hold":     "84c2a0f150d7420538afaa31e7d676ddb9cb92a1bf88ceec78bfd62f3633f657",
     "blocked":  "d3071cdf66b03d4077f5c093d00bc89865821780b95fe9cafd61e2db12336d71",
-    "pending":  "558ce4f000e9f286356f08258d54909bb3532ef3555cbf7a76dc4ebb7a673be8",
+    "pending":  "5d4d8d8da51340d2a55f5806d8433bddfd8fe4fec1b42e3be5d291c4fc3e502e",
     "visibility_history": "da869da534c1cd0a0f87c8c6f7b9d84e5c24370c3ae0c2cf90ca380f93f68adf",
 }
 
