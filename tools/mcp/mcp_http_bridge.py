@@ -679,7 +679,7 @@ def _handle_exec_scoped(arguments: dict) -> dict:
     params = arguments.get("params", {})
     # session_audit_id: 외부 주입 또는 bridge에서 신규 발행 (Rev.2 C-5)
     session_audit_id: str = arguments.get("session_audit_id") or f"SA-{str(uuid.uuid4())[:8]}"
-    VALID = frozenset({"pytest","git_commit","git_status","git_diff","systemctl_restart"})
+    VALID = frozenset({"pytest","git_commit","git_status","git_diff","systemctl_restart","git_push"})
     if command not in VALID:
         return {"isError": True, "content": [{"type": "text", "text": f"DENY: command {command} not in whitelist"}]}
     body = json.dumps({
@@ -791,7 +791,7 @@ def _build_write_tool_entries() -> list:
         {"name": "ask_domi", "description": "[ASK] 도미(OpenAI Design Architect)에게 설계 의뢰 (caddy only)",
          "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [ASK_DOMI_ALLOWED_ACTOR]}, "prompt": {"type": "string"}, "context": {"type": "string"}}, "required": ["actor_id", "prompt"]}},
         {"name": "exec_scoped", "description": "[EXEC] EAG approval 기반 허용 명령 실행 (caddy only)",
-         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [EXEC_ALLOWED_ACTOR]}, "approval_id": {"type": "string"}, "command": {"type": "string", "enum": ["pytest","git_commit","git_status","git_diff","systemctl_restart"]}, "params": {"type": "object"}}, "required": ["actor_id", "approval_id", "command"]}},
+         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [EXEC_ALLOWED_ACTOR]}, "approval_id": {"type": "string"}, "command": {"type": "string", "enum": ["pytest","git_commit","git_status","git_diff","systemctl_restart","git_push"]}, "params": {"type": "object"}}, "required": ["actor_id", "approval_id", "command"]}},
     ]
 
 
