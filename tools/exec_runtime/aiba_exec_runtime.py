@@ -51,7 +51,7 @@ from typing import Any
 
 # ── 상수 ────────────────────────────────────────────────────────────────────
 
-EXEC_RUNTIME_VERSION = "1.3.0"
+EXEC_RUNTIME_VERSION = "1.4.0"
 EXEC_HOST = "127.0.0.1"
 EXEC_PORT = 8449
 
@@ -65,6 +65,8 @@ COMMAND_TIMEOUTS: dict[str, int] = {
     "git_diff": 30,
     "git_push": 120,
     "systemctl_restart": 30,
+    "write_script": 10,
+    "run_script": 120,
 }
 
 # systemctl_restart 허용 서비스 화이트리스트 (3종 한정)
@@ -84,6 +86,9 @@ ALLOWED_PYTEST_OPTIONS = frozenset({
     "--no-header",
     "-p", "no:warnings",
 })
+
+# caddy sandbox 경로 (write_script / run_script 전용)
+CADDY_SANDBOX = os.path.join(ARSS_ROOT, "tools/sandbox/caddy/active")
 
 # git_push allowlist (Fail-Closed)
 ALLOWED_GIT_REMOTES = frozenset({"origin"})
@@ -249,6 +254,46 @@ def _validate_and_build_cmd(command: str, params: dict) -> tuple[bool, str, list
         cmd = ["systemctl", "restart", service]
         return True, "", cmd
 
+    if command == "write_script":
+        filename = params.get("filename", "")
+        script_content = params.get("content", "")
+
+        if not filename:
+            return False, "write_script: filename required", []
+        if not filename.endswith(".py"):
+            return False, f"write_script: filename must end with .py: {filename!r}", []
+        if "/" in filename or "\\" in filename:
+            return False, f"write_script: path separator not allowed in filename: {filename!r}", []
+        if not script_content:
+            return False, "write_script: content required", []
+
+        os.makedirs(CADDY_SANDBOX, exist_ok=True)
+        target = os.path.realpath(os.path.join(CADDY_SANDBOX, filename))
+        real_sandbox = os.path.realpath(CADDY_SANDBOX)
+        if not (target == real_sandbox or target.startswith(real_sandbox + os.sep)):
+            return False, f"write_script: path escape detected: {target!r}", []
+
+        spec = {"command": "write_script", "target": target, "content": script_content}
+        return True, "", spec
+
+    if command == "run_script":
+        script_path = params.get("script_path", "")
+
+        if not script_path:
+            return False, "run_script: script_path required", []
+        if not script_path.endswith(".py"):
+            return False, f"run_script: script_path must end with .py: {script_path!r}", []
+
+        real_script = os.path.realpath(os.path.abspath(script_path))
+        real_sandbox = os.path.realpath(CADDY_SANDBOX)
+        if not (real_script == real_sandbox or real_script.startswith(real_sandbox + os.sep)):
+            return False, f"run_script: path outside caddy sandbox: {real_script!r}", []
+        if not os.path.isfile(real_script):
+            return False, f"run_script: script not found: {real_script!r}", []
+
+        cmd = ["python3", real_script]
+        return True, "", cmd
+
     return False, f"command '{command}' not in whitelist", []
 
 
@@ -286,6 +331,20 @@ def _run_command(command: str, cmd_list: list | dict, timeout: int) -> dict:
                 "stderr": commit_result.stderr,
                 "exit_code": commit_result.returncode,
             }
+
+        if command == "write_script":
+            spec = cmd_list  # write_script spec dict
+            try:
+                with open(spec["target"], "w", encoding="utf-8") as f:
+                    f.write(spec["content"])
+                return {
+                    "stdout": f"WRITE_OK: {spec['target']}",
+                    "stderr": "",
+                    "exit_code": 0,
+                    "written_path": spec["target"],
+                }
+            except Exception as e:
+                return {"stdout": "", "stderr": f"WRITE_ERROR: {e}", "exit_code": -1}
 
         if command == "git_push":
             push_spec = cmd_list  # push_spec dict
@@ -492,6 +551,10 @@ class ExecHandler(BaseHTTPRequestHandler):
             "audit_id": audit_id,
             "approval_id": approval_id,
         }
+        # write_script 전용 응답 필드 추가
+        if command == "write_script":
+            response["written_path"] = exec_result.get("written_path")
+
         # git_push 전용 응답 필드 추가
         if command == "git_push":
             response["error_type"] = exec_result.get("error_type")

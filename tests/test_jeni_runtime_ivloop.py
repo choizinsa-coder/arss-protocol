@@ -440,12 +440,50 @@ def test_execute_gemini_503_retry_also_fails(monkeypatch):
     assert "after_503_retry" in result["error"]
 
 def test_execute_gemini_non503_no_retry(monkeypatch):
+    """400 등 503/429 외 오류코드는 재시도 없이 즉시 FAIL_CLOSED (v4.2.0 현행화)."""
+    call_count = {"n": 0}
+    def mock_urlopen(req, timeout):
+        call_count["n"] += 1
+        raise urllib.error.HTTPError(url="", code=400, msg="BAD_REQUEST", hdrs={}, fp=None)
+    monkeypatch.setattr(_runtime.urllib.request, "urlopen", mock_urlopen)
+    result = _runtime._execute_gemini_request(MagicMock())
+    assert result["ok"] is False
+    assert "HTTP_400" in result["error"]
+    assert call_count["n"] == 1  # 재시도 없음
+
+
+def test_execute_gemini_429_retry_then_fail(monkeypatch):
+    """v4.2.0: 429 발생 시 1회 재시도, 재시도도 429면 FAIL_CLOSED (after_429_retry)."""
     call_count = {"n": 0}
     def mock_urlopen(req, timeout):
         call_count["n"] += 1
         raise urllib.error.HTTPError(url="", code=429, msg="TMR", hdrs={}, fp=None)
     monkeypatch.setattr(_runtime.urllib.request, "urlopen", mock_urlopen)
+    monkeypatch.setattr(_runtime.time, "sleep", lambda s: None)
     result = _runtime._execute_gemini_request(MagicMock())
     assert result["ok"] is False
     assert "HTTP_429" in result["error"]
-    assert call_count["n"] == 1
+    assert "after_429_retry" in result["error"]
+    assert call_count["n"] == 2  # 최초 1회 + 재시도 1회
+
+
+def test_execute_gemini_429_retry_success(monkeypatch):
+    """v4.2.0: 429 발생 후 재시도 성공 케이스."""
+    import json as _json
+    call_count = {"n": 0}
+    def mock_urlopen(req, timeout):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            raise urllib.error.HTTPError(url="", code=429, msg="TMR", hdrs={}, fp=None)
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.return_value = _json.dumps({
+            "candidates": [{"content": {"parts": [{"text": "PASS"}]}, "finishReason": "STOP"}]
+        }).encode()
+        return mock_resp
+    monkeypatch.setattr(_runtime.urllib.request, "urlopen", mock_urlopen)
+    monkeypatch.setattr(_runtime.time, "sleep", lambda s: None)
+    result = _runtime._execute_gemini_request(MagicMock())
+    assert result["ok"] is True
+    assert call_count["n"] == 2  # 최초 1회(429) + 재시도 1회(성공)

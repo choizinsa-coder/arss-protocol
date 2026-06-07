@@ -124,7 +124,7 @@ ASK_DOMI_TOOLS = frozenset({"ask_domi"})
 EXEC_RUNTIME_URL = "http://127.0.0.1:8449/exec"
 EXEC_RUNTIME_TIMEOUT = 310
 EXEC_ALLOWED_ACTOR = "caddy"
-EXEC_MAX_PAYLOAD_BYTES = 8192
+EXEC_MAX_PAYLOAD_BYTES = 32768  # v1.4.0: write_script content 수용
 EXEC_TOOLS = frozenset({"exec_scoped"})
 
 ALLOWED_TOOLS = frozenset({
@@ -679,7 +679,7 @@ def _handle_exec_scoped(arguments: dict) -> dict:
     params = arguments.get("params", {})
     # session_audit_id: 외부 주입 또는 bridge에서 신규 발행 (Rev.2 C-5)
     session_audit_id: str = arguments.get("session_audit_id") or f"SA-{str(uuid.uuid4())[:8]}"
-    VALID = frozenset({"pytest","git_commit","git_status","git_diff","systemctl_restart","git_push"})
+    VALID = frozenset({"pytest","git_commit","git_status","git_diff","systemctl_restart","git_push","write_script","run_script"})
     if command not in VALID:
         return {"isError": True, "content": [{"type": "text", "text": f"DENY: command {command} not in whitelist"}]}
     body = json.dumps({
@@ -791,7 +791,7 @@ def _build_write_tool_entries() -> list:
         {"name": "ask_domi", "description": "[ASK] 도미(OpenAI Design Architect)에게 설계 의뢰 (caddy only)",
          "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [ASK_DOMI_ALLOWED_ACTOR]}, "prompt": {"type": "string"}, "context": {"type": "string"}}, "required": ["actor_id", "prompt"]}},
         {"name": "exec_scoped", "description": "[EXEC] EAG approval 기반 허용 명령 실행 (caddy only)",
-         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [EXEC_ALLOWED_ACTOR]}, "approval_id": {"type": "string"}, "command": {"type": "string", "enum": ["pytest","git_commit","git_status","git_diff","systemctl_restart","git_push"]}, "params": {"type": "object"}}, "required": ["actor_id", "approval_id", "command"]}},
+         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [EXEC_ALLOWED_ACTOR]}, "approval_id": {"type": "string"}, "command": {"type": "string", "enum": ["pytest","git_commit","git_status","git_diff","systemctl_restart","git_push","write_script","run_script"]}, "params": {"type": "object"}}, "required": ["actor_id", "approval_id", "command"]}},
     ]
 
 
