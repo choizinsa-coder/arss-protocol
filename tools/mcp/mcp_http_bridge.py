@@ -734,7 +734,9 @@ def _handle_ask_jeni(arguments: dict) -> dict:
             result = json.loads(resp_body)
             if result.get("ok"):
                 return {"isError": False, "content": [{"type": "text", "text": result.get("text", "")}]}
-            return {"isError": True, "content": [{"type": "text", "text": f"JENI_ERROR: {result.get('error', 'unknown')}"}]}
+            error_key    = result.get("error", "unknown")
+            error_detail = result.get("text", "")
+            return {"isError": True, "content": [{"type": "text", "text": f"JENI_ERROR: {error_key}\nDETAIL: {error_detail}"}]}
     except urllib.error.URLError as e:
         return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: jeni runtime unreachable — {e}"}]}
     except TimeoutError:
