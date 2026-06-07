@@ -501,6 +501,8 @@ class ExecHandler(BaseHTTPRequestHandler):
         # git_push는 audit_detail dict를 JSON 직렬화하여 detail로 전달
         if command == "git_push":
             pre_detail = json.dumps(cmd_list["audit_detail"], ensure_ascii=False)
+        elif isinstance(cmd_list, dict):
+            pre_detail = f"cmd_list={str(cmd_list)[:100]}"
         else:
             pre_detail = f"cmd_list={cmd_list[:3]}..."
 
