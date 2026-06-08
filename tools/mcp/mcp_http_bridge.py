@@ -756,6 +756,63 @@ _ARSS_POINTER_PATH = os.path.join(_ARSS_ROOT, "SESSION_CONTEXT_POINTER.json")
 SYNC_ALLOWED_ACTORS = READ_ALLOWED_ACTORS
 
 
+# EAG-S208-WORM-002: Ledger Token Register
+_LEDGER_LOOPBACK_IPS = frozenset({"127.0.0.1", "::1"})
+
+def _handle_ledger_token_register(handler):
+    if handler.client_address[0] not in _LEDGER_LOOPBACK_IPS:
+        handler._send_json(403, {"ok": False, "error": "LEDGER_TOKEN_REGISTER_DENIED: LOOPBACK_ONLY"})
+        return
+    cl = int(handler.headers.get("Content-Length", 0))
+    raw = handler.rfile.read(cl) if cl > 0 else b"{}"
+    try: body = json.loads(raw)
+    except Exception:
+        handler._send_json(400, {"ok": False, "error": "INVALID_JSON"}); return
+    actor = body.get("actor", ""); session = body.get("session", "")
+    token_id = body.get("token_id", ""); issuer = body.get("issuer", "")
+    if issuer != "beo":
+        handler._send_json(403, {"ok": False, "error": "DENY: issuer must be beo"}); return
+    if actor not in ("caddy", "domi", "jeni"):
+        handler._send_json(400, {"ok": False, "error": f"DENY: invalid actor={actor}"}); return
+    if not session or not token_id:
+        handler._send_json(400, {"ok": False, "error": "DENY: session and token_id required"}); return
+    try:
+        import sys as _s
+        lp = "/opt/arss/engine/arss-protocol/tools/ledger"
+        if lp not in _s.path: _s.path.insert(0, lp)
+        from ledger_writer import register_ledger_token
+        result = register_ledger_token(token_id, actor, session)
+        handler._send_json(200 if result["ok"] else 400, result)
+    except Exception as e:
+        handler._send_json(500, {"ok": False, "error": f"LEDGER_TOKEN_REGISTER_ERROR: {e}"})
+
+def _handle_ledger_append(handler, agent):
+    if agent not in ("caddy", "domi", "jeni"):
+        handler._send_json(400, {"ok": False, "error": f"DENY: invalid agent={agent}"}); return
+    cl = int(handler.headers.get("Content-Length", 0))
+    raw = handler.rfile.read(cl) if cl > 0 else b"{}"
+    try: body = json.loads(raw)
+    except Exception:
+        handler._send_json(400, {"ok": False, "error": "INVALID_JSON"}); return
+    actor = body.get("actor", ""); action_type = body.get("action_type", "")
+    payload = body.get("payload", ""); session = body.get("session", "")
+    chain_tip = body.get("chain_tip", ""); token_id = body.get("token_id", "")
+    payload_ref = body.get("payload_ref", "")
+    if actor != agent:
+        handler._send_json(403, {"ok": False, "error": f"DENY: actor={actor} != path agent={agent}"}); return
+    if not all([actor, action_type, payload, session, chain_tip, token_id]):
+        handler._send_json(400, {"ok": False, "error": "DENY: required fields missing"}); return
+    try:
+        import sys as _s
+        lp = "/opt/arss/engine/arss-protocol/tools/ledger"
+        if lp not in _s.path: _s.path.insert(0, lp)
+        from ledger_writer import append_entry
+        result = append_entry(actor, action_type, payload, session, chain_tip, token_id, payload_ref)
+        handler._send_json(200 if result["ok"] else 400, result)
+    except Exception as e:
+        handler._send_json(500, {"ok": False, "error": f"LEDGER_APPEND_ERROR: {e}"})
+
+
 def _handle_sync(arguments: dict) -> dict:
     """
     sync — SESSION_CONTEXT canonical 상태와 호출자 context_hash 비교.
@@ -1190,6 +1247,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
         if self.path.startswith("/jeni/"):
             _handle_agent_request(self, "jeni", "/jeni/")
             return
+
+        if self.path == "/internal/ledger-token/register":
+            _handle_ledger_token_register(self); return
+        if self.path.startswith("/internal/ledger-append/"):
+            agent = self.path.split("/internal/ledger-append/", 1)[1].split("?")[0].rstrip("/")
+            _handle_ledger_append(self, agent); return
 
         self._send_json(403, {"error": "forbidden"})
 

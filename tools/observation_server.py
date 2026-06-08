@@ -29,6 +29,17 @@ from urllib.parse import urlparse
 from projection_builder import get_projection, get_stale_output, check_ttl, invalidate_cache
 from sandbox_validator import validate_write, SANDBOX_ROOT, ALLOWED_AGENTS
 
+# ── Ledger Verifier 임포트 (EAG-S208-WORM-002) ────────────────────────────────
+import sys as _sys_lv
+_lv_path = "/opt/arss/engine/arss-protocol/tools/ledger"
+if _lv_path not in _sys_lv.path: _sys_lv.path.insert(0, _lv_path)
+try:
+    from ledger_verifier import verify_chain as _lv_verify_chain, verify_manifest as _lv_verify_manifest
+    from observation_verifier import run_batch_verification as _ov_batch
+    _LEDGER_VERIFIER_AVAILABLE = True
+except ImportError:
+    _LEDGER_VERIFIER_AVAILABLE = False
+
 # ── 상수 ───────────────────────────────────────────────────────────────────
 
 PORT = 8446
@@ -411,6 +422,11 @@ class ObservationHandler(BaseHTTPRequestHandler):
                          response_bytes=rb)
             return
 
+
+        if path.startswith("/ledger/"):
+            parts = path.split("/")
+            if len(parts) == 4 and parts[3] == "verify":
+                self._handle_ledger_verify(parts[2]); return
         required_agent = self.GET_ENDPOINT_AGENT.get(path)
         if required_agent is None:
             self._send_error(404, "ENDPOINT_NOT_FOUND")
@@ -472,6 +488,11 @@ class ObservationHandler(BaseHTTPRequestHandler):
                          "OBSERVATION_LOCKED", response_bytes=rb)
             return
 
+
+        if path.startswith("/ledger/") and path.endswith("/observe"):
+            parts = path.split("/")
+            if len(parts) == 4:
+                self._handle_ledger_observe(parts[2]); return
         required_agent = self.POST_ENDPOINT_AGENT.get(path)
         if required_agent is None:
             self._send_error(404, "ENDPOINT_NOT_FOUND")
@@ -624,6 +645,25 @@ class ObservationHandler(BaseHTTPRequestHandler):
         })
 
     # ── UNLOCK Handler ─────────────────────────────────────────────────────
+
+
+    def _handle_ledger_verify(self, agent):
+        if not _LEDGER_VERIFIER_AVAILABLE:
+            self._send_json(503, {"error": "LEDGER_VERIFIER_UNAVAILABLE"}); return
+        if agent == "manifest": result = _lv_verify_manifest()
+        elif agent in ("caddy", "domi", "jeni"): result = _lv_verify_chain(agent)
+        else:
+            self._send_json(400, {"error": f"INVALID_AGENT: {agent}"}); return
+        self._send_json(200 if result.get("status") == "PASS" else 422, result)
+
+    def _handle_ledger_observe(self, agent):
+        if not _LEDGER_VERIFIER_AVAILABLE:
+            self._send_json(503, {"error": "LEDGER_VERIFIER_UNAVAILABLE"}); return
+        try:
+            result = _ov_batch()
+            self._send_json(200, result)
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
 
     def _handle_unlock(self):
         path = "/internal/observation/unlock"

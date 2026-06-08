@@ -1,0 +1,31 @@
+{
+  "session": "S208",
+  "eag_id": "EAG-S208-WORM-002",
+  "timestamp": "2026-06-08T19:58:29.388066+09:00",
+  "evidence": {
+    "state_ledger_caddy.jsonl": {
+      "lsattr": "-----a--------e------- /opt/arss/engine/arss-protocol/ledger/state_ledger_caddy.jsonl",
+      "append_only": true
+    },
+    "state_ledger_domi.jsonl": {
+      "lsattr": "-----a--------e------- /opt/arss/engine/arss-protocol/ledger/state_ledger_domi.jsonl",
+      "append_only": true
+    },
+    "state_ledger_jeni.jsonl": {
+      "lsattr": "-----a--------e------- /opt/arss/engine/arss-protocol/ledger/state_ledger_jeni.jsonl",
+      "append_only": true
+    },
+    "ledger_manifest.jsonl": {
+      "lsattr": "-----a--------e------- /opt/arss/engine/arss-protocol/ledger/ledger_manifest.jsonl",
+      "append_only": true
+    },
+    "observation_log.jsonl": {
+      "lsattr": "-----a--------e------- /opt/arss/engine/arss-protocol/observation/observation_log.jsonl",
+      "append_only": true
+    },
+    "observation_alerts.jsonl": {
+      "lsattr": "-----a--------e------- /opt/arss/engine/arss-protocol/observation/observation_alerts.jsonl",
+      "append_only": true
+    }
+  }
+}
