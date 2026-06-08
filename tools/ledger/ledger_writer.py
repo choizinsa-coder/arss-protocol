@@ -1,7 +1,8 @@
 """
 ledger_writer.py
-AIBA WORM Ledger Writer — EAG-S208-WORM-002
+AIBA WORM Ledger Writer — EAG-S209-EAG3-001
 Constitution 제4조(불변 장부) · 제5조(독립 관측) 구현
+__write_to_disk() 단일 계층으로 fail_closed 검사 중앙화
 """
 from __future__ import annotations
 import hashlib, json, os, threading, time
@@ -13,15 +14,19 @@ ARSS_ROOT = "/opt/arss/engine/arss-protocol"
 LEDGER_DIR = Path(ARSS_ROOT) / "ledger"
 OBSERVATION_DIR = Path(ARSS_ROOT) / "observation"
 LEDGER_TOKEN_REGISTRY = Path(ARSS_ROOT) / "registry" / "ledger_tokens.json"
+FAIL_CLOSED_FLAG = OBSERVATION_DIR / "fail_closed.flag"
 LEDGER_PATHS = {
     "caddy": LEDGER_DIR / "state_ledger_caddy.jsonl",
     "domi":  LEDGER_DIR / "state_ledger_domi.jsonl",
     "jeni":  LEDGER_DIR / "state_ledger_jeni.jsonl",
 }
-MANIFEST_PATH = LEDGER_DIR / "ledger_manifest.jsonl"
-OBS_LOG_PATH  = OBSERVATION_DIR / "observation_log.jsonl"
+MANIFEST_PATH  = LEDGER_DIR / "ledger_manifest.jsonl"
+OBS_LOG_PATH   = OBSERVATION_DIR / "observation_log.jsonl"
 OBS_ALERT_PATH = OBSERVATION_DIR / "observation_alerts.jsonl"
 ALLOWED_ACTORS = frozenset({"caddy", "domi", "jeni"})
+# write_type 상수 — private 가드용
+_WT_LEDGER      = "LEDGER"
+_WT_OBSERVATION = "OBSERVATION"
 GENESIS_PREV_HASH = "0" * 64
 SCHEMA_VERSION = "v1"
 KST = timezone(timedelta(hours=9))
@@ -39,37 +44,29 @@ def _compute_entry_hash(entry):
     filtered = {k: v for k, v in entry.items() if k != "entry_hash"}
     return _sha256(json.dumps(filtered, sort_keys=True, ensure_ascii=False))
 
-def _append_jsonl(path, record):
+# ── 단일 디스크 쓰기 계층 ─────────────────────────────────────────────────────
+
+def __write_to_disk(path: Path, record: dict, write_type: str):
+    """
+    모든 파일 쓰기의 단일 진입점.
+    write_type="OBSERVATION" → fail_closed 검사 없이 허용 (관측 레이어 독립성 보장)
+    write_type="LEDGER"      → fail_closed.flag 존재 시 FailClosedError 발생
+    write_type 파라미터는 이 모듈 내부 상수(_WT_*)만 사용할 것.
+    """
+    if write_type == _WT_LEDGER:
+        if Path(FAIL_CLOSED_FLAG).exists():
+            raise FailClosedError("FAIL_CLOSED_FLAG present — ledger write rejected")
+    elif write_type != _WT_OBSERVATION:
+        raise ValueError(f"INVALID_WRITE_TYPE: {write_type!r}")
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
         f.flush(); os.fsync(f.fileno())
 
-def _read_last_entry(path):
-    if not path.exists(): return None
-    last = None
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    try: last = json.loads(line)
-                    except json.JSONDecodeError: pass
-    except OSError: return None
-    return last
+class FailClosedError(Exception):
+    pass
 
-def _read_all_entries(path):
-    if not path.exists(): return []
-    entries = []
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    try: entries.append(json.loads(line))
-                    except json.JSONDecodeError: pass
-    except OSError: pass
-    return entries
+# ── 토큰 관리 ─────────────────────────────────────────────────────────────────
 
 def _load_token_registry():
     if not LEDGER_TOKEN_REGISTRY.exists(): return {}
@@ -121,6 +118,34 @@ def validate_ledger_token(token_id, actor):
     if meta.get("scope") != "append_only": return False, "TOKEN_SCOPE_INVALID"
     return True, "OK"
 
+# ── 내부 헬퍼 ────────────────────────────────────────────────────────────────
+
+def _read_last_entry(path):
+    if not path.exists(): return None
+    last = None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try: last = json.loads(line)
+                    except json.JSONDecodeError: pass
+    except OSError: return None
+    return last
+
+def _read_all_entries(path):
+    if not path.exists(): return []
+    entries = []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try: entries.append(json.loads(line))
+                    except json.JSONDecodeError: pass
+    except OSError: pass
+    return entries
+
 def _is_manifest_frozen():
     last = _read_last_entry(MANIFEST_PATH)
     if last and last.get("event") == "SESSION_FREEZE":
@@ -139,7 +164,9 @@ def _update_manifest(session, chain_tip):
              "chain_tip": chain_tip, **heads, "prev_hash": prev_hash}
     entry["entry_hash"] = _compute_entry_hash(entry)
     with _ledger_locks["manifest"]:
-        _append_jsonl(MANIFEST_PATH, entry)
+        __write_to_disk(MANIFEST_PATH, entry, _WT_LEDGER)
+
+# ── 공개 API ──────────────────────────────────────────────────────────────────
 
 def append_session_freeze(session, eag_id, chain_tip):
     frozen, es = _is_manifest_frozen()
@@ -156,7 +183,10 @@ def append_session_freeze(session, eag_id, chain_tip):
              "timestamp": _now_iso(), **heads, "prev_hash": prev_hash}
     entry["entry_hash"] = _compute_entry_hash(entry)
     with _ledger_locks["manifest"]:
-        _append_jsonl(MANIFEST_PATH, entry)
+        try:
+            __write_to_disk(MANIFEST_PATH, entry, _WT_LEDGER)
+        except FailClosedError as e:
+            return {"ok": False, "error": f"FAIL_CLOSED: {e}"}
     revoked = revoke_session_tokens(session, "SESSION_FREEZE")
     return {"ok": True, "event": "SESSION_FREEZE", "session": session,
             "eag_id": eag_id, "tokens_revoked": revoked, "entry_hash": entry["entry_hash"]}
@@ -174,8 +204,10 @@ def initialize_genesis(actor, session, chain_tip):
                "prev_hash": GENESIS_PREV_HASH, "session": session,
                "chain_tip": chain_tip, "signature_version": SCHEMA_VERSION}
     genesis["entry_hash"] = _compute_entry_hash(genesis)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    _append_jsonl(path, genesis)
+    try:
+        __write_to_disk(path, genesis, _WT_LEDGER)
+    except FailClosedError as e:
+        return {"ok": False, "error": f"FAIL_CLOSED: {e}"}
     return {"ok": True, "actor": actor, "entry_hash": genesis["entry_hash"]}
 
 def append_entry(actor, action_type, payload, session, chain_tip, token_id, payload_ref=""):
@@ -203,10 +235,14 @@ def append_entry(actor, action_type, payload, session, chain_tip, token_id, payl
                  "prev_hash": prev_hash, "session": session,
                  "chain_tip": chain_tip, "signature_version": SCHEMA_VERSION}
         entry["entry_hash"] = _compute_entry_hash(entry)
-        _append_jsonl(path, entry)
+        try:
+            __write_to_disk(path, entry, _WT_LEDGER)
+        except FailClosedError as e:
+            return {"ok": False, "error": f"FAIL_CLOSED: {e}"}
     _update_manifest(session, chain_tip)
-    _append_jsonl(OBS_LOG_PATH, {"obs_type": "APPEND", "actor": actor,
-                                  "seq": new_seq, "entry_hash": entry["entry_hash"],
-                                  "session": session, "timestamp": _now_iso()})
+    __write_to_disk(OBS_LOG_PATH, {"obs_type": "APPEND", "actor": actor,
+                                    "seq": new_seq, "entry_hash": entry["entry_hash"],
+                                    "session": session, "timestamp": _now_iso()},
+                    _WT_OBSERVATION)
     return {"ok": True, "actor": actor, "seq": new_seq,
             "entry_hash": entry["entry_hash"], "prev_hash": prev_hash}
