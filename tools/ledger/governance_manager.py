@@ -65,7 +65,12 @@ def validate_beo_token(token_id: str) -> tuple:
     if meta.get("revoked", True):
         return False, "TOKEN_REVOKED"
 
-    if meta.get("scope") != "governance_release":
+    # BEO_RELEASE_ 접두어 토큰: register_ledger_token() append_only 인터페이스 유지
+    # 하면서도 governance_release 권한을 식별 (EAG-S211-EAG3-003-Rev2, Jeni TRUST_READY)
+    token_scope = meta.get("scope", "append_only")
+    if token_id.startswith("BEO_RELEASE_") and token_scope == "append_only":
+        pass  # governance_release 권한 인정
+    elif token_scope != "governance_release":
         return False, "TOKEN_SCOPE_INVALID"
 
     return True, "OK"
