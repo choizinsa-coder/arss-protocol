@@ -412,6 +412,18 @@ def test_loop_memory_injected(monkeypatch):
 import urllib.error
 from unittest.mock import MagicMock
 
+
+def _make_mock_req():
+    """_execute_gemini_request에 전달 가능한 가짜 Request 픽스첨.
+    _new_req()이 full_url/data/headers를 접근하므로 실제값이 필요.
+    """
+    mock_req = MagicMock()
+    mock_req.full_url = "https://generativelanguage.googleapis.com/v1beta/models/test:generateContent"
+    mock_req.data = b'{"contents":[]}'
+    mock_req.headers = {"Content-Type": "application/json"}
+    return mock_req
+
+
 def test_execute_gemini_503_retry_success(monkeypatch):
     call_count = {"n": 0}
     def mock_urlopen(req, timeout):
@@ -426,7 +438,7 @@ def test_execute_gemini_503_retry_success(monkeypatch):
         return mock_resp
     monkeypatch.setattr(_runtime.urllib.request, "urlopen", mock_urlopen)
     monkeypatch.setattr(_runtime.time, "sleep", lambda s: None)
-    result = _runtime._execute_gemini_request(MagicMock())
+    result = _runtime._execute_gemini_request(_make_mock_req())
     assert result["ok"] is True
     assert call_count["n"] == 2
 
@@ -435,7 +447,7 @@ def test_execute_gemini_503_retry_also_fails(monkeypatch):
         raise urllib.error.HTTPError(url="", code=503, msg="SU", hdrs={}, fp=None)
     monkeypatch.setattr(_runtime.urllib.request, "urlopen", mock_urlopen)
     monkeypatch.setattr(_runtime.time, "sleep", lambda s: None)
-    result = _runtime._execute_gemini_request(MagicMock())
+    result = _runtime._execute_gemini_request(_make_mock_req())
     assert result["ok"] is False
     assert "after_503_retry" in result["error"]
 
@@ -446,7 +458,7 @@ def test_execute_gemini_non503_no_retry(monkeypatch):
         call_count["n"] += 1
         raise urllib.error.HTTPError(url="", code=400, msg="BAD_REQUEST", hdrs={}, fp=None)
     monkeypatch.setattr(_runtime.urllib.request, "urlopen", mock_urlopen)
-    result = _runtime._execute_gemini_request(MagicMock())
+    result = _runtime._execute_gemini_request(_make_mock_req())
     assert result["ok"] is False
     assert "HTTP_400" in result["error"]
     assert call_count["n"] == 1  # 재시도 없음
@@ -460,7 +472,7 @@ def test_execute_gemini_429_retry_then_fail(monkeypatch):
         raise urllib.error.HTTPError(url="", code=429, msg="TMR", hdrs={}, fp=None)
     monkeypatch.setattr(_runtime.urllib.request, "urlopen", mock_urlopen)
     monkeypatch.setattr(_runtime.time, "sleep", lambda s: None)
-    result = _runtime._execute_gemini_request(MagicMock())
+    result = _runtime._execute_gemini_request(_make_mock_req())
     assert result["ok"] is False
     assert "HTTP_429" in result["error"]
     assert "after_429_retry" in result["error"]
@@ -484,6 +496,6 @@ def test_execute_gemini_429_retry_success(monkeypatch):
         return mock_resp
     monkeypatch.setattr(_runtime.urllib.request, "urlopen", mock_urlopen)
     monkeypatch.setattr(_runtime.time, "sleep", lambda s: None)
-    result = _runtime._execute_gemini_request(MagicMock())
+    result = _runtime._execute_gemini_request(_make_mock_req())
     assert result["ok"] is True
     assert call_count["n"] == 2  # 최초 1회(429) + 재시도 1회(성공)

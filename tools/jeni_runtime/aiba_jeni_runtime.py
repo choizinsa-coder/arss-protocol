@@ -17,6 +17,10 @@ PT-S193-JENI-PERSIST-001
     - 제니 제언 1: Memory Pruning — RESOLVED/CLOSED findings 주입 제외
     - 제니 제언 2: Quota Lock — sandbox 50MB 초과 시 오래된 audits 롤링 삭제
   v4.1.0 (S199): Gemini 503 자동 재시도 1회 추가
+  v4.4.0 (S211): NO_PARTS Exponential Backoff 재시도 3회 추가 (EAG-S211-JENI-001)
+    - _parse_response() 헬퍼 신설 — NO_PARTS 2s/4s/8s backoff
+    - 503/429 재시도 성공 경로도 _parse_response() 적용 (중복 제거)
+    - 매 재시도마다 Request 재생성 (body stream 소진 방지)
     - _execute_gemini_request: HTTP 503 감지 시 2초 대기 후 1회 재시도
     - 재시도 후 503 지속 시 즉시 FAIL_CLOSED
     - S199 EAG-2: 비오(Joshua) 승인
@@ -43,7 +47,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.3.0"
+RUNTIME_VERSION = "4.4.0"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.0-flash")
@@ -54,6 +58,9 @@ GEMINI_API_KEY = os.environ.get("AIBA_GEMINI_API_KEY", "")
 
 GEMINI_503_RETRY_SLEEP = 2  # 503 재시도 대기 시간(초)
 GEMINI_429_RETRY_MAX_SLEEP = 60  # 429 Retry-After 상한(초)
+
+NO_PARTS_RETRY_MAX = 3          # NO_PARTS 재시도 최대 횟수 (EAG-S211-JENI-001)
+NO_PARTS_RETRY_BASE_SLEEP = 2   # NO_PARTS 기반 대기 시간(초) — 2s/4s/8s
 
 MAX_TOOL_ROUNDS = 5
 MAX_TOTAL_SECONDS = 120
@@ -542,57 +549,85 @@ def _read_http_error_body(e: urllib.error.HTTPError) -> str:
 
 
 def _execute_gemini_request(req: urllib.request.Request) -> dict:
-    """Gemini API 단일 요청 실행. 503 발생 시 1회 자동 재시도 (S199 EAG-2)."""
-    try:
-        with urllib.request.urlopen(req, timeout=GEMINI_TIMEOUT) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            parts = _extract_parts(data)
-            if not parts:
-                finish = _extract_finish_reason(data)
-                return {"ok": False, "text": "", "function_calls": [], "parts": [],
-                        "error": f"NO_PARTS: finish_reason={finish}"}
+    """Gemini API 단일 요청 실행.
+    503/429 재시도 유지. NO_PARTS 발생 시 Exponential Backoff 재시도 추가 (EAG-S211-JENI-001).
+    """
+    started_at = time.time()
+
+    # 원본 요청의 URL/헤더/데이터 보존 — 매 재시도마다 Request 재생성
+    _orig_url = req.full_url
+    _orig_data = req.data
+    _orig_headers = dict(req.headers)
+
+    def _new_req() -> urllib.request.Request:
+        return urllib.request.Request(
+            _orig_url, data=_orig_data,
+            headers=_orig_headers, method="POST")
+
+    def _budget_ok(extra_sleep: float = 0.0) -> bool:
+        elapsed = time.time() - started_at
+        return (elapsed + extra_sleep) < min(GEMINI_TIMEOUT, MAX_TOTAL_SECONDS)
+
+    def _parse_response(data: dict) -> dict:
+        """parts 추출 시도. NO_PARTS 되면 exponential backoff 재시도."""
+        parts = _extract_parts(data)
+        if parts:
             return {"ok": True, "text": _extract_text_from_parts(parts),
                     "function_calls": _extract_function_calls(parts),
                     "parts": parts, "error": None}
+
+        finish = _extract_finish_reason(data)
+
+        for retry_idx in range(NO_PARTS_RETRY_MAX):
+            sleep_sec = NO_PARTS_RETRY_BASE_SLEEP * (2 ** retry_idx)  # 2/4/8
+            if not _budget_ok(sleep_sec):
+                return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "error": "FAIL_CLOSED: NO_PARTS retry would exceed time budget"}
+            time.sleep(sleep_sec)
+            try:
+                # 매 재시도마다 Request 재생성 (body stream 소진 방지 — Jeni 강제 지시)
+                with urllib.request.urlopen(_new_req(), timeout=GEMINI_TIMEOUT) as r:
+                    rd = json.loads(r.read().decode("utf-8"))
+                    rp = _extract_parts(rd)
+                    if rp:
+                        return {"ok": True, "text": _extract_text_from_parts(rp),
+                                "function_calls": _extract_function_calls(rp),
+                                "parts": rp, "error": None}
+                    finish = _extract_finish_reason(rd)
+            except Exception as re_err:
+                return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "error": f"FAIL_CLOSED: NO_PARTS retry error — {re_err}"}
+
+        return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                "error": f"NO_PARTS: finish_reason={finish} (after_{NO_PARTS_RETRY_MAX}_retries)"}
+
+    try:
+        with urllib.request.urlopen(_new_req(), timeout=GEMINI_TIMEOUT) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return _parse_response(data)
     except urllib.error.HTTPError as e:
         if e.code == 503:
-            # 503 일시 과부하 — 2초 대기 후 1회 재시도
             time.sleep(GEMINI_503_RETRY_SLEEP)
             try:
-                with urllib.request.urlopen(req, timeout=GEMINI_TIMEOUT) as resp2:
+                with urllib.request.urlopen(_new_req(), timeout=GEMINI_TIMEOUT) as resp2:
                     data2 = json.loads(resp2.read().decode("utf-8"))
-                    parts2 = _extract_parts(data2)
-                    if not parts2:
-                        finish2 = _extract_finish_reason(data2)
-                        return {"ok": False, "text": "", "function_calls": [], "parts": [],
-                                "error": f"NO_PARTS: finish_reason={finish2}"}
-                    return {"ok": True, "text": _extract_text_from_parts(parts2),
-                            "function_calls": _extract_function_calls(parts2),
-                            "parts": parts2, "error": None}
+                    return _parse_response(data2)  # 중복 NO_PARTS 체크 제거
             except urllib.error.HTTPError as e2:
                 return {"ok": False, "text": "", "function_calls": [], "parts": [],
                         "error": f"HTTP_{e2.code}: {_read_http_error_body(e2)} (after_503_retry)"}
             except Exception as e2:
                 return {"ok": False, "text": "", "function_calls": [], "parts": [],
-                        "error": f"FAIL_CLOSED: retry error — {e2}"}
+                        "error": f"FAIL_CLOSED: 503 retry error — {e2}"}
         elif e.code == 429:
-            # 429 Rate Limit — Retry-After 기반 대기 후 1회 재시도 (S201 EAG)
             body_text = _read_http_error_body(e)
             match = re.search(r'retry\s+in\s+([\d.]+)\s*s', body_text, re.IGNORECASE)
             retry_delay = float(match.group(1)) if match else 30.0
             retry_delay = min(retry_delay, GEMINI_429_RETRY_MAX_SLEEP)
             time.sleep(retry_delay)
             try:
-                with urllib.request.urlopen(req, timeout=GEMINI_TIMEOUT) as resp3:
+                with urllib.request.urlopen(_new_req(), timeout=GEMINI_TIMEOUT) as resp3:
                     data3 = json.loads(resp3.read().decode("utf-8"))
-                    parts3 = _extract_parts(data3)
-                    if not parts3:
-                        finish3 = _extract_finish_reason(data3)
-                        return {"ok": False, "text": "", "function_calls": [], "parts": [],
-                                "error": f"NO_PARTS: finish_reason={finish3} (after_429_retry)"}
-                    return {"ok": True, "text": _extract_text_from_parts(parts3),
-                            "function_calls": _extract_function_calls(parts3),
-                            "parts": parts3, "error": None}
+                    return _parse_response(data3)  # 중복 NO_PARTS 체크 제거
             except urllib.error.HTTPError as e3:
                 return {"ok": False, "text": "", "function_calls": [], "parts": [],
                         "error": f"HTTP_{e3.code}: {_read_http_error_body(e3)} (after_429_retry)"}
