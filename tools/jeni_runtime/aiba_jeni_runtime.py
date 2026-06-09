@@ -183,7 +183,7 @@ def _extract_function_calls(parts: list) -> list:
 # ── OAuth Token ───────────────────────────────────────────────────────────────
 
 _token_cache: dict = {"access_token": "", "expires_at": 0.0, "refresh_count": 0}
-_MAX_TOKEN_REFRESH = 1
+_MAX_TOKEN_REFRESH = None  # EAG-S211-OAUTH-001: 장기 실행 안정성 확보 — None = 무제한 자동 재발급
 
 
 def _fetch_new_token() -> tuple:
@@ -213,7 +213,10 @@ def _get_access_token() -> tuple:
     now = time.time()
     if _token_cache["access_token"] and now < _token_cache["expires_at"] - 60:
         return _token_cache["access_token"], None
-    if _token_cache["refresh_count"] > _MAX_TOKEN_REFRESH:
+    if (
+        _MAX_TOKEN_REFRESH is not None
+        and _token_cache["refresh_count"] > _MAX_TOKEN_REFRESH
+    ):
         return "", "OAUTH_REFRESH_LIMIT_EXCEEDED"
     token, err = _fetch_new_token()
     if err:
