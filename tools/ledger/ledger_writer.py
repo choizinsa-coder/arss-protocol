@@ -83,11 +83,11 @@ def _save_token_registry(registry):
         f.flush(); os.fsync(f.fileno())
     os.replace(tmp, LEDGER_TOKEN_REGISTRY)
 
-def register_ledger_token(token_id, actor, session):
+def register_ledger_token(token_id, actor, session, scope="append_only"):
     if actor not in ALLOWED_ACTORS:
         return {"ok": False, "error": f"INVALID_ACTOR: {actor}"}
     meta = {"token_id": token_id, "actor": actor, "session": session,
-            "scope": "append_only", "issuer": "beo_loopback",
+            "scope": scope, "issuer": "beo_loopback",
             "issued_at": _now_iso(), "revoked": False,
             "revoked_reason": None, "revoked_at": None}
     with _token_lock:

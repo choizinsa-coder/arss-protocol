@@ -19,6 +19,58 @@ KST = timezone(timedelta(hours=9))
 
 CLEAN_SESSION_THRESHOLD = 3
 
+# ── Beo 토큰 검증 (EAG-S210-TOKEN-001) ──────────────────────────────────────
+
+def _load_token_registry() -> dict:
+    """
+    ledger_tokens.json 로드.
+    실패 시 빈 dict 반환 대신 None 반환 → Fail-Closed 처리 위임.
+    """
+    import sys as _sys
+    lp = "/opt/arss/engine/arss-protocol/tools/ledger"
+    if lp not in _sys.path:
+        _sys.path.insert(0, lp)
+    try:
+        from ledger_writer import _load_token_registry as _lw_load
+        return _lw_load()
+    except Exception:
+        return None
+
+
+def validate_beo_token(token_id: str) -> tuple:
+    """
+    Beo 관리자 토큰 검증.
+    검증 순서:
+      1. registry 로드 — 실패 시 Fail-Closed (TOKEN_REGISTRY_UNAVAILABLE)
+      2. 토큰 존재 확인 (TOKEN_NOT_FOUND)
+      3. issuer == "beo_loopback" (TOKEN_ISSUER_INVALID)
+      4. revoked == False (TOKEN_REVOKED)
+      5. scope == "governance_release" (TOKEN_SCOPE_INVALID)
+    Returns: (is_valid: bool, reason: str)
+    """
+    if not token_id or not token_id.strip():
+        return False, "TOKEN_ID_EMPTY"
+
+    registry = _load_token_registry()
+    if registry is None:
+        return False, "TOKEN_REGISTRY_UNAVAILABLE"
+
+    meta = registry.get(token_id)
+    if meta is None:
+        return False, "TOKEN_NOT_FOUND"
+
+    if meta.get("issuer") != "beo_loopback":
+        return False, "TOKEN_ISSUER_INVALID"
+
+    if meta.get("revoked", True):
+        return False, "TOKEN_REVOKED"
+
+    if meta.get("scope") != "governance_release":
+        return False, "TOKEN_SCOPE_INVALID"
+
+    return True, "OK"
+
+
 def _now_iso():
     return datetime.now(KST).isoformat()
 
@@ -128,9 +180,10 @@ def release_enforce(beo_token: str, approval_id: str, session: str) -> dict:
     # 조건 1: approval_id 존재
     if not approval_id or not approval_id.strip():
         return {"ok": False, "error": "APPROVAL_ID_MISSING"}
-    # 조건 2: beo_token 존재 (S209 간소화 검증)
-    if not beo_token or not beo_token.strip():
-        return {"ok": False, "error": "BEO_TOKEN_MISSING"}
+    # 조건 2: beo_token 완전 인증 (EAG-S210-TOKEN-001)
+    valid, reason = validate_beo_token(beo_token)
+    if not valid:
+        return {"ok": False, "error": f"BEO_TOKEN_INVALID: {reason}"}
 
     state = load_eag3_state()
 
@@ -176,9 +229,10 @@ def release_fail_closed(beo_token: str, approval_id: str) -> dict:
     # 조건 2: approval_id 존재
     if not approval_id or not approval_id.strip():
         return {"ok": False, "error": "APPROVAL_ID_MISSING"}
-    # 조건 3: beo_token 존재
-    if not beo_token or not beo_token.strip():
-        return {"ok": False, "error": "BEO_TOKEN_MISSING"}
+    # 조건 3: beo_token 완전 인증 (EAG-S210-TOKEN-001)
+    valid, reason = validate_beo_token(beo_token)
+    if not valid:
+        return {"ok": False, "error": f"BEO_TOKEN_INVALID: {reason}"}
     # 조건 4: verify_all_chains PASS
     chain_result = verify_all_chains()
     if chain_result.get("status") != "PASS":
