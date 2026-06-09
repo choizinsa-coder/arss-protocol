@@ -95,6 +95,18 @@ ALLOWED_GIT_BRANCHES = frozenset({"main"})
 # ARSS 프로젝트 루트 (절대경로 고정)
 ARSS_ROOT = "/opt/arss/engine/arss-protocol"
 
+# Fail-Closed 플래그 경로 (EAG-S210-EXEC-001)
+FAIL_CLOSED_FLAG = "/opt/arss/engine/arss-protocol/observation/fail_closed.flag"
+
+# 변경성 명령 집합 — Fail-Closed 상태에서 차단 (EAG-S210-EXEC-001)
+MUTATING_COMMANDS = frozenset({
+    "git_commit",
+    "git_push",
+    "run_script",
+    "write_script",
+    "systemctl_restart",
+})
+
 # 감사 로그 경로 (bridge audit_trail 옆에 위치)
 AUDIT_LOG_PATH = os.path.join(ARSS_ROOT, "tools/mcp/exec_audit_trail.log")
 
@@ -463,6 +475,23 @@ class ExecHandler(BaseHTTPRequestHandler):
         # v1.1.0: session_audit_id 수신 (optional — backward compatible)
         session_audit_id: str | None = body.get("session_audit_id") or None
         audit_id = str(uuid.uuid4())
+
+        # ── Gate 0: Fail-Closed 실행 파이프라인 동결 (EAG-S210-EXEC-001) ─────
+        if command in MUTATING_COMMANDS and os.path.exists(FAIL_CLOSED_FLAG):
+            _write_audit(
+                audit_id=audit_id,
+                stage="FAIL_CLOSED_DENY",
+                command=command,
+                actor_id=actor_id,
+                approval_id=approval_id,
+                detail="execution pipeline frozen",
+                session_audit_id=session_audit_id,
+            )
+            self._send_json(403, {
+                "ok": False,
+                "error": "FAIL_CLOSED_ACTIVE: execution pipeline frozen",
+            })
+            return
 
         # ── Gate 1: actor 검증 ───────────────────────────────────────────────
         if actor_id != ALLOWED_ACTOR:
