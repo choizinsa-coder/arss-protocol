@@ -1,7 +1,7 @@
 """
 mcp_read_server.py
 PT-S134-VPS-OBS-001 Phase 1 READ ONLY OBSERVABILITY
-Version: 1.0.0
+Version: 1.1.0  (S214: EVIDENCE_CODE_ROOT 추가 — EAG-S214-OBS-001)
 
 원칙:
 - READ CHANNEL ONLY
@@ -24,12 +24,13 @@ from pathlib import Path
 from typing import Optional
 
 # ── Semantic Root 정의 ──────────────────────────────────────────────
-CODE_ROOT      = Path("/opt/arss/engine/arss-protocol")
-GOVERNANCE_ROOT = Path("/opt/arss/engine/arss-protocol/tools/governance")
-EVIDENCE_ROOT  = Path("/opt/arss/engine/arss-protocol/tests")
-ARSS_HUB_ROOT  = Path("/opt/arss/engine/arss-protocol/ARSS_HUB")
-LOG_ROOT       = Path("/opt/arss/engine/arss-protocol/tools/mcp")
-METADATA_ROOT  = Path("/opt/arss/engine/arss-protocol")
+CODE_ROOT           = Path("/opt/arss/engine/arss-protocol")
+GOVERNANCE_ROOT     = Path("/opt/arss/engine/arss-protocol/tools/governance")
+EVIDENCE_ROOT       = Path("/opt/arss/engine/arss-protocol/tests")
+EVIDENCE_CODE_ROOT  = Path("/opt/arss/engine/arss-protocol/tools/evidence")  # S214 신규: jeni 독립 관측용
+ARSS_HUB_ROOT       = Path("/opt/arss/engine/arss-protocol/ARSS_HUB")
+LOG_ROOT            = Path("/opt/arss/engine/arss-protocol/tools/mcp")
+METADATA_ROOT       = Path("/opt/arss/engine/arss-protocol")
 
 # ── 허용 Purpose Category ──────────────────────────────────────────
 ALLOWED_PURPOSES = {
@@ -77,7 +78,7 @@ ALLOWED_SERVICES = {
 # ── 에이전트별 허용 Semantic Root ──────────────────────────────────
 AGENT_ROOT_ALLOWLIST = {
     "domi":  [CODE_ROOT, GOVERNANCE_ROOT, METADATA_ROOT, EVIDENCE_ROOT],
-    "jeni":  [EVIDENCE_ROOT, LOG_ROOT, METADATA_ROOT, GOVERNANCE_ROOT, ARSS_HUB_ROOT],
+    "jeni":  [EVIDENCE_ROOT, LOG_ROOT, METADATA_ROOT, GOVERNANCE_ROOT, ARSS_HUB_ROOT, EVIDENCE_CODE_ROOT],
     "caddy": [CODE_ROOT, EVIDENCE_ROOT, LOG_ROOT, METADATA_ROOT],
 }
 
