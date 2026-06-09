@@ -27,6 +27,7 @@ from typing import Optional
 CODE_ROOT      = Path("/opt/arss/engine/arss-protocol")
 GOVERNANCE_ROOT = Path("/opt/arss/engine/arss-protocol/tools/governance")
 EVIDENCE_ROOT  = Path("/opt/arss/engine/arss-protocol/tests")
+ARSS_HUB_ROOT  = Path("/opt/arss/engine/arss-protocol/ARSS_HUB")
 LOG_ROOT       = Path("/opt/arss/engine/arss-protocol/tools/mcp")
 METADATA_ROOT  = Path("/opt/arss/engine/arss-protocol")
 
@@ -76,7 +77,7 @@ ALLOWED_SERVICES = {
 # ── 에이전트별 허용 Semantic Root ──────────────────────────────────
 AGENT_ROOT_ALLOWLIST = {
     "domi":  [CODE_ROOT, GOVERNANCE_ROOT, METADATA_ROOT, EVIDENCE_ROOT],
-    "jeni":  [EVIDENCE_ROOT, LOG_ROOT, METADATA_ROOT, GOVERNANCE_ROOT],
+    "jeni":  [EVIDENCE_ROOT, LOG_ROOT, METADATA_ROOT, GOVERNANCE_ROOT, ARSS_HUB_ROOT],
     "caddy": [CODE_ROOT, EVIDENCE_ROOT, LOG_ROOT, METADATA_ROOT],
 }
 
