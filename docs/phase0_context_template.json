@@ -1,0 +1,54 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "confirmed_session": "S216",
+    "dep_chain": "도미 4차 설계 → 캐디 IMPLEMENTABLE → 제니 5차 TRUST_READY → 비오 EAG-S216-PHASE0-001",
+    "token_budget": {
+      "minimum": 150,
+      "recommended": 250,
+      "removal_priority": ["recent_decisions", "current_agenda"],
+      "mandatory_fields": ["aiba_identity", "agent_role", "agent_lens", "task"]
+    }
+  },
+  "template": {
+    "aiba_identity": "AI 협업 운영체제",
+    "agent_role": "CSO 또는 CRO",
+    "agent_lens": "기회 렌즈 또는 리스크 렌즈",
+    "recent_decisions": [
+      "SESSION_CONTEXT_S{n}_FINAL.json visibility_metrics_s{n}.key_decisions 배열 상위 3항목",
+      "형식: 주어(대상)+동사(조치)+결과, 30자 이내",
+      "예시: 'gemini-2.0-flash→2.5-flash-lite 교체 완료'"
+    ],
+    "current_agenda": "session_reentry.resume_point 값 그대로 기입",
+    "system_state": "인프라 상태 요약 (브리지·도미·제니·exec 상태)",
+    "task": "이번 호출의 구체적 태스크 (1줄)"
+  },
+  "caddy_extraction_procedure": {
+    "description": "캐디가 ask_domi / ask_jeni 호출 전 recent_decisions 필드를 채우는 표준 절차",
+    "steps": [
+      "1. ARSS Protocol read_file로 SESSION_CONTEXT_S{n}_FINAL.json 로드",
+      "2. visibility_metrics_s{n}.key_decisions 배열 상위 3항목 추출 (부족 시 s{n-1} 보충)",
+      "3. 각 항목: 주어(대상)+동사(조치)+결과 형식, 30자 이내 요약 후 recent_decisions 배열 기입",
+      "4. session_reentry.resume_point 값 → current_agenda 필드 기입",
+      "5. 캐디 임의 추가·변형 금지 — VPS 기록 기준 준수"
+    ],
+    "prohibited": "캐디가 SESSION_CONTEXT를 참조하지 않고 recent_decisions를 임의로 기술하는 행위"
+  },
+  "call_type_variants": {
+    "A_ask_domi_design": {
+      "agent_role": "CSO",
+      "agent_lens": "기회 렌즈",
+      "note": "설계 의뢰 시 사용"
+    },
+    "B_ask_jeni_trust_ready": {
+      "agent_role": "CRO",
+      "agent_lens": "리스크 렌즈",
+      "note": "TRUST_READY 검증 의뢰 시 사용"
+    },
+    "C_ask_jeni_cross_validation": {
+      "agent_role": "CRO",
+      "agent_lens": "리스크 렌즈",
+      "note": "도미 설계안 크로스 검증 시 사용 — task 필드에 도미 설계안 원문 포함"
+    }
+  }
+}
