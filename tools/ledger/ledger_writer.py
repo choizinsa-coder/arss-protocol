@@ -19,11 +19,12 @@ LEDGER_PATHS = {
     "caddy": LEDGER_DIR / "state_ledger_caddy.jsonl",
     "domi":  LEDGER_DIR / "state_ledger_domi.jsonl",
     "jeni":  LEDGER_DIR / "state_ledger_jeni.jsonl",
+    "session_journal": Path("/opt/arss/engine/arss-protocol/session_journal/session_journal.jsonl"),
 }
 MANIFEST_PATH  = LEDGER_DIR / "ledger_manifest.jsonl"
 OBS_LOG_PATH   = OBSERVATION_DIR / "observation_log.jsonl"
 OBS_ALERT_PATH = OBSERVATION_DIR / "observation_alerts.jsonl"
-ALLOWED_ACTORS = frozenset({"caddy", "domi", "jeni"})
+ALLOWED_ACTORS = frozenset({"caddy", "domi", "jeni", "session_journal"})
 # write_type 상수 — private 가드용
 _WT_LEDGER      = "LEDGER"
 _WT_OBSERVATION = "OBSERVATION"

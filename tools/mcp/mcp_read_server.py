@@ -31,6 +31,7 @@ EVIDENCE_CODE_ROOT  = Path("/opt/arss/engine/arss-protocol/tools/evidence")  # S
 ARSS_HUB_ROOT       = Path("/opt/arss/engine/arss-protocol/ARSS_HUB")
 LOG_ROOT            = Path("/opt/arss/engine/arss-protocol/tools/mcp")
 METADATA_ROOT       = Path("/opt/arss/engine/arss-protocol")
+SESSION_JOURNAL_ROOT = Path("/opt/arss/engine/arss-protocol/session_journal")  # S217 신규: Phase 1 Shared Memory
 
 # ── 허용 Purpose Category ──────────────────────────────────────────
 ALLOWED_PURPOSES = {
@@ -77,9 +78,9 @@ ALLOWED_SERVICES = {
 
 # ── 에이전트별 허용 Semantic Root ──────────────────────────────────
 AGENT_ROOT_ALLOWLIST = {
-    "domi":  [CODE_ROOT, GOVERNANCE_ROOT, METADATA_ROOT, EVIDENCE_ROOT],
-    "jeni":  [EVIDENCE_ROOT, LOG_ROOT, METADATA_ROOT, GOVERNANCE_ROOT, ARSS_HUB_ROOT, EVIDENCE_CODE_ROOT],
-    "caddy": [CODE_ROOT, EVIDENCE_ROOT, LOG_ROOT, METADATA_ROOT],
+    "domi":  [CODE_ROOT, GOVERNANCE_ROOT, METADATA_ROOT, EVIDENCE_ROOT, SESSION_JOURNAL_ROOT],
+    "jeni":  [EVIDENCE_ROOT, LOG_ROOT, METADATA_ROOT, GOVERNANCE_ROOT, ARSS_HUB_ROOT, EVIDENCE_CODE_ROOT, SESSION_JOURNAL_ROOT],
+    "caddy": [CODE_ROOT, EVIDENCE_ROOT, LOG_ROOT, METADATA_ROOT, SESSION_JOURNAL_ROOT],
 }
 
 # ── 허용 Connector Identity ────────────────────────────────────────
