@@ -76,11 +76,13 @@
     },
     {
       "id": "PT-LEGACY-AUTO-007",
-      "note": "Phase 2-B 전환 완료(Apr 12). GitHub push는 별도 설계 필요. WF-05 재활성화 후 진행.",
+      "note": "Phase 2-B 전환 완료(Apr 12). GitHub push는 별도 설계 필요. WF-05 재활성화 후 진행. | S221 stale 정정: gh_push_sc.py(EAG-S205-GH-PUSH-001) 구현 완료. S205에서 이미 COMPLETED.",
       "owner": "도미→캐디→Claude Code",
       "priority": "MEDIUM",
-      "status": "DESIGN_PENDING",
-      "task": "Phase 2-B 설계 의뢰 — SESSION_CONTEXT.json GitHub 자동 push"
+      "status": "COMPLETED",
+      "task": "Phase 2-B 설계 의뢰 — SESSION_CONTEXT.json GitHub 자동 push",
+      "completed_session": 205,
+      "completed_date": "2026-06-08"
     },
     {
       "id": "PT-LEGACY-AUTO-023",
@@ -103,29 +105,35 @@
     {
       "created_date": "2026-04-14",
       "id": "PT-LEGACY-AUTO-038",
-      "note": "캐디(오케스트레이터)+Claude 서브에이전트(워커) 구조 설계 의뢰. 도미/제니 독립성 유지 전제. 서브에이전트 호출 자격/출력 처리/VPS 접근/RPU 발행 경계 규칙 포함. WF-05 재활성화 + Phase 2-B 안정화 이후 착수. 비오(Joshua) 지시 2026-04-14 Session 28.",
+      "note": "캐디(오케스트레이터)+Claude 서브에이전트(워커) 구조 설계 의뢰. 도미/제니 독립성 유지 전제. 서브에이전트 호출 자격/출력 처리/VPS 접근/RPU 발행 경계 규칙 포함. WF-05 재활성화 + Phase 2-B 안정화 이후 착수. 비오(Joshua) 지시 2026-04-14 Session 28. | S221 stale 정정: 아키텍쳐 설계 승인(EAG-S205-SUBAGENT-DESIGN-001). S205에서 이미 COMPLETED.",
       "owner": "도미→캐디→Claude Code",
       "priority": "LOW",
-      "status": "DESIGN_PENDING",
-      "task": "Claude 서브에이전트 통합 설계 — 캐디+서브에이전트 오케스트레이터 구조"
+      "status": "COMPLETED",
+      "task": "Claude 서브에이전트 통합 설계 — 캐디+서브에이전트 오케스트레이터 구조",
+      "completed_session": 205,
+      "completed_date": "2026-06-08"
     },
     {
       "created_date": "2026-04-15",
       "id": "PT-LEGACY-AUTO-042",
-      "note": "비오님 지시(Session 33): 도미 설계→EAG 절차가 안전성을 실질적으로 보장하는지, 번거로움 대비 효과 재검토 필요. WF-05 재구축 완료 후 별도 세션.",
+      "note": "비오님 지시(Session 33): 도미 설계→EAG 절차가 안전성을 실질적으로 보장하는지, 번거로움 대비 효과 재검토 필요. WF-05 재구축 완료 후 별도 세션. | S221 stale 정정: C안 채택(EAG-S205-GOV-SIMPLE-RULE-001). S205에서 이미 COMPLETED.",
       "owner": "비오(Joshua)",
       "priority": "LOW",
-      "status": "DESIGN_PENDING",
-      "task": "거버넌스 프로세스 효율성 재검토 — 도미 설계→EAG 절차 실질적 효과 검토"
+      "status": "COMPLETED",
+      "task": "거버넌스 프로세스 효율성 재검토 — 도미 설계→EAG 절차 실질적 효과 검토",
+      "completed_session": 205,
+      "completed_date": "2026-06-08"
     },
     {
       "created_date": "2026-04-16",
       "id": "PT-LEGACY-AUTO-046",
-      "note": "AIBA-DESIGN-003에서 제외. hash 계산 방식 및 출력 계약 미정의. v1.4 별도 설계 필요.",
+      "note": "AIBA-DESIGN-003에서 제외. hash 계산 방식 및 출력 계약 미정의. v1.4 별도 설계 필요. | S221 stale 정정: mcp_http_bridge v2.6.0 sync 구현(52d0b5d). S205에서 이미 COMPLETED.",
       "owner": "도미→캐디",
       "priority": "LOW",
-      "status": "DESIGN_PENDING",
-      "task": "/sync 명령어 설계 — Command Layer v1.4 이월"
+      "status": "COMPLETED",
+      "task": "/sync 명령어 설계 — Command Layer v1.4 이월",
+      "completed_session": 205,
+      "completed_date": "2026-06-08"
     },
     {
       "completed_date": "2026-05-02",
