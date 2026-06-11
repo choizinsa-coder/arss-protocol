@@ -3,7 +3,7 @@
   "schema_version": "phase3_shard_v1",
   "session_ref": 150,
   "item_count": 58,
-  "open_count": 9,
+  "open_count": 3,
   "critical_count": 0,
   "last_mutated_session": 150,
   "items": [
@@ -96,11 +96,13 @@
     },
     {
       "id": "PT-LEGACY-AUTO-026",
-      "note": "LESSON-014 기반. 필드 누락 skip 시 hash_match:null 또는 hash_match_skipped:true 반환으로 개선. 별도 EAG 필요.",
+      "note": "LESSON-014 기반. 필드 누락 skip 시 hash_match:null 또는 hash_match_skipped:true 반환으로 개선. 별도 EAG 필요. | S222 stale 정정: flat_verifier v1.2.0(EAG-S221-FLAT-V12-001, commit 186ff1c)에서 hash_match_skipped:true 반환 구현 완료. LESSON-014 해소 확인. S221 DEP 체인 완주 과제였음.",
       "owner": "캐디→Claude Code",
       "priority": "LOW",
-      "status": "DESIGN_PENDING",
-      "task": "flat_verifier.py hash_match 반환값 개선"
+      "status": "COMPLETED",
+      "task": "flat_verifier.py hash_match 반환값 개선",
+      "completed_session": 221,
+      "completed_date": "2026-06-11"
     },
     {
       "created_date": "2026-04-14",
