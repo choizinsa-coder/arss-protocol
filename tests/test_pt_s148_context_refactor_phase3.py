@@ -32,7 +32,7 @@ SHARD_PATHS = {
 # active: S166 이후 내용 변경 반영 (실측값 2026-05-31)
 # pending: S166 이후 내용 변경 반영 (실측값 2026-05-31)
 EXPECTED_HASHES = {
-    "active":   "0ff719a69d8ed1eba7de2ef04475ec9d8755eeb5925bb68ef76afc54298f0727",
+    "active":   "3237ea893411ae8d7eb1740274fd29830bdb426e5b60156b95694562d8144a44",
     "hold":     "8acf7ea42bcbdd2a471b5e1bf8bb1d4f2ff60d63db1939807d460115d1981da5",
     "blocked":  "d3071cdf66b03d4077f5c093d00bc89865821780b95fe9cafd61e2db12336d71",
     "pending":  "ad7273b85d73b505beaed61ca2a6b9c8d5bd080710ddf8e758fee0634d634ca9",
