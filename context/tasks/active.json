@@ -84,11 +84,13 @@
     },
     {
       "id": "PT-LEGACY-AUTO-023",
-      "note": "POST /generate 필수 필드(Authorization, actor_id, content, prev_chain_hash) 및 persist 미지원 사항 공식 스펙 문서 정리 필요.",
+      "note": "POST /generate 필수 필드(Authorization, actor_id, content, prev_chain_hash) 및 persist 미지원 사항 공식 스펙 문서 정리 필요. | S221 stale 정정: generator-api-spec-v1.0.md가 S204(commit acb1293, EAG-S204-DEPLOY-SPEC-001)에서 배포 완료됨. POST /generate 필수 필드 및 persist 미지원 사항 모두 문서화 확인. S204~S220 spec/ 변경 없음.",
       "owner": "캐디",
       "priority": "MEDIUM",
-      "status": "DESIGN_PENDING",
-      "task": "generator API 스펙 공식 문서화"
+      "status": "COMPLETED",
+      "task": "generator API 스펙 공식 문서화",
+      "completed_session": 204,
+      "completed_date": "2026-05-09"
     },
     {
       "id": "PT-LEGACY-AUTO-026",
