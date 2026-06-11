@@ -3,7 +3,7 @@
   "schema_version": "phase3_shard_v1",
   "session_ref": 150,
   "item_count": 58,
-  "open_count": 3,
+  "open_count": 2,
   "critical_count": 0,
   "last_mutated_session": 150,
   "items": [
@@ -387,10 +387,12 @@
       "task": "Receipt Retention Policy 확정 — R0~R3 등급별 VPS/Drive 보존 기간 수치 LOCK",
       "owner": "도미→캐디→제니→비오(EAG)",
       "priority": "MEDIUM",
-      "status": "DEFERRED",
+      "status": "COMPLETED",
       "created_session": 99,
       "created_date": "2026-05-08",
-      "note": "AIBA_CODING_STANDARD_v1.0-rc1 GOV-001. 잠정 방향: R3 영구/R2 중기/R1 선택/R0 없음. 선행 조건: Baseline Snapshot 완료 후 수치 LOCK."
+      "note": "AIBA_CODING_STANDARD_v1.0-rc1 GOV-001. 잠정 방향: R3 영구/R2 중기/R1 선택/R0 없음. 선행 조건: Baseline Snapshot 완료 후 수치 LOCK. | S222 stale 정정: EAG-S219-GOV-001로 retention_policy_v1.0.md VPS 배포 완료 확인. R0~R3 수치 LOCK 완료. task_ref PT-S99-GOV-001 문서 내 명시.",
+      "completed_session": 219,
+      "completed_date": "2026-06-10"
     },
     {
       "id": "PT-S99-GOV-002",
