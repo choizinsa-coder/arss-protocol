@@ -58,3 +58,34 @@ class TestFlatVerifierV11:
         result = validate(str(tmp_path), "rpu-0001:rpu-0001")
         assert result["hash_match"] is False, f"expected False, got {result['hash_match']}"
         assert result["validated_count"] == 0
+
+    def test_tc5_skipped_flag_true(self, tmp_path):
+        """TC-5: 필드 누락 skip → hash_match=None, hash_match_skipped=True"""
+        rpu = {"rpu_id": "rpu-0001", "timestamp": "2026-01-01T00:00:00.000000Z"}
+        (tmp_path / "rpu-0001.json").write_text(json.dumps(rpu), encoding="utf-8")
+        result = validate(str(tmp_path), "rpu-0001:rpu-0001")
+        assert result["hash_match"] is None
+        assert result["hash_match_skipped"] is True
+
+    def test_tc6_pass_skipped_false(self, tmp_path):
+        """TC-6: 정상 PASS → hash_match=True, hash_match_skipped=False"""
+        rpu = _make_rpu("rpu-0001", GENESIS)
+        (tmp_path / "rpu-0001.json").write_text(json.dumps(rpu), encoding="utf-8")
+        result = validate(str(tmp_path), "rpu-0001:rpu-0001")
+        assert result["hash_match"] is True
+        assert result["hash_match_skipped"] is False
+
+    def test_tc7_fail_skipped_false(self, tmp_path):
+        """TC-7: hash 불일치 FAIL → hash_match=False, hash_match_skipped=False"""
+        rpu = _make_rpu("rpu-0001", GENESIS)
+        rpu["hash"] = "a" * 64
+        (tmp_path / "rpu-0001.json").write_text(json.dumps(rpu), encoding="utf-8")
+        result = validate(str(tmp_path), "rpu-0001:rpu-0001")
+        assert result["hash_match"] is False
+        assert result["hash_match_skipped"] is False
+
+    def test_tc8_no_files_skipped_false(self, tmp_path):
+        """TC-8: 파일 없음 → hash_match=False, hash_match_skipped=False"""
+        result = validate(str(tmp_path), "rpu-0001:rpu-0001")
+        assert result["hash_match"] is False
+        assert result["hash_match_skipped"] is False

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-ACTIVE_VERSION = "1.1.0"
+ACTIVE_VERSION = "1.2.0"
 VERSION_STATUS = "active"
 """
 flat_verifier.py — AIBA Flat Schema Verifier
@@ -58,6 +58,7 @@ def validate(input_dir: str, range_str: str) -> dict:
             "validated_count": 0,
             "chain_integrity": False,
             "hash_match": False,
+            "hash_match_skipped": False,
             "importable": False,
             "reason": "no files found"
         }
@@ -95,6 +96,7 @@ def validate(input_dir: str, range_str: str) -> dict:
         "validated_count": len(rpus),
         "chain_integrity": chain_ok,
         "hash_match": hash_ok,
+        "hash_match_skipped": (hash_ok is None),
         "importable": False,
         "reason": "missing canonical chain structure — flat schema not compatible with canonical verifier"
     }
