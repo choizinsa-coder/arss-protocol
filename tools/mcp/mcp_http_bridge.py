@@ -1248,6 +1248,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
             _handle_agent_request(self, "jeni", "/jeni/")
             return
 
+        if self.path == "/internal/ledger-token/register":
+            _handle_ledger_token_register(self); return
         if self.path.startswith("/internal/ledger-append/"):
             agent = self.path.split("/internal/ledger-append/", 1)[1].split("?")[0].rstrip("/")
             _handle_ledger_append(self, agent); return
