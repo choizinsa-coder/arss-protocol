@@ -1,0 +1,89 @@
+{
+  "_comment": "SESSION CLOSE delta-json 템플릿 — 9개 필수 키 전부 포함",
+  "_usage": "python3 tools/close/session_close_generator.py --session N --chain-tip HASH --prev-tip HASH --delta-json this_file.json --approval-id EAG-S{N}-...",
+  "session_reentry": {
+    "last_session": 0,
+    "resume_point": "S{N}: 작업 요약",
+    "eag_carryover": "없음 또는 이월 항목"
+  },
+  "next_steps": [
+    "S{N+1}: 다음 세션 작업 항목 1",
+    "S{N+1}: 다음 세션 작업 항목 2"
+  ],
+  "agent_focus": {
+    "beo": "S{N} — 비오 활동 요약",
+    "caddy": "S{N} — 캐디 활동 요약",
+    "domi": "S{N} — 도미 활동 요약 (미호출 시 '미호출')",
+    "jeni": "S{N} — 제니 활동 요약 (미호출 시 '미호출')"
+  },
+  "pytest_status": {
+    "last_run_date": "YYYY-MM-DD",
+    "last_run_session": 0,
+    "regression_impact": "NONE",
+    "total_failed": 0,
+    "total_passed": 0,
+    "total_skipped": 94,
+    "note": "S{N}: 변경 내역 요약"
+  },
+  "system_changes": {
+    "deployed_session": 0,
+    "commits": [],
+    "changes": [],
+    "eag_chain": "EAG-S{N}-...",
+    "pytest_result": "0 passed / 0 failed / 94 skipped"
+  },
+  "caddy_governance_record": {
+    "session": 0,
+    "date": "YYYY-MM-DD",
+    "eag_gates_this_session": [],
+    "incidents": [],
+    "oi_observations": [],
+    "notable": "S{N}: 세션 주요 사항",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "PASS"
+    }
+  },
+  "visibility_metrics": {
+    "session": 0,
+    "date": "YYYY-MM-DD",
+    "M-01_active_canonical_key_count": 42,
+    "M-02_tier_d_quarantine_key_count": 78,
+    "M-03_ceiling_utilization_rate": "42/42",
+    "M-04_session_delta_size": "MEDIUM",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S{N}.json",
+    "M-06_active_task_load": 0,
+    "M-07_stabilization_compliance": "PASS",
+    "chain_tip": "",
+    "pytest_result": "0 passed / 0 failed / 94 skipped",
+    "key_decisions": []
+  },
+  "session_delta": {
+    "session": 0,
+    "modified_keys": [
+      "session_delta", "updated_at", "generated_at", "pytest_status",
+      "session_count", "next_steps", "session_reentry", "sync_meta",
+      "chain", "caddy_governance_record_s{N}", "agent_focus"
+    ],
+    "added_keys": [
+      "system_changes_s{N}",
+      "caddy_governance_record_s{N}",
+      "visibility_metrics_s{N}"
+    ],
+    "removed_keys": ["system_changes_s{N-4}"]
+  },
+  "sync_meta": {
+    "last_sync_date": "YYYY-MM-DD",
+    "last_sync_session": 0,
+    "files": [
+      "SESSION_CONTEXT_S{N}_FINAL.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S{N}.json"
+    ],
+    "sync_status": "SYNCED"
+  }
+}
