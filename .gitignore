@@ -82,3 +82,41 @@ tools/sandbox/e2e_test_*.txt
 tools/sandbox/domi/
 # 일회성 스크립트
 **/regenerate_runtime_*.py
+
+# === S228 .gitignore 정비 (EAG-S228-GITIGNORE-001) ===
+
+# 세션 리포트 — SCP-only 아티팩트
+AIBA_Daily_Session_Report_S*.md
+SESSION_REPORTS/
+
+# 에이전트 부트/컨텍스트 파일 — SCP-only
+AIBA_Agent_Context_S*.md
+DOMI_BOOT_CONTEXT_S*.md
+JENI_BOOT_CONTEXT_S*.md
+
+# 증거/AES 인덱스 디렉토리
+ARSS_HUB/04_EVIDENCE/AES_INDEX/
+
+# jeni sandbox (caddy/domi와 동일 패턴)
+tools/sandbox/jeni/
+
+# 런타임 상태 파일
+observation/eag3_state.json
+tools/mcp/exec_audit_trail.log
+
+# 동적 레지스트리
+registry/dynamic_clients.json
+registry/oauth_clients.json
+registry/transport_failures/
+
+# 루트 일회성 임시 스크립트
+build_s*.py
+generate_close*.py
+release_containment_*.py
+patch_*.py
+s[0-9]*_verify.py
+verify_s*.py
+setup_collab_space.py
+
+# 기타 임시 빌드 파일
+docs/AIBA_Direction_S215.md
