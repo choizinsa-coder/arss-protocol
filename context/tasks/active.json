@@ -3,7 +3,7 @@
   "schema_version": "phase3_shard_v1",
   "session_ref": 150,
   "item_count": 58,
-  "open_count": 2,
+  "open_count": 0,
   "critical_count": 0,
   "last_mutated_session": 150,
   "items": [
@@ -620,10 +620,10 @@
       "task": "STEP-1A Visibility Metrics — Daily Session Report 적용",
       "owner": "캐디",
       "priority": "HIGH",
-      "status": "IN_PROGRESS",
+      "status": "COMPLETED",
       "created_session": 115,
       "created_date": "2026-05-10",
-      "note": "M-01~M-07 7개 항목 확정. 비오(Joshua) 승인. LESSON-021 IMMUTABLE 등재. S116부터 Report 정규 적용. 세션 종료 체크리스트 신설. S131: Visibility Metrics 정규 운용 계속.",
+      "note": "M-01~M-07 7개 항목 확정. 비오(Joshua) 승인. LESSON-021 IMMUTABLE 등재. S116부터 Report 정규 적용. 세션 종료 체크리스트 신설. S131: Visibility Metrics 정규 운용 계속. | S231 COMPLETED: STEP-1A Daily Session Report 적용 + append_visibility_metrics.py WORM 통합(EAG-S223-JOURNAL-001) + session_journal S218부터 정규 운영 확립. 비오님 S231 완료 선언.",
       "metrics": [
         "M-01: Active Canonical Key Count",
         "M-02: Tier D Quarantine Key Count",
@@ -632,7 +632,9 @@
         "M-05: Archive File Status",
         "M-06: Active Task Load",
         "M-07: Stabilization Compliance"
-      ]
+      ],
+      "completed_session": 231,
+      "completed_date": "2026-06-12"
     },
     {
       "id": "PT-S115-OBS-002",
