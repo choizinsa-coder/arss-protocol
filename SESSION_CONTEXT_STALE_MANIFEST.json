@@ -1,10 +1,17 @@
 {
-  "session": 202,
-  "generated_at": "2026-06-07T23:59:00.000000+09:00",
+  "session_count": 235,
+  "context_hash": "f422f4e1280b39c84537cd557aa85684161d673be0c0c24343ebeb0426993572",
+  "updated_at": "2026-06-12T18:48:07.820576+09:00",
+  "status": "FRESH",
+  "last_updated_session": 239,
+  "last_updated_at": "2026-06-12T10:44:09+09:00",
   "stale_files": [
-    "SESSION_CONTEXT_S201_FINAL.json",
-    "SESSION_CONTEXT_ARCHIVE_TIER_D_S201.json"
+    "SESSION_CONTEXT_S232_FINAL.json",
+    {
+      "file": "SESSION_CONTEXT_S237_FINAL.json",
+      "stale_since_session": 238
+    }
   ],
-  "current_canonical": "SESSION_CONTEXT_S202_FINAL.json",
-  "note": "S202 close — S201 FINAL은 stale로 표시됨"
+  "last_updated": "2026-06-13T03:50:00+09:00",
+  "active_final": "SESSION_CONTEXT_S238_FINAL.json"
 }
