@@ -28,12 +28,12 @@ def compute_file_sha256(path):
 
 
 def _fetch_session_count_from_status() -> int:
-    """GET http://159.203.125.1:8000/session/current → data.session_count 자동 획득 (DIS-044)"""
+    """GET http://127.0.0.1:8000/session/current → data.session_count 자동 획득 (DIS-044)"""
     import urllib.request as _urllib_req
     import json as _json_inner
     try:
         _req = _urllib_req.Request(
-            'http://159.203.125.1:8000/session/current',
+            'http://127.0.0.1:8000/session/current',
             headers={'Authorization': 'Bearer ' + os.environ['AIBA_TOKEN_CADDY']}
         )
         with _urllib_req.urlopen(_req, timeout=5) as resp:
