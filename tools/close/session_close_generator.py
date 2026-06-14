@@ -21,6 +21,7 @@ EAG: EAG-S231-CLOSE-GENERATOR-001
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone, timedelta
@@ -263,6 +264,8 @@ def main() -> None:
     parser.add_argument('--approval-id', default='',
                         help='EAG approval ID (운영 실행 시 필수)')
     args = parser.parse_args()
+
+    os.umask(0o027)  # S243: arss 640 보안 정책
 
     n          = args.session
     chain_tip  = args.chain_tip

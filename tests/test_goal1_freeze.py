@@ -52,14 +52,14 @@ FROZEN_HASHES = {
     "tools/guard/pointer_guard_s231.py":
         "3e25cf94bf0bf13635aa7f9675aafffb88927e6ecc5ccf3581e6639effd0c9c0",
     "tools/close/session_close_generator.py":
-        "03b8bfb16c9db8f346ec03e2c7f70915e6d10f88f00c1da9629c80a8cfa92090",
+        "b2dbf9f85194e85ddbf0759f3f5304aebd98a02a570d08fecfde24c66042a0c1",
 }
 
 # ── WORM 특례: session_journal last_entry_hash 고정 (S239 기준) ─────────
 # append-only이므로 전체 hash 고정 불가. last_entry_hash만 검증.
 # journal에 새 entry가 append되면 이 값도 함께 EAG 하 갱신 필요.
 FROZEN_JOURNAL_LAST_ENTRY_HASH = (
-    "3399c08802347794408f681d0f26a3c694041f7ded57a9b7189d391eb475af5c"
+    "9e1937e0bac7aa27e62851e498a01086c6cb2c27050fde9b552277537ceb7ebf"
 )
 JOURNAL_PATH = "session_journal/session_journal.jsonl"
 
