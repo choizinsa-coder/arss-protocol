@@ -59,7 +59,7 @@ FROZEN_HASHES = {
 # append-only이므로 전체 hash 고정 불가. last_entry_hash만 검증.
 # journal에 새 entry가 append되면 이 값도 함께 EAG 하 갱신 필요.
 FROZEN_JOURNAL_LAST_ENTRY_HASH = (
-    "9e1937e0bac7aa27e62851e498a01086c6cb2c27050fde9b552277537ceb7ebf"
+    "98082f44a0f776258053b772b346d9d140d0a934e2aed676b6c0324c09931649"
 )
 JOURNAL_PATH = "session_journal/session_journal.jsonl"
 

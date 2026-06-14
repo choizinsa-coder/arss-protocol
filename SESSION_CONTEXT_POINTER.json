@@ -1,10 +1,10 @@
 {
-  "current_session": 239,
+  "current_session": 244,
   "canonical_file": "SESSION_CONTEXT.json",
-  "final_file": "SESSION_CONTEXT_S239_FINAL.json",
-  "chain_tip": "7768ebc",
-  "prev_tip": "7768ebc",
-  "context_hash": "0f396b54ed19a32a70bec5fc789e4fd966e34a2ea3f2a6754d23df264637a68e",
-  "generated_at": "2026-06-13T03:50:00+09:00",
+  "final_file": "SESSION_CONTEXT_S244_FINAL.json",
+  "chain_tip": "PENDING_COMMIT",
+  "prev_tip": "cfc1f74",
+  "context_hash": "d785af8c7c429b399a4e964d1fd2295e61494d51341edef1a61a23d9ffbee79b",
+  "generated_at": "2026-06-14T08:17:22.725509+00:00",
   "schema_version": "4.0"
 }

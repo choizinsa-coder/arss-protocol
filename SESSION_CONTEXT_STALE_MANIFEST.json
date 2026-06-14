@@ -1,17 +1,6 @@
 {
-  "session_count": 235,
-  "context_hash": "f422f4e1280b39c84537cd557aa85684161d673be0c0c24343ebeb0426993572",
-  "updated_at": "2026-06-12T18:48:07.820576+09:00",
-  "status": "FRESH",
-  "last_updated_session": 239,
-  "last_updated_at": "2026-06-12T10:44:09+09:00",
-  "stale_files": [
-    "SESSION_CONTEXT_S232_FINAL.json",
-    {
-      "file": "SESSION_CONTEXT_S237_FINAL.json",
-      "stale_since_session": 238
-    }
-  ],
-  "last_updated": "2026-06-13T03:50:00+09:00",
-  "active_final": "SESSION_CONTEXT_S238_FINAL.json"
+  "session_count": 244,
+  "context_hash": "d785af8c7c429b399a4e964d1fd2295e61494d51341edef1a61a23d9ffbee79b",
+  "updated_at": "2026-06-14T08:17:22.725509+00:00",
+  "status": "FRESH"
 }
