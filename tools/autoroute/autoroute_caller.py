@@ -177,6 +177,127 @@ def route(session: int, prompt: str, context: str = "", route_seq: int = 1) -> d
     return {"status": "OK", "detail": detail, "counter": counter}
 
 
+
+# ──────────────────────────────────────────────
+# BidirRouter 확장 — EAG-S247-G2-BIDIR-002
+# ──────────────────────────────────────────────
+
+BIDIR_WEBHOOK_URL = "http://127.0.0.1:5678/webhook/DEP-G2-003-BidirRouter"
+BIDIR_WF_ID       = "dq7ub7AVYZULm3c1"
+
+
+def bidir_counter_path(session: int) -> Path:
+    return RUNTIME_DIR / f"autoroute_bidir_counter_S{session}.json"
+
+
+def load_bidir_counter(session: int) -> dict:
+    p = bidir_counter_path(session)
+    if not p.exists():
+        return {"session_id": f"S{session}", "success_count": 0, "error_count": 0, "schema": SCHEMA}
+    with open(p, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_bidir_counter(session: int, counter: dict) -> None:
+    RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+    with open(bidir_counter_path(session), "w", encoding="utf-8") as f:
+        json.dump(counter, f, ensure_ascii=False, indent=2)
+
+
+def deactivate_bidir(key: str) -> bool:
+    """BidirRouter WF 비활성화 (BIDIR_WF_ID 대상)."""
+    try:
+        req = urllib.request.Request(
+            f"{N8N_API_BASE}/workflows/{BIDIR_WF_ID}/deactivate",
+            data=b"", headers={"X-N8N-API-KEY": key, "Content-Type": "application/json"}, method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode())
+        return not result.get("active", True)
+    except Exception as e:
+        print(f"[BIDIR-DEACTIVATE-FAIL] {e}", file=sys.stderr)
+        return False
+
+
+def route_bidir(session: int, prompt: str, context: str = "", route_seq: int = 1) -> dict:
+    """
+    BidirRouter 호출 래퍼 (제니→도미→제니 2단계).
+    Returns: {status, detail, stage, redesigned, counter}
+    status: OK | BLOCKED_MAX_CALLS | ERROR | DEACTIVATED | WORM_HARD_STOP
+    """
+    counter = load_bidir_counter(session)
+    total = counter["success_count"] + counter["error_count"]
+    route_id = f"BR-S{session}-{route_seq:03d}"
+
+    # ── 가드 B-3: 3회 초과 사전 차단 ──
+    if total >= MAX_CALLS_PER_SESSION:
+        return {"status": "BLOCKED_MAX_CALLS", "detail": f"session calls {total} >= {MAX_CALLS_PER_SESSION}",
+                "stage": None, "redesigned": None, "counter": counter}
+
+    # ── 호출 실행 ──
+    jeni_ok = False
+    error_occurred = False
+    detail = ""
+    stage = None
+    redesigned = None
+    try:
+        body = json.dumps({"prompt": prompt, "context": context, "session_id": str(session)}).encode()
+        req = urllib.request.Request(BIDIR_WEBHOOK_URL, data=body,
+                                     headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=CALL_TIMEOUT) as resp:
+            rb = resp.read().decode()
+            if resp.status == 200 and rb:
+                try:
+                    parsed = json.loads(rb)
+                    jeni_ok = bool(parsed.get("ok", False))
+                    detail = parsed.get("text", "")[:120]
+                    stage = parsed.get("stage")
+                    redesigned = parsed.get("redesigned")
+                except json.JSONDecodeError:
+                    jeni_ok = False
+                    detail = "non-json response"
+            else:
+                detail = f"HTTP {resp.status} len={len(rb)}"
+    except Exception as e:
+        error_occurred = True
+        detail = f"exception: {e}"
+
+    if not jeni_ok:
+        error_occurred = True
+
+    # ── 카운터 갱신 ──
+    if jeni_ok and not error_occurred:
+        counter["success_count"] += 1
+    else:
+        counter["error_count"] += 1
+    save_bidir_counter(session, counter)
+
+    # ── AUTO_ROUTE WORM 기록 (stage 정보를 prompt_summary에 포함) ──
+    stage_info = f"[stage={stage},redesigned={redesigned}]"
+    prompt_with_stage = f"{prompt[:60]} {stage_info}"
+    worm_ok = record_auto_route(session, route_id, prompt_with_stage, jeni_ok, error_occurred)
+    if not worm_ok:
+        record_incident(session, f"INC-S{session}-BR-WORM", "BIDIRROUTE_WORM_FAIL",
+                        f"BIDIR_ROUTE WORM 기록 실패 route_id={route_id}. fail-closed 라우팅 중단.")
+        key = load_api_key()
+        deactivate_bidir(key)
+        return {"status": "WORM_HARD_STOP", "detail": "WORM record failed → deactivated",
+                "stage": stage, "redesigned": redesigned, "counter": counter}
+
+    # ── 가드 B-2: error 누적 2회 → deactivate ──
+    if counter["error_count"] >= MAX_ERRORS:
+        key = load_api_key()
+        deact = deactivate_bidir(key)
+        record_incident(session, f"INC-S{session}-BR-B2", "BIDIRROUTE_ERROR_LIMIT",
+                        f"error_count={counter['error_count']} >= {MAX_ERRORS}. BidirRouter deactivate={deact}. 재활성화는 비오님 EAG.")
+        return {"status": "DEACTIVATED", "detail": f"error limit reached, deactivated={deact}",
+                "stage": stage, "redesigned": redesigned, "counter": counter}
+
+    if error_occurred:
+        return {"status": "ERROR", "detail": detail, "stage": stage, "redesigned": redesigned, "counter": counter}
+    return {"status": "OK", "detail": detail, "stage": stage, "redesigned": redesigned, "counter": counter}
+
+
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser(description="AutoRouter caller wrapper")
