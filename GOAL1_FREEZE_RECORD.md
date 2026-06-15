@@ -107,3 +107,17 @@
 4. 적용 전후 freeze 재현 테스트 결과 첨부 의무
 
 **재발 방지 (절차 규칙):** 세션 클로즈 시 journal append 발생 시 `FROZEN_JOURNAL_LAST_ENTRY_HASH` 갱신을 EAG 게이트로 처리한다. 자동 동기화는 도입하지 않는다(변조 시 guard가 변조값을 새 기준으로 흡수하여 탐지 불능이 되므로).
+
+
+## Freeze Registry Update Log — S251 (EAG-S251-GOVDOC-PROTECT-001)
+- 일자: 2026-06-15
+- DEP: DEP-S251-GOVDOC-PROTECT-001
+- 변경: FROZEN_HASHES 거버넌스 문서 5종 추가
+  - docs/AIBA_Constitution_v2.0_FINAL.md = 95cf76d07db526f6c7a8296a0f7ebd49857b5bcb20c6f30687cb2f574505b572
+  - docs/retention_policy_v1.0.md = 25a5dcc2a376b70477e787e9da2388f766ff524c1a83b0ef6b9b6a8be58d05e9
+  - docs/AES_v1.0.md = 54687b02873fcc22c500faf3cbde46daa6be273803c63ac01786e1b881bd2e17
+  - docs/AIBA_Direction_S215.md = 68de96fcd010b7f870811cca2895f67ff1a21e255f6d65110da2cae4aad1fc64
+  - docs/oauth_secrets_management.md = d158ba8fbcd743880f42155c9920d069032c2f4c176009a2268f4b1fa24d1f08
+- 원인: S250 헌법 무단 손상(미탐지) 재발방지 (제니 권고)
+- 거버넌스: 도미 [DESIGN] + 제니 2회 TRUST(T-2 해소). T-1 실시간탐지부재는 비오 EAG로 잔여리스크 수용·등재.
+- 자기해시 동반갱신: GOAL1_FREEZE_RECORD.md 094d8ccdd0f468dd4a37394303d84fa86925a25a6ab199daaf0d587a10e23cf2 -> (FROZEN_HASHES 반영)

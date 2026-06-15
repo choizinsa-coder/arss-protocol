@@ -41,13 +41,24 @@ FROZEN_HASHES = {
     "context/governance/rules.json":
         "c3229b840d7199fa6d2c2cddc1b4c10585b9911bb6a6d16d481adc9aa065c6a1",
     "GOAL1_FREEZE_RECORD.md":
-        "094d8ccdd0f468dd4a37394303d84fa86925a25a6ab199daaf0d587a10e23cf2",
+        "78b26b099c50bd71a889c024d511289c34aa1934e4d45ce302b53713109cb4a6",
     "tools/ledger/ledger_writer.py":
         "16ece7b4523e8a97b116c0888c4ce8401b31f61dffc169686a5b5b1b56adc168",
     "tools/ledger/ledger_verifier.py":
         "75363c2594c0c1fb3440cf480c777f317b0a1553489a776dd600b965a0eceaa4",
     "tools/ledger/observation_verifier.py":
         "f754137f761edd131921bc1c4c754ec5452d181e1dc92cbec2c2b12dfb3e228b",
+    # 거버넌스 문서 동결 (S251 EAG-S251-GOVDOC-PROTECT-001)
+    "docs/AIBA_Constitution_v2.0_FINAL.md":
+        "95cf76d07db526f6c7a8296a0f7ebd49857b5bcb20c6f30687cb2f574505b572",
+    "docs/retention_policy_v1.0.md":
+        "25a5dcc2a376b70477e787e9da2388f766ff524c1a83b0ef6b9b6a8be58d05e9",
+    "docs/AES_v1.0.md":
+        "54687b02873fcc22c500faf3cbde46daa6be273803c63ac01786e1b881bd2e17",
+    "docs/AIBA_Direction_S215.md":
+        "68de96fcd010b7f870811cca2895f67ff1a21e255f6d65110da2cae4aad1fc64",
+    "docs/oauth_secrets_management.md":
+        "d158ba8fbcd743880f42155c9920d069032c2f4c176009a2268f4b1fa24d1f08",
     # 조건부 동결 (버그픽스 EAG 하 허용 — hash 갱신 시 EAG 필수)
     "tools/guard/pointer_guard_s231.py":
         "3e25cf94bf0bf13635aa7f9675aafffb88927e6ecc5ccf3581e6639effd0c9c0",
