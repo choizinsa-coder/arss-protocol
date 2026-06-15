@@ -85,3 +85,25 @@
 - SESSION_CONTEXT_S238_FINAL.json (COMPLETE 선언 근거)
 - TA-S239-001 (제니 CRO Freeze 권고)
 - TA-S239-002 (제니 CRO Goal 2 오버엔지니어링 위험)
+
+---
+
+## Freeze Registry Update Log
+
+### Update 1 — S249 (Freeze Version G1-FRZ-001 유지)
+**승인 EAG:** ORD-S249-GOV-002 (비오 조건부 승인, S249)
+**근거 세션:** S248 (저널 freeze baseline 갱신 누락 운영사건)
+**체인:** 도미 DEP-S249-FREEZE-REGISTRY-UPDATE v3 설계 → 캐디 IMPLEMENTABLE=YES → 제니 TRUST_READY → 비오 EAG
+
+| 항목 | 변경 전 값 | 변경 후 값 | 원인 |
+|------|-----------|-----------|------|
+| `FROZEN_HASHES['tools/close/session_close_generator.py']` | `b2dbf9f85194e85ddbf0759f3f5304aebd98a02a570d08fecfde24c66042a0c1` | `6d4422c1d7dd77ad2f20de5109067d599b50ab398e9cd4eb19075c43058de028` | EAG-S249-TIERD-MIGRATE-001 승인 변경(Tier D 이관 메커니즘) 반영 — 조건부 동결 지문 정정 |
+| `FROZEN_JOURNAL_LAST_ENTRY_HASH` | `b304b503fa165bfafd824f9afa63a59643ad7d76d4f51b2a69fe660bc56fa3e6` (S246 INC-S246-AR-B2) | `8b9a2ecfa9c189918c2a16381dfc6e38504ec93d06b0045dacf0df7a6ad340fe` (S248 BR-S248-001) | S248 정상 append 후 baseline 갱신 누락 정정. 체인 무결성 정상(prev_hash 연결 확인), 변조 아님 |
+
+**부속 조건 (ORD-S249-GOV-002):**
+1. journal/freeze 값 자동 동기화 구현 금지 — 변조 탐지 메커니즘 보존
+2. EAG 승인 기반 수동 freeze 갱신만 허용
+3. Tier-D DEP(EAG-S249-TIERD-MIGRATE-001)와 별도 커밋 유지
+4. 적용 전후 freeze 재현 테스트 결과 첨부 의무
+
+**재발 방지 (절차 규칙):** 세션 클로즈 시 journal append 발생 시 `FROZEN_JOURNAL_LAST_ENTRY_HASH` 갱신을 EAG 게이트로 처리한다. 자동 동기화는 도입하지 않는다(변조 시 guard가 변조값을 새 기준으로 흡수하여 탐지 불능이 되므로).

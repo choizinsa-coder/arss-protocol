@@ -41,7 +41,7 @@ FROZEN_HASHES = {
     "context/governance/rules.json":
         "c3229b840d7199fa6d2c2cddc1b4c10585b9911bb6a6d16d481adc9aa065c6a1",
     "GOAL1_FREEZE_RECORD.md":
-        "4d97e2b5cacf0ade6ed99d7097927d6cd26177c819bf316924de2c3d0b740602",
+        "094d8ccdd0f468dd4a37394303d84fa86925a25a6ab199daaf0d587a10e23cf2",
     "tools/ledger/ledger_writer.py":
         "16ece7b4523e8a97b116c0888c4ce8401b31f61dffc169686a5b5b1b56adc168",
     "tools/ledger/ledger_verifier.py":
@@ -52,14 +52,14 @@ FROZEN_HASHES = {
     "tools/guard/pointer_guard_s231.py":
         "3e25cf94bf0bf13635aa7f9675aafffb88927e6ecc5ccf3581e6639effd0c9c0",
     "tools/close/session_close_generator.py":
-        "b2dbf9f85194e85ddbf0759f3f5304aebd98a02a570d08fecfde24c66042a0c1",
+        "6d4422c1d7dd77ad2f20de5109067d599b50ab398e9cd4eb19075c43058de028",
 }
 
 # ── WORM 특례: session_journal last_entry_hash 고정 (S239 기준) ─────────
 # append-only이므로 전체 hash 고정 불가. last_entry_hash만 검증.
 # journal에 새 entry가 append되면 이 값도 함께 EAG 하 갱신 필요.
 FROZEN_JOURNAL_LAST_ENTRY_HASH = (
-    "b304b503fa165bfafd824f9afa63a59643ad7d76d4f51b2a69fe660bc56fa3e6"
+    "8b9a2ecfa9c189918c2a16381dfc6e38504ec93d06b0045dacf0df7a6ad340fe"
 )
 JOURNAL_PATH = "session_journal/session_journal.jsonl"
 
