@@ -41,7 +41,7 @@ FROZEN_HASHES = {
     "context/governance/rules.json":
         "c3229b840d7199fa6d2c2cddc1b4c10585b9911bb6a6d16d481adc9aa065c6a1",
     "GOAL1_FREEZE_RECORD.md":
-        "78b26b099c50bd71a889c024d511289c34aa1934e4d45ce302b53713109cb4a6",
+        "d641082eaec8878aa0e568ceedf0df9c6c0b0e9a1411a69f3268a94ebc34c56f",
     "tools/ledger/ledger_writer.py":
         "16ece7b4523e8a97b116c0888c4ce8401b31f61dffc169686a5b5b1b56adc168",
     "tools/ledger/ledger_verifier.py":
@@ -62,6 +62,8 @@ FROZEN_HASHES = {
     # 조건부 동결 (버그픽스 EAG 하 허용 — hash 갱신 시 EAG 필수)
     "tools/guard/pointer_guard_s231.py":
         "3e25cf94bf0bf13635aa7f9675aafffb88927e6ecc5ccf3581e6639effd0c9c0",
+    "tools/guard/govdoc_freeze_gate.py":
+        "f339413646af55c344fd38910019cb583aaab40e33f302d5f4e2da55944e414c",
     "tools/close/session_close_generator.py":
         "856d0c4b66c86da74e1320d0b3cbb4b037dabf9b878786f4ba2e22673bd57988",
 }

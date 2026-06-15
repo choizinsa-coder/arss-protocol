@@ -121,3 +121,13 @@
 - 원인: S250 헌법 무단 손상(미탐지) 재발방지 (제니 권고)
 - 거버넌스: 도미 [DESIGN] + 제니 2회 TRUST(T-2 해소). T-1 실시간탐지부재는 비오 EAG로 잔여리스크 수용·등재.
 - 자기해시 동반갱신: GOAL1_FREEZE_RECORD.md 094d8ccdd0f468dd4a37394303d84fa86925a25a6ab199daaf0d587a10e23cf2 -> (FROZEN_HASHES 반영)
+
+## Freeze Registry Update Log - S251 Part 2 (EAG-S251-GOVDOC-PROTECT-001)
+- Date: 2026-06-15
+- DEP: DEP-S251-GOVDOC-PROTECT-001 Part 2 (boot/close freeze gate)
+- Change: add gate script to FROZEN_HASHES (guard-of-guard)
+  - tools/guard/govdoc_freeze_gate.py = f339413646af55c344fd38910019cb583aaab40e33f302d5f4e2da55944e414c
+- New file: tools/guard/govdoc_freeze_gate.py runs tests/test_goal1_freeze.py under ENV=test as a fast non-destructive blocking gate for boot/close. Non-zero exit => REPORT and WAIT.
+- Governance: Domi DESIGN + Caddy IMPLEMENTABLE + Jeni 2x TRUST (T-1 gate-freeze accepted, T-3 close no-code agreed). T-2 boot prompt-adoption dependency accepted by Beo EAG as residual bounded by close full-pytest backstop (<=1 session) -> OI-S251-T2-RESIDUAL.
+- Boot adoption recommended: add a SESSION BOOT step running govdoc_freeze_gate.py; non-zero => REPORT and WAIT (prompt adoption is Beo authority).
+- Self-hash co-update: GOAL1_FREEZE_RECORD.md 78b26b09 -> reflected in FROZEN_HASHES
