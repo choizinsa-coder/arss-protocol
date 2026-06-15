@@ -32,6 +32,13 @@ KST = timezone(timedelta(hours=9))
 
 APPROVAL_ID_PATTERN = re.compile(r'^EAG-S\d+-[A-Z0-9][A-Z0-9-]*[A-Z0-9]?$')
 
+# ── DEP-S249-TIERD-MIGRATE-001 (목표 ③) ──────────────────────────
+# 정착조건(a): 이관 대상 = caddy_governance_record_s* / visibility_metrics_s*
+#              AND 세션번호 < (n - N_RETENTION + 1)
+# 범위 격리: goal2_*, 구조 키, system_changes(GOV-003)는 비대상.
+N_RETENTION = 10
+_RECORD_KEY_RE = re.compile(r'^(caddy_governance_record_s|visibility_metrics_s)(\d+)$')
+
 # delta-json 필수 키 9개 스펙 (비오님 확정)
 DELTA_REQUIRED_KEYS = {
     'session_reentry':         dict,
@@ -70,13 +77,43 @@ def _validate_approval_id(approval_id: str) -> bool:
 
 
 def _rollback(generated_files: list) -> None:
-    """이번 실행 신규 생성 파일만 삭제"""
+    """이번 실행 신규 생성 파일만 삭제.
+    주의: Tier D archive 파일은 이관 데이터를 보유하므로 이 목록에 넣지 않는다(손실 방지)."""
     for fp in generated_files:
         try:
             Path(fp).unlink(missing_ok=True)
             print(f'[ROLLBACK] 삭제: {Path(fp).name}')
         except Exception as e:
             print(f'[ROLLBACK-WARN] 삭제 실패: {Path(fp).name} — {e}')
+
+
+def identify_archive_candidates(sc: dict, n: int, N: int = N_RETENTION) -> dict:
+    """[③ 1단계] 비파괴 식별: aged record 키를 {key: value}로 반환. sc 미변경.
+    정착조건(a): 패턴(caddy_governance_record_s*/visibility_metrics_s*) AND 세션 < (n-N+1)."""
+    threshold = n - N + 1
+    candidates = {}
+    for k, v in sc.items():
+        m = _RECORD_KEY_RE.match(k)
+        if m and int(m.group(2)) < threshold:
+            candidates[k] = v
+    return candidates
+
+
+def verify_archive_integrity(archive_path: Path, candidates: dict) -> bool:
+    """[③ 2단계] 무결성 검증: 기록된 archive 파일을 다시 읽어
+    data에 모든 candidate 키가 보존됐는지 확인. 정착조건(b) 역조회 소스 = data."""
+    try:
+        with open(archive_path, encoding='utf-8') as f:
+            written = json.load(f)
+    except Exception as e:
+        print(f'[INTEGRITY-FAIL] archive 재읽기 오류: {e}')
+        return False
+    data = written.get('data', {})
+    for k, v in candidates.items():
+        if k not in data or data[k] != v:
+            print(f'[INTEGRITY-FAIL] 키 누락/불일치: {k}')
+            return False
+    return True
 
 
 # ── 단계별 처리 함수 ─────────────────────────────────────────────
@@ -120,8 +157,9 @@ def load_prev_final(n: int) -> dict:
 
 
 def apply_delta(sc: dict, n: int, chain_tip: str, prev_tip: str,
-                delta: dict) -> dict:
-    """단계 3~4: delta 적용 + context_hash 계산"""
+                delta: dict):
+    """단계 3~4: delta 적용 + [③] aged record 키 비파괴 식별.
+    반환: (sc, archive_candidates). context_hash는 main()에서 조건부 pop 이후 산출."""
     now = _now()
 
     sc['session_count'] = n
@@ -139,16 +177,19 @@ def apply_delta(sc: dict, n: int, chain_tip: str, prev_tip: str,
     sc['session_delta']                     = delta['session_delta']
     sc['sync_meta']                         = delta['sync_meta']
 
-    # GOV-003: system_changes_s{N-4} 키 제거 (ceiling 42 유지)
+    # GOV-003: system_changes_s{N-4} 키 제거 (ceiling 42 유지) — ③ 범위 외, 기존 유지
     sc.pop(f'system_changes_s{n - 4}', None)
 
-    # context_hash 계산 — ensure_ascii=False SSOT
-    sc['context_hash'] = _context_hash(sc)
-    return sc
+    # [③ 1단계] aged record 키 비파괴 식별 (제거는 main()에서 archive 성공 후)
+    archive_candidates = identify_archive_candidates(sc, n)
+
+    # context_hash는 여기서 산출하지 않음 — 조건부 pop 이후 최종 sc 기준 main()에서 1회 산출
+    return sc, archive_candidates
 
 
-def build_archive(n: int) -> dict:
-    """단계 6용: ARCHIVE 구조 생성"""
+def build_archive(n: int, archive_candidates: dict) -> dict:
+    """단계 6용: ARCHIVE 구조 생성 + [③] aged record 키 무손실 기록.
+    migrated_keys_count / total_tier_d_keys 실효화."""
     prev_archive_path = ROOT / f'SESSION_CONTEXT_ARCHIVE_TIER_D_S{n - 1}.json'
     try:
         with open(prev_archive_path, encoding='utf-8') as f:
@@ -161,15 +202,17 @@ def build_archive(n: int) -> dict:
         print(f'[FAIL] S{n - 1} ARCHIVE JSON decode 실패: {e}')
         sys.exit(1)
 
+    migrated = len(archive_candidates)
     return {
         '_archive_meta': {
             'archive_session':    n,
             'archive_date':       _today(),
             'base_archive':       f'SESSION_CONTEXT_ARCHIVE_TIER_D_S{n - 1}.json',
-            'tier_d_change':      '변동 없음',
-            'migrated_keys_count': 0,
-            'total_tier_d_keys':  total_tier_d,
-        }
+            'tier_d_change':      f'+{migrated} keys migrated' if migrated else '변동 없음',
+            'migrated_keys_count': migrated,
+            'total_tier_d_keys':  total_tier_d + migrated,
+        },
+        'data': archive_candidates,   # [③] 정착조건(b) 역조회 소스
     }
 
 
@@ -277,33 +320,71 @@ def main() -> None:
     # ── 단계 2: S{N-1}_FINAL 로드
     sc = load_prev_final(n)
 
-    # ── 단계 3~4: delta 적용 + context_hash 계산
-    sc = apply_delta(sc, n, chain_tip, prev_tip, delta)
-    computed_hash = sc['context_hash']
+    # ── 단계 3~4: delta 적용 + [③] aged 키 비파괴 식별
+    sc, archive_candidates = apply_delta(sc, n, chain_tip, prev_tip, delta)
 
     # ── dry-run: 파일 write 전면 금지 — 경로·payload 출력 후 종료
     if args.dry_run:
+        # 이관 성공을 가정한 최종 sc로 시뮬레이션 hash 산출
+        sc_sim = dict(sc)
+        for k in archive_candidates:
+            sc_sim.pop(k, None)
+        sim_hash = _context_hash(sc_sim)
         print(f'[DRY-RUN] 산출 예정: SESSION_CONTEXT_S{n}_FINAL.json')
         print(f'[DRY-RUN]   session_count  = {n}')
         print(f'[DRY-RUN]   chain_tip      = {chain_tip}')
-        print(f'[DRY-RUN]   context_hash   = {computed_hash}')
-        print(f'[DRY-RUN] 산출 예정: SESSION_CONTEXT_ARCHIVE_TIER_D_S{n}.json')
+        print(f'[DRY-RUN]   context_hash   = {sim_hash} (이관 반영 시뮬레이션)')
+        print(f'[DRY-RUN] [③] Tier D 이관 대상 aged record 키 = {len(archive_candidates)}개 '
+              f'(보존 윈도우 N={N_RETENTION})')
+        print(f'[DRY-RUN] 산출 예정: SESSION_CONTEXT_ARCHIVE_TIER_D_S{n}.json '
+              f'(data: {len(archive_candidates)} keys)')
         print(f'[DRY-RUN] 산출 예정: SESSION_CONTEXT.json (canonical overwrite)')
         print(f'[DRY-RUN] 산출 예정: SESSION_CONTEXT_POINTER.json')
         print(f'[DRY-RUN]   current_session = {n}')
         print(f'[DRY-RUN] 산출 예정: SESSION_CONTEXT_STALE_MANIFEST.json')
+        print(f'[DRY-RUN] 원자 순서: archive 기록+검증 성공 시에만 active pop')
         print(f'[DRY-RUN] 3-way verify: SKIP (파일 미생성 — 운영 실행 시 수행)')
         sys.exit(0)
 
-    # ── 운영 실행: approval-id 형식 검증 (단계 7·8·9 진입 전 gate)
+    # ── 운영 실행: approval-id 형식 검증 (write 진입 전 gate)
     if not args.approval_id or not _validate_approval_id(args.approval_id):
         print('[FAIL] --approval-id 미제공 또는 형식 불일치 '
               '(예: EAG-S231-CLOSE-GENERATOR-001)')
         sys.exit(1)
 
-    generated_files: list = []
+    generated_files: list = []   # 주의: archive 파일은 손실 방지 위해 미포함
 
-    # ── 단계 5: SESSION_CONTEXT_S{N}_FINAL.json 저장
+    # ── [③ 원자 순서] 단계 6: archive 기록 + 무결성 검증을 active pop보다 선행
+    archive_path = ROOT / f'SESSION_CONTEXT_ARCHIVE_TIER_D_S{n}.json'
+    try:
+        archive = build_archive(n, archive_candidates)
+        with open(archive_path, 'w', encoding='utf-8') as f:
+            json.dump(archive, f, ensure_ascii=False, indent=2)
+        print(f'[OK] SESSION_CONTEXT_ARCHIVE_TIER_D_S{n}.json '
+              f'({archive_path.stat().st_size} bytes, data {len(archive_candidates)} keys)')
+    except SystemExit:
+        raise
+    except Exception as e:
+        print(f'[FAIL] ARCHIVE 기록 실패: {e}')
+        sys.exit(1)
+
+    # 무결성 검증 — 실패 시 FAIL_CLOSED (pop 미수행, 손실 0)
+    if not verify_archive_integrity(archive_path, archive_candidates):
+        archive_path.unlink(missing_ok=True)   # 불량 archive 제거 (키는 active sc에 잔존)
+        print('[FAIL] archive 무결성 검증 실패 — pop 미수행, 데이터 손실 0. 중단(FAIL_CLOSED).')
+        sys.exit(1)
+
+    # ── [③] archive 기록+검증 성공 → 이때만 active pop 확정 (정착조건 c)
+    for k in archive_candidates:
+        sc.pop(k, None)
+    migrated = len(archive_candidates)
+    print(f'[OK] [③] active pop 확정 — migrated {migrated} keys (보존 윈도우 N={N_RETENTION})')
+
+    # ── [③] 최종 sc(이관 반영) 기준 context_hash 1회 산출
+    sc['context_hash'] = _context_hash(sc)
+    computed_hash = sc['context_hash']
+
+    # ── 단계 5: SESSION_CONTEXT_S{N}_FINAL.json 저장 (이관 반영 sc)
     sc_final_path = ROOT / f'SESSION_CONTEXT_S{n}_FINAL.json'
     try:
         with open(sc_final_path, 'w', encoding='utf-8') as f:
@@ -313,23 +394,6 @@ def main() -> None:
               f'({sc_final_path.stat().st_size} bytes)')
     except Exception as e:
         print(f'[FAIL] SC_FINAL 저장 실패: {e}')
-        sys.exit(1)
-
-    # ── 단계 6: SESSION_CONTEXT_ARCHIVE_TIER_D_S{N}.json 생성
-    archive_path = ROOT / f'SESSION_CONTEXT_ARCHIVE_TIER_D_S{n}.json'
-    try:
-        archive = build_archive(n)
-        with open(archive_path, 'w', encoding='utf-8') as f:
-            json.dump(archive, f, ensure_ascii=False, indent=2)
-        generated_files.append(archive_path)
-        print(f'[OK] SESSION_CONTEXT_ARCHIVE_TIER_D_S{n}.json '
-              f'({archive_path.stat().st_size} bytes)')
-    except SystemExit:
-        _rollback(generated_files)
-        raise
-    except Exception as e:
-        _rollback(generated_files)
-        print(f'[FAIL] ARCHIVE 생성 실패: {e}')
         sys.exit(1)
 
     # ── 단계 7: SESSION_CONTEXT.json canonical overwrite
