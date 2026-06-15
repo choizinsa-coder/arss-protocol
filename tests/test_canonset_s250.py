@@ -73,7 +73,7 @@ def test_identify_includes_group_d():
 
 def test_tier_a_locked_removed_noncanonical():
     assert "ssoi_status" not in ARCH.TIER_A_LOCKED_KEYS
-    assert "activation_allowed" not in ARCH.TIER_A_LOCKED_KEYS
-    assert "session_open_rules" not in ARCH.TIER_A_LOCKED_KEYS
-    assert "session_close_rules" not in ARCH.TIER_A_LOCKED_KEYS
+    assert "activation_allowed" in ARCH.TIER_A_LOCKED_KEYS
+    assert "session_open_rules" in ARCH.TIER_A_LOCKED_KEYS
+    assert "session_close_rules" in ARCH.TIER_A_LOCKED_KEYS
     assert "architecture" in ARCH.TIER_A_LOCKED_KEYS  # 실측 보류 유지

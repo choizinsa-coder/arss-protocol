@@ -53,6 +53,9 @@ TIER_A_LOCKED_KEYS = {
     "chain",
     "canonical_rules",
     "lessons",
+    "activation_allowed",
+    "session_open_rules",
+    "session_close_rules",
 }
 
 # T2 WARN 판단 기준 필드 (stale_state_detector 연동)
