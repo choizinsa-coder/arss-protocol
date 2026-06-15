@@ -94,12 +94,12 @@ def test_o2_complexity_ceiling_tracking(live_data):
     """
     top-level key 수 Complexity Ceiling(42) 추적.
     """
-    from session_context_archive import _check_complexity_ceiling, TIER_D_ELIGIBLE_STATUSES
+    from session_context_archive import _check_complexity_ceiling, canonical_key_count, TIER_D_ELIGIBLE_STATUSES
 
-    key_count = len(live_data.keys())
+    key_count = canonical_key_count(live_data)
     ceiling_result = _check_complexity_ceiling(live_data)
 
-    print(f"\nCurrent top-level key count: {key_count} / ceiling: 42")
+    print(f"\nCanonical key count: {key_count} / ceiling: 42")
     print(f"Ceiling status: {ceiling_result['status']}")
     if ceiling_result.get("action_required"):
         print(f"Action required: {ceiling_result['action_required']}")

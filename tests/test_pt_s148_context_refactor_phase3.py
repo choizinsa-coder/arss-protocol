@@ -153,12 +153,9 @@ def test_t12_session_context_pointer_structure():
         assert "body_ref" in entry, f"{key}: body_ref 없음"
         assert "_shard_hash" in entry, f"{key}: _shard_hash 없음"
 
-    # visibility_metrics_current: Tier D 포인터 구조 검증
-    # S166 이후 visibility_metrics_current가 Tier D 포인터로 전환됨
-    vm = sc.get("visibility_metrics_current")
-    assert vm is not None, "visibility_metrics_current 필드 없음"
-    assert isinstance(vm, dict), "visibility_metrics_current는 dict여야 함"
-    assert vm.get("quarantine_status") == "TIER_D", \
-        f"visibility_metrics_current quarantine_status 불일치: {vm.get('quarantine_status')}"
-    assert "archive_ref" in vm, \
-        "visibility_metrics_current archive_ref 누락"
+    # visibility_metrics_current: migrated to Tier D by S250 R2
+    # (EAG-S250-CANONSET-001 GROUP_D_MIGRATE_WHITELIST). Absence from active SC is the binding contract.
+    # Aligned in S251 (EAG-S251-SC-GOVFIX-001).
+    assert "visibility_metrics_current" not in sc, (
+        "visibility_metrics_current must be absent from active SC (S250 Tier D migration contract)"
+    )
