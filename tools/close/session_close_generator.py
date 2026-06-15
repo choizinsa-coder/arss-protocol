@@ -39,6 +39,20 @@ APPROVAL_ID_PATTERN = re.compile(r'^EAG-S\d+-[A-Z0-9][A-Z0-9-]*[A-Z0-9]?$')
 N_RETENTION = 10
 _RECORD_KEY_RE = re.compile(r'^(caddy_governance_record_s|visibility_metrics_s)(\d+)$')
 
+# DEP-S250-CANONSET-001 R2: group D 구조 키 강제 이관 화이트리스트 (1회성)
+#   goal2_progress는 갱신 진행 위험 키로 active 유지(비대상).
+GROUP_D_MIGRATE_WHITELIST = frozenset({
+    'goal2_declaration', 'goal2_governance_rule',
+    'visibility_metrics_current', 'on_the_horizon',
+})
+
+# DEP-S250-CANONSET-001 R3: canonical 카운트 제외(기계 9키) — 천장 게이트용
+CANONICAL_EXCLUDE_KEYS = frozenset({
+    'session_count', 'chain', 'session_delta', 'updated_at', 'generated_at',
+    'context_hash', 'schema_version', 'sync_meta', 'pytest_status',
+})
+CEILING_LIMIT = 42
+
 # delta-json 필수 키 9개 스펙 (비오님 확정)
 DELTA_REQUIRED_KEYS = {
     'session_reentry':         dict,
@@ -95,6 +109,9 @@ def identify_archive_candidates(sc: dict, n: int, N: int = N_RETENTION) -> dict:
     for k, v in sc.items():
         m = _RECORD_KEY_RE.match(k)
         if m and int(m.group(2)) < threshold:
+            candidates[k] = v
+        elif k in GROUP_D_MIGRATE_WHITELIST:
+            # [S250 R2] group D 구조 키 1회성 강제 이관 (atomic_order 동일 적용)
             candidates[k] = v
     return candidates
 
@@ -306,6 +323,8 @@ def main() -> None:
                         help='파일 write 없이 산출 예정 경로·payload 출력만')
     parser.add_argument('--approval-id', default='',
                         help='EAG approval ID (운영 실행 시 필수)')
+    parser.add_argument('--ceiling-override', action='store_true',
+                        help='[S250 R4] EAG 우회 — canonical 천장 초과 시 HARD_STOP 강등')
     args = parser.parse_args()
 
     os.umask(0o027)  # S243: arss 640 보안 정책
@@ -379,6 +398,17 @@ def main() -> None:
         sc.pop(k, None)
     migrated = len(archive_candidates)
     print(f'[OK] [③] active pop 확정 — migrated {migrated} keys (보존 윈도우 N={N_RETENTION})')
+
+    # ── [S250 R4] canonical 천장 게이트 (제외 9키 적용 카운트). pop 이후 최종 sc 기준.
+    canon = len([k for k in sc.keys() if k not in CANONICAL_EXCLUDE_KEYS])
+    if canon > CEILING_LIMIT and not args.ceiling_override:
+        print(f'[FAIL] canonical key {canon} > 천장 {CEILING_LIMIT}. '
+               f'EAG 우회(--ceiling-override) 없이 클로즈 중단(HARD_STOP). 데이터 손실 0.')
+        sys.exit(1)
+    elif canon >= 41:
+        print(f'[SYSTEM_REVIEW] canonical key {canon} — 천장 임박. 검토 권고.')
+    else:
+        print(f'[OK] canonical key {canon} <= 천장 {CEILING_LIMIT} (여유 {CEILING_LIMIT - canon}).')
 
     # ── [③] 최종 sc(이관 반영) 기준 context_hash 1회 산출
     sc['context_hash'] = _context_hash(sc)

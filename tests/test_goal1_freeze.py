@@ -52,7 +52,7 @@ FROZEN_HASHES = {
     "tools/guard/pointer_guard_s231.py":
         "3e25cf94bf0bf13635aa7f9675aafffb88927e6ecc5ccf3581e6639effd0c9c0",
     "tools/close/session_close_generator.py":
-        "6d4422c1d7dd77ad2f20de5109067d599b50ab398e9cd4eb19075c43058de028",
+        "856d0c4b66c86da74e1320d0b3cbb4b037dabf9b878786f4ba2e22673bd57988",
 }
 
 # ── WORM 특례: session_journal last_entry_hash 고정 (S239 기준) ─────────

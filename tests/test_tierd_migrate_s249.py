@@ -20,7 +20,8 @@ _spec.loader.exec_module(scg)
 def _mock_sc(low=215, high=249):
     sc = {
         'session_count': high,
-        'goal2_declaration': {'status': 'DECLARED'},     # 비대상(②범위)
+        'goal2_declaration': {'status': 'DECLARED'},     # S250 group D 화이트리스트 → 이관 대상
+        'goal2_progress': {'status': 'IN_PROGRESS'},      # S250 위험 키 → active 유지(비대상)
         'system_changes_s248': {'commits': ['x']},        # 비대상(GOV-003)
     }
     for s in range(low, high + 1):
@@ -37,7 +38,10 @@ def _record_count(sc):
 def test_identify_predicate_boundary():
     sc = _mock_sc()
     cands = scg.identify_archive_candidates(sc, 249)        # threshold=240
-    assert len(cands) == 50                                  # s215..s239 ×2
+    record_cands = [k for k in cands if scg._RECORD_KEY_RE.match(k)]
+    assert len(record_cands) == 50                           # s215..s239 ×2 (record 경계 불변)
+    assert 'goal2_declaration' in cands                      # S250 group D 화이트리스트 이관
+    assert len(cands) == 51                                  # record 50 + group D 1
     assert 'caddy_governance_record_s239' in cands           # aged
     assert 'caddy_governance_record_s240' not in cands       # 경계 유지
     assert 'visibility_metrics_s249' not in cands            # 최신 유지
@@ -46,8 +50,11 @@ def test_identify_predicate_boundary():
 def test_identify_excludes_nontargets():
     sc = _mock_sc()
     cands = scg.identify_archive_candidates(sc, 249)
-    assert not any('goal2' in k for k in cands)
-    assert not any('system_changes' in k for k in cands)
+    # S250(EAG-S250-CANONSET-001): group D 화이트리스트(goal2_declaration)는 이관 대상.
+    # 위험 키 goal2_progress와 구조 키 system_changes는 여전히 비대상(안전 단언 강화).
+    assert 'goal2_progress' not in cands                     # 위험 키 active 유지
+    assert not any('system_changes' in k for k in cands)     # GOV-003 비대상
+    assert 'goal2_declaration' in cands                      # 화이트리스트 이관
 
 
 def test_identify_nondestructive():

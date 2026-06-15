@@ -40,16 +40,17 @@ REQUIRED_ARCHIVE_FIELDS = [
 TIER_D_ELIGIBLE_STATUSES = {"CLOSED", "CANCELED", "SUPERSEDED", "COMPLETED"}
 
 # Tier A LOCKED 집합 — 절대 archive 이동 금지
+# DEP-S250-CANONSET-001 R5: 비canonical 4키 제거
+#   ssoi_status      — EAG-4(S123) 의도 제거 (SESSION_CONTEXT 구조 불일치)
+#   activation_allowed / session_open_rules / session_close_rules
+#                    — SESSION_STATE_RUNTIME / SESSION_BOOT 형제 파일 소속(canonical 아님)
+#   architecture     — 실측 보류로 유지 (S250 [SELF-CRITIQUE])
 TIER_A_LOCKED_KEYS = {
-    "activation_allowed",
     "architecture",
     "session_count",
     "session_delta",
-    "session_open_rules",
-    "session_close_rules",
     "session_reentry",
     "chain",
-    "ssoi_status",
     "canonical_rules",
     "lessons",
 }
@@ -183,26 +184,44 @@ def _evaluate_tier_d_eligibility(
     return eligible, ineligible
 
 
-def _check_complexity_ceiling(session_context: dict) -> dict:
+# DEP-S250-CANONSET-001 R3: canonical 카운트 제외 집합 (기계 9키, 동결 정의)
+#   ②DEP 인터페이스(R6): 이 집합 + canonical_key_count() 시그니처가 후속 DEP 산출물.
+CANONICAL_EXCLUDE_KEYS = frozenset({
+    "session_count", "chain", "session_delta", "updated_at", "generated_at",
+    "context_hash", "schema_version", "sync_meta", "pytest_status",
+})
+
+
+def canonical_key_count(session_context: dict) -> int:
+    """R3: 기계 키 제외 canonical 카운트. (내용 키 next_steps/agent_focus/session_reentry는 포함)"""
+    return len([k for k in session_context.keys() if k not in CANONICAL_EXCLUDE_KEYS])
+
+
+def _check_complexity_ceiling(session_context: dict, override_approved: bool = False) -> dict:
     """
-    Complexity Ceiling 평가.
-    41~42개: SYSTEM REVIEW REQUIRED (즉시 FAIL 아님)
-    43개 이상: HARD STOP
+    Complexity Ceiling 평가 (DEP-S250-CANONSET-001).
+    카운트 = canonical_key_count (기계 9키 제외).
+    <=40: OK / 41~42: SYSTEM REVIEW REQUIRED / >42: HARD STOP
+    override_approved=True(EAG 우회): >42여도 HARD_STOP 대신 SYSTEM_REVIEW로 강등(R4).
     """
-    top_level_keys = len(session_context.keys())
+    key_count = canonical_key_count(session_context)
     result = {
-        "key_count": top_level_keys,
+        "key_count": key_count,
         "ceiling_limit": 42,
         "status": "OK",
         "action_required": None,
     }
 
-    if top_level_keys > 42:
-        result["status"] = "HARD_STOP"
-        result["action_required"] = f"top-level key {top_level_keys}개 — Ceiling 초과. 즉시 중단 필요."
-    elif top_level_keys >= 41:
+    if key_count > 42:
+        if override_approved:
+            result["status"] = "SYSTEM_REVIEW_REQUIRED"
+            result["action_required"] = f"canonical key {key_count}개 — Ceiling 초과(EAG 우회 승인). SYSTEM REVIEW."
+        else:
+            result["status"] = "HARD_STOP"
+            result["action_required"] = f"canonical key {key_count}개 — Ceiling 초과. 즉시 중단 필요."
+    elif key_count >= 41:
         result["status"] = "SYSTEM_REVIEW_REQUIRED"
-        result["action_required"] = f"top-level key {top_level_keys}개 — Ceiling 임박. SYSTEM REVIEW REQUIRED."
+        result["action_required"] = f"canonical key {key_count}개 — Ceiling 임박. SYSTEM REVIEW REQUIRED."
 
     return result
 
