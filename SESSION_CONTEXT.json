@@ -1,46 +1,47 @@
 {
-  "session_count": 250,
+  "session_count": 251,
   "chain": {
-    "session": 250,
-    "prev_tip": "215f4d8",
-    "tip": "241175d"
+    "session": 251,
+    "prev_tip": "241175d",
+    "tip": "a9e25ae"
   },
   "session_reentry": {
-    "last_session": 250,
-    "resume_point": "S250: canonical-set 정식 정의+천장 게이트(42)+group D 이관 DEP 완주(EAG-S250-CANONSET-001, commit 1f5c697). 배포 오염 INC-S250-001 자각·격리 재커밋. 헌법 무단 손상 발견→복구(EAG-S250-CONST-RESTORE-001, 제니 재감사 TRUST_READY). 클로즈 중 전체 pytest 회귀 1건 발견→TIER_A 보호집합 3키 복원 정정 DEP 완주(EAG-S250-TIERA-FIX-001, commit 241175d). pytest 1650/0/94.",
-    "eag_carryover": "헌법 손상 경위 조사(미커밋 편집, git 시점 특정 불가) + 헌법 손상 재발방지 통제 DEP / canonical-set ② CANONICAL_EXCLUDE_KEYS+canonical_key_count 인터페이스 후속 DEP(R6 산출물) / n8n 환경변수 격리 잔여 점검 / OI-S248-JENI-CONTEXT-001 + OI-S250-JENI-RUNTIME-LOOP / OI-S247-001 유지"
+    "last_session": 251,
+    "resume_point": "S251: 거버넌스 문서 보호 DEP 완주 — Part1 거버넌스 5종(헌법/retention/AES/Direction/oauth) FROZEN_HASHES 동결(663cc4c); Part2 boot/close freeze 차단 게이트 tools/guard/govdoc_freeze_gate.py 신설+자체 동결(a9e25ae). 추가로 전체 pytest를 막던 stale 테스트 2건(test_o2 천장 raw카운트, test_t12 vm_current)을 S250 승인계약(canonical 카운트 / vm_current Tier D 이관)에 정렬하는 SC-GOVFIX DEP 완주(747369a). 전체 pytest 1656/0/94. HEAD a9e25ae.",
+    "eag_carryover": "#2 헌법 손상 경위(미커밋, git 사후탐지만) / #4 n8n 환경변수 격리(제니 TRUST-ADVISORY 필수) / #5 OI-JENI-CONTEXT+RUNTIME-LOOP / #6 OI-S247-001 restart BrokenPipe / #7 Role Drift Scoreboard / boot freeze 게이트 SESSION BOOT 절차 채택(비오 권한) / OI-S251-T1-RESIDUAL+T2-RESIDUAL(close backstop bounded, 비오 EAG 수용)"
   },
   "next_steps": [
-    "[헌법 재발방지] 거버넌스 문서 무단 손상 방지 통제 — 별도 DEP (제니 권고)",
-    "[헌법 경위조사] AIBA_Constitution 손상 변경 시점·주체 규명 (미커밋 편집, git log로 마지막 정상 커밋만 확인 가능)",
-    "[canonical-set ②] CANONICAL_EXCLUDE_KEYS + canonical_key_count() 인터페이스 후속 DEP (R6 산출물)",
-    "[n8n 환경변수 격리] RESTRICT/BLOCK_ENV 잔여 점검",
-    "[OI-S248-JENI-CONTEXT-001 / OI-S250-JENI-RUNTIME-LOOP] 제니 무기억 호출 오류 + 런타임 반복출력 이상 관찰",
-    "[OI-S247-001] restart 동반 run_script BrokenPipe 조건부 관찰",
-    "Role Drift Scoreboard 수동 운영 계속",
-    "[범위 외] SQLite DB 비대 / nginx 443 server_name 중복 warn"
+    "#2 헌법 손상 경위 — 미커밋 편집이라 git 시점/주체 특정 불가(사후탐지 한계)",
+    "#4 n8n 환경변수 격리(제니 TRUST-ADVISORY 필수): N8N_RESTRICT_FILE_ACCESS_TO 설정 + N8N_BLOCK_ENV_ACCESS_TO_LOCALHOST=true",
+    "#5 OI-S248-JENI-CONTEXT-001 + OI-S250-JENI-RUNTIME-LOOP",
+    "#6 OI-S247-001 restart run_script BrokenPipe",
+    "#7 Role Drift Scoreboard 운영",
+    "boot freeze 게이트: SESSION BOOT 절차에 govdoc_freeze_gate.py 차단 단계 추가(프롬프트 채택=비오 권한)",
+    "OI-S251-T1-RESIDUAL: 거버넌스 문서 실시간 변조탐지 부재 — close pytest backstop bounded, 비오 EAG 수용",
+    "OI-S251-T2-RESIDUAL: boot 게이트 프롬프트 채택 의존 — 동일 backstop bounded, 비오 EAG 수용",
+    "[범위외] system_changes_s208 잔존 / SQLite 비대 / nginx 443 server_name 중복"
   ],
   "agent_focus": {
-    "beo": "S250 — DEP-S250-CANONSET-001 최종 합격 확정(1f5c697). 헌법 손상 추적 지시→복구 EAG(EAG-S250-CONST-RESTORE-001). 회귀 정정 EAG(EAG-S250-TIERA-FIX-001). 세션 종료 지시.",
-    "caddy": "S250 — canonical-set DEP 완주. 배포 오염(INC-S250-001) 자각·격리. 헌법 손상 실측·복구. 클로즈 중 전체 pytest 회귀 발견→TIER_A 정정 DEP 완주(INC-S250-002). 5-file 클로즈.",
-    "domi": "S250 — canonical-set 설계(v5 수렴). TIER_A 회귀 정정 설계(해석1 보호집합 복원) + 보강 설계(test 단언 정합).",
-    "jeni": "S250 — canonical-set TRUST_READY. 헌법 복구 재감사 TRUST_READY. TIER_A 정정 2차 TRUST_READY(1차 NOT_READY 소명 후). 1차 런타임 반복출력 이상 관측(OI-S250-JENI-RUNTIME-LOOP)."
+    "beo": "S251 — 이월 순차 진행 + 커밋 제약(green 전 금지/add -A 금지/대상만 명시 스테이징) 지시. SC-GOVFIX·Part2 EAG 승인. Part2 제니 STOP 위 T-2 잔여리스크 EAG 수용. 세션 종료 지시.",
+    "caddy": "S251 — GOVDOC-PROTECT Part1+Part2 + SC-GOVFIX 3 DEP 완주. DEP 체인 자율 구동. 단언-게이트 스테이징(오염0). chain false-alarm 1건 자체 해소. 5-file 클로즈.",
+    "domi": "S251 — SC-GOVFIX 시정 설계 + Part2 게이트 설계(test_goal1_freeze 재사용).",
+    "jeni": "S251 — SC-GOVFIX 2차 TRUST_READY(S250 문서근거 후). Part2 2차 NOT_READY(T-1 게이트freeze 수용/T-2 punt)→비오 EAG 수용 진행. 런타임 안정."
   },
   "pytest_status": {
     "last_run_date": "2026-06-15",
-    "last_run_session": 250,
+    "last_run_session": 251,
     "regression_impact": "NONE",
     "total_failed": 0,
-    "total_passed": 1650,
+    "total_passed": 1656,
     "total_skipped": 94,
-    "note": "S250: test_canonset_s250.py TC 8건 신규(1642→1650). TIER_A 정정 후 회귀 0. --ignore=tools/sandbox."
+    "note": "S251: GOVDOC freeze 9->15 TC(+6: docs5+gate1), stale 2건(test_o2/test_t12) S250 계약 정렬. 1650->1656. --ignore=tools/sandbox."
   },
   "sync_meta": {
     "last_sync_date": "2026-06-15",
-    "last_sync_session": 250,
+    "last_sync_session": 251,
     "files": [
-      "SESSION_CONTEXT_S250_FINAL.json",
-      "SESSION_CONTEXT_ARCHIVE_TIER_D_S250.json"
+      "SESSION_CONTEXT_S251_FINAL.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S251.json"
     ],
     "sync_status": "SYNCED"
   },
@@ -142,7 +143,7 @@
     }
   },
   "session_delta": {
-    "session": 250,
+    "session": 251,
     "modified_keys": [
       "session_count",
       "chain",
@@ -157,17 +158,17 @@
       "session_delta"
     ],
     "added_keys": [
-      "system_changes_s250",
-      "caddy_governance_record_s250",
-      "visibility_metrics_s250"
+      "system_changes_s251",
+      "caddy_governance_record_s251",
+      "visibility_metrics_s251"
     ],
     "removed_keys": [
-      "system_changes_s246"
+      "system_changes_s247"
     ],
-    "tier_d_migrated": "aged record s240(caddy_governance_record_s240 + visibility_metrics_s240, 2키) + group D(goal2_declaration + goal2_governance_rule + visibility_metrics_current + on_the_horizon, 4키) = 6키 → ARCHIVE_TIER_D_S250.json"
+    "tier_d_migrated": "aged record s241(caddy_governance_record_s241 + visibility_metrics_s241, 2키) -> ARCHIVE_TIER_D_S251.json. group D는 S250 이관완료(해당없음)."
   },
-  "updated_at": "2026-06-15T17:07:05.081862+09:00",
-  "generated_at": "2026-06-15T17:07:05.081862+09:00",
+  "updated_at": "2026-06-15T19:14:02.508296+09:00",
+  "generated_at": "2026-06-15T19:14:02.508296+09:00",
   "n8n_assets_registry": {
     "registered_session": 240,
     "registered_by": "비오 (S240 경로 B 지시)",
@@ -235,74 +236,6 @@
       "A": "AUTO_ROUTE 전구간 journal WORM 강제 기록",
       "B": "세션당 최대 3회 / 타임아웃 30초 / 오류 2회 중단"
     }
-  },
-  "caddy_governance_record_s241": {
-    "session": 241,
-    "date": "2026-06-14",
-    "eag_gates_this_session": [
-      "EAG-S241-N8N-PROXY-001: n8n HTTPS 리버스 프록시 전환 + 5678 폐쇄",
-      "EAG-S241-N8N-PWRESET-001: n8n owner 계정 CLI 복구"
-    ],
-    "incidents": [
-      {
-        "id": "INC-S241-001",
-        "type": "CADDY_OPTION_MENU",
-        "description": "보안 방향 결정 시 3안 표 제시. 비오님 강력 지적·명령. INC-S220-002·S228-001에 이은 OPTION_MENU 3회 누적. 메모리 #21 영구 등재.",
-        "session": 241
-      },
-      {
-        "id": "INC-S241-002",
-        "type": "CADDY_DEPLOY_BACKUP_LOCATION_ERROR",
-        "description": "nginx 백업파일을 sites-enabled/ 내부 생성 → duplicate default server로 nginx -t 실패 유발. /root/nginx_bak_s241/ 격리로 해소.",
-        "session": 241
-      },
-      {
-        "id": "INC-S241-003",
-        "type": "CADDY_SCRIPT_WHITESPACE_MISMATCH",
-        "description": "치환 스크립트 v1 탭/스페이스 불일치로 매칭 0건(안전 중단). v2 정규식으로 해결. 원본 무손상.",
-        "session": 241
-      }
-    ],
-    "oi_observations": [
-      "n8n HTTPS 전환 완료 — 외부 https://n8n.arss-protocol.org/ (443), 내부 127.0.0.1:5678, 5678 외부 차단 확정(Test-NetConnection False)",
-      "journal 실제 경로 = session_journal/session_journal.jsonl (SSOT tools/journal 표기는 오기 — 정정 후보)",
-      "S240 N8N_SECURE_COOKIE=false(/etc/environment) 실효 미적용 확인 — systemd 데몬 미주입. HTTPS 정석 해결로 대체.",
-      "[제니 TA-S241] N8N_RESTRICT_FILE_ACCESS_TO 해제 + N8N_BLOCK_ENV_ACCESS_TO_LOCALHOST=false = 거버넌스 우회 경로. 차기 세션 강제 격리.",
-      "[범위 외] SQLite DB 2.76GB 비대 / nginx arss-protocol.org 443 server_name 중복 warn",
-      "Role Drift Scoreboard S241: 도미 0/제니 0/캐디 3(INC-S241-001~003)",
-      "Rejected Ideas Ledger S241: S241-R001(보안 방향 선택지 메뉴 제시)"
-    ],
-    "notable": "S241: n8n HTTPS 리버스 프록시 전환 완료(DNS+certbot+nginx+systemd+ufw). owner 계정 복구. 5678 외부 폐쇄. VM S240 append. INC 3건(OPTION_MENU 재발 포함).",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "PASS",
-      "M07_role_boundary": "FAIL (INC-S241-001~003)"
-    }
-  },
-  "visibility_metrics_s241": {
-    "session": 241,
-    "date": "2026-06-14",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 78,
-    "M-03_ceiling_utilization_rate": "44/42 (천장 초과 — system_changes_s237 제거 후 s241 추가)",
-    "M-04_session_delta_size": "LARGE (EAG 2건 + INC 3건 + n8n HTTPS 전환 인프라 + 계정 복구)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S241.json",
-    "M-06_active_task_load": 0,
-    "M-07_stabilization_compliance": "FAIL (INC-S241-001~003)",
-    "chain_tip": "7768ebc",
-    "pytest_result": "1625 passed / 0 failed / 94 skipped",
-    "key_decisions": [
-      "EAG-S241-N8N-PROXY-001: n8n HTTPS 리버스 프록시 전환 (n8n.arss-protocol.org)",
-      "EAG-S241-N8N-PWRESET-001: n8n owner 계정 CLI 복구",
-      "5678 외부 포트 완전 폐쇄 (애플리케이션+방화벽 2중 차단)",
-      "secure cookie 기본 true 유지 (해제 기각)",
-      "INC-S241-001: CADDY_OPTION_MENU 재발 (3회 누적)",
-      "N8N 파일/환경 접근 격리 차기 세션 강제 (제니 TA-S241)"
-    ]
   },
   "caddy_governance_record_s242": {
     "session": 242,
@@ -572,24 +505,6 @@
       "INC 0건 — M07 PASS"
     ]
   },
-  "system_changes_s247": {
-    "deployed_session": 247,
-    "commits": [
-      "8fdb910",
-      "9048568"
-    ],
-    "changes": [
-      "n8n WF-01 lXsm2orKxGqIgGpf Detect Change: shard-aware jsCode (Phase 3) — pending_tasks/lessons/decisions getLen 대응 (n8n API)",
-      "tools/autoroute/autoroute_caller.py: route_bidir/deactivate_bidir/load_bidir_counter/save_bidir_counter + BIDIR 상수 추가",
-      "tests/test_goal1_freeze.py: FROZEN_JOURNAL_LAST_ENTRY_HASH 98082f44→b304b503 현행화",
-      "aiba_status_server.py:869: app.run host 0.0.0.0→127.0.0.1",
-      "tools/create_eag_approval.py: 159.203.125.1:8000→127.0.0.1:8000 (2건)",
-      "n8n WF-01 HTTP Request1 URL: 159.203.125.1→127.0.0.1 (n8n API)",
-      "ufw 8000/tcp ALLOW 삭제 (v4/v6)"
-    ],
-    "eag_chain": "EAG-S247-OI-S246-001-FIXWF01 + G2-BIDIR-002 + TEST-HASH-001 + OI-S243-001-PORT8000",
-    "pytest_result": "1634 passed / 0 failed / 94 skipped"
-  },
   "caddy_governance_record_s247": {
     "session": 247,
     "date": "2026-06-14",
@@ -710,7 +625,7 @@
       "M07 S248 PASS — INC 0건"
     ]
   },
-  "context_hash": "e513bc623b7c9f373fad9a33c7b021f7763a6acafa6ac44db3af129ad285aed5",
+  "context_hash": "73d053d0804149de9b7b4bb20f58856cee6fcf017caca2e94b42a23323502f7a",
   "system_changes_s249": {
     "deployed_session": 249,
     "commits": [
@@ -866,6 +781,78 @@
       "EAG-S250-TIERA-FIX-001: TIER_A 보호집합 3키 복원 + 모순 단언 교정",
       "천장 게이트 첫 운영 클로즈 — group D/aged 4키 Tier D 이관",
       "M07 S250 FAIL — INC 2건"
+    ]
+  },
+  "system_changes_s251": {
+    "deployed_session": 251,
+    "commits": [
+      "663cc4c",
+      "747369a",
+      "a9e25ae"
+    ],
+    "changes": [
+      "tests/test_goal1_freeze.py: FROZEN_HASHES 거버넌스 5종 추가(Part1) + govdoc_freeze_gate.py 등재·RECORD 자기해시 갱신(Part2)",
+      "GOAL1_FREEZE_RECORD.md: S251 Part1/Part2 Update Log 추가",
+      "tools/guard/govdoc_freeze_gate.py: 신설 — test_goal1_freeze.py ENV=test 단독 실행 boot/close freeze 차단 게이트(non-zero=REPORT&WAIT)",
+      "tests/test_pt_s113_001_operational.py: test_o2 천장 트리거 canonical_key_count 정렬",
+      "tests/test_pt_s148_context_refactor_phase3.py: test_t12 vm_current 단언 S250 Tier D 이관 반영"
+    ],
+    "eag_chain": "EAG-S251-GOVDOC-PROTECT-001(Part1+Part2) + EAG-S251-SC-GOVFIX-001",
+    "pytest_result": "1656 passed / 0 failed / 94 skipped"
+  },
+  "caddy_governance_record_s251": {
+    "session": 251,
+    "date": "2026-06-15",
+    "eag_gates_this_session": [
+      "EAG-S251-GOVDOC-PROTECT-001: 거버넌스 5종 동결(Part1,663cc4c) + boot/close freeze 게이트 신설·자체동결(Part2,a9e25ae)",
+      "EAG-S251-SC-GOVFIX-001: stale 테스트 2건 S250 승인계약 정렬(747369a)",
+      "EAG-S251-CLOSE-001: S251 세션 종료"
+    ],
+    "incidents": [],
+    "oi_observations": [
+      "chain false-alarm: push의 c47b2cf(S250 close 커밋)를 chain 불일치로 과잉경보 → git log 실측으로 클로즈 커밋이 기록 tip보다 1앞선 정상 구조임을 자체 해소. 위반 아님.",
+      "OI-S251-T1-RESIDUAL: 거버넌스 실시간 변조탐지 부재 — close pytest backstop ≤1세션. 비오 EAG 수용.",
+      "OI-S251-T2-RESIDUAL: boot 게이트 프롬프트 채택 의존(구조적) — 동일 backstop bounded. 비오 EAG 수용.",
+      "boot baseline staleness: 부트가 캐시 pytest_status(1650/0/94) 신뢰→실제 2 failed 미반영 실증. Part2 게이트로 boot 실측 경로 제공.",
+      "OI-S250-JENI-RUNTIME-LOOP 계열: 제니 응답 대체로 안정(Part2 2차 T-1 순환 재요구 경미 관측).",
+      "Role Drift Scoreboard S251: 도미 0 / 제니 0 / 캐디 0",
+      "Rejected Ideas: 도미 실시간모니터링·STORAGE DEP 제안(SC-GOVFIX) 범위외 기각"
+    ],
+    "caddy_self_report": [
+      "OPTION_MENU 재발 없음 — 단일 경로 권고 유지.",
+      "DEP 체인 자율 구동(ask_domi/ask_jeni 직접) — 별도 호출지시 대기 없음.",
+      "커밋 제약 준수: green 전 commit 없음 / git add -A 없음 / 단언-게이트로 대상파일만(3커밋 무관 dirty 0).",
+      "chain false-alarm은 과잉경보였으나 즉시 실측·해소·정정 보고. 작업 영향 0."
+    ],
+    "notable": "S251: GOVDOC-PROTECT(Part1 동결5종 + Part2 boot/close 게이트) + SC-GOVFIX(stale 2건 정렬) 3 DEP 완주. freeze 9->15 TC. canonical 천장 N_RETENTION=10으로 ~40 bound 확인(이월#3 정리). pytest 1656/0/94. INC 0. 데이터 손실 0.",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "PASS"
+    }
+  },
+  "visibility_metrics_s251": {
+    "session": 251,
+    "date": "2026-06-15",
+    "M-01_active_canonical_key_count": 40,
+    "M-02_tier_d_quarantine_key_count": 134,
+    "M-03_ceiling_utilization_rate": "40/42 (aged s241 2키 이관 후 천장 이하)",
+    "M-04_session_delta_size": "LARGE (EAG 3건, DEP 3개 완주, INC 0)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S251.json",
+    "M-06_active_task_load": 0,
+    "M-07_stabilization_compliance": "PASS",
+    "chain_tip": "a9e25ae",
+    "pytest_result": "1656 passed / 0 failed / 94 skipped",
+    "key_decisions": [
+      "EAG-S251-GOVDOC-PROTECT-001 Part1: 거버넌스 5종 동결",
+      "EAG-S251-GOVDOC-PROTECT-001 Part2: boot/close freeze 게이트 신설·자체동결",
+      "EAG-S251-SC-GOVFIX-001: stale 테스트 2건 S250 계약 정렬",
+      "M07 S251 PASS — INC 0",
+      "OI-S251-T1/T2-RESIDUAL 비오 EAG 수용"
     ]
   }
 }
