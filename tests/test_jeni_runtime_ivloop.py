@@ -267,7 +267,7 @@ def test_build_function_response_message_error():
 def _patch_gemini(monkeypatch, responses):
     call_count = {"n": 0}
 
-    def _mock(contents):
+    def _mock(contents, **kwargs):
         n = call_count["n"]
         call_count["n"] += 1
         if n < len(responses):
@@ -396,7 +396,7 @@ def test_loop_memory_injected(monkeypatch):
     monkeypatch.setattr(_runtime, "_load_memory_context", _mock_memory)
     _patch_persist_noop(monkeypatch)
 
-    def _mock_gemini(contents):
+    def _mock_gemini(contents, **kwargs):
         first_text = contents[0]["parts"][0]["text"]
         if "S192" in first_text:
             captured["preamble_seen"] = True

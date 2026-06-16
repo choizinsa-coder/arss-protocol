@@ -37,10 +37,11 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.0.2"
+RUNTIME_VERSION = "1.1.0"
 
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
+OPENAI_MODEL_ESCALATE = os.environ.get("AIBA_DOMI_MODEL_ESCALATE", "gpt-4o")
 OPENAI_TIMEOUT = 55
 OPENAI_MAX_OUTPUT_TOKENS = 4096
 
@@ -607,12 +608,13 @@ def _execute_openai_request(req: urllib.request.Request) -> dict:
                 "error": f"FAIL_CLOSED: unexpected error — {e}"}
 
 
-def _call_openai(messages: list) -> dict:
+def _call_openai(messages: list, escalate: bool = False) -> dict:
     if not OPENAI_API_KEY:
         return {"ok": False, "text": "", "tool_calls": [], "message": {},
                 "error": "FAIL_CLOSED: AIBA_OPENAI_API_KEY not configured"}
+    _model = OPENAI_MODEL_ESCALATE if escalate else OPENAI_MODEL
     body = {
-        "model": OPENAI_MODEL,
+        "model": _model,
         "messages": messages,
         "tools": _build_tools(),
         "max_completion_tokens": OPENAI_MAX_OUTPUT_TOKENS,
@@ -651,7 +653,7 @@ def _build_tool_response_message(tool_call_id: str, result_text: str, error) -> 
 # ── Persistent Multi-Turn Loop ────────────────────────────────────────────────
 
 
-def _run_design_loop(prompt: str, context: str, session: str = "S000") -> dict:
+def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate: bool = False) -> dict:
     loop_start = time.time()
 
     memory = _load_memory_context()
@@ -671,7 +673,7 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000") -> dict:
                 round_num, _make_audit_bundle(round_num, audit_trail))
             break
 
-        call_result = _call_openai(accumulated)
+        call_result = _call_openai(accumulated, escalate=escalate)
         if not call_result["ok"]:
             final_result = _make_fail_closed_result(
                 "DESIGN_PARSE_FAILURE", call_result.get("error") or "",
@@ -747,7 +749,7 @@ class DomiRuntimeHandler(BaseHTTPRequestHandler):
         if self.path == "/health":
             self._send_json(200, {
                 "status": "active", "version": RUNTIME_VERSION,
-                "model": OPENAI_MODEL, "key_present": bool(OPENAI_API_KEY),
+                "model": OPENAI_MODEL, "model_escalate": OPENAI_MODEL_ESCALATE, "key_present": bool(OPENAI_API_KEY),
                 "max_tool_rounds": MAX_TOOL_ROUNDS,
                 "max_total_seconds": MAX_TOTAL_SECONDS,
                 "persistent_memory": True, "function_calling": True})
@@ -768,10 +770,11 @@ class DomiRuntimeHandler(BaseHTTPRequestHandler):
         prompt = req_body.get("prompt", "")
         context = req_body.get("context", "")
         session = req_body.get("session", "S000")
+        escalate = bool(req_body.get("escalate", False))
         if not prompt:
             self._send_json(400, {"ok": False, "error": "prompt required"})
             return
-        result = _run_design_loop(prompt, context, session)
+        result = _run_design_loop(prompt, context, session, escalate=escalate)
         if not result.get("ok"):
             print(f"[DOMI_RUNTIME] FAIL: {result.get('error', 'unknown')}",
                   file=sys.stderr, flush=True)

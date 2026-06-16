@@ -47,10 +47,11 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.4.0"
+RUNTIME_VERSION = "4.5.0"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_MODEL_ESCALATE = os.environ.get("AIBA_GEMINI_MODEL_ESCALATE", "gemini-2.5-pro")
 GEMINI_TIMEOUT = 55
 GEMINI_MAX_OUTPUT_TOKENS = 4096
 
@@ -650,10 +651,11 @@ def _execute_gemini_request(req: urllib.request.Request) -> dict:
                 "error": f"FAIL_CLOSED: unexpected error — {e}"}
 
 
-def _call_gemini(contents: list) -> dict:
+def _call_gemini(contents: list, escalate: bool = False) -> dict:
     if not GEMINI_API_KEY:
         return {"ok": False, "text": "", "function_calls": [], "parts": [],
                 "error": "FAIL_CLOSED: AIBA_GEMINI_API_KEY not configured"}
+    _model = GEMINI_MODEL_ESCALATE if escalate else GEMINI_MODEL
     body = {
         "system_instruction": {"parts": [{"text": JENI_SYSTEM_INSTRUCTION}]},
         "contents": contents,
@@ -662,7 +664,7 @@ def _call_gemini(contents: list) -> dict:
                              "maxOutputTokens": GEMINI_MAX_OUTPUT_TOKENS},
     }
     raw_body = json.dumps(body).encode("utf-8")
-    url = f"{GEMINI_API_BASE}/{GEMINI_MODEL}:generateContent"
+    url = f"{GEMINI_API_BASE}/{_model}:generateContent"
     req = urllib.request.Request(
         url, data=raw_body,
         headers={"Content-Type": "application/json",
@@ -693,7 +695,7 @@ def _build_function_response_message(name: str, result_text: str, error) -> dict
 # ── Persistent Multi-Turn Loop ────────────────────────────────────────────────
 
 
-def _run_verification_loop(prompt: str, context: str, session: str = "S000") -> dict:
+def _run_verification_loop(prompt: str, context: str, session: str = "S000", escalate: bool = False) -> dict:
     loop_start = time.time()
 
     memory = _load_memory_context()
@@ -713,7 +715,7 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000") -> 
                 round_num, _make_audit_bundle(round_num, audit_trail))
             break
 
-        call_result = _call_gemini(accumulated)
+        call_result = _call_gemini(accumulated, escalate=escalate)
         if not call_result["ok"]:
             final_result = _make_fail_closed_result(
                 "VALIDATION_PARSE_FAILURE", call_result.get("error") or "",
@@ -789,7 +791,7 @@ class JeniRuntimeHandler(BaseHTTPRequestHandler):
         if self.path == "/health":
             self._send_json(200, {
                 "status": "active", "version": RUNTIME_VERSION,
-                "model": GEMINI_MODEL, "key_present": bool(GEMINI_API_KEY),
+                "model": GEMINI_MODEL, "model_escalate": GEMINI_MODEL_ESCALATE, "key_present": bool(GEMINI_API_KEY),
                 "max_tool_rounds": MAX_TOOL_ROUNDS,
                 "max_total_seconds": MAX_TOTAL_SECONDS,
                 "persistent_memory": True, "function_calling": True,
@@ -811,10 +813,11 @@ class JeniRuntimeHandler(BaseHTTPRequestHandler):
         prompt = req_body.get("prompt", "")
         context = req_body.get("context", "")
         session = req_body.get("session", "S000")
+        escalate = bool(req_body.get("escalate", False))
         if not prompt:
             self._send_json(400, {"ok": False, "error": "prompt required"})
             return
-        result = _run_verification_loop(prompt, context, session)
+        result = _run_verification_loop(prompt, context, session, escalate=escalate)
         self._send_json(200, result)  # v4.2.0: 항상 200, ok=false 시 body에 error 포함
 
 
