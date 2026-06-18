@@ -68,7 +68,7 @@ from mcp_read_server import ReadOnlyServer, AGENT_ROOT_ALLOWLIST
 
 BRIDGE_HOST = "127.0.0.1"
 BRIDGE_PORT = 8443
-BRIDGE_VERSION = "2.6.0"
+BRIDGE_VERSION = "2.7.0"
 
 # ── OAuth Compatibility Layer (S184 EAG-2, S187 EAG-1) ───────────────────────
 import secrets as _secrets
@@ -648,7 +648,8 @@ def _handle_ask_domi(arguments: dict) -> dict:
     if not prompt:
         return {"isError": True, "content": [{"type": "text", "text": "DENY: prompt required"}]}
 
-    forward_body = json.dumps({"prompt": prompt, "context": context}).encode("utf-8")
+    session = arguments.get("session", "S000")
+    forward_body = json.dumps({"prompt": prompt, "context": context, "session": session}).encode("utf-8")
     if len(forward_body) > ASK_DOMI_MAX_PROMPT_BYTES:
         return {"isError": True, "content": [{"type": "text", "text": f"DENY: prompt size {len(forward_body)} exceeds limit {ASK_DOMI_MAX_PROMPT_BYTES}"}]}
 
@@ -726,7 +727,8 @@ def _handle_ask_jeni(arguments: dict) -> dict:
     if not prompt:
         return {"isError": True, "content": [{"type": "text", "text": "DENY: prompt required"}]}
 
-    forward_body = json.dumps({"prompt": prompt, "context": context}).encode("utf-8")
+    session = arguments.get("session", "S000")
+    forward_body = json.dumps({"prompt": prompt, "context": context, "session": session}).encode("utf-8")
     if len(forward_body) > ASK_JENI_MAX_PROMPT_BYTES:
         return {"isError": True, "content": [{"type": "text", "text": f"DENY: prompt size {len(forward_body)} exceeds limit {ASK_JENI_MAX_PROMPT_BYTES}"}]}
 
@@ -905,9 +907,9 @@ def _build_write_tool_entries() -> list:
         {"name": "get_write_plane_state", "description": "[WRITE] Write Plane 현재 상태 조회 (caddy only)",
          "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [WRITE_ALLOWED_ACTOR]}}, "required": ["actor_id"]}},
         {"name": "ask_jeni", "description": "[ASK] 제니(Gemini Governance Auditor)에게 질문 (caddy only)",
-         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [ASK_JENI_ALLOWED_ACTOR]}, "prompt": {"type": "string"}, "context": {"type": "string"}}, "required": ["actor_id", "prompt"]}},
+         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [ASK_JENI_ALLOWED_ACTOR]}, "prompt": {"type": "string"}, "context": {"type": "string"}, "session": {"type": "string", "description": "세션 ID (예: S264). persistent memory 세션별 축적용."}}, "required": ["actor_id", "prompt"]}},
         {"name": "ask_domi", "description": "[ASK] 도미(OpenAI Design Architect)에게 설계 의뢰 (caddy only)",
-         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [ASK_DOMI_ALLOWED_ACTOR]}, "prompt": {"type": "string"}, "context": {"type": "string"}}, "required": ["actor_id", "prompt"]}},
+         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [ASK_DOMI_ALLOWED_ACTOR]}, "prompt": {"type": "string"}, "context": {"type": "string"}, "session": {"type": "string", "description": "세션 ID (예: S264). persistent memory 세션별 축적용."}}, "required": ["actor_id", "prompt"]}},
         {"name": "exec_scoped", "description": "[EXEC] EAG approval 기반 허용 명령 실행 (caddy only)",
          "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": [EXEC_ALLOWED_ACTOR]}, "approval_id": {"type": "string"}, "command": {"type": "string", "enum": ["pytest","git_commit","git_status","git_diff","systemctl_restart","git_push","write_script","run_script"]}, "params": {"type": "object"}}, "required": ["actor_id", "approval_id", "command"]}},
     ]
