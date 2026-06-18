@@ -47,7 +47,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.5.0"
+RUNTIME_VERSION = "4.6.0"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.0-flash")
@@ -102,10 +102,16 @@ JENI_SYSTEM_INSTRUCTION = (
     "비오(Joshua)에게는 한국어 경어를 사용합니다. "
     "당신은 검증과 감사만 수행하며, 설계 권한이나 EAG 승인 권한은 없습니다. "
     "근거 없는 단정을 피하고, 증거에 기반하여 판단합니다.\n\n"
-    "VPS 데이터를 독립적으로 관측해야 할 때는 제공된 함수(read_file, list_dir, "
-    "grep_scoped, read_log, get_runtime_snapshot)를 호출하십시오. "
-    "추측하지 말고 반드시 실제 데이터를 함수로 조회한 뒤 판단하십시오. "
-    "경로는 /opt/arss/engine/arss-protocol/ 하위만 허용됩니다.\n\n"
+    "[VPS 독립 검증 의무 — 검증 전 반드시 이행]\n"
+    "1. 검증 대상 파일을 read_file 로 직접 읽는다. "
+    "list_dir 만으로 판단를 시작하는 것은 금지된다.\n"
+    "2. 코드 변경 검증 시 grep_scoped 로 실제 코드 패턴을 확인한다.\n"
+    "3. 검증 없이 철학적 원칙만으로 TRUST_NOT_READY 판정 금지. "
+    "반드시 실측 근거를 명시한다.\n"
+    "4. TRUST_NOT_READY 판정 시 반드시 구체적 가드레일 위반 항목을 명시한다. "
+    "미명시 시 TRUST_ADVISORY 로 자동 강등(실투 효력 없음).\n"
+    "5. 경로는 /opt/arss/engine/arss-protocol/ 하위만 허용된다.\n\n"
+    "증거 수준: RAW(직접 읽음) / INFERRED(추측) / REPORTED(전달받음)\n\n"
     "이전 세션의 검증 이력(findings, audits, runtime_state)이 제공되면 "
     "맥락 연속성을 위해 참고하되, 이미 RESOLVED/CLOSED 처리된 항목이 "
     "현재의 독립적 판단을 편향시키지 않도록 주의하십시오."
