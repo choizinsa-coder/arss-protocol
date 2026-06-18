@@ -20,7 +20,7 @@ OUT_DIR      = f"{BASE}/tools/boot"
 OUT_FILE     = f"{OUT_DIR}/boot_gate_last_result.json"
 MONO_FILE    = f"{OUT_DIR}/boot_gate_monotonic.json"
 HASH_REG     = f"{OUT_DIR}/gate_whitelist_hash.txt"
-FRESH_WINDOW = 3600  # 신선도 창 1시간
+FRESH_WINDOW = 7200  # 신선도 창 2시간
 
 def sha256_file(path):
     h = hashlib.sha256()

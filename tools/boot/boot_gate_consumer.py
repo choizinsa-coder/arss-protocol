@@ -11,7 +11,7 @@ import json, sys, time, os
 OUT_DIR   = "/opt/arss/engine/arss-protocol/tools/boot"
 RESULT    = f"{OUT_DIR}/boot_gate_last_result.json"
 FLAG      = f"{OUT_DIR}/BOOT_GATE_FAIL_FLAG"
-FRESH_SEC = 3600  # 신선도 창
+FRESH_SEC = 7200  # 신선도 창
 
 def main():
     # 1. 플래그 파일 확인 (systemd 실패 연동)
