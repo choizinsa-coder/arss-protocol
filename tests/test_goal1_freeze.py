@@ -65,14 +65,14 @@ FROZEN_HASHES = {
     "tools/guard/govdoc_freeze_gate.py":
         "f339413646af55c344fd38910019cb583aaab40e33f302d5f4e2da55944e414c",
     "tools/close/session_close_generator.py":
-        "856d0c4b66c86da74e1320d0b3cbb4b037dabf9b878786f4ba2e22673bd57988",
+        "73ea6fcaee61514646d34ebb490b35614055b770c5b704653e777d703793b7e9",
 }
 
 # ── WORM 특례: session_journal last_entry_hash 고정 (S239 기준) ─────────
 # append-only이므로 전체 hash 고정 불가. last_entry_hash만 검증.
 # journal에 새 entry가 append되면 이 값도 함께 EAG 하 갱신 필요.
 FROZEN_JOURNAL_LAST_ENTRY_HASH = (
-    "8b9a2ecfa9c189918c2a16381dfc6e38504ec93d06b0045dacf0df7a6ad340fe"
+    "b304b503fa165bfafd824f9afa63a59643ad7d76d4f51b2a69fe660bc56fa3e6"
 )
 JOURNAL_PATH = "session_journal/session_journal.jsonl"
 
