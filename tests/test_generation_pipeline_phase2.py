@@ -14,7 +14,16 @@ from tools.session_context_gen.generation_pipeline import (
 from tools.session_context_gen.hash_utils import compute_hash
 
 
-def _make_receipt(chain_hash="aaaa1234", artifact_hash="bbbb5678"):
+def _make_receipt(chain_hash="aaaa1234", artifact_hash="bbbb5678", tmp_dir=None):
+    # artifact_path: tmp_dir가 주어지면 실제 임시 파일 생성, 아니면 빈 문자열(placeholder)
+    if tmp_dir is not None:
+        artifact_file = os.path.join(tmp_dir, "baseline_artifact.json")
+        with open(artifact_file, "w", encoding="utf-8") as f:
+            json.dump({"_placeholder": True}, f)
+        artifact_path = artifact_file
+    else:
+        artifact_path = ""
+
     return {
         "status": "PASS",
         "persistence_allowed": True,
@@ -32,7 +41,7 @@ def _make_receipt(chain_hash="aaaa1234", artifact_hash="bbbb5678"):
             "governance_context": {},
         },
         "extension": {
-            "artifact_path": "/tmp/test.json",
+            "artifact_path": artifact_path,
             "artifact_hash": artifact_hash,
             "prev_artifact_hash": "",
             "extension_version": "1.0",
@@ -106,7 +115,7 @@ def test_tc1_pipeline_success_runtime_first():
     tmp = tempfile.mkdtemp()
     try:
         receipts_dir, output_dir = _setup_dirs(tmp)
-        _write_receipt(receipts_dir, _make_receipt())
+        _write_receipt(receipts_dir, _make_receipt(tmp_dir=tmp))
         input_path = _write_input(tmp, _make_minimal_full_context())
         runtime_path = _write_runtime(tmp, _make_minimal_runtime_context())
         result = run_pipeline(input_path, receipts_dir, output_dir, runtime_path=runtime_path)
@@ -130,7 +139,7 @@ def test_tc2_runtime_pair_hash_integrity():
     tmp = tempfile.mkdtemp()
     try:
         receipts_dir, output_dir = _setup_dirs(tmp)
-        _write_receipt(receipts_dir, _make_receipt())
+        _write_receipt(receipts_dir, _make_receipt(tmp_dir=tmp))
         input_path = _write_input(tmp, _make_minimal_full_context())
         runtime_path = _write_runtime(tmp, _make_minimal_runtime_context())
         result = run_pipeline(input_path, receipts_dir, output_dir, runtime_path=runtime_path)
@@ -152,7 +161,7 @@ def test_tc3_pair_validator_pass():
     tmp = tempfile.mkdtemp()
     try:
         receipts_dir, output_dir = _setup_dirs(tmp)
-        _write_receipt(receipts_dir, _make_receipt())
+        _write_receipt(receipts_dir, _make_receipt(tmp_dir=tmp))
         input_path = _write_input(tmp, _make_minimal_full_context())
         runtime_path = _write_runtime(tmp, _make_minimal_runtime_context())
         result = run_pipeline(input_path, receipts_dir, output_dir, runtime_path=runtime_path)
@@ -166,7 +175,7 @@ def test_tc4_boundary_validator_pass():
     tmp = tempfile.mkdtemp()
     try:
         receipts_dir, output_dir = _setup_dirs(tmp)
-        _write_receipt(receipts_dir, _make_receipt())
+        _write_receipt(receipts_dir, _make_receipt(tmp_dir=tmp))
         input_path = _write_input(tmp, _make_minimal_full_context())
         runtime_path = _write_runtime(tmp, _make_minimal_runtime_context())
         result = run_pipeline(input_path, receipts_dir, output_dir, runtime_path=runtime_path)
@@ -180,7 +189,7 @@ def test_tc5_receipt_contains_pair_info():
     tmp = tempfile.mkdtemp()
     try:
         receipts_dir, output_dir = _setup_dirs(tmp)
-        _write_receipt(receipts_dir, _make_receipt())
+        _write_receipt(receipts_dir, _make_receipt(tmp_dir=tmp))
         input_path = _write_input(tmp, _make_minimal_full_context())
         runtime_path = _write_runtime(tmp, _make_minimal_runtime_context())
         result = run_pipeline(input_path, receipts_dir, output_dir, runtime_path=runtime_path)
@@ -199,7 +208,7 @@ def test_tc6_missing_input_raises():
     tmp = tempfile.mkdtemp()
     try:
         receipts_dir, output_dir = _setup_dirs(tmp)
-        _write_receipt(receipts_dir, _make_receipt())
+        _write_receipt(receipts_dir, _make_receipt(tmp_dir=tmp))
         try:
             run_pipeline("/nonexistent/path.json", receipts_dir, output_dir)
             assert False, "TC-6 FAIL: PipelineError not raised"
