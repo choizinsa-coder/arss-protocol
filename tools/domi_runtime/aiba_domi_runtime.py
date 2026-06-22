@@ -37,7 +37,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.2.0"
+RUNTIME_VERSION = "1.3.0"
 
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
@@ -78,8 +78,11 @@ MAX_AUDITS_INJECT = 2
 
 SANDBOX_QUOTA_BYTES = 50 * 1024 * 1024  # 50MB
 
+COLLAB_DIR = os.path.join(ARSS_ROOT, "tools/sandbox/common/collab")
+
 ALLOWED_TOOLS = frozenset({
     "read_file", "list_dir", "grep_scoped", "read_log", "get_runtime_snapshot",
+    "write_file",
 })
 
 DOMI_SYSTEM_INSTRUCTION = (
@@ -143,6 +146,13 @@ def _build_tools() -> list:
             "name": "get_runtime_snapshot",
             "description": "사전 정의된 read-only 런타임 스냅샷 조회. 파라미터 불필요.",
             "parameters": {"type": "object", "properties": {}}}},
+        {"type": "function", "function": {
+            "name": "write_file",
+            "description": "VPS 파일 쓰기. 허용 경로: tools/sandbox/domi/** 또는 tools/sandbox/common/collab/**. 에이전트 간 토론 결과를 collab/에 기록할 때 사용.",
+            "parameters": {"type": "object", "properties": {
+                "target_path": {"type": "string", "description": "쓸 파일의 절대 경로"},
+                "content": {"type": "string", "description": "파일 내용"}},
+                "required": ["target_path", "content"]}}},
     ]
 
 
@@ -273,6 +283,20 @@ def _is_sandbox_write_allowed(path: str) -> bool:
 # ── bridge REST ───────────────────────────────────────────────────────────────
 
 
+
+
+def _is_write_allowed(target_path: str) -> bool:
+    """Domi 쓰기 허용 경로: sandbox/domi/** + sandbox/common/collab/**"""
+    if not target_path:
+        return False
+    try:
+        real = os.path.realpath(os.path.abspath(target_path))
+    except Exception:
+        return False
+    for base in [os.path.realpath(SANDBOX_ROOT), os.path.realpath(COLLAB_DIR)]:
+        if real == base or real.startswith(base + os.sep):
+            return True
+    return False
 def _call_bridge_tool(tool: str, params: dict) -> tuple:
     token, err = _get_access_token()
     if err:
@@ -315,6 +339,16 @@ def _call_bridge_tool(tool: str, params: dict) -> tuple:
 def _execute_function_call(name: str, args: dict) -> tuple:
     if name not in ALLOWED_TOOLS:
         return "", f"TOOL_NOT_ALLOWED: '{name}'"
+    # write_file 분기 (S277 추가)
+    if name == "write_file":
+        target_path = args.get("target_path", "")
+        content = args.get("content", "")
+        if not target_path:
+            return "", "WRITE_DENIED: target_path required"
+        if not _is_write_allowed(target_path):
+            return "", f"WRITE_DENIED: path not in domi whitelist: {target_path}"
+        return _call_bridge_tool("write_file", {"target_path": target_path, "content": content})
+    # 읽기 도구 분기
     path = args.get("path", "")
     if path and not _is_path_allowed(path):
         return "", f"PATH_NOT_ALLOWED: '{path}'"
