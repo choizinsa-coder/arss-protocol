@@ -1,0 +1,125 @@
+{
+  "schema": "constraint_registry_v1.2",
+  "last_updated_session": 276,
+  "last_updated_date": "2026-06-22",
+
+  "mcp_constraints": {
+    "write_file": {
+      "status": "HTTP_403",
+      "blocked": true,
+      "oi": null,
+      "reason": "Write Plane 미승인 경로 차단",
+      "alternative": "SCP 배포 후 SSH 실행"
+    },
+    "write_script": {
+      "status": "OK",
+      "blocked": false,
+      "oi": null,
+      "reason": "OI-S247-001 RESOLVED (S276) — exec_scoped params 키 누락 원인 확정, S273 session_close_generator.py 개정으로 exec_scoped 의존 제거 완료",
+      "alternative": null
+    },
+    "run_script": {
+      "status": "OK",
+      "blocked": false,
+      "oi": null,
+      "reason": "OI-S247-001 RESOLVED (S276) — exec_scoped params 키 누락 원인 확정, S273 session_close_generator.py 개정으로 exec_scoped 의존 제거 완료",
+      "alternative": null
+    },
+    "read_file":   { "status": "OK", "blocked": false },
+    "list_dir":    { "status": "OK", "blocked": false },
+    "grep_scoped": { "status": "OK", "blocked": false },
+    "exec_scoped": { "status": "OK", "blocked": false },
+    "ask_domi":    { "status": "OK", "blocked": false },
+    "ask_jeni":    { "status": "OK", "blocked": false }
+  },
+
+  "env_constraints": {
+    "python_cmd":                     "python3",
+    "python_cmd_forbidden":           "python",
+    "powershell_ssh_inline_python_c": "FORBIDDEN",
+    "reason_powershell":              "nested quotes consistently fail in PowerShell SSH",
+    "complex_cmd_policy":             "VPS에 .py 파일 SCP 배포 후 실행",
+    "delta_json_source":
+      "read_file:tools/close/session_close_generator.py:DELTA_REQUIRED_KEYS"
+  },
+
+  "session_close": {
+    "success_condition":
+      "next_boot_preflight PASS (journal hash + freeze gate + manifest + registry hash)",
+    "required_reads_before_delta": [
+      "tools/close/session_close_generator.py"
+    ],
+    "delta_required_keys": [
+      "session_reentry", "next_steps", "agent_focus", "pytest_status",
+      "system_changes", "caddy_governance_record", "visibility_metrics",
+      "session_delta", "sync_meta"
+    ],
+    "layer4_temp_verification":
+      "tools/close/close_manifest.json (run_script 대체, S273 구현됨)",
+    "layer4_blocker": null
+  },
+
+  "git_constraints": {
+    "diagnosis_first_cmd": "git log --oneline -20",
+    "reason":              "브랜치 히스토리 전체 파악 우선",
+    "forbidden_pattern":   "실측 없는 dangling 판정 → cherry-pick 제안 금지"
+  },
+
+  "pytest_constraints": {
+    "env_var":  "ENV=test",
+    "required": true
+  },
+
+  "beo_burden": {
+    "threshold_n": 2,
+    "policy":      "예상 비오님 수동 실행 N >= 2이면 명령 제안 전 재검토"
+  },
+
+  "evidence_id": {
+    "source":     "exec_audit_trail.log session_audit_id",
+    "format":     "SA-{8자리 hex}",
+    "validation": "issued_audit_ids 인메모리 세트 대조"
+  },
+
+  "claim_expression_policy": {
+    "restricted_expressions": [
+      "완료", "완료 확정", "확인됨", "검증됨",
+      "PASS", "TRUST_READY", "IMPLEMENTABLE", "설계 완료"
+    ],
+    "requirement":    "evidence_id (SA-해시) 첨부 필수",
+    "allowed_without_evidence": [
+      "제안", "추정", "미검증", "검토 필요", "잠정적"
+    ],
+    "violation":      "L3_DENY — evidence_id 없는 완료 선언 차단"
+  },
+
+  "oi_registry": {
+    "OI-S247-001": {
+      "title":             "exec_scoped run_script / write_script HTTP 400",
+      "service":           "aiba-exec-runtime.service (port 8449)",
+      "impact":            "Layer 4 완전 자동화 불가 / 비오님 수동 실행 부담 근원",
+      "priority":          0,
+      "status":            "RESOLVED",
+      "resolved_session":  276,
+      "root_cause":        "exec_scoped params 키 누락 (filename/script_path) S267~S274",
+      "resolution":        "S273 session_close_generator.py 개정으로 exec_scoped 의존 완전 제거. aiba-exec-runtime 자체는 active 정상 상태.",
+      "evidence":          "exec_audit_trail.log RAW 확인 (S276 진단)"
+    },
+    "OI-S272-001": {
+      "title":    "SESSION_CONTEXT task 4-bucket 소멸 원인 규명",
+      "priority": 2,
+      "status":   "OPEN"
+    },
+    "OI-S271-001": {
+      "title":    "test_generation_pipeline_phase2.py 5건 픽스처 결함",
+      "priority": 3,
+      "status":   "OPEN"
+    }
+  },
+
+  "cache_management": {
+    "load_on_boot":   true,
+    "reload_trigger": "_reload_constraints() 내부 함수 (v1.2 구현 대상)",
+    "note":           "세션 중 registry 변경 시 bridge 재부팅 또는 reload 호출 필요"
+  }
+}
