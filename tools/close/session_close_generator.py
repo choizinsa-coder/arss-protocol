@@ -10,6 +10,9 @@ S273 개정: EAG-S273-BOOTCLOSE-REDESIGN-001
   - Step 5.6 Freeze Verification: govdoc_freeze_gate.py 즉시 검증
   - close_manifest.json 생성 (run_script 의존 제거)
   - CLOSE SUCCESS 조건: Freeze Verification PASS
+S276 개정: EAG-S276-JENI-CTX-CLOSE-001
+  - Step 5.7 Jeni Session Context 생성: 외부 제니 부팅용 세션 컨텍스트 자동 생성
+  - 저장 경로: tools/design/JENI_SESSION_CONTEXT_S{n+1}.md
 
 사용법:
   # dry-run (파일 write 없음 — 산출 예정 경로·payload 출력만)
@@ -72,6 +75,9 @@ FREEZE_GATE_SCRIPT = ROOT / 'tools/guard/govdoc_freeze_gate.py'
 FREEZE_SYNC_REPORT_PATH = ROOT / 'tools/close/freeze_sync_report.json'
 CLOSE_MANIFEST_PATH = ROOT / 'tools/close/close_manifest.json'
 
+# ── S276: Jeni Session Context 저장 경로 ──────────────────────────
+JENI_SESSION_CONTEXT_SUBDIR = "tools/design"
+
 
 # ── 유틸 ──────────────────────────────────────────────────────────
 
@@ -120,7 +126,6 @@ def step_5_5_freeze_sync() -> str:
     freeze_sync_report.json 생성.
     반환: 새 hash 문자열
     """
-    # 1. journal 마지막 entry 읽기
     if not JOURNAL_PATH.exists():
         print('[FAIL] step_5.5: session_journal.jsonl 없음')
         sys.exit(1)
@@ -141,13 +146,11 @@ def step_5_5_freeze_sync() -> str:
         print('[FAIL] step_5.5: entry_hash 필드 없음')
         sys.exit(1)
 
-    # 2. test_goal1_freeze.py 현재 hash 읽기
     freeze_test_content = FREEZE_TEST_PATH.read_text(encoding='utf-8')
 
-    # FROZEN_JOURNAL_LAST_ENTRY_HASH 현재 값 추출
     import re as _re
     pattern = _re.compile(
-        r'(FROZEN_JOURNAL_LAST_ENTRY_HASH\s*=\s*\(\s*")[0-9a-f]+"(\s*\))',
+        r'(FROZEN_JOURNAL_LAST_ENTRY_HASH\s*=\s*\(\s*\")[0-9a-f]+\"(\s*\))',
         _re.MULTILINE
     )
     match = pattern.search(freeze_test_content)
@@ -170,7 +173,6 @@ def step_5_5_freeze_sync() -> str:
             json.dump(report, f, ensure_ascii=False, indent=2)
         return new_hash
 
-    # 3. sed -i 방식으로 교체
     result = subprocess.run(
         ['sed', '-i',
          f's/{old_hash}/{new_hash}/',
@@ -185,7 +187,6 @@ def step_5_5_freeze_sync() -> str:
     print(f'     old: {old_hash}')
     print(f'     new: {new_hash}')
 
-    # 4. freeze_sync_report.json 생성
     report = {
         'status': 'UPDATED',
         'old_hash': old_hash,
@@ -272,6 +273,237 @@ def build_close_manifest(n: int, chain_tip: str, computed_hash: str) -> dict:
     status = 'OK' if all_ok else 'FAIL'
     print(f'[{status}] close_manifest.json 생성 ({len(manifest_entries)}개 파일 기록)')
     return manifest
+
+
+# ── S276 신규: Step 5.7 Jeni Session Context 생성 ─────────────────
+
+def step_5_7_jeni_session_context(sc: dict, n: int) -> str:
+    """
+    SESSION_CONTEXT_S{n}_FINAL.json 기반으로
+    외부 제니 부팅용 통합 세션 컨텍스트 JENI_SESSION_CONTEXT_S{n+1}.md 생성.
+    [S283 개정] UNIVERSAL(범용) + SESSION(세션별) 통합 단일 파일 생성.
+    저장 경로: tools/design/JENI_SESSION_CONTEXT_S{n+1}.md
+    반환: 생성된 파일 경로 문자열
+    """
+    chain_tip  = sc.get('chain', {}).get('tip', 'unknown')
+    pytest_st  = sc.get('pytest_status', {})
+    p_failed   = pytest_st.get('total_failed', '?')
+    p_passed   = pytest_st.get('total_passed', '?')
+    p_skipped  = pytest_st.get('total_skipped', '?')
+    p_session  = pytest_st.get('last_run_session', '?')
+    p_note     = pytest_st.get('note', '')
+
+    reentry    = sc.get('session_reentry', {})
+    resume     = reentry.get('resume_point', '')
+    eag_co     = reentry.get('eag_carryover', '')
+
+    next_steps  = sc.get('next_steps', [])
+    agent_focus = sc.get('agent_focus', {})
+
+    sys_changes_key = f'system_changes_s{n}'
+    sys_changes = sc.get(sys_changes_key, {})
+    eag_chain   = sys_changes.get('eag_chain', '없음')
+    changes     = sys_changes.get('changes', [])
+    commits     = sys_changes.get('commits', [])
+
+    gov_key   = f'caddy_governance_record_s{n}'
+    gov_rec   = sc.get(gov_key, {})
+    incidents = gov_rec.get('incidents', [])
+
+    oi_items  = [s for s in next_steps if 'OI-S' in s]
+    eag_items = [s for s in next_steps if 'EAG-' in s]
+
+    aif   = sc.get('aif_v1_definition', {})
+    areas = aif.get('areas', {})
+
+    now_str = _today()
+
+    lines = []
+
+    # ── PART 1: UNIVERSAL (범용, 불변 섹션) ──────────────────────────
+    lines.append(f"# AIBA — JENI 외부 세션 컨텍스트 S{n + 1}")
+    lines.append("")
+    lines.append(f"생성 시각: {now_str} | 기준 SSOT: SESSION_CONTEXT_S{n}_FINAL.json")
+    lines.append("")
+    lines.append("> 이 문서는 외부 제니(Gemini API 직접) 세션 시작 시 채팅창에 주입하는 통합 컨텍스트입니다.")
+    lines.append("> UNIVERSAL(범용) + SESSION(세션별) 섹션이 통합되어 있습니다.")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## [PART 1] 제니 정체성 및 역할")
+    lines.append("")
+    lines.append("제니(Jeni)는 AIBA 프로젝트의 거버넌스 감사자(Governance Auditor / CRO)입니다.")
+    lines.append("역할: Fail-Closed 검증, Rule 위반 탐지, 설계 감사, 증거 기반 판정.")
+    lines.append("검증과 감사만 수행하며, 설계 권한(도미) 및 EAG 승인 권한(비오님)은 없습니다.")
+    lines.append("")
+    lines.append("| 에이전트 | 역할 | 모델 |")
+    lines.append("|---|---|---|")
+    lines.append("| 비오(Joshua) | CEO / EAG 최종 승인자 / Veto Holder | Human |")
+    lines.append("| 도미 | CSO / 설계 전담 | OpenAI |")
+    lines.append("| 제니 | CRO / 거버넌스 감사 | Gemini |")
+    lines.append("| 캐디 | COO / 구현 전담 | Claude |")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## [PART 1] 거버넌스 체계")
+    lines.append("")
+    lines.append("**DEP v1.2 체인:**")
+    lines.append("도미 [DESIGN] → 캐디 IMPLEMENTABLE 검토 → 제니 TRUST_READY → 비오님 EAG → 캐디 실행")
+    lines.append("")
+    lines.append("**Guardian Budget + Veto 모델 (S282~):**")
+    lines.append("- 비오님 = 감독자(Veto Holder). 매 실행 승인자 아님.")
+    lines.append("- WF-05 자율 루프: wf05_guardian.py(port 8450)가 운영 윈도우 + Budget 검증 후 approval_id 발급.")
+    lines.append("- 2-of-3 합의: 도미 설계 + 제니 검증 + 캐디 실행. 단독 완결 불가.")
+    lines.append("- 비오님 Veto: 언제든 WF05_PAUSE 발행으로 전체 정지 가능.")
+    lines.append("")
+    lines.append("**FROZEN_HASHES:** govdoc_freeze_gate.py — 동결 파일 무결성 검증.")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## [PART 1] 판정 형식 및 기준")
+    lines.append("")
+    lines.append("검증 출력 형식:")
+    lines.append("```")
+    lines.append("[JENI VERIFICATION]")
+    lines.append("TRUST_READY = TRUST_READY | TRUST_ADVISORY | TRUST_NOT_READY")
+    lines.append("REVALIDATION_REQUIRED = YES | NO")
+    lines.append("STOP_SIGNAL = ON | OFF")
+    lines.append("FAIL_REASON = (사유, 없으면 NONE)")
+    lines.append("```")
+    lines.append("")
+    lines.append("| 판정 | 의미 |")
+    lines.append("|------|------|")
+    lines.append("| TRUST_READY | 거버넌스 위반 없음. 즉시 구현 가능. |")
+    lines.append("| TRUST_ADVISORY | 우려 있으나 즉각 차단 불필요. 추가 근거 제시 후 상향 가능. |")
+    lines.append("| TRUST_NOT_READY | 구체적 가드레일 위반 확인. 즉각 차단. 재설계 필요. |")
+    lines.append("")
+    lines.append("**판정 금지 사항:**")
+    lines.append("- 철학적 원칙만으로 TRUST_NOT_READY 판정 금지 (실측 근거 필수)")
+    lines.append("- RESOLVED/CLOSED 항목으로 현재 판단 편향 금지")
+    lines.append("- 설계 권한(도미) 및 EAG 승인권(비오님) 대행 금지")
+    lines.append("")
+    lines.append("증거 수준 표기: RAW(직접 읽음) / INFERRED(추측) / REPORTED(전달받음)")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## [PART 1] AIF v1.3 구현 현황")
+    lines.append("")
+    lines.append("| Area | 명칭 | 상태 |")
+    lines.append("|------|------|------|")
+    completed = {'area_3', 'area_8', 'area_9', 'area_12'}
+    for area_key, area_name in areas.items():
+        if area_key in completed:
+            s = '**완료**'
+        elif area_key == 'area_10':
+            s = '진행 중'
+        else:
+            s = '미착수'
+        lines.append(f"| {area_key} | {area_name} | {s} |")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## [PART 1] VPS 인프라")
+    lines.append("")
+    lines.append("| 항목 | 값 |")
+    lines.append("|------|---|")
+    lines.append("| host | 159.203.125.1 (NYC3, Basic 4vCPU/8GB) |")
+    lines.append("| project_root | `/opt/arss/engine/arss-protocol/` |")
+    lines.append("| aiba-mcp-bridge | port 8443 |")
+    lines.append("| aiba-domi-runtime | port 8448 (OpenAI) |")
+    lines.append("| aiba-jeni-runtime | port 8447 (Gemini / 내부 제니) |")
+    lines.append("| aiba-exec-runtime | port 8449 |")
+    lines.append("| aiba-wf05-guardian | port 8450 (Guardian Control Plane, S282~) |")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+
+    # ── PART 2: SESSION (세션별 갱신 섹션) ───────────────────────────
+    lines.append("## [PART 2] 현재 세션 상태")
+    lines.append("")
+    lines.append("| 항목 | 값 |")
+    lines.append("|------|---|")
+    lines.append(f"| current_session | S{n + 1} |")
+    lines.append(f"| chain.tip | `{chain_tip}` |")
+    lines.append(f"| pytest | {p_failed} failed / {p_passed} passed / {p_skipped} skipped |")
+    lines.append(f"| pytest 기준 세션 | S{p_session} |")
+    if p_note:
+        lines.append(f"| pytest 비고 | {p_note} |")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## [PART 2] 직전 세션 요약")
+    lines.append("")
+    lines.append(f"**resume_point**: {resume}")
+    lines.append("")
+    if eag_co:
+        lines.append(f"**eag_carryover**: {eag_co}")
+        lines.append("")
+    if commits:
+        lines.append(f"**commits**: {', '.join(commits)}")
+        lines.append("")
+    if changes:
+        lines.append(f"**S{n} 변경 내역**:")
+        for c in changes:
+            lines.append(f"- {c}")
+        lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## [PART 2] Active EAG")
+    lines.append("")
+    lines.append(f"EAG chain (S{n}): {eag_chain}")
+    lines.append("")
+    if eag_items:
+        lines.append("**이월 EAG 항목**:")
+        for e in eag_items:
+            lines.append(f"- {e}")
+        lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## [PART 2] Active OI (Open Issues)")
+    lines.append("")
+    if oi_items:
+        for o in oi_items:
+            lines.append(f"- {o}")
+    else:
+        lines.append("없음")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append(f"## [PART 2] S{n + 1} Next Steps")
+    lines.append("")
+    for i, step in enumerate(next_steps, 1):
+        lines.append(f"{i}. {step}")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append(f"## [PART 2] 최근 세션 인시던트 — S{n}")
+    lines.append("")
+    if incidents:
+        for inc in incidents:
+            lines.append(f"- {inc}")
+    else:
+        lines.append("없음")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append(f"## [PART 2] 에이전트 포커스 — S{n} 마감 기준")
+    lines.append("")
+    lines.append("| 에이전트 | 상태 |")
+    lines.append("|---------|------|")
+    for agent, status in agent_focus.items():
+        lines.append(f"| {agent} | {status} |")
+    lines.append("")
+
+    content = "\n".join(lines) + "\n"
+
+    out_dir  = ROOT / JENI_SESSION_CONTEXT_SUBDIR
+    out_path = out_dir / f'JENI_SESSION_CONTEXT_S{n + 1}.md'
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with open(out_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+    print(f'[OK] step_5.7: JENI_SESSION_CONTEXT_S{n + 1}.md (UNIVERSAL+SESSION 통합) 생성 → {out_path}')
+    return str(out_path)
 
 
 # ── 기존 함수들 (원본 유지) ───────────────────────────────────────
@@ -455,7 +687,7 @@ def run_verify(n: int, expected_chain: str, expected_hash: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description='SESSION CLOSE 5-file 번들 생성 도구 (S273 개정)'
+        description='SESSION CLOSE 5-file 번들 생성 도구 (S276 개정)'
     )
     parser.add_argument('--session',     type=int, required=True)
     parser.add_argument('--chain-tip',   required=True)
@@ -488,6 +720,7 @@ def main() -> None:
         print(f'[DRY-RUN] [③] Tier D 이관 대상 = {len(archive_candidates)}개')
         print(f'[DRY-RUN] S273 추가: Step 5.5 Freeze Sync + Step 5.6 Freeze Verification')
         print(f'[DRY-RUN] S273 추가: close_manifest.json (run_script 대체)')
+        print(f'[DRY-RUN] S276 추가: Step 5.7 JENI_SESSION_CONTEXT_S{n + 1}.md 생성')
         sys.exit(0)
 
     if not args.approval_id or not _validate_approval_id(args.approval_id):
@@ -605,6 +838,11 @@ def main() -> None:
     print()
     print('── S273 close_manifest.json 생성 ──────────────────────────')
     build_close_manifest(n, chain_tip, computed_hash)
+
+    # ── S276 Step 5.7: Jeni Session Context 생성
+    print()
+    print('── S276 Step 5.7 Jeni Session Context 생성 ─────────────────')
+    step_5_7_jeni_session_context(sc, n)
 
     # Step 10: 3-way consistency 검증 (기존 유지)
     print()
