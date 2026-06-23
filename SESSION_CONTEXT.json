@@ -1,53 +1,556 @@
 {
-  "session_count": 251,
+  "session_count": 279,
   "chain": {
-    "session": 251,
-    "prev_tip": "241175d",
-    "tip": "a9e25ae"
+    "session": 279,
+    "prev_tip": "95d05b6",
+    "tip": "c4f79e6"
   },
   "session_reentry": {
-    "last_session": 251,
-    "resume_point": "S251: 거버넌스 문서 보호 DEP 완주 — Part1 거버넌스 5종(헌법/retention/AES/Direction/oauth) FROZEN_HASHES 동결(663cc4c); Part2 boot/close freeze 차단 게이트 tools/guard/govdoc_freeze_gate.py 신설+자체 동결(a9e25ae). 추가로 전체 pytest를 막던 stale 테스트 2건(test_o2 천장 raw카운트, test_t12 vm_current)을 S250 승인계약(canonical 카운트 / vm_current Tier D 이관)에 정렬하는 SC-GOVFIX DEP 완주(747369a). 전체 pytest 1656/0/94. HEAD a9e25ae.",
-    "eag_carryover": "#2 헌법 손상 경위(미커밋, git 사후탐지만) / #4 n8n 환경변수 격리(제니 TRUST-ADVISORY 필수) / #5 OI-JENI-CONTEXT+RUNTIME-LOOP / #6 OI-S247-001 restart BrokenPipe / #7 Role Drift Scoreboard / boot freeze 게이트 SESSION BOOT 절차 채택(비오 권한) / OI-S251-T1-RESIDUAL+T2-RESIDUAL(close backstop bounded, 비오 EAG 수용)"
+    "last_session": 279,
+    "resume_point": "S279: /observe 엔드포인트 구현 완료 (EAG-S279-OBSERVE-001, commit 48a75cc). Jeni v4.9.0 / Domi v1.5.0. ivloop 테스트 fix (commit c4f79e6). git push 완료 (c02af61..c4f79e6). caddy_error_log 시스템 구축.",
+    "eag_carryover": "S280: OI-S272-001 task 4-bucket 키 소멸 10 failed 해소. port 8449 HTTP 400 진단."
   },
   "next_steps": [
-    "#2 헌법 손상 경위 — 미커밋 편집이라 git 시점/주체 특정 불가(사후탐지 한계)",
-    "#4 n8n 환경변수 격리(제니 TRUST-ADVISORY 필수): N8N_RESTRICT_FILE_ACCESS_TO 설정 + N8N_BLOCK_ENV_ACCESS_TO_LOCALHOST=true",
-    "#5 OI-S248-JENI-CONTEXT-001 + OI-S250-JENI-RUNTIME-LOOP",
-    "#6 OI-S247-001 restart run_script BrokenPipe",
-    "#7 Role Drift Scoreboard 운영",
-    "boot freeze 게이트: SESSION BOOT 절차에 govdoc_freeze_gate.py 차단 단계 추가(프롬프트 채택=비오 권한)",
-    "OI-S251-T1-RESIDUAL: 거버넌스 문서 실시간 변조탐지 부재 — close pytest backstop bounded, 비오 EAG 수용",
-    "OI-S251-T2-RESIDUAL: boot 게이트 프롬프트 채택 의존 — 동일 backstop bounded, 비오 EAG 수용",
-    "[범위외] system_changes_s208 잔존 / SQLite 비대 / nginx 443 server_name 중복"
+    "OI-S272-001: task 4-bucket 키 소멸 복구 — active_tasks/hold_tasks/blocked_tasks/archived_tasks/pending_tasks_legacy_shim/canonical_rules/lessons 복구 (10 failed 해소)",
+    "pytest exec 직접 실행 복구 (port 8449 HTTP 400 근본 원인 진단)"
   ],
   "agent_focus": {
-    "beo": "S251 — 이월 순차 진행 + 커밋 제약(green 전 금지/add -A 금지/대상만 명시 스테이징) 지시. SC-GOVFIX·Part2 EAG 승인. Part2 제니 STOP 위 T-2 잔여리스크 EAG 수용. 세션 종료 지시.",
-    "caddy": "S251 — GOVDOC-PROTECT Part1+Part2 + SC-GOVFIX 3 DEP 완주. DEP 체인 자율 구동. 단언-게이트 스테이징(오염0). chain false-alarm 1건 자체 해소. 5-file 클로즈.",
-    "domi": "S251 — SC-GOVFIX 시정 설계 + Part2 게이트 설계(test_goal1_freeze 재사용).",
-    "jeni": "S251 — SC-GOVFIX 2차 TRUST_READY(S250 문서근거 후). Part2 2차 NOT_READY(T-1 게이트freeze 수용/T-2 punt)→비오 EAG 수용 진행. 런타임 안정."
+    "beo": "S279 — /observe 엔드포인트 EAG 승인. caddy 오류 자동 기록 시스템 지시. 외부 도미·제니 VPS 접근 구조 방향 확정.",
+    "caddy": "S279 — EAG-S279-OBSERVE-001 구현 완료. Jeni v4.9.0 / Domi v1.5.0 /observe 배포. ivloop 테스트 4건 fix. git push 2회. caddy_error_log 구축. INC 3건 발생 (nested quotes 재발, 패치 실행 명령 누락, 패치 파일 SCP 누락).",
+    "domi": "S279 — 외부 도미·제니 VPS 접근 아키텍처 R1/R2/R3 설계 참여. /observe 엔드포인트 방향 제시.",
+    "jeni": "S279 — TRUST_NOT_READY 판정 (물리적 연결 방식 미정의). /observe 스펙 TRUST_NOT_READY (실측 근거 부족 — TRUST_ADVISORY 간주)."
   },
   "pytest_status": {
-    "last_run_date": "2026-06-15",
-    "last_run_session": 251,
-    "regression_impact": "NONE",
-    "total_failed": 0,
-    "total_passed": 1656,
+    "last_run_date": "2026-06-23",
+    "last_run_session": 279,
+    "regression_impact": "NONE (10건 OI-S272-001 기존 지속)",
+    "total_failed": 10,
+    "total_passed": 1733,
     "total_skipped": 94,
-    "note": "S251: GOVDOC freeze 9->15 TC(+6: docs5+gate1), stale 2건(test_o2/test_t12) S250 계약 정렬. 1650->1656. --ignore=tools/sandbox."
+    "note": "S279: 그룹 A 4건(ivloop write_file) 해소. 잔여 10건 전부 OI-S272-001 task 키 소멸."
   },
   "sync_meta": {
-    "last_sync_date": "2026-06-15",
-    "last_sync_session": 251,
+    "last_sync_date": "2026-06-23",
+    "last_sync_session": 279,
     "files": [
-      "SESSION_CONTEXT_S251_FINAL.json",
-      "SESSION_CONTEXT_ARCHIVE_TIER_D_S251.json"
+      "SESSION_CONTEXT_S279_FINAL.json",
+      "SESSION_CONTEXT_ARCHIVE_TIER_D_S279.json"
     ],
     "sync_status": "SYNCED"
   },
-  "schema_version": "4.0",
-  "system_name": "AIBA Self-Evolution-Ready System",
-  "system_version": "AIBA-v3.2-S165",
+  "aif_v1_definition": {
+    "registered_session": 269,
+    "version": "v1.3",
+    "areas": {
+      "area_0": "Project Initiation Kernel (2축 START GATE)",
+      "area_1": "자율 의제 발굴 레이더 (Idea Market)",
+      "area_2": "VPS AutoGuard (보안3단계 탐지)",
+      "area_3": "제니 Dual Verification (보안3단계 격리, 지표1 Primary)",
+      "area_4": "에이전트 간 토론 (Decision Ledger)",
+      "area_5": "Beo Sovereign Authority (Constitutional Override)",
+      "area_6": "선언→작동 전환 (Governance Compiler)",
+      "area_7": "조직 학습 엔진",
+      "area_8": "도미-제니 직접 채널",
+      "area_9": "AICS 정체성 일관성 (보안3단계 예방, 토큰제어)",
+      "area_10": "Execution Delivery System",
+      "area_11": "Decision Ledger (Decision Class 4종)",
+      "area_12": "Governance Compiler",
+      "area_13": "Evaluation & Benchmark (지표7종 SSOT)",
+      "area_14": "Shadow Simulation (메타+Interlock)"
+    },
+    "area_15_preview": "Failure Memory System (v1.4 예고)",
+    "priority_s270": [
+      "area_9",
+      "area_8",
+      "area_3",
+      "area_12",
+      "area_0"
+    ],
+    "root_prerequisite": "area_9 — 전 영역의 전제 조건",
+    "consensus": "도미·제니·캐디 3자 합의 100% + 비오님 EAG-S269-AIF-V1.3-001"
+  },
+  "caddy_governance_record_s272": {
+    "session": 272,
+    "date": "2026-06-20",
+    "eag_gates_this_session": [
+      "EAG-S272-GOVCOMP-001: Area 12 Governance Compiler 구현 승인",
+      "EAG-S272-RECOVERY-001: SSOT 무결성 강제 복구 (git reset --hard 545b4fa)",
+      "EAG-S272-CLOSE-001: S272 SESSION CLOSE"
+    ],
+    "incidents": [
+      "INC-S272-001: 옵션 메뉴 제시 금지 위반 — 에스컬레이션 시 A/B/C 3가지 경로 제시",
+      "INC-S272-002: git status 미확인으로 손상 SESSION_CONTEXT.json을 b983e28에 커밋. git reset --hard 545b4fa로 복구.",
+      "INC-S272-003: find 명령 후 git ls-files에 cd 누락 — fatal: not a git repository 오류 유발",
+      "INC-S272-004: Area 12 tar 재배포 후 git add 미스테리 미해소 — S273 이월"
+    ],
+    "oi_observations": [
+      "OI-S272-001 신규: SESSION_CONTEXT.json task 4-bucket(active/hold/blocked/archived) 소멸. Area 12 물리 격리 증명으로 무관 확정. 손상 시점 역추적 미완(별도 진단 세션 필요).",
+      "boot gate freshness 조건(③ timestamp_epoch 신선도): LLM 주입 날짜 vs VPS 클럭 비교 구조적 결함 확인. 비오님 결정으로 조건 제거. 공식화는 S273 의제.",
+      "caddy_cmd_gate.py 실효성: VPS tools/governance/ 에 배포. 9 tests PASS. S272 실패 3종(python -c, backslash-pipe, 파일명 공백) 모두 차단 확인.",
+      "Area 12 git add 미스테리: 파일 존재 확인, gitignore 미해당, NOT_IGNORED 확인에도 staging 안 됨. 원인 미확정. S273 첫 진단 대상.",
+      "Role Drift Scoreboard S272: 도미 0 / 제니 0 / 캐디 INC 4건"
+    ],
+    "caddy_self_report": [
+      "INC-S272-001: 에스컬레이션 상황에서 A/B/C 옵션 제시 — 비오님 강력 질책.",
+      "INC-S272-002: git commit 전 git status 미확인으로 손상 SSOT 커밋. 캐디 과실 확정.",
+      "INC-S272-003: find + git ls-files 합성 명령에서 cd 누락.",
+      "INC-S272-004: tar 재배포 후 git add 미스테리 미해소로 세션 연장. S273 이월.",
+      "비오님이 명령 복붙 단순 노동자가 된다는 강력 질책 수용. exec_scoped 복구를 별도 의제로 등록.",
+      "caddy_cmd_gate.py 배포로 명령 사전검증 체계 구축 — 실효성 증명됨."
+    ],
+    "notable": "S272: Area 12 Governance Evidence Compiler 설계 3라운드(R1→R2→R3) + 구현. caddy_cmd_gate.py 영속 게이트 배포. INC 4건 발생(S271 0건 대비 급등). SSOT 무결성 사고(INC-S272-002) 발생·복구. chain.tip 545b4fa 유지.",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PARTIAL (INC-S272-003 cd 누락)",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "FAIL (INC-S272-001 옵션메뉴, INC-S272-002 추측실행)"
+    }
+  },
+  "visibility_metrics_s272": {
+    "session": 272,
+    "date": "2026-06-20",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 151,
+    "M-03_ceiling_utilization_rate": "44/42 (Tier D 이관 필요)",
+    "M-04_session_delta_size": "LARGE (Area 12 구현, INC 4건, SSOT 복구)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S272.json",
+    "M-06_active_task_load": 8,
+    "M-07_stabilization_compliance": "FAIL",
+    "chain_tip": "545b4fa",
+    "pytest_result": "미측정 (S273 재측정 예정)",
+    "key_decisions": [
+      "boot gate freshness 조건(③) 제거 (비오님 직접 결정)",
+      "Area 12 Evidence Compiler로 전환 (실제 EAG 토큰 RAW 기반)",
+      "INC-S272-002 복구: git reset --hard 545b4fa (제니 권고 채택)",
+      "caddy_cmd_gate.py 영속 배포 (명령 사전검증 게이트)",
+      "CADDY 금지 4종 메모리+거버넌스 문서 이중 등록",
+      "exec_scoped 복구를 별도 의제 등록 (비오님 지적 수용)"
+    ]
+  },
+  "session_delta": {
+    "session": 279,
+    "modified_keys": [
+      "session_count",
+      "chain",
+      "session_reentry",
+      "next_steps",
+      "agent_focus",
+      "pytest_status",
+      "sync_meta",
+      "updated_at",
+      "generated_at",
+      "context_hash",
+      "session_delta"
+    ],
+    "added_keys": [
+      "system_changes_s279",
+      "caddy_governance_record_s279",
+      "visibility_metrics_s279"
+    ],
+    "removed_keys": [
+      "system_changes_s275"
+    ]
+  },
+  "updated_at": "2026-06-23T15:34:39.882145+09:00",
+  "generated_at": "2026-06-23T15:34:39.882145+09:00",
+  "context_hash": "e056748999f5b7f6f553690de278bb36eb3a7d7fb8e3b69ced7cfec2dd6bda86",
+  "caddy_governance_record_s273": {
+    "session": 273,
+    "date": "2026-06-21",
+    "eag_gates_this_session": [
+      "EAG-S273-BOOTCLOSE-REDESIGN-001: SESSION BOOT/CLOSE 재설계 구현 승인",
+      "EAG-S273-CLOSE-001: S273 SESSION CLOSE"
+    ],
+    "incidents": [
+      "INC-S273-001: 옵션 메뉴 제시 금지 위반 — R3 PROJECT INSTRUCTIONS 수정 시 번호 재부여 방식 두 가지 제시",
+      "INC-S273-002: ENV=test 누락 — SESSION_CONTEXT에 명시된 정보를 참조하지 않고 pytest 명령 생성"
+    ],
+    "oi_observations": [
+      "Jeni 1차 검증: Context Hallucination — 단일 VPS/단일 세션 구조에 분산 환경 race condition 개념 기계적 적용. loop_rule 적용으로 TRUST_ADVISORY 하향 후 TRUST_READY 전환.",
+      "SESSION CLOSE Step 5.5 자동 hash 갱신으로 boot gate 구조적 결함 해소. S274부터 journal append 시 수동 개입 불필요.",
+      "ask_jeni/ask_domi MCP 파라미터: message → prompt. tool_search 없이 호출 시도하여 오류 발생 후 수정."
+    ],
+    "caddy_self_report": [
+      "INC-S273-001: R3 처리 시 번호 재부여 여부를 비오님께 선택하게 함 — 영구 금지 위반.",
+      "INC-S273-002: ENV=test SESSION_CONTEXT 명시 정보 미참조로 pytest 명령 오류 유발.",
+      "ask_jeni 호출을 비오님께 요청하는 착오 발생 — MCP 직접 호출 가능함에도 불구하고."
+    ],
+    "notable": "S273: SESSION BOOT/CLOSE 구조적 재설계 완료. boot gate 반복 실패 근본 원인 제거. INC 3건(옵션메뉴, ENV=test 누락, ask_jeni 착오). chain.tip 1b64b64.",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "FAIL (INC-S273-001 옵션메뉴, INC-S273-002 정보 미참조)"
+    }
+  },
+  "visibility_metrics_s273": {
+    "session": 273,
+    "date": "2026-06-21",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 151,
+    "M-03_ceiling_utilization_rate": "44/42 (Tier D 이관 필요)",
+    "M-04_session_delta_size": "MEDIUM (재설계 1건, INC 3건)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S272.json 유지",
+    "M-06_active_task_load": 6,
+    "M-07_stabilization_compliance": "FAIL",
+    "chain_tip": "1b64b64",
+    "pytest_result": "5 failed / 1738 passed / 94 skipped",
+    "key_decisions": [
+      "SESSION CLOSE Step 5.5 Freeze Sync + Step 5.6 Freeze Verification 추가 (EAG-S273-BOOTCLOSE-REDESIGN-001)",
+      "close_manifest.json 생성으로 run_script 의존 제거",
+      "PROJECT INSTRUCTIONS boot gate 조건 ③ 제거 (비오님 직접 편집)",
+      "FROZEN_HASHES session_close_generator.py 연쇄 hash 갱신"
+    ]
+  },
+  "caddy_governance_record_s274": {
+    "session": 274,
+    "date": "2026-06-21",
+    "eag_gates_this_session": [
+      "EAG-S274-GITDIAG-001: git 상태 진단 (read-only)",
+      "EAG-S274-AREA12-COMMIT-001: cherry-pick 시도 (empty, 무변경)"
+    ],
+    "incidents": [
+      "INC-S274-001: SESSION CLOSE delta JSON 필수 키 반복 누락 (agent_focus, pytest_status, system_changes, caddy_governance_record, visibility_metrics, session_delta, sync_meta) — DELTA_REQUIRED_KEYS 사전 미확인 과실"
+    ],
+    "oi_observations": [
+      "Area 12 git add 미스테리 원인: 2b98618이 main에 정상 포함되어 있었음. S272 SSOT git reset --hard 제거 기록은 오기.",
+      "SESSION CLOSE delta JSON 작성 전 DELTA_REQUIRED_KEYS 코드 직접 확인 절차 필요 — S275부터 적용."
+    ],
+    "caddy_self_report": [
+      "INC-S274-001: DELTA_REQUIRED_KEYS 9개를 사전에 확인하지 않고 delta JSON 작성. 비오님께 반복 오류 유발. 근본 과실."
+    ],
+    "notable": "S274: Area 12 미스테리 해소(진단 성과). SESSION CLOSE delta 반복 누락으로 비오님 심각한 불편 유발. INC 1건.",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "N/A",
+      "M07_role_boundary": "FAIL (INC-S274-001 delta 반복 누락)"
+    }
+  },
+  "visibility_metrics_s274": {
+    "session": 274,
+    "date": "2026-06-21",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 151,
+    "M-03_ceiling_utilization_rate": "44/42",
+    "M-04_session_delta_size": "SMALL (진단 전용, 변경 커밋 없음)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S273.json 유지",
+    "M-06_active_task_load": 5,
+    "M-07_stabilization_compliance": "FAIL",
+    "chain_tip": "1b64b64",
+    "pytest_result": "5 failed / 1738 passed / 94 skipped",
+    "key_decisions": [
+      "Area 12 git add 미스테리 해소: 2b98618 main 정상 포함 확인",
+      "S272 SSOT 오기 확인: git reset --hard로 2b98618 제거 기록은 실제와 불일치"
+    ]
+  },
+  "caddy_governance_record_s275": {
+    "session": 275,
+    "date": "2026-06-21",
+    "eag_gates_this_session": [],
+    "incidents": [
+      "INC-S275-001: SESSION CLOSE 착수 지연 — 설계 토론 집중으로 CLOSE 준비가 세션 말미에 시작됨. 비오님 대기 시간 발생."
+    ],
+    "oi_observations": [
+      "OI-S247-001: S275에서 순위 0 최우선 재조정. S276 첫 착수 대상.",
+      "EDA_FRAMEWORK_v1.2 완결: Registry+Enforcement+Receipt 3계층. 도미 YES. 제니 TRUST_READY.",
+      "도미 구현 초기 3개 확인 항목: Registry=Enforcement 여부 / Receipt 자동 생성 여부 / next_boot_preflight=BOOT Gate 동일 여부 S276 실측 우선."
+    ],
+    "caddy_self_report": [
+      "INC-S275-001: 설계 토론이 길어져 SESSION CLOSE 준비가 세션 말미에 집중됨. 비오님께 대기 부담 유발.",
+      "S275 설계 성과: EDA_FRAMEWORK v1.0-v1.2 3회 개정, 도미-제니 6라운드 토론 완결, 실측 5종 수행."
+    ],
+    "notable": "S275: EDA_FRAMEWORK v1.2 완결 (설계 전용 세션). EAG 없음. 변경 커밋 없음.",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "N/A",
+      "M07_role_boundary": "PASS"
+    }
+  },
+  "visibility_metrics_s275": {
+    "session": 275,
+    "date": "2026-06-21",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 151,
+    "M-03_ceiling_utilization_rate": "44/42",
+    "M-04_session_delta_size": "MEDIUM (설계 문서 3종 INC 1건)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S274.json 유지",
+    "M-06_active_task_load": 9,
+    "M-07_stabilization_compliance": "PASS",
+    "chain_tip": "1b64b64",
+    "pytest_result": "5failed/1738passed/94skipped",
+    "key_decisions": [
+      "EDA_FRAMEWORK v1.2 완결 Registry+Enforcement+Receipt 3계층",
+      "OI-S247-001 순위 0 재조정 S276 첫 착수",
+      "도미 구현 착수 YES 최종 판단",
+      "constraint_registry.json 스키마 확정 VPS 생성은 EAG-S275-EDA-IMPLEMENTATION"
+    ]
+  },
+  "system_changes_s276": {
+    "deployed_session": 276,
+    "commits": [
+      "da8ba3c"
+    ],
+    "changes": [
+      "CADDY PROJECT INSTRUCTIONS v3.8: Step 5.7 Jeni Session Context 자동화 + [JENI CONTEXT] 섹션 신규",
+      "tools/governance/constraint_registry.json: EDA SSOT Registry 신규 생성 (schema v1.2, OI-S247-001 RESOLVED 반영)",
+      "tools/mcp/mcp_http_bridge.py: v2.6.0→v2.7.0 EDA L1 Tool-call Gate + L2 Evidence Gate + L3 Output Claim Gate + Evidence Receipt 자동 생성 + _load_constraint_cache() main() 통합",
+      "tools/mcp/eda_block_insert.py: EDA 블록 삽입 보조 파일 (신규)",
+      "tools/close/session_close_generator.py: S276 개정 — Step 5.7 JENI_SESSION_CONTEXT_S{n+1}.md 자동 생성",
+      "JENI_CONTEXT_UNIVERSAL.md: 외부 제니 범용 컨텍스트 문서 신규 생성 (역할·판정형식·거버넌스·AIF v1.3)",
+      "tools/design/JENI_SESSION_CONTEXT_S276.md: 외부 제니 S276 세션 컨텍스트 수동 생성 (Step 5.7 최초 실행 전)"
+    ],
+    "eag_chain": "EAG-S275-EDA-IMPLEMENTATION (구현 세션: S276)",
+    "pytest_result": "5 failed / 1738 passed / 94 skipped (S273 승계)"
+  },
+  "caddy_governance_record_s276": {
+    "session": 276,
+    "date": "2026-06-22",
+    "eag_gates_this_session": [
+      "EAG-S275-EDA-IMPLEMENTATION: constraint_registry.json 신규 생성 + mcp_http_bridge.py L1/L2/L3 Gate + Evidence Receipt 통합 (commit da8ba3c)"
+    ],
+    "incidents": [],
+    "oi_observations": [
+      "OI-S247-001 RESOLVED (S276): exec_audit_trail.log RAW 확인. 근본 원인 = exec_scoped params 키 누락(filename/script_path) S267~S274. S273 session_close_generator.py 개정으로 exec_scoped 의존 완전 제거. aiba-exec-runtime 서비스 자체는 active 정상.",
+      "OI-S272-001 원인 확정: S268 SESSION CLOSE SCP 워크어라운드 시 active_tasks/hold_tasks/blocked_tasks/pending_tasks/archived_tasks/pending_tasks_legacy_shim/canonical_rules/lessons 8개 키 누락 검증 실패로 소멸. S267_FINAL에 원본 보존. S277 CLOSE delta 복구 예정.",
+      "OI-S271-001 원인 확정: test_generation_pipeline_phase2.py _make_receipt()의 artifact_path='/tmp/test.json' 하드코딩. baseline_selector.py가 파일 존재 여부 검증 → BaselineSelectorError 발생. TC-1~5 전부 FAIL. 수정 EAG 필요.",
+      "외부 제니 컨텍스트 구조 신설: 내부 제니와 동일 조건 유지 원칙. 문서 1(JENI_CONTEXT_UNIVERSAL.md 범용) + 문서 2(JENI_SESSION_CONTEXT_S{n}.md 매 세션). Step 5.7로 SESSION CLOSE 시 자동 생성.",
+      "EDA v1.2 L1 Gate 동작 검증: write_file 호출 시 L1_DENY 즉시 반환 확인. bridge v2.7.0 active.",
+      "mcp_http_bridge.py v2.7.0: S264에서 session 파라미터 추가(S000 누적 해소)했던 v2.7.0과 버전 충돌. EDA 패치 후 동일 버전 번호 유지(기능 확장으로 처리)."
+    ],
+    "caddy_self_report": [
+      "INC 0건 세션.",
+      "패치 스크립트 이스케이프 문제로 mcp_http_bridge.py EDA 패치 2회 실패(SyntaxError) — 3차 시도에서 외부 파일 분리 방식으로 구조적 해결.",
+      "OI-S247-001 초기 진단 시 check_service_state SERVICE_NOT_IN_ALLOWLIST DENY 발생 — get_runtime_snapshot으로 전환 후 정상 진단 완료."
+    ],
+    "notable": "S276: EDA v1.2 전 항목 구현 완료(EAG-S275-EDA-IMPLEMENTATION). OI-S247-001 RESOLVED. 외부 제니 컨텍스트 구조 신설. CADDY v3.8 확정. OI-S272-001/S271-001 원인 확정. INC 0건.",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "PASS"
+    }
+  },
+  "visibility_metrics_s276": {
+    "session": 276,
+    "date": "2026-06-22",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 151,
+    "M-03_ceiling_utilization_rate": "44/42 (system_changes_s276 + caddy_governance_record_s276 + visibility_metrics_s276 추가, system_changes_s272 제거 상쇄 → 44 유지)",
+    "M-04_session_delta_size": "LARGE (EAG 1건 + EDA v1.2 전 항목 + 외부 제니 구조 신설 + OI 2건 원인 확정)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S276.json",
+    "M-06_active_task_load": 2,
+    "M-07_stabilization_compliance": "PASS",
+    "chain_tip": "da8ba3c",
+    "pytest_result": "5 failed / 1738 passed / 94 skipped",
+    "key_decisions": [
+      "OI-S247-001 RESOLVED — exec_scoped params 키 누락 원인 확정, S273 이후 이미 해소",
+      "EAG-S275-EDA-IMPLEMENTATION 전 5항목 완료 (commit da8ba3c)",
+      "외부 제니 컨텍스트 2종 구조 확립 (SESSION CLOSE Step 5.7 자동화)",
+      "CADDY v3.8 PROJECT INSTRUCTIONS 확정",
+      "OI-S272-001 원인 확정 (S268 CLOSE 키 누락, S277 복구 예정)",
+      "OI-S271-001 원인 확정 (_make_receipt 픽스처 결함, EAG 수정 이월)"
+    ]
+  },
+  "system_changes_s277": {
+    "deployed_session": 277,
+    "commits": [
+      "6c26d23",
+      "636c1a1"
+    ],
+    "changes": [
+      "tests/test_generation_pipeline_phase2.py: OI-S271-001 RESOLVED (commit 6c26d23)",
+      "tools/domi_runtime/aiba_domi_runtime.py: v1.2.0 → v1.3.0 (write_file + COLLAB_DIR, commit 636c1a1)",
+      "tools/jeni_runtime/aiba_jeni_runtime.py: v4.6.0 → v4.7.0 (write_file + COLLAB_DIR, commit 636c1a1)",
+      "tools/sandbox/common/collab/: 신설 — 공유 공간 생성 (S277, gitignore domain)",
+      "/etc/systemd/system/aiba-domi-runtime.service: Environment=AIBA_DOMI_CLIENT_SECRET 제거, EnvironmentFile 단일화",
+      "/etc/systemd/system/aiba-jeni-runtime.service: EnvironmentFile 추가 (AIBA_GEMINI_API_KEY 이관)",
+      "/etc/aiba/secrets.env: AIBA_GEMINI_API_KEY >> 추가",
+      "Domi/Jeni read_file 직접 호출 검증: OK — OAuth token / read_file / /ask 모두 성공"
+    ],
+    "eag_chain": "EAG-S277-OI271-COMMIT-001, EAG-S277-DOMI-JENI-WRITE-001, EAG-S277-CLOSE-001",
+    "pytest_result": "10 failed / 1733 passed / 94 skipped (10건 OI-S272-001 키 소멸)"
+  },
+  "caddy_governance_record_s277": {
+    "session": 277,
+    "date": "2026-06-22",
+    "eag_gates_this_session": [
+      "EAG-S277-OI271-COMMIT-001: fixture 수정 commit 6c26d23",
+      "EAG-S277-DOMI-JENI-WRITE-001: Domi/Jeni write_file + collab 구현 commit 636c1a1",
+      "EAG-S277-CLOSE-001: S277 SESSION CLOSE"
+    ],
+    "oi_observations": [
+      "OI-S271-001 RESOLVED: commit 6c26d23.",
+      "OI-S272-001 CLOSE delta 복구 (8개 키).",
+      "exec plane 복원: write_script/run_script/git_commit 정상. pytest exec port 8449 HTTP 400 미해소.",
+      "Domi/Jeni write_file + COLLAB_DIR 구현: v1.3.0/v4.7.0. commit 636c1a1.",
+      "collab 공유공간 신설 (S277): threads/ decisions/ drafts/.",
+      "systemd unit secret 동기화: domi unit 구버전 secret 제거, jeni unit EnvironmentFile 추가, secrets.env GEMINI_API_KEY 추가.",
+      "Domi/Jeni read_file 직접 호출 검증: Domi OK, Jeni OK. /ask 경유 current_session=277 독립 확인.",
+      "Jeni 세션 부팅 자동화 미구현: 런타임 시작 시 SSOT 자동 로드 로직 없음 → S278 구현 의뢰."
+    ]
+  },
+  "visibility_metrics_s277": {
+    "session": 277,
+    "date": "2026-06-22",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 151,
+    "M-03_ceiling_utilization_rate": "44/42 (OI-S272-001 8개 키 복구로 증가 — Tier D 이관 필요)",
+    "M-04_session_delta_size": "MEDIUM (EAG 2건, OI 2건 처리, INC 1건, exec plane 복원 확인)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S277.json",
+    "M-06_active_task_load": 2,
+    "M-07_stabilization_compliance": "FAIL (INC-S277-001)",
+    "chain_tip": "6c26d23",
+    "pytest_result": "10 failed / 1733 passed / 94 skipped",
+    "key_decisions": [
+      "EAG-S277-OI271-COMMIT-001: fixture 수정 commit 6c26d23",
+      "OI-S271-001 RESOLVED",
+      "OI-S272-001 CLOSE delta 복구",
+      "exec plane write_script/run_script/git_commit 정상 확인",
+      "present_files 호출 절대 금지 메모리 갱신 (S277)"
+    ]
+  },
+  "system_changes_s278": {
+    "deployed_session": 278,
+    "commits": [
+      "95d05b6"
+    ],
+    "changes": [
+      "tools/design/DOMI_SESSION_BOOT_PROTOCOL.md: 신규 생성 (EAG-S278-AGENT-BOOT-001)",
+      "tools/design/JENI_SESSION_BOOT_PROTOCOL.md: 신규 생성 (EAG-S278-AGENT-BOOT-001)",
+      "tools/domi_runtime/aiba_domi_runtime.py: v1.3.0 → v1.4.0 (SC_FINAL 자동 로드 + BOOT_PROTOCOL 주입)",
+      "tools/jeni_runtime/aiba_jeni_runtime.py: v4.7.0 → v4.8.0 (SC_FINAL 자동 로드 + BOOT_PROTOCOL 주입)"
+    ],
+    "eag_chain": "EAG-S278-AGENT-BOOT-001, EAG-S278-CLOSE-001",
+    "pytest_result": "미실행 (S277 결과 승계: 10 failed / 1733 passed / 94 skipped)"
+  },
+  "caddy_governance_record_s278": {
+    "session": 278,
+    "date": "2026-06-23",
+    "eag_gates_this_session": [
+      "EAG-S278-AGENT-BOOT-001: Domi/Jeni 세션 자율 부팅 시스템 구현 (commit 95d05b6)",
+      "EAG-S278-CLOSE-001: S278 SESSION CLOSE"
+    ],
+    "incidents": [
+      "INC-S278-001: outputs 복사 누락 후 SCP 명령 출력 — 실행 불가능한 명령 제공. 비오님 지적 후 수정.",
+      "INC-S278-002: present_files 호출 금지 규칙 위반 — 수습 과정에서 규칙 미확인 후 호출.",
+      "INC-S278-003: SCP 명령 4줄 분리 출력 — 단일 명령으로 가능한 작업을 4회 복붙하게 함."
+    ],
+    "oi_observations": [
+      "present_files 호출 시 오른쪽 패널 미리보기가 열리는 것은 인터페이스 제약으로 허용 확정 (S278 비오님).",
+      "파일 생성 출력 원칙 갱신: outputs 복사 후 present_files 호출하여 다운로드 버튼 제공. 내용은 채팅창 출력 금지.",
+      "Domi SC_FINAL 자동 로드 검증 완료: session=277 정상 인지.",
+      "Jeni SC_FINAL 자동 로드 검증 완료: session=277, chain_tip=636c1a1 정상 로드.",
+      "CADDY_FAILURE_REPORT_S278.md 생성 — S274 오류 기록에 S278 INC 3건 추가 (패턴 분석 포함)."
+    ],
+    "caddy_self_report": [
+      "INC-S278-001: 파일 생성 후 outputs 복사 단계 누락. PRE-OUTPUT CHECK 형식적 이행. 비오님 지적 후 수정.",
+      "INC-S278-002: 수습 과정에서 present_files 호출 금지 규칙 미확인. 이중 과실.",
+      "INC-S278-003: SCP 4줄 분리 출력. 비오님 효율성 지적 수용. 동일 경로 다중 파일은 단일 명령으로 출력 원칙 확립.",
+      "문제 분석 시 '선택지 제시' 패턴 1회 발생 (present_files vs SCP 방식 질문) — 비오님이 결정하게 한 것은 원칙 위반 경계선."
+    ],
+    "notable": "S278: EAG-S278-AGENT-BOOT-001 완료. Domi/Jeni SC_FINAL 자동 로드 구현·검증. INC 3건. present_files 규칙 갱신. commit 95d05b6."
+  },
+  "visibility_metrics_s278": {
+    "session": 278,
+    "date": "2026-06-23",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 151,
+    "M-03_ceiling_utilization_rate": "44/42 (system_changes_s278 + caddy_governance_record_s278 + visibility_metrics_s278 추가, system_changes_s274 제거 상쇄)",
+    "M-04_session_delta_size": "MEDIUM (EAG 1건, INC 3건, 검증 완료)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S278.json",
+    "M-06_active_task_load": 3,
+    "M-07_stabilization_compliance": "FAIL (INC-S278-001~003)",
+    "chain_tip": "95d05b6",
+    "pytest_result": "10 failed / 1733 passed / 94 skipped (S277 승계)",
+    "key_decisions": [
+      "EAG-S278-AGENT-BOOT-001: Domi/Jeni SC_FINAL 자동 로드 구현",
+      "present_files 규칙 갱신: 미리보기 허용, 다운로드 버튼 제공",
+      "SCP 다중 파일 단일 명령 출력 원칙 확립",
+      "CADDY_FAILURE_REPORT_S278.md 생성"
+    ]
+  },
+  "system_changes_s279": {
+    "deployed_session": 279,
+    "commits": [
+      "48a75cc",
+      "c4f79e6"
+    ],
+    "changes": [
+      "tools/jeni_runtime/aiba_jeni_runtime.py: v4.8.0 → v4.9.0 (/observe 엔드포인트 추가, EAG-S279-OBSERVE-001)",
+      "tools/domi_runtime/aiba_domi_runtime.py: v1.4.0 → v1.5.0 (/observe 엔드포인트 추가, EAG-S279-OBSERVE-001)",
+      "tests/test_jeni_runtime_ivloop.py: write_file 반영 4개 테스트 갱신 (EAG-S279-JENI-TEST-FIX-001)",
+      "tools/caddy_error_log/: 캐디 오류 자동 기록 시스템 신규 구축 (비오님 지시 S279)",
+      "git push: c02af61..c4f79e6 (S277~S279 누적 push 완료)"
+    ],
+    "eag_chain": "EAG-S279-OBSERVE-001, EAG-S279-GITPUSH-001, EAG-S279-JENI-TEST-FIX-001, EAG-S279-GITPUSH-002, EAG-S279-CLOSE-001",
+    "pytest_result": "10 failed / 1733 passed / 94 skipped"
+  },
+  "caddy_governance_record_s279": {
+    "session": 279,
+    "date": "2026-06-23",
+    "eag_gates_this_session": [
+      "EAG-S279-OBSERVE-001: Jeni/Domi Runtime /observe 엔드포인트 구현 (commit 48a75cc)",
+      "EAG-S279-GITPUSH-001: git push origin main (95d05b6 포함)",
+      "EAG-S279-JENI-TEST-FIX-001: ivloop 테스트 4건 갱신 (commit c4f79e6)",
+      "EAG-S279-GITPUSH-002: git push origin main (c4f79e6 포함)",
+      "EAG-S279-CLOSE-001: S279 SESSION CLOSE"
+    ],
+    "incidents": [
+      "INC-S279-001: PowerShell SSH inline python3 -c nested quotes 재사용 — CADDY_FAILURE_REPORT B-4 기존 알려진 제약 미참조 (RC-2)",
+      "INC-S279-002: 패치 스크립트 실행 명령 누락 — SCP 배포 후 실행 단계 미안내로 verify FAIL (RC-4)",
+      "INC-S279-003: 패치 파일 SCP 미포함 — verify_observe.py/caddy_error_logger.py만 배포하고 patch_jeni/domi_observe.py 누락 (RC-4)"
+    ],
+    "oi_observations": [
+      "OI-S272-001 지속: task 4-bucket 키 소멸 10 failed — S280 복구 예정.",
+      "caddy_error_log 시스템 구축: tools/caddy_error_log/ 초기화, S279 INC 3건 기록. 누적 13건.",
+      "외부 도미·제니 VPS 접근 구조 확정: /observe 엔드포인트로 내부 Runtime 경유 간접 접근. 비오님 경험 기준 충족.",
+      "제니 TRUST_NOT_READY → TRUST_ADVISORY 간주: 실측 근거 없는 철학적 우려 나열. 자체 검증 기준 미충족."
+    ],
+    "caddy_self_report": [
+      "INC-S279-001: PowerShell nested quotes — B-4 기존 제약 또 위반. CADDY_FAILURE_REPORT 문서를 명시적으로 참조하지 않은 RC-2 반복.",
+      "INC-S279-002: 패치 실행 명령 누락 — verify FAIL로 비오님 재작업 유발. RC-4 반복.",
+      "INC-S279-003: SCP 파일 누락 — 이전 SCP 명령에서 패치 파일 미포함. RC-4 연속 발생.",
+      "S279 INC 3건 모두 caddy_error_log에 즉시 기록 (비오님 지시 이행)."
+    ],
+    "notable": "S279: /observe 구현 완료. 외부 도미·제니 캐디처럼 VPS 관측 가능. caddy_error_log 영속 시스템 구축. INC 3건 RC-2/RC-4 반복 패턴."
+  },
+  "visibility_metrics_s279": {
+    "session": 279,
+    "date": "2026-06-23",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 151,
+    "M-03_ceiling_utilization_rate": "44/42 (system_changes_s279 + caddy_governance_record_s279 + visibility_metrics_s279 추가, system_changes_s275 제거 상쇄)",
+    "M-04_session_delta_size": "MEDIUM (EAG 4건, INC 3건, /observe 구현, caddy_error_log 구축)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S279.json",
+    "M-06_active_task_load": 2,
+    "M-07_stabilization_compliance": "FAIL (INC-S279-001~003)",
+    "chain_tip": "c4f79e6",
+    "pytest_result": "10 failed / 1733 passed / 94 skipped",
+    "key_decisions": [
+      "EAG-S279-OBSERVE-001: /observe 엔드포인트 구현 (Jeni v4.9.0 / Domi v1.5.0)",
+      "외부 도미·제니 VPS 접근 = 내부 Runtime 경유 구조 확정",
+      "caddy_error_log 영속 시스템 구축 (비오님 지시)",
+      "ivloop 테스트 4건 write_file 반영 수정",
+      "git push c02af61..c4f79e6 완료"
+    ]
+  },
   "active_tasks": {
     "_shard_hash": "dfb918c85c5ae583a528c0a0a493d6afa58e5734b5251c08cde6e844dacba918",
     "body_ref": "context/tasks/active.json",
@@ -79,6 +582,13 @@
     "schema_version": "phase3_shard_v1",
     "status": "active"
   },
+  "archived_tasks": {
+    "archive_ref": "SESSION_CONTEXT_ARCHIVE_TIER_D_S114.json",
+    "integrity_hash": "4185b77cab3aca7c5d48fe6e7621c5c70913c83af88a9f93bc574939401b0297",
+    "migrated_at": "2026-05-10T00:00:00.000+09:00",
+    "migrated_session": 114,
+    "quarantine_status": "TIER_D"
+  },
   "pending_tasks": {
     "_shard_hash": "b9946a9b8f3855390701a8e1433f6947cfdb06a5947f3594d7bb6e9b3ddd02f1",
     "body_ref": "context/tasks/pending.json",
@@ -88,13 +598,6 @@
     "session_ref": 209,
     "schema_version": "phase3_shard_v1",
     "status": "active"
-  },
-  "archived_tasks": {
-    "archive_ref": "SESSION_CONTEXT_ARCHIVE_TIER_D_S114.json",
-    "integrity_hash": "4185b77cab3aca7c5d48fe6e7621c5c70913c83af88a9f93bc574939401b0297",
-    "migrated_at": "2026-05-10T00:00:00.000+09:00",
-    "migrated_session": 114,
-    "quarantine_status": "TIER_D"
   },
   "pending_tasks_legacy_shim": {
     "archive_ref": "SESSION_CONTEXT_ARCHIVE_TIER_D_S114.json",
@@ -121,738 +624,5 @@
     "latest_session_ref": 150,
     "schema_version": "phase2_shard_v1",
     "status": "active"
-  },
-  "system_changes_s208": {
-    "deployed_session": 208,
-    "commits": [
-      "574f334"
-    ],
-    "changes": [
-      "tools/ledger/ledger_writer.py: WORM 장부 writer (신규)",
-      "tools/ledger/ledger_verifier.py: Hash Chain 검증기 (신규)",
-      "tools/ledger/observation_verifier.py: 독립 관측 검증기 audit-only (신규)"
-    ],
-    "eag_chain": "EAG-S208-WORM-001 + EAG-S208-WORM-002",
-    "pytest_result": "1496 passed / 0 failed / 94 skipped",
-    "worm_status": {
-      "chattr_a_applied": true,
-      "genesis_recorded": true,
-      "manifest_initialized": true,
-      "fail_closed_mode": "audit-only (EAG-3 대기)",
-      "eag3_condition": "연속 3회 세션 Hash Mismatch 0건"
-    }
-  },
-  "session_delta": {
-    "session": 251,
-    "modified_keys": [
-      "session_count",
-      "chain",
-      "session_reentry",
-      "next_steps",
-      "agent_focus",
-      "pytest_status",
-      "sync_meta",
-      "updated_at",
-      "generated_at",
-      "context_hash",
-      "session_delta"
-    ],
-    "added_keys": [
-      "system_changes_s251",
-      "caddy_governance_record_s251",
-      "visibility_metrics_s251"
-    ],
-    "removed_keys": [
-      "system_changes_s247"
-    ],
-    "tier_d_migrated": "aged record s241(caddy_governance_record_s241 + visibility_metrics_s241, 2키) -> ARCHIVE_TIER_D_S251.json. group D는 S250 이관완료(해당없음)."
-  },
-  "updated_at": "2026-06-15T19:14:02.508296+09:00",
-  "generated_at": "2026-06-15T19:14:02.508296+09:00",
-  "n8n_assets_registry": {
-    "registered_session": 240,
-    "registered_by": "비오 (S240 경로 B 지시)",
-    "n8n_version": "2.25.7",
-    "n8n_host": "localhost:5678 (VPS 159.203.125.1)",
-    "data_dir": "/root/.n8n",
-    "owner_account": "choizinsa@gmail.com",
-    "active_workflows": [
-      {
-        "id": "lXsm2orKxGqIgGpf",
-        "name": "AIBA WF-01 Change Detection",
-        "trigger": "scheduleTrigger",
-        "role": "SESSION_CONTEXT 변경 감지(SHA256) → WF-02 호출"
-      },
-      {
-        "id": "L27s4uzKrpKP3elM",
-        "name": "AIBA WF-02 Validation",
-        "trigger": "executeWorkflowTrigger",
-        "role": "Core/Delta 검증 → PASS 시 WF-03 호출"
-      },
-      {
-        "id": "0pMkuq6XPLdOK87M",
-        "name": "AIBA WF-03 Propagation",
-        "trigger": "executeWorkflowTrigger",
-        "role": "Google Drive 업로드(OAuth)"
-      },
-      {
-        "id": "l5gbC2FRI4uLaiSw",
-        "name": "AIBA WF-T1 Transport Deployment Receiver",
-        "trigger": "webhook",
-        "role": "배포 수신"
-      },
-      {
-        "id": "QNkwiDZSn0cLIDoR",
-        "name": "AIBA WF-T2 Transport Sync Receiver",
-        "trigger": "webhook",
-        "role": "동기화 수신"
-      },
-      {
-        "id": "dq7ub7AVYZULm3c1",
-        "name": "AIBA WF-04 BidirRouter DEP-G2-003",
-        "trigger": "webhook",
-        "role": "제니→도미→제니 2단계 역방향 라우팅 (S247 등재, 비활성 — 운영검증 후 활성화)",
-        "status": "INACTIVE"
-      }
-    ],
-    "deleted_duplicates_count": 6,
-    "note": "2026-04~05 구축 기존 자산. S240 SSOT 등재. S247 WF-04 BidirRouter 등재(비활성). WF-01→02→03 체인은 scheduleTrigger 자동구동."
-  },
-  "goal2_progress": {
-    "session": 240,
-    "status": "IN_PROGRESS",
-    "completed": [
-      "DEP-G2-001: 현행 DEP 흐름 관측 (보조 베이스라인)",
-      "DEP-G2-002: MVP 실행계획 + Tier 1~3 초안 설계",
-      "n8n 보안 선행 조치 (2.25.7 패치)",
-      "n8n 워크플로우 자산 정리 (11→5)"
-    ],
-    "pending": [
-      "DEP-G2-002 도미→제니 라우팅 워크플로우 실제 생성 (API Key 선행)",
-      "Tier 위험도 분류 기준 확정"
-    ],
-    "mvp_scope": "도미 출력을 n8n이 제니에게 자동 라우팅 (Message Router only, EAG 우회 금지)",
-    "guards": {
-      "A": "AUTO_ROUTE 전구간 journal WORM 강제 기록",
-      "B": "세션당 최대 3회 / 타임아웃 30초 / 오류 2회 중단"
-    }
-  },
-  "caddy_governance_record_s242": {
-    "session": 242,
-    "date": "2026-06-14",
-    "eag_gates_this_session": [
-      "EAG-S242-N8N-ISOLATION-001: n8n 파일/환경 접근 격리 (1단계 root 탈출 + 2단계 환경변수 격리)",
-      "EAG-S242-CLOSE-001: SESSION CLOSE 5-file 번들"
-    ],
-    "incidents": [
-      {
-        "id": "INC-S242-001",
-        "type": "CADDY_OPTION_MENU",
-        "description": "디스크 여유 보고 후 EAG 승인 시 원안/제외/재논의 3선택지 재제시. 비오 \"승인\" 1회 후 캐디가 다시 옵션 나열. INC-S220-002·S228-001·S241-001에 이은 OPTION_MENU 4회 누적. 직후 단일안으로 자가교정.",
-        "session": 242
-      },
-      {
-        "id": "INC-S242-002",
-        "type": "CADDY_ENV_PRECHECK_OMISSION",
-        "description": "Phase1 스크립트 실행 시 sqlite3 CLI 미설치 미확인 → STEP2 WAL checkpoint에서 exit127 ABORT. 서비스 stop 후 중단. 사전 바이너리 점검 누락. 안전 ABORT로 데이터 무손상.",
-        "session": 242
-      },
-      {
-        "id": "INC-S242-003",
-        "type": "CADDY_TAR_TIMEOUT_INEFFICIENCY",
-        "description": "Phase1 백업을 gzip tar(5.2GB, .bak.s241 포함)로 실행 → run_script 120s 타임아웃 2회. 서비스 정지시간 연장. 비압축 tar + .bak.s241 제외로 전환하여 즉시 해소.",
-        "session": 242
-      }
-    ],
-    "oi_observations": [
-      "DEP-S242-N8N-ISOLATION-001 DEP 체인 완주 — 도미 2회 재설계 + 제니 FAIL→PENDING→PASS 3판정",
-      "Goal 2 인프라 보안 격리 — OS레벨(User=n8n) + 앱레벨(RESTRICT/BLOCK_ENV) 이중 방어선 구축",
-      "제니 T-4c 신규 의제: /opt/arss/ SSOT 644 world-readable → n8n read 가능(write denied). 기밀성 위반. S243 강제 격리.",
-      "Role Drift Scoreboard S242: 도미 0/제니 0/캐디 3(INC-S242-001~003)",
-      "Rejected Ideas Ledger S242: S242-R001(EAG 승인 후 선택지 재제시)",
-      "M07 S242 FAIL — INC-S242-001~003. S241에 이어 연속 FAIL."
-    ],
-    "notable": "S242: n8n 격리 DEP 완주(1·2단계). root 탈출+환경변수 격리. 제니 TRUST_READY. INC 3건(OPTION_MENU 4회 누적 포함). 데이터 무손상. 제니 T-4c 차기 강제 의제.",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "N/A (write_script 자율 집행, SCP 미사용)",
-      "M07_role_boundary": "FAIL (INC-S242-001~003)"
-    }
-  },
-  "visibility_metrics_s242": {
-    "session": 242,
-    "date": "2026-06-14",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 78,
-    "M-03_ceiling_utilization_rate": "44/42 (천장 초과 — system_changes_s238 제거 후 s242 추가)",
-    "M-04_session_delta_size": "LARGE (EAG 1건 + INC 3건 + n8n 격리 2단계 인프라 + 계정/데이터 이전)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S242.json",
-    "M-06_active_task_load": 0,
-    "M-07_stabilization_compliance": "FAIL (INC-S242-001~003)",
-    "chain_tip": "a6d559d",
-    "pytest_result": "1625 passed / 0 failed / 94 skipped",
-    "key_decisions": [
-      "EAG-S242-N8N-ISOLATION-001: n8n 파일/환경 접근 격리 완료 (제니 TRUST_READY)",
-      "1단계 root 탈출: User=root→n8n, 데이터 /var/lib/n8n/.n8n 이전",
-      "2단계 환경변수 격리: RESTRICT=/var/lib/n8n/.n8n:/tmp, BLOCK_ENV=true",
-      "WAL checkpoint MANDATORY + chmod 700 + /tmp 허용 (제니 조건 3건 반영)",
-      "제니 T-4c SSOT 노출 — S243 강제 의제 분리",
-      "INC-S242-001: CADDY_OPTION_MENU 4회 누적"
-    ]
-  },
-  "caddy_governance_record_s243": {
-    "session": 243,
-    "date": "2026-06-14",
-    "eag_gates_this_session": [
-      "EAG-S243-SSOT-PERMS-001: SSOT 파일 OS 레벨 접근 격리 (arss 그룹+2750+640)",
-      "EAG-S243-N8N-APIKEY-FIX-001: N8N_API_KEY 양끝 <,> 정정",
-      "EAG-S243-CLOSE-001: SESSION CLOSE 5-file 번들"
-    ],
-    "incidents": [
-      {
-        "id": "INC-S243-001",
-        "type": "CADDY_MESSENGER_ROLE_DELEGATION",
-        "description": "DEP-S243-SSOT-PERMS-001 도미 설계 의뢰 시 ask_domi 직접 호출 가능함에도 비오님에게 브리핑 텍스트 copy-paste를 요청. 비오님 '내가 메신저 역할을 해야만 하나' 지적. 즉시 자각 후 ask_jeni/ask_domi 직접 호출로 전환.",
-        "session": 243
-      }
-    ],
-    "oi_observations": [
-      "DEP-S243-SSOT-PERMS-001 DEP 체인 완주 — 도미 설계 + 제니 1차 FAIL(변경전 상태 오독)→캐디 반론→2차 TRUST_READY",
-      "T-4c 기밀성 위반 해소 — n8n(uid=998) OS 레벨 SSOT read 차단 확인(exit=1 Permission denied)",
-      "WF-01→02→03 scheduleTrigger 자동구동 — EAG 우회 아님 확정(read+외부백업만, SSOT/git write 없음). 제니 동의.",
-      "OI-S243-001: :8000 = aiba-status.service, 인증 보호(401), 0.0.0.0 bind+ufw ALLOW — 위험도 저(인증 보호 중), bind 면적 축소 검토 잔여",
-      "OI-S243-002: Google Drive 자동전파 WORM 기록 연계 — 제니 중간 우선순위 등재",
-      "n8n API Key: 기존 AIBA-WF04 만료 → 신규 발급. 양끝 <,> 포함 저장 오류 → 캐디 정정 후 API 200 OK",
-      "WORM 장부(ledger/observation .jsonl) chattr +a로 chown 불가 — dir 2750 차단으로 격리 목표 동일 달성",
-      "Role Drift Scoreboard S243: 도미 0/제니 0/캐디 1(INC-S243-001)",
-      "Rejected Ideas Ledger S243: 해당 없음",
-      "M07 S243 FAIL — INC-S243-001(메신저 역할 위반). S242에 이어 연속 FAIL."
-    ],
-    "notable": "S243: SSOT OS 격리 DEP 완주(T-4c 해소). n8n API Key 발급·정정·검증. WF 자동구동 점검(우회 아님). OI-S243-001/002 등재. INC-S243-001(메신저 역할 자각·교정).",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "N/A (write_script 자율 집행, SCP 미사용)",
-      "M07_role_boundary": "FAIL (INC-S243-001)"
-    }
-  },
-  "system_changes_s244": {
-    "deployed_session": 244,
-    "commits": [
-      "4796415",
-      "0cab52c"
-    ],
-    "changes": [
-      "n8n 워크플로우 DEP-G2-002-AutoRouter 생성(id=LzApNQOOl6hqGtOM): Webhook→Send_to_Jeni(127.0.0.1:8447/ask,30s)→Respond",
-      "tools/journal/append_auto_route.py: AUTO_ROUTE 전용 WORM append CLI (신규)",
-      "tools/autoroute/autoroute_caller.py: 캐디 세션 측 호출 래퍼 + 가드 B-2/B-3 (신규)",
-      "tools/autoroute/__init__.py + runtime/.gitignore (신규, 카운터 SSOT 격리)",
-      "tests/test_autoroute_guard.py: TC-01~TC-09 (신규)",
-      "tests/test_goal1_freeze.py: frozen_journal_last_entry_hash 현행화(98082f44)"
-    ],
-    "eag_chain": "EAG-S244-DEP-G2-002-001 + WF-VALIDATION-001 + DEP-G2-002-FIX-001 + DEP-G2-003-001 + AUTOROUTER-PROD-VALIDATION-001 + CLOSE-001",
-    "pytest_result": "1634 passed / 0 failed / 94 skipped"
-  },
-  "caddy_governance_record_s244": {
-    "session": 244,
-    "date": "2026-06-14",
-    "eag_gates_this_session": [
-      "EAG-S244-DEP-G2-002-001: AutoRouter n8n 워크플로우 생성",
-      "EAG-S244-WF-VALIDATION-001: T-1~T-4 검증 (T-2 FAIL→비활성화)",
-      "EAG-S244-DEP-G2-002-FIX-001: jsonBody 경로 교정 + onError 제거 → 재검증 전항목 PASS",
-      "EAG-S244-DEP-G2-003-001: AutoRouter 가드 래퍼 + AUTO_ROUTE WORM",
-      "EAG-S244-AUTOROUTER-PROD-VALIDATION-001: 운영 검증 → Goal 2 MVP 운영 준비 완료",
-      "EAG-S244-CLOSE-001: SESSION CLOSE 5-file 번들 + frozen hash 현행화"
-    ],
-    "incidents": [],
-    "oi_observations": [
-      "DEP 체인 4회 완주(DEP-G2-002/FIX/G2-003/PROD-VALIDATION) — 전부 도미→제니→비오 EAG 정규 체인",
-      "T-2 결함: 표면 HTTP 200 + onError continueErrorOutput이 오류 삼킴 → execution 로그 심층검증으로 포착. 교훈: 표면 응답코드 불신",
-      "RCA 확정: n8n webhook payload는 $json.body 하위 위치 (top-level 아님)",
-      "가드 B-2 실호출 미트리거 — active 유지 검증과 충돌, pytest TC로 대체 검증(캐디 자율 판단)",
-      "Role Drift Scoreboard S244: 도미 0/제니 0/캐디 0 (이탈 없음)",
-      "Rejected Ideas Ledger S244: 해당 없음",
-      "M07 S244 PASS — S242·S243 연속 FAIL 후 첫 회복",
-      "자가교정 3건(run_script params·n8n active·import) — 코드 실측 후 즉시 교정, 데이터 무손상, INC 미닱",
-      "[OI-S244-001] 루트 디렉토리 누적: 과거 세션 FINAL/ARCHIVE/Report 및 일회성 patch_*/verify_*/build_* 스크립이 루트에 상당량 누적. 아트우터 이동 검토 후보(별도 DEP 대상, S244 판단·실행 보류)"
-    ],
-    "notable": "S244: Goal 2 MVP 운영 준비 완료. AutoRouter 생성→교정→가드→운영검증 DEP 4회 완주. 도미→n8n→제니 자동 라우팅 실증. INC 0건. M07 회복.",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "N/A (write_script 자율 집행, SCP 미사용)",
-      "M07_role_boundary": "PASS"
-    }
-  },
-  "visibility_metrics_s244": {
-    "session": 244,
-    "date": "2026-06-14",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 78,
-    "M-03_ceiling_utilization_rate": "44/42 (천장 초과 — system_changes_s240 제거 후 s244 추가)",
-    "M-04_session_delta_size": "LARGE (EAG 6건 + DEP 4회 완주 + AutoRouter 인프라 + 신규 파일 5종)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S244.json",
-    "M-06_active_task_load": 0,
-    "M-07_stabilization_compliance": "PASS",
-    "chain_tip": "0cab52c",
-    "pytest_result": "1634 passed / 0 failed / 94 skipped",
-    "key_decisions": [
-      "EAG-S244-DEP-G2-002-001: AutoRouter 생성",
-      "EAG-S244-DEP-G2-002-FIX-001: payload 경로 교정 재검증 PASS",
-      "EAG-S244-DEP-G2-003-001: 가드 래퍼 구현 (제니 3차 TRUST_READY)",
-      "EAG-S244-AUTOROUTER-PROD-VALIDATION-001: Goal 2 MVP 운영 준비 완료 판정",
-      "M07 S244 PASS — S242·S243 연속 FAIL 후 회복"
-    ]
-  },
-  "caddy_governance_record_s245": {
-    "session": 245,
-    "date": "2026-06-14",
-    "eag_gates_this_session": [
-      "EAG-S245-AUTOROUTE-LIVE-001: runtime/.gitignore 커밋 + AutoRouter 최초 실운영 AR-S245-001 + 카운터 정책 설계 라우팅",
-      "EAG-S245-CLOSE-001: SESSION CLOSE 5-file 번들"
-    ],
-    "incidents": [],
-    "oi_observations": [
-      "write/run_script exec runtime 파라미터 스펙: write_script=content(not script)+.py 필수; run_script=script_path(절대경로) 필수",
-      "AutoRouter AR-S245-001: WORM entry_hash=32ba1148..., success=1/error=0, Jeni OK",
-      "DECISION-S245-001: AUTO_ROUTE 카운터 지속성 = 방식 A(세션별 초기화) 현행 유지 확정 (도미 설계 + 제니 TRUST_READY + 비오님 확정)",
-      "Role Drift Scoreboard S245: 도미 0/제니 0/캐디 0 (이탈 없음)",
-      "INC 0건 세션"
-    ],
-    "notable": "S245: AutoRouter 최초 실운영 성공. Goal 2 MVP 도미→n8n→제니 자동 라우팅 실증. 카운터 정책 방식 A 확정. INC 0건.",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "N/A (write_script 자율 집행, SCP 미사용)",
-      "M07_role_boundary": "PASS"
-    }
-  },
-  "visibility_metrics_s245": {
-    "session": 245,
-    "date": "2026-06-14",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 78,
-    "M-03_ceiling_utilization_rate": "44/42 (천장 초과 — system_changes_s241 제거 후 s245 추가)",
-    "M-04_session_delta_size": "SMALL (EAG 2건 + gitignore 커밋 + AutoRouter 실운영 + 카운터 정책 확정)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S245.json",
-    "M-06_active_task_load": 0,
-    "M-07_stabilization_compliance": "PASS",
-    "chain_tip": "66338bb",
-    "pytest_result": "1634 passed / 0 failed / 94 skipped",
-    "key_decisions": [
-      "EAG-S245-AUTOROUTE-LIVE-001: runtime/.gitignore 커밋(66338bb) + AutoRouter 최초 실운영 AR-S245-001",
-      "DECISION-S245-001: AUTO_ROUTE 카운터 지속성 = 방식 A(세션별 초기화) 현행 유지",
-      "write/run_script 파라미터 스펙 공식 확인 (LESSON-S245-001)",
-      "INC 0건 — M07 PASS"
-    ]
-  },
-  "caddy_governance_record_s246": {
-    "session": 246,
-    "date": "2026-06-14",
-    "eag_gates_this_session": [
-      "EAG-S246-G2-BIDIR-001: n8n WF BidirRouter DEP-G2-003 신규 생성 (id=dq7ub7AVYZULm3c1, 비활성)",
-      "EAG-S246-B2-VERIFY-001: B-2 가드 실환경 검증 (실제 deactivate 확인 + 복구)"
-    ],
-    "incidents": [],
-    "oi_observations": [
-      "Design Contract 방식 도입: 도미 1~3차 DOMI_INFERENCE_DESIGN 패턴 재발 → 4차 Design Contract 기반 설계로 IMPL 해소",
-      "OI-S246-001: WF-01 Detect Change 노드 TypeError (pending_tasks.map is not a function) — SC phase3_shard_v1 미동기화. Google Drive 자동전파 중단 중.",
-      "B-2 가드 실환경 검증: error_count=2 → deactivate=True → 즐시 복구 확인.",
-      "#5~#8 이월 항목 전수 현황 파악 완료.",
-      "Role Drift Scoreboard S246: 도미 0 / 제니 0 / 캐디 0"
-    ],
-    "notable": "S246: 이월 전항목 처리완료. Design Contract 방식 도입으로 도미 설계 IMPL 달성. BidirRouter WF 생성완료. B-2 가드 실증. OI-S246-001 WF-01 에러 발견. INC 0건.",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "N/A (write_script 자율 집행, SCP 미사용)",
-      "M07_role_boundary": "PASS"
-    }
-  },
-  "visibility_metrics_s246": {
-    "session": 246,
-    "date": "2026-06-14",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 78,
-    "M-03_ceiling_utilization_rate": "44/42 (천장 초과 — system_changes_s242 제거 후 s246 추가)",
-    "M-04_session_delta_size": "LARGE (EAG 2건 + Design Contract 방식 도입 + WF 신규 생성 + B-2 검증 + OI 발견)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S246.json",
-    "M-06_active_task_load": 0,
-    "M-07_stabilization_compliance": "PASS",
-    "chain_tip": "cc6d45b",
-    "pytest_result": "1634 passed / 0 failed / 94 skipped",
-    "key_decisions": [
-      "EAG-S246-G2-BIDIR-001: BidirRouter WF dq7ub7AVYZULm3c1 생성 완료 (비활성)",
-      "EAG-S246-B2-VERIFY-001: B-2 가드 실환경 검증 성공",
-      "Design Contract 방식 신설: 도미 추론 방지 구조 확립",
-      "OI-S246-001: WF-01 TypeError 발견 — S247 DEP 등록",
-      "INC 0건 — M07 PASS"
-    ]
-  },
-  "caddy_governance_record_s247": {
-    "session": 247,
-    "date": "2026-06-14",
-    "eag_gates_this_session": [
-      "EAG-S247-OI-S246-001-FIXWF01: WF-01 shard-aware 교체",
-      "EAG-S247-G2-BIDIR-002: autoroute_caller.py BidirRouter 확장",
-      "EAG-S247-TEST-HASH-001: frozen hash 현행화",
-      "EAG-S247-OI-S243-001-PORT8000: :8000 bind 축소 + ufw 삭제",
-      "EAG-S247-EXEC-HEALTHCHECK-001: exec runtime 안정성 점검",
-      "EAG-S247-CLOSE-001: SESSION CLOSE 5-file 번들"
-    ],
-    "incidents": [],
-    "oi_observations": [
-      "DEP 3회 완주(OI-S246-001/BIDIR-002/OI-S243-001) — 전부 도미→제니→비오 정규 체인",
-      "제니 3건 모두 1차 TRUST_NOT_READY→반론/실측보강→2차 TRUST_READY 패턴",
-      "OI-S243-001 STEP1~4 비오님 직접 실행(exec BrokenPipe 대응) — 2중차단 달성(bind+ufw)",
-      "OI-S247-001: restart 동반 run_script BrokenPipe 조건부 관츠. 일반 run_script healthcheck PASS",
-      "WF-04 BidirRouter SSOT 등재(비활성)",
-      "Role Drift Scoreboard S247: 도미 0 / 제니 0 / 캐디 0"
-    ],
-    "notable": "S247: 이월 전항목 처리. DEP 3회 완주. :8000 외부노출 제거(2중차단). WF-04 등재. exec BrokenPipe 조건부 관츠. INC 0건.",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "N/A (write_script 자율 집행, SCP 미사용)",
-      "M07_role_boundary": "PASS"
-    }
-  },
-  "visibility_metrics_s247": {
-    "session": 247,
-    "date": "2026-06-14",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 78,
-    "M-03_ceiling_utilization_rate": "44/42 (천장 초과 — system_changes_s243 제거 후 s247 추가)",
-    "M-04_session_delta_size": "LARGE (EAG 4건 + DEP 3회 + WF-01 fix + BidirRouter + :8000 축소 + WF-04 등재)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S247.json",
-    "M-06_active_task_load": 0,
-    "M-07_stabilization_compliance": "PASS",
-    "chain_tip": "9048568",
-    "pytest_result": "1634 passed / 0 failed / 94 skipped",
-    "key_decisions": [
-      "EAG-S247-OI-S246-001-FIXWF01: WF-01 shard-aware (TypeError 해소)",
-      "EAG-S247-G2-BIDIR-002: autoroute_caller BidirRouter 확장",
-      "EAG-S247-OI-S243-001-PORT8000: :8000 2중차단(bind 127.0.0.1 + ufw 삭제)",
-      "WF-04 BidirRouter SSOT 등재(비활성)",
-      "OI-S247-001 조건부 관츠 등재",
-      "M07 S247 PASS — INC 0건"
-    ]
-  },
-  "system_changes_s248": {
-    "deployed_session": 248,
-    "commits": [
-      "39d6e5e"
-    ],
-    "changes": [
-      "루트 디렉토리 정리: archive/{sessions,reports,boot_contexts,agent_contexts,uncategorized} 이동 242건",
-      ".bak 파일 11건 삭제",
-      "git rm: SC_FINAL/ARCHIVE/Report 추적파일 12건 삭제 반영",
-      "SESSION_CONTEXT_FULL.json ROOT 원복(test_boot_generator_phase2 의존성)",
-      "Category B(일회성 스크립트)는 보류 — 별도 DEP"
-    ],
-    "eag_chain": "EAG-S248-ROOT-CLEANUP-001 + EAG-S248-BIDIR-VERIFY-001 + EAG-S248-CLOSE-001",
-    "pytest_result": "1634 passed / 0 failed / 94 skipped"
-  },
-  "caddy_governance_record_s248": {
-    "session": 248,
-    "date": "2026-06-14",
-    "eag_gates_this_session": [
-      "EAG-S248-ROOT-CLEANUP-001: 루트 정리 A/C/D (B 보류) + commit 39d6e5e",
-      "EAG-S248-BIDIR-VERIFY-001: WF-04 운영검증 VERIFY_PASS (비활성 복귀)"
-    ],
-    "incidents": [],
-    "oi_observations": [
-      "OI-S244-001 루트 정리 완주(A 242+C 11+D 4). B는 별도 DEP 이월(삭제→참조성 검증 재설계)",
-      "OI-S248-JENI-CONTEXT-001: 제니 무기억 호출 시 파일 접근 권한 오류 응답 패턴 — 관찰 등재",
-      "OI-S248-CONTEXT-CEILING-001: active canonical key 44 유지, 누적 보존 정책 재검토 필요 — 이월",
-      "BidirRouter 검증: 라우팅 파이프라인(webhook/execution/WORM/ledger/가드) 전부 PASS. 제니 응답 내용 품질은 OI 별건",
-      "DEP 2회 완주(ROOT-CLEANUP/BIDIR-VERIFY) — 전부 도미→제니→비오 EAG 정규 체인",
-      "close Step1 delta 기록 오정 자각: removed_keys를 [system_changes_s243, visibility_metrics_s243]로 기재했으나 해당 key는 S247에서 이미 제거됨(무효과). removed_keys=[] 정합 정정",
-      "Role Drift Scoreboard S248: 도미 0 / 제니 0 / 캐디 0",
-      "Rejected Ideas Ledger S248: 해당 없음"
-    ],
-    "notable": "S248: OI-S244-001 루트 정리 A/C/D 완료(commit 39d6e5e). BidirRouter WF-04 운영검증 VERIFY_PASS. FULL 원복로 회귀 6건 즉시 해소. 천장 초과 OI 이월. INC 0건.",
-    "caddy_self_report": [
-      "ROOT-CLEANUP IMPLEMENTABLE 검토 시 SESSION_CONTEXT_FULL.json의 test_boot_generator_phase2 FULL_PATH 의존성 사전 grep 미실시 → 회귀 6건 유발. 단일 파일 원복으로 즉시 해소했으나 DRY_RUN 단계 의존성 검증 누락 (LESSON-020 성격)",
-      "close Step1 delta 오정: 이미 제거된 s243 key를 제거 대상으로 기재. 비오님 지적으로 removed_keys=[] 정정"
-    ],
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "N/A (write_script 자율 집행, SCP 미사용)",
-      "M07_role_boundary": "PASS"
-    }
-  },
-  "visibility_metrics_s248": {
-    "session": 248,
-    "date": "2026-06-14",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 78,
-    "M-03_ceiling_utilization_rate": "44/42 (천장 초과 지속 — 재해석 보류, OI-S248-CONTEXT-CEILING-001 이월)",
-    "M-04_session_delta_size": "LARGE (EAG 2건 + 루트 정리 257건 + BidirRouter 검증 + commit)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S248.json",
-    "M-06_active_task_load": 0,
-    "M-07_stabilization_compliance": "PASS",
-    "chain_tip": "39d6e5e",
-    "pytest_result": "1634 passed / 0 failed / 94 skipped",
-    "key_decisions": [
-      "EAG-S248-ROOT-CLEANUP-001: 루트 정리 A/C/D 완료 (B 보류)",
-      "EAG-S248-BIDIR-VERIFY-001: WF-04 VERIFY_PASS (inactive 유지)",
-      "OI-S248-JENI-CONTEXT-001 / OI-S248-CONTEXT-CEILING-001 등재",
-      "Category B 별도 DEP 이월 (삭제→참조성 검증 재설계)",
-      "M07 S248 PASS — INC 0건"
-    ]
-  },
-  "context_hash": "73d053d0804149de9b7b4bb20f58856cee6fcf017caca2e94b42a23323502f7a",
-  "system_changes_s249": {
-    "deployed_session": 249,
-    "commits": [
-      "5d7cc14",
-      "215f4d8"
-    ],
-    "changes": [
-      "tools/close/session_close_generator.py: Tier D 이관 메커니즘(N=10 보존, 원자 무손실: archive 기록+검증 성공 후에만 active pop). apply_delta 반환 (sc, archive_candidates) / build_archive(n, candidates) / identify_archive_candidates / verify_archive_integrity 추가",
-      "tests/test_tierd_migrate_s249.py: 이관 검증 TC 8건 (신규)",
-      "tests/test_goal1_freeze.py: FROZEN_HASHES[session_close_generator] b2dbf9f8→6d4422c1, FROZEN_JOURNAL_LAST_ENTRY_HASH b304b503→8b9a2ecf, FROZEN_HASHES[GOAL1_FREEZE_RECORD.md] 4d97e2b5→094d8ccd",
-      "GOAL1_FREEZE_RECORD.md: Freeze Registry Update Log 추가(전값·후값·원인·근거세션 S248·EAG ORD-S249-GOV-002)"
-    ],
-    "eag_chain": "EAG-S249-TIERD-MIGRATE-001 + ORD-S249-GOV-001 + ORD-S249-GOV-002",
-    "pytest_result": "1642 passed / 0 failed / 94 skipped"
-  },
-  "caddy_governance_record_s249": {
-    "session": 249,
-    "date": "2026-06-15",
-    "eag_gates_this_session": [
-      "EAG-S249-TIERD-MIGRATE-001: session_close_generator.py Tier D 이관 메커니즘(목표 ③) + TC 8건. commit 5d7cc14",
-      "ORD-S249-GOV-001: 통합 수정 분해 승인 — ③ 단독 DEP 우선, ①② 별도 DEP 연기",
-      "ORD-S249-GOV-002: Goal 1 Freeze 레지스트리 갱신(조건부 승인 6개 조건). commit 215f4d8"
-    ],
-    "incidents": [
-      {
-        "id": "INC-S249-001",
-        "type": "CADDY_FREEZE_REGISTRY_PRECHECK_OMISSION",
-        "description": "DEP-S249-TIERD-MIGRATE-001 사전 점검에서 session_close_generator.py가 Goal 1 동결(조건부) 대상임을 확인하지 못함. 의존성 grep(apply_delta/build_archive/test_session_close_generator)은 수행했으나 freeze 레지스트리(test_goal1_freeze.py) 점검 누락 → 배포 후 freeze guard 2건 FAIL. ORD-S249-GOV-002 보완 DEP로 정정·해소.",
-        "session": 249
-      }
-    ],
-    "oi_observations": [
-      "Tier D 이관 메커니즘 최초 운영 실행 — record s215~s239(50건) archive 이관, active record s240~s249 유지",
-      "freeze② stale 근본원인 실측: 동결 b304b503=S246 엔트리, 현재 8b9a2ecf=S248 엔트리(정상 append, 체인 무결성 정상). S248 클로즈 시 baseline 갱신 누락",
-      "부팅 pytest 기준선(1634/0/94)은 기록값 — 실제 freeze②는 S248부터 red였음(실측화 관측)",
-      "Role Drift Scoreboard S249: 도미 0 / 제니 0 / 캐디 1(INC-S249-001)",
-      "Rejected Ideas Ledger S249: S249-R001(통째 교체 vs 부분 선택지 제시 — 자가교정)"
-    ],
-    "caddy_self_report": [
-      "INC-S249-001: 변경 대상이 Goal 1 동결 파일임을 사전 점검 누락 → 배포 후 freeze guard 2건 FAIL. 비오님 지적 후 보완 DEP로 해소.",
-      "OPTION_MENU 자가교정: 세션 초반 '통째 교체 vs 부분' 선택지 제시 → 비오님 강력 지적(메모리 #21 누적). 이후 단일 경로 전환.",
-      "write_script 배포 스크립트 base64 전사 손상 자각 → 실행 차단, 바이트 보존 경로(present_files+SCP)로 전환."
-    ],
-    "notable": "S249: Tier D 이관 메커니즘 구현(목표 ③, 5d7cc14) + 배포 후 freeze 위반 보완(ORD-S249-GOV-002, 215f4d8). 본 클로즈에서 이관 최초 운영. INC-S249-001(freeze 사전점검 누락).",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "PASS",
-      "M07_role_boundary": "FAIL (INC-S249-001 + 초반 OPTION_MENU 자가교정)"
-    }
-  },
-  "visibility_metrics_s249": {
-    "session": 249,
-    "date": "2026-06-15",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 128,
-    "M-03_ceiling_utilization_rate": "44/42 (천장 초과 — goal2 키 잔여, ①② 별도 DEP. 레코드 누적분은 Tier D 이관 50건으로 해소)",
-    "M-04_session_delta_size": "LARGE (EAG/ORD 3건 + INC 1건 + Tier D 이관 메커니즘 + freeze 보완 + 이관 최초 운영 50건)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S249.json",
-    "M-06_active_task_load": 0,
-    "M-07_stabilization_compliance": "FAIL (INC-S249-001)",
-    "chain_tip": "215f4d8",
-    "pytest_result": "1642 passed / 0 failed / 94 skipped",
-    "key_decisions": [
-      "EAG-S249-TIERD-MIGRATE-001: Tier D 이관 메커니즘(목표 ③) 구현·배포(5d7cc14)",
-      "ORD-S249-GOV-002: Goal 1 Freeze 레지스트리 갱신 — session_close_generator 지문 + journal baseline(S248) 정정(215f4d8)",
-      "Tier D 이관 최초 운영 — record s215~s239 50건 archive(active record s240~s249 유지)",
-      "INC-S249-001: freeze 레지스트리 사전점검 누락",
-      "M07 S249 FAIL — INC-S249-001"
-    ]
-  },
-  "system_changes_s250": {
-    "deployed_session": 250,
-    "commits": [
-      "1f5c697",
-      "241175d"
-    ],
-    "changes": [
-      "tools/session_context_gen/session_context_archive.py: CANONICAL_EXCLUDE_KEYS(9키)+canonical_key_count() 추가, _check_complexity_ceiling override_approved 파라미터화(천장 42, >42 HARD_STOP), TIER_A_LOCKED_KEYS 정합(ssoi_status 제거 / activation_allowed·session_open_rules·session_close_rules 복원 / architecture 유지 = 10키)",
-      "tools/close/session_close_generator.py: GROUP_D_MIGRATE_WHITELIST(4)+CANONICAL_EXCLUDE_KEYS+CEILING_LIMIT(42), identify_archive_candidates group D 확장, 천장 게이트 + --ceiling-override CLI",
-      "tests/test_canonset_s250.py: canonset 검증 TC 8건 신규(TIER_A 단언 in 정정 반영)",
-      "tests/test_goal1_freeze.py: FROZEN_HASHES[session_close_generator.py] 856d0c4b 현행화",
-      "tests/test_tierd_migrate_s249.py: group D 계약 반영 + 안전 단언 강화",
-      "docs/AIBA_Constitution_v2.0_FINAL.md: 무단 손상(본문 429줄 삭제, 미커밋) 발견→git checkout HEAD 복구(원문 430줄)"
-    ],
-    "eag_chain": "EAG-S250-CANONSET-001 + EAG-S250-CONST-RESTORE-001 + EAG-S250-TIERA-FIX-001",
-    "pytest_result": "1650 passed / 0 failed / 94 skipped"
-  },
-  "caddy_governance_record_s250": {
-    "session": 250,
-    "date": "2026-06-15",
-    "eag_gates_this_session": [
-      "EAG-S250-CANONSET-001: canonical-set 정의 + 천장 게이트(42) + group D 이관 (commit 1f5c697)",
-      "EAG-S250-CONST-RESTORE-001: AIBA 헌법 무단 손상 git 복구 (작업트리, 커밋 무관)",
-      "EAG-S250-TIERA-FIX-001: TIER_A 보호집합 3키 복원 + test_canonset 모순 단언 교정 (commit 241175d)"
-    ],
-    "incidents": [
-      {
-        "id": "INC-S250-001",
-        "type": "CADDY_DEPLOY_CONTAMINATION",
-        "description": "canonset 배포 시 4중 오류: (1) pytest ENV=test 누락으로 conftest 차단(미실행) (2) git add -A로 무관 dirty 22파일 휩쓸이 (3) commit이 pytest green에 미게이트 (4) S249 의존 TC 미동반. git reset+2파일 재커밋(1f5c697)으로 격리. 데이터 손실 0.",
-        "session": 250
-      },
-      {
-        "id": "INC-S250-002",
-        "type": "CADDY_GUARD_SET_REDUCTION_UNVERIFIED",
-        "description": "canonset patch가 TIER_A_LOCKED_KEYS(이관 절대금지 보호집합)에서 3키(activation_allowed/session_open_rules/session_close_rules)를 invariant(test_s2) 미검토로 축소 + 정반대 단언(test_tier_a_locked_removed_noncanonical)을 신설. 전체 pytest에서 test_s2 FAIL로 발현(부분 pytest 미포착). 도미 해석1(보호집합 복원)→제니 TRUST_READY→EAG-S250-TIERA-FIX-001로 원상복귀(241175d). 회귀 0.",
-        "session": 250
-      }
-    ],
-    "oi_observations": [
-      "헌법 손상 복구: docs/AIBA_Constitution_v2.0_FINAL.md 본문 429줄이 작업트리에서 삭제(미커밋)→git checkout HEAD 복구. 경위(시점·주체)는 미커밋 편집이라 git 특정 불가. 제니 복구 재감사 TRUST_READY.",
-      "확정 커밋(1f5c697)에 회귀 잠복 — 부분 pytest(25건)만으로 확정 시 전체 회귀 미포착 교훈. 클로즈 전 전체 pytest 필수.",
-      "OI-S250-JENI-RUNTIME-LOOP: TIER_A 정정 제니 1차 응답이 동일 판정을 수십 회 반복 출력(생성 이상). 2차 정상. OI-S248-JENI-CONTEXT-001 계열.",
-      "Role Drift Scoreboard S250: 도미 0 / 제니 0 / 캐디 2(INC-S250-001~002)",
-      "Rejected Ideas Ledger S250: 해당 없음",
-      "M07 S250 FAIL — INC-S250-001~002"
-    ],
-    "caddy_self_report": [
-      "INC-S250-001: 배포 명령 4중 오류(ENV=test 누락/git add -A/pytest 미게이트/의존 TC 미동반). 비오님 지적 후 격리 재커밋.",
-      "INC-S250-002: 보호집합 축소를 기존 invariant 미검토로 강행 + 모순 단언 신설. 전체 pytest에서 발현. 정정 DEP 완주.",
-      "OPTION_MENU 재발 없음 — 단일 경로 유지."
-    ],
-    "notable": "S250: canonical-set 정의+천장 게이트+group D 이관 DEP 완주(1f5c697). 헌법 무단 손상 발견·복구(EAG-S250-CONST-RESTORE-001). 클로즈 중 전체 pytest 회귀 발견→TIER_A 정정 DEP 완주(241175d). INC 2건. 천장 게이트 첫 운영 클로즈. 데이터 손실 0.",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "PASS",
-      "M07_role_boundary": "FAIL (INC-S250-001~002)"
-    }
-  },
-  "visibility_metrics_s250": {
-    "session": 250,
-    "date": "2026-06-15",
-    "M-01_active_canonical_key_count": 40,
-    "M-02_tier_d_quarantine_key_count": 132,
-    "M-03_ceiling_utilization_rate": "40/42 (천장 게이트 첫 운영 — exclude 9키 + aged 2키 + group D 4키 = 6키 이관으로 천장 이하)",
-    "M-04_session_delta_size": "LARGE (EAG 3건 + INC 2건 + canonical-set + 헌법 복구 + TIER_A 정정)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S250.json",
-    "M-06_active_task_load": 0,
-    "M-07_stabilization_compliance": "FAIL (INC-S250-001~002)",
-    "chain_tip": "241175d",
-    "pytest_result": "1650 passed / 0 failed / 94 skipped",
-    "key_decisions": [
-      "EAG-S250-CANONSET-001: canonical-set 정의+천장 게이트(42)+group D 이관",
-      "EAG-S250-CONST-RESTORE-001: AIBA 헌법 무단 손상 복구",
-      "EAG-S250-TIERA-FIX-001: TIER_A 보호집합 3키 복원 + 모순 단언 교정",
-      "천장 게이트 첫 운영 클로즈 — group D/aged 4키 Tier D 이관",
-      "M07 S250 FAIL — INC 2건"
-    ]
-  },
-  "system_changes_s251": {
-    "deployed_session": 251,
-    "commits": [
-      "663cc4c",
-      "747369a",
-      "a9e25ae"
-    ],
-    "changes": [
-      "tests/test_goal1_freeze.py: FROZEN_HASHES 거버넌스 5종 추가(Part1) + govdoc_freeze_gate.py 등재·RECORD 자기해시 갱신(Part2)",
-      "GOAL1_FREEZE_RECORD.md: S251 Part1/Part2 Update Log 추가",
-      "tools/guard/govdoc_freeze_gate.py: 신설 — test_goal1_freeze.py ENV=test 단독 실행 boot/close freeze 차단 게이트(non-zero=REPORT&WAIT)",
-      "tests/test_pt_s113_001_operational.py: test_o2 천장 트리거 canonical_key_count 정렬",
-      "tests/test_pt_s148_context_refactor_phase3.py: test_t12 vm_current 단언 S250 Tier D 이관 반영"
-    ],
-    "eag_chain": "EAG-S251-GOVDOC-PROTECT-001(Part1+Part2) + EAG-S251-SC-GOVFIX-001",
-    "pytest_result": "1656 passed / 0 failed / 94 skipped"
-  },
-  "caddy_governance_record_s251": {
-    "session": 251,
-    "date": "2026-06-15",
-    "eag_gates_this_session": [
-      "EAG-S251-GOVDOC-PROTECT-001: 거버넌스 5종 동결(Part1,663cc4c) + boot/close freeze 게이트 신설·자체동결(Part2,a9e25ae)",
-      "EAG-S251-SC-GOVFIX-001: stale 테스트 2건 S250 승인계약 정렬(747369a)",
-      "EAG-S251-CLOSE-001: S251 세션 종료"
-    ],
-    "incidents": [],
-    "oi_observations": [
-      "chain false-alarm: push의 c47b2cf(S250 close 커밋)를 chain 불일치로 과잉경보 → git log 실측으로 클로즈 커밋이 기록 tip보다 1앞선 정상 구조임을 자체 해소. 위반 아님.",
-      "OI-S251-T1-RESIDUAL: 거버넌스 실시간 변조탐지 부재 — close pytest backstop ≤1세션. 비오 EAG 수용.",
-      "OI-S251-T2-RESIDUAL: boot 게이트 프롬프트 채택 의존(구조적) — 동일 backstop bounded. 비오 EAG 수용.",
-      "boot baseline staleness: 부트가 캐시 pytest_status(1650/0/94) 신뢰→실제 2 failed 미반영 실증. Part2 게이트로 boot 실측 경로 제공.",
-      "OI-S250-JENI-RUNTIME-LOOP 계열: 제니 응답 대체로 안정(Part2 2차 T-1 순환 재요구 경미 관측).",
-      "Role Drift Scoreboard S251: 도미 0 / 제니 0 / 캐디 0",
-      "Rejected Ideas: 도미 실시간모니터링·STORAGE DEP 제안(SC-GOVFIX) 범위외 기각"
-    ],
-    "caddy_self_report": [
-      "OPTION_MENU 재발 없음 — 단일 경로 권고 유지.",
-      "DEP 체인 자율 구동(ask_domi/ask_jeni 직접) — 별도 호출지시 대기 없음.",
-      "커밋 제약 준수: green 전 commit 없음 / git add -A 없음 / 단언-게이트로 대상파일만(3커밋 무관 dirty 0).",
-      "chain false-alarm은 과잉경보였으나 즉시 실측·해소·정정 보고. 작업 영향 0."
-    ],
-    "notable": "S251: GOVDOC-PROTECT(Part1 동결5종 + Part2 boot/close 게이트) + SC-GOVFIX(stale 2건 정렬) 3 DEP 완주. freeze 9->15 TC. canonical 천장 N_RETENTION=10으로 ~40 bound 확인(이월#3 정리). pytest 1656/0/94. INC 0. 데이터 손실 0.",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "PASS",
-      "M07_role_boundary": "PASS"
-    }
-  },
-  "visibility_metrics_s251": {
-    "session": 251,
-    "date": "2026-06-15",
-    "M-01_active_canonical_key_count": 40,
-    "M-02_tier_d_quarantine_key_count": 134,
-    "M-03_ceiling_utilization_rate": "40/42 (aged s241 2키 이관 후 천장 이하)",
-    "M-04_session_delta_size": "LARGE (EAG 3건, DEP 3개 완주, INC 0)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S251.json",
-    "M-06_active_task_load": 0,
-    "M-07_stabilization_compliance": "PASS",
-    "chain_tip": "a9e25ae",
-    "pytest_result": "1656 passed / 0 failed / 94 skipped",
-    "key_decisions": [
-      "EAG-S251-GOVDOC-PROTECT-001 Part1: 거버넌스 5종 동결",
-      "EAG-S251-GOVDOC-PROTECT-001 Part2: boot/close freeze 게이트 신설·자체동결",
-      "EAG-S251-SC-GOVFIX-001: stale 테스트 2건 S250 계약 정렬",
-      "M07 S251 PASS — INC 0",
-      "OI-S251-T1/T2-RESIDUAL 비오 EAG 수용"
-    ]
   }
 }
