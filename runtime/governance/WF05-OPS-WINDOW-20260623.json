@@ -1,0 +1,10 @@
+{
+  "schema": "WF05_OPS_WINDOW_v1",
+  "window_id": "WF05-OPS-WINDOW-20260623",
+  "created_by": "Beo",
+  "created_at": "2026-06-23T19:53:22.967548+09:00",
+  "expires_at": "2026-06-24T00:00:00.967531+09:00",
+  "daily_budget": 20,
+  "remaining_budget": 20,
+  "status": "ACTIVE"
+}

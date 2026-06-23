@@ -1,0 +1,17 @@
+{
+  "schema": "WF05_POLICY_v1",
+  "workflow_id": "ZV05Z7YmQMpKCXfi",
+  "status": "ACTIVE",
+  "allowed_commands": [
+    "git_status",
+    "git_diff",
+    "pytest"
+  ],
+  "max_exec_per_day": 20,
+  "risk_threshold": "MEDIUM",
+  "require_jeni_pass": true,
+  "auto_pause_on_fail": true,
+  "beo_veto_enabled": true,
+  "created_at": "2026-06-23T19:53:22.967314+09:00",
+  "created_by": "Beo"
+}

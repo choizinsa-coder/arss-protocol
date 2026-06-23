@@ -1,0 +1,10 @@
+{
+  "schema": "WF05_BUDGET_STATE_v1",
+  "window_id": "WF05-OPS-WINDOW-20260623",
+  "budget_total": 20,
+  "budget_used": 1,
+  "budget_remaining": 19,
+  "last_exec_at": "2026-06-23T19:57:01.178316+09:00",
+  "state": "ACTIVE",
+  "updated_at": "2026-06-23T19:57:01.178334+09:00"
+}
