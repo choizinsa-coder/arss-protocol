@@ -7,6 +7,9 @@ PT-S194-DOMI-RUNTIME-001
   v1.0.0 (S194): 최초 생성
   v1.3.0 (S277): write_file + COLLAB_DIR 추가
   v1.4.0 (S278): SC_FINAL 자동 로드 + DOMI_SESSION_BOOT_PROTOCOL 주입
+  v1.5.0 (S279): /observe 엔드포인트 추가 (EAG-S279-OBSERVE-001)
+    - POST /observe: targets 지정 시 Runtime이 ALLOWED_TOOLS 자율 호출 후 결과 반환
+    - targets: session_context / runtime_snapshot / service_status
     - EAG-S278-AGENT-BOOT-001
     - _load_session_context(): POINTER → SC_FINAL 자동 로드 (TTL=프로세스 수명)
     - 로드 실패 시 FAIL_CLOSED (context empty, 경고 로그)
@@ -30,7 +33,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.4.0"
+RUNTIME_VERSION = "1.5.0"
 
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
@@ -749,6 +752,84 @@ def _build_tool_response_message(tool_call_id: str, result_text: str, error) -> 
     return {"role": "tool", "tool_call_id": tool_call_id, "content": payload}
 
 
+# ── Observe Loop (EAG-S279-OBSERVE-001) ──────────────────────────────────────
+
+
+def _run_observe_loop(targets: list, session: str = "S000") -> dict:
+    """
+    /observe 엔드포인트 처리.
+    targets 목록에 따라 ALLOWED_TOOLS 자율 호출 후 결과를 dict로 반환.
+    targets:
+      - "session_context"    : SESSION_CONTEXT_POINTER + SC_FINAL 읽기
+      - "runtime_snapshot"   : get_runtime_snapshot 호출
+      - "service_status"     : runtime_snapshot 내 services 필드 추출
+    """
+    results: dict = {}
+    errors: dict = {}
+
+    for target in targets:
+        try:
+            if target == "session_context":
+                # POINTER 읽기
+                ptr_text, ptr_err = _execute_function_call(
+                    "read_file",
+                    {"path": "/opt/arss/engine/arss-protocol/SESSION_CONTEXT_POINTER.json"}
+                )
+                if ptr_err:
+                    errors[target] = f"POINTER_READ_FAILED: {ptr_err}"
+                    continue
+                import json as _json
+                pointer = _json.loads(ptr_text)
+                last_session = pointer.get("last_session") or pointer.get("current_session")
+                if last_session is None:
+                    errors[target] = "POINTER: last_session 키 없음"
+                    continue
+                # SC_FINAL 읽기
+                sc_path = (
+                    f"/opt/arss/engine/arss-protocol/"
+                    f"SESSION_CONTEXT_S{last_session}_FINAL.json"
+                )
+                sc_text, sc_err = _execute_function_call("read_file", {"path": sc_path})
+                if sc_err:
+                    errors[target] = f"SC_FINAL_READ_FAILED: {sc_err}"
+                    continue
+                sc_data = _json.loads(sc_text)
+                summary_keys = [
+                    "session_count", "chain", "next_steps",
+                    "agent_focus", "pytest_status", "session_reentry",
+                ]
+                summary = {k: sc_data[k] for k in summary_keys if k in sc_data}
+                results[target] = summary
+
+            elif target in ("runtime_snapshot", "service_status"):
+                snap_text, snap_err = _execute_function_call(
+                    "get_runtime_snapshot", {}
+                )
+                if snap_err:
+                    errors[target] = f"SNAPSHOT_FAILED: {snap_err}"
+                    continue
+                import json as _json
+                snap_data = _json.loads(snap_text)
+                if target == "service_status":
+                    results[target] = snap_data.get("services", snap_data)
+                else:
+                    results[target] = snap_data
+
+            else:
+                errors[target] = f"UNKNOWN_TARGET: {target}"
+
+        except Exception as e:
+            errors[target] = f"EXCEPTION: {e}"
+
+    return {
+        "ok": len(errors) == 0,
+        "session": session,
+        "results": results,
+        "errors": errors,
+    }
+
+
+
 # ── Persistent Multi-Turn Loop ────────────────────────────────────────────────
 
 
@@ -853,11 +934,25 @@ class DomiRuntimeHandler(BaseHTTPRequestHandler):
                 "max_tool_rounds": MAX_TOOL_ROUNDS,
                 "max_total_seconds": MAX_TOTAL_SECONDS,
                 "persistent_memory": True, "function_calling": True,
-                "sc_context_loaded": _sc_cache["loaded"]})
+                "sc_context_loaded": _sc_cache["loaded"],
+                "observe_endpoint": True})
             return
         self._send_json(403, {"error": "forbidden"})
 
     def do_POST(self):
+        if self.path == "/observe":
+            content_length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(content_length) if content_length > 0 else b"{}"
+            try:
+                req_body = json.loads(raw)
+            except json.JSONDecodeError:
+                self._send_json(400, {"ok": False, "error": "invalid_json"})
+                return
+            targets = req_body.get("targets", ["session_context", "runtime_snapshot", "service_status"])
+            session = req_body.get("session", "S000")
+            result = _run_observe_loop(targets, session)
+            self._send_json(200, result)
+            return
         if self.path != "/ask":
             self._send_json(403, {"error": "forbidden"})
             return
