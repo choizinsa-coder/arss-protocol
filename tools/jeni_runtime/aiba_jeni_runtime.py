@@ -24,6 +24,12 @@ PT-S193-JENI-PERSIST-001
     - _execute_gemini_request: HTTP 503 감지 시 2초 대기 후 1회 재시도
     - 재시도 후 503 지속 시 즉시 FAIL_CLOSED
     - S199 EAG-2: 비오(Joshua) 승인
+  v4.7.0 (S277): write_file + COLLAB_DIR 추가 (EAG-S277-DOMI-JENI-WRITE-001)
+  v4.8.0 (S278): SC_FINAL 자동 로드 + JENI_SESSION_BOOT_PROTOCOL 주입
+    - EAG-S278-AGENT-BOOT-001
+    - _load_session_context(): POINTER → SC_FINAL 자동 로드 (TTL=프로세스 수명)
+    - 로드 실패 시 FAIL_CLOSED (context empty, 경고 로그)
+    - /health 응답에 sc_context_loaded 필드 추가
   설계 근거: BRIEFING-DOMI-S193-002 Final / S199 Domi 설계
   EAG-1: 비오(Joshua) S193 승인
   Jeni TRUST_READY: PASS (BRIEFING-JENI-S193-003)
@@ -47,7 +53,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.7.0"
+RUNTIME_VERSION = "4.8.0"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.0-flash")
@@ -76,6 +82,70 @@ JENI_CLIENT_ID = os.environ.get("AIBA_JENI_CLIENT_ID", "")
 JENI_CLIENT_SECRET = os.environ.get("AIBA_JENI_CLIENT_SECRET", "")
 
 ARSS_ROOT = "/opt/arss/engine/arss-protocol"
+
+BOOT_PROTOCOL_PATH = os.path.join(
+    ARSS_ROOT, "tools/design/JENI_SESSION_BOOT_PROTOCOL.md")
+SESSION_POINTER_PATH = os.path.join(ARSS_ROOT, "SESSION_CONTEXT_POINTER.json")
+
+# ── Session Context Auto-Load (EAG-S278-AGENT-BOOT-001) ──────────────────────
+
+_sc_cache: dict = {"content": None, "loaded": False}
+
+
+def _load_session_context() -> str:
+    """
+    SESSION_CONTEXT_POINTER.json → SC_FINAL 자동 로드.
+    TTL = 프로세스 수명 (세션 내 SC_FINAL 불변 보장).
+    로드 실패 시 FAIL_CLOSED: 빈 문자열 반환 + 경고 로그.
+    """
+    if _sc_cache["loaded"]:
+        return _sc_cache["content"] or ""
+    try:
+        # STEP 1: POINTER 읽기
+        with open(SESSION_POINTER_PATH, encoding="utf-8") as f:
+            pointer = json.load(f)
+        last_session = pointer.get("last_session") or pointer.get("current_session")
+        if last_session is None:
+            raise ValueError("POINTER: last_session 키 없음")
+        # STEP 2: SC_FINAL 읽기
+        sc_path = os.path.join(
+            ARSS_ROOT, f"SESSION_CONTEXT_S{last_session}_FINAL.json")
+        with open(sc_path, encoding="utf-8") as f:
+            sc_data = json.load(f)
+        # STEP 3: 직렬화 (필요 키만)
+        summary_keys = [
+            "session_count", "chain", "next_steps", "agent_focus",
+            "pytest_status", "session_reentry",
+        ]
+        sc_summary = {k: sc_data[k] for k in summary_keys if k in sc_data}
+        sc_text = json.dumps(sc_summary, ensure_ascii=False, indent=2)
+        # STEP 4: BOOT_PROTOCOL 읽기 (선택적)
+        boot_text = ""
+        try:
+            with open(BOOT_PROTOCOL_PATH, encoding="utf-8") as f:
+                boot_text = f.read()
+        except Exception:
+            pass  # 문서 없어도 SC_FINAL 로드는 유효
+        content = (
+            "[JENI SESSION BOOT — SC_FINAL 자동 로드]\n"
+            f"{sc_text}\n\n"
+        )
+        if boot_text:
+            content += f"[JENI SESSION BOOT PROTOCOL]\n{boot_text}\n\n"
+        _sc_cache["content"] = content
+        _sc_cache["loaded"] = True
+        print(
+            f"[JENI_RUNTIME] SC_FINAL loaded: session={last_session} "
+            f"chain_tip={sc_data.get('chain', {}).get('tip', 'unknown')}",
+            file=sys.stderr)
+        return content
+    except Exception as e:
+        _sc_cache["loaded"] = True  # 재시도 방지
+        _sc_cache["content"] = ""
+        print(f"[JENI_RUNTIME] WARN: SC_FINAL load FAILED — {e} (FAIL_CLOSED: context empty)",
+              file=sys.stderr)
+        return ""
+
 
 # WRITE_SCOPE = SANDBOX_ONLY (문제 1)
 SANDBOX_ROOT = os.path.join(ARSS_ROOT, "tools/sandbox/jeni")
@@ -276,8 +346,6 @@ def _is_sandbox_write_allowed(path: str) -> bool:
 # ── bridge REST ───────────────────────────────────────────────────────────────
 
 
-
-
 def _is_write_allowed(target_path: str) -> bool:
     """Jeni 쓰기 허용 경로: sandbox/jeni/** + sandbox/common/collab/**"""
     if not target_path:
@@ -290,6 +358,8 @@ def _is_write_allowed(target_path: str) -> bool:
         if real == base or real.startswith(base + os.sep):
             return True
     return False
+
+
 def _call_bridge_tool(tool: str, params: dict) -> tuple:
     token, err = _get_access_token()
     if err:
@@ -597,7 +667,6 @@ def _execute_gemini_request(req: urllib.request.Request) -> dict:
     """
     started_at = time.time()
 
-    # 원본 요청의 URL/헤더/데이터 보존 — 매 재시도마다 Request 재생성
     _orig_url = req.full_url
     _orig_data = req.data
     _orig_headers = dict(req.headers)
@@ -628,7 +697,6 @@ def _execute_gemini_request(req: urllib.request.Request) -> dict:
                         "error": "FAIL_CLOSED: NO_PARTS retry would exceed time budget"}
             time.sleep(sleep_sec)
             try:
-                # 매 재시도마다 Request 재생성 (body stream 소진 방지 — Jeni 강제 지시)
                 with urllib.request.urlopen(_new_req(), timeout=GEMINI_TIMEOUT) as r:
                     rd = json.loads(r.read().decode("utf-8"))
                     rp = _extract_parts(rd)
@@ -654,7 +722,7 @@ def _execute_gemini_request(req: urllib.request.Request) -> dict:
             try:
                 with urllib.request.urlopen(_new_req(), timeout=GEMINI_TIMEOUT) as resp2:
                     data2 = json.loads(resp2.read().decode("utf-8"))
-                    return _parse_response(data2)  # 중복 NO_PARTS 체크 제거
+                    return _parse_response(data2)
             except urllib.error.HTTPError as e2:
                 return {"ok": False, "text": "", "function_calls": [], "parts": [],
                         "error": f"HTTP_{e2.code}: {_read_http_error_body(e2)} (after_503_retry)"}
@@ -670,7 +738,7 @@ def _execute_gemini_request(req: urllib.request.Request) -> dict:
             try:
                 with urllib.request.urlopen(_new_req(), timeout=GEMINI_TIMEOUT) as resp3:
                     data3 = json.loads(resp3.read().decode("utf-8"))
-                    return _parse_response(data3)  # 중복 NO_PARTS 체크 제거
+                    return _parse_response(data3)
             except urllib.error.HTTPError as e3:
                 return {"ok": False, "text": "", "function_calls": [], "parts": [],
                         "error": f"HTTP_{e3.code}: {_read_http_error_body(e3)} (after_429_retry)"}
@@ -715,8 +783,11 @@ def _call_gemini(contents: list, escalate: bool = False) -> dict:
 # ── Message 조립 ──────────────────────────────────────────────────────────────
 
 
-def _build_initial_message(prompt: str, context: str, memory_preamble: str) -> dict:
+def _build_initial_message(prompt: str, context: str, memory_preamble: str,
+                           sc_context: str = "") -> dict:
     segments = []
+    if sc_context:
+        segments.append(sc_context)
     if memory_preamble:
         segments.append(memory_preamble)
     if context:
@@ -737,10 +808,11 @@ def _build_function_response_message(name: str, result_text: str, error) -> dict
 def _run_verification_loop(prompt: str, context: str, session: str = "S000", escalate: bool = False) -> dict:
     loop_start = time.time()
 
+    sc_context = _load_session_context()
     memory = _load_memory_context()
     memory_preamble = _build_memory_preamble(memory)
 
-    accumulated: list = [_build_initial_message(prompt, context, memory_preamble)]
+    accumulated: list = [_build_initial_message(prompt, context, memory_preamble, sc_context)]
     audit_trail: list = []
     round_num = 0
     final_result = None
@@ -830,11 +902,13 @@ class JeniRuntimeHandler(BaseHTTPRequestHandler):
         if self.path == "/health":
             self._send_json(200, {
                 "status": "active", "version": RUNTIME_VERSION,
-                "model": GEMINI_MODEL, "model_escalate": GEMINI_MODEL_ESCALATE, "key_present": bool(GEMINI_API_KEY),
+                "model": GEMINI_MODEL, "model_escalate": GEMINI_MODEL_ESCALATE,
+                "key_present": bool(GEMINI_API_KEY),
                 "max_tool_rounds": MAX_TOOL_ROUNDS,
                 "max_total_seconds": MAX_TOTAL_SECONDS,
                 "persistent_memory": True, "function_calling": True,
-                "gemini_503_retry": True})
+                "gemini_503_retry": True,
+                "sc_context_loaded": _sc_cache["loaded"]})
             return
         self._send_json(403, {"error": "forbidden"})
 
@@ -878,7 +952,7 @@ def main():
     print(f"[JENI_RUNTIME] starting v{RUNTIME_VERSION} model={GEMINI_MODEL} "
           f"key={_mask_key(GEMINI_API_KEY)} max_tool_rounds={MAX_TOOL_ROUNDS} "
           f"persistent_memory=True function_calling=True "
-          f"gemini_503_retry=True sleep={GEMINI_503_RETRY_SLEEP}s", file=sys.stderr)
+          f"gemini_503_retry=True sleep={GEMINI_503_RETRY_SLEEP}s sc_auto_load=True", file=sys.stderr)
     if not GEMINI_API_KEY:
         print("[JENI_RUNTIME] WARN: AIBA_GEMINI_API_KEY not set — /ask will FAIL_CLOSED",
               file=sys.stderr)
