@@ -51,18 +51,19 @@ from tools.jeni_runtime.aiba_jeni_runtime import (  # noqa: E402
 
 def test_function_declarations_count():
     decls = _build_function_declarations()
-    assert len(decls) == 5
+    assert len(decls) == 6  # v4.7.0: write_file 추가
 
 
 def test_function_declarations_names():
     names = {d["name"] for d in _build_function_declarations()}
     assert names == {"read_file", "list_dir", "grep_scoped", "read_log",
-                     "get_runtime_snapshot"}
+                     "get_runtime_snapshot", "write_file"}  # v4.7.0: write_file 추가
 
 
-def test_function_declarations_no_write():
+def test_function_declarations_has_write():
+    # v4.7.0 (EAG-S277-DOMI-JENI-WRITE-001): write_file 추가됨
     names = {d["name"] for d in _build_function_declarations()}
-    assert "write_file" not in names
+    assert "write_file" in names
 
 
 def test_function_declarations_have_parameters():
@@ -138,10 +139,11 @@ def test_is_sandbox_write_empty_denied():
 # ── _execute_function_call ────────────────────────────────────────────────────
 
 
-def test_execute_function_call_not_allowed():
+def test_execute_function_call_write_denied():
+    # v4.7.0: write_file은 ALLOWED_TOOLS에 포함되나 target_path 없으면 WRITE_DENIED
     result, err = _execute_function_call("write_file", {"path": "/x"})
     assert err is not None
-    assert "TOOL_NOT_ALLOWED" in err
+    assert "WRITE_DENIED" in err
 
 
 def test_execute_function_call_path_denied():
