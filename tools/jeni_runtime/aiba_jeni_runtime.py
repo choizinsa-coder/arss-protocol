@@ -56,7 +56,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.9.0"
+RUNTIME_VERSION = "4.10.0"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.0-flash")
@@ -71,6 +71,9 @@ GEMINI_429_RETRY_MAX_SLEEP = 60  # 429 Retry-After 상한(초)
 
 NO_PARTS_RETRY_MAX = 3          # NO_PARTS 재시도 최대 횟수 (EAG-S211-JENI-001)
 NO_PARTS_RETRY_BASE_SLEEP = 2   # NO_PARTS 기반 대기 시간(초) — 2s/4s/8s
+
+HTTP_RETRY_MAX = 3              # 503/429 재시도 최대 횟수 (EAG-S284-JENI-RETRY-001)
+HTTP_RETRY_BASE_SLEEP = 2       # 503/429 기반 대기 시간(초) — 2s/4s/8s
 
 MAX_TOOL_ROUNDS = 5
 MAX_TOTAL_SECONDS = 120
@@ -715,39 +718,42 @@ def _execute_gemini_request(req: urllib.request.Request) -> dict:
         return {"ok": False, "text": "", "function_calls": [], "parts": [],
                 "error": f"NO_PARTS: finish_reason={finish} (after_{NO_PARTS_RETRY_MAX}_retries)"}
 
+    def _retry_http_with_backoff(code: int) -> dict:
+        """503/429 공통 지수 백오프 재시도 (EAG-S284-JENI-RETRY-001).
+        NO_PARTS 백오프와 동일 패턴: 최대 3회, 2/4/8초.
+        시간 예산 초과 시 즉시 FAIL_CLOSED.
+        """
+        tag = f"after_{code}_retry"
+        for retry_idx in range(HTTP_RETRY_MAX):
+            sleep_sec = HTTP_RETRY_BASE_SLEEP * (2 ** retry_idx)  # 2/4/8
+            if not _budget_ok(sleep_sec):
+                return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "error": f"FAIL_CLOSED: HTTP_{code} retry would exceed time budget ({tag})"}
+            time.sleep(sleep_sec)
+            try:
+                with urllib.request.urlopen(_new_req(), timeout=GEMINI_TIMEOUT) as resp_r:
+                    data_r = json.loads(resp_r.read().decode("utf-8"))
+                    return _parse_response(data_r)
+            except urllib.error.HTTPError as e_r:
+                if e_r.code in (503, 429):
+                    code = e_r.code
+                    tag = f"after_{code}_retry"
+                    continue
+                return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "error": f"HTTP_{e_r.code}: {_read_http_error_body(e_r)} ({tag})"}
+            except Exception as e_r:
+                return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "error": f"FAIL_CLOSED: HTTP_{code} retry error — {e_r} ({tag})"}
+        return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                "error": f"HTTP_{code}: persisted after {HTTP_RETRY_MAX} retries ({tag})"}
+
     try:
         with urllib.request.urlopen(_new_req(), timeout=GEMINI_TIMEOUT) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             return _parse_response(data)
     except urllib.error.HTTPError as e:
-        if e.code == 503:
-            time.sleep(GEMINI_503_RETRY_SLEEP)
-            try:
-                with urllib.request.urlopen(_new_req(), timeout=GEMINI_TIMEOUT) as resp2:
-                    data2 = json.loads(resp2.read().decode("utf-8"))
-                    return _parse_response(data2)
-            except urllib.error.HTTPError as e2:
-                return {"ok": False, "text": "", "function_calls": [], "parts": [],
-                        "error": f"HTTP_{e2.code}: {_read_http_error_body(e2)} (after_503_retry)"}
-            except Exception as e2:
-                return {"ok": False, "text": "", "function_calls": [], "parts": [],
-                        "error": f"FAIL_CLOSED: 503 retry error — {e2}"}
-        elif e.code == 429:
-            body_text = _read_http_error_body(e)
-            match = re.search(r'retry\s+in\s+([\d.]+)\s*s', body_text, re.IGNORECASE)
-            retry_delay = float(match.group(1)) if match else 30.0
-            retry_delay = min(retry_delay, GEMINI_429_RETRY_MAX_SLEEP)
-            time.sleep(retry_delay)
-            try:
-                with urllib.request.urlopen(_new_req(), timeout=GEMINI_TIMEOUT) as resp3:
-                    data3 = json.loads(resp3.read().decode("utf-8"))
-                    return _parse_response(data3)
-            except urllib.error.HTTPError as e3:
-                return {"ok": False, "text": "", "function_calls": [], "parts": [],
-                        "error": f"HTTP_{e3.code}: {_read_http_error_body(e3)} (after_429_retry)"}
-            except Exception as e3:
-                return {"ok": False, "text": "", "function_calls": [], "parts": [],
-                        "error": f"FAIL_CLOSED: 429 retry error — {e3}"}
+        if e.code in (503, 429):
+            return _retry_http_with_backoff(e.code)
         return {"ok": False, "text": "", "function_calls": [], "parts": [],
                 "error": f"HTTP_{e.code}: {_read_http_error_body(e)}"}
     except urllib.error.URLError as e:
@@ -989,6 +995,7 @@ class JeniRuntimeHandler(BaseHTTPRequestHandler):
                 "max_total_seconds": MAX_TOTAL_SECONDS,
                 "persistent_memory": True, "function_calling": True,
                 "gemini_503_retry": True,
+                "http_retry_backoff": "3x_2_4_8",
                 "sc_context_loaded": _sc_cache["loaded"],
                 "observe_endpoint": True})
             return
