@@ -478,7 +478,7 @@ def test_execute_gemini_429_retry_then_fail(monkeypatch):
     assert result["ok"] is False
     assert "HTTP_429" in result["error"]
     assert "after_429_retry" in result["error"]
-    assert call_count["n"] == 2  # 최초 1회 + 재시도 1회
+    assert call_count["n"] == 4  # 최초 1회 + 재시도 3회 (v4.10.0 EAG-S284-JENI-RETRY-001)
 
 
 def test_execute_gemini_429_retry_success(monkeypatch):
