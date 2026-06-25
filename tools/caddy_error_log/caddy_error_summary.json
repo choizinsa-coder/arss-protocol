@@ -1,0 +1,28 @@
+{
+  "total_errors": 22,
+  "by_session": {
+    "S272": 4,
+    "S273": 2,
+    "S274": 1,
+    "S275": 1,
+    "S278": 3,
+    "S279": 3,
+    "S281": 4,
+    "S282": 1,
+    "S283": 1,
+    "S284": 2
+  },
+  "by_category": {
+    "RC-1": 2,
+    "RC-2": 8,
+    "RC-3": 3,
+    "RC-4": 4,
+    "RC-5": 3,
+    "RC-6": 2
+  },
+  "source": "SSOT (SESSION_CONTEXT_S{n}_FINAL.json caddy_governance_record)",
+  "backfill_range": "S272-S285",
+  "backfill_eag": "EAG-S286-BACKFILL-APPROVE",
+  "note": "former fake summary (13) discarded; SSOT-based actual 22 incidents.",
+  "last_updated": "2026-06-25T07:48:25.089896+00:00"
+}

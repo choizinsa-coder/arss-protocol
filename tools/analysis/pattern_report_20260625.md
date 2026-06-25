@@ -1,6 +1,6 @@
 # Pattern Analysis
 
-- Distinct Root Causes: 1
+- Distinct Root Causes: 22
 - Structural Recurrence Rate: 0.0
 
 ## Recurring Root Causes
