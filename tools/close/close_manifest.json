@@ -1,0 +1,46 @@
+{
+  "schema": "close_manifest_v1",
+  "session": 286,
+  "chain_tip": "50fa994",
+  "context_hash": "9603d6e5c94ba7b53f4d0b330c54c118b76ed6807a6de2820af060335f16f4d8",
+  "generated_at": "2026-06-25T17:15:15.483394+09:00",
+  "all_files_ok": true,
+  "files": [
+    {
+      "file": "SESSION_CONTEXT_S286_FINAL.json",
+      "exists": true,
+      "size_bytes": 44352,
+      "sha256": "2274b221cf20cd855656110b5c2c45c3b8b413d0d674eee3687678411129241e",
+      "status": "OK"
+    },
+    {
+      "file": "SESSION_CONTEXT_ARCHIVE_TIER_D_S286.json",
+      "exists": true,
+      "size_bytes": 4264,
+      "sha256": "9b8d38a889ed5194074358f2cf469ae0da96b524cb6db55fad56cdb137dd5bdf",
+      "status": "OK"
+    },
+    {
+      "file": "SESSION_CONTEXT.json",
+      "exists": true,
+      "size_bytes": 44352,
+      "sha256": "2274b221cf20cd855656110b5c2c45c3b8b413d0d674eee3687678411129241e",
+      "status": "OK"
+    },
+    {
+      "file": "SESSION_CONTEXT_POINTER.json",
+      "exists": true,
+      "size_bytes": 341,
+      "sha256": "72dcfed1c255108f1fc4e867faab68d67f7132195654220ec090d09dc7e184dc",
+      "status": "OK"
+    },
+    {
+      "file": "SESSION_CONTEXT_STALE_MANIFEST.json",
+      "exists": true,
+      "size_bytes": 185,
+      "sha256": "cc77d280d9dd5433fa037f898139be2002a66f166f94575af3b336a02c4527ac",
+      "status": "OK"
+    }
+  ],
+  "verification_method": "MCP read_file OBSERVE"
+}

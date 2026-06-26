@@ -1,5 +1,5 @@
 """
-aiba_jeni_runtime.py v4.1.0
+aiba_jeni_runtime.py v4.11.0
 AIBA Jeni Runtime — Persistent Autonomous Verification Agent
 PT-S193-JENI-PERSIST-001
 
@@ -8,39 +8,32 @@ PT-S193-JENI-PERSIST-001
   v2.0.0 (S191): Independent Verification Loop (텍스트 TRIGGER 기반)
   v3.0.0 (S193): Multi-Turn Tool Loop ([JENI_TOOL_REQUEST] 텍스트 파싱)
   v4.0.0 (S193): Persistent Autonomous Agent 전면 재설계
-    - 도미 Rev.3 (BRIEFING-DOMI-S193-002 Final) + 제니 TRUST_READY PASS
-    - 문제 1: WRITE_SCOPE = SANDBOX_ONLY (tools/sandbox/jeni/** 한정)
-    - 문제 2: Persistent Memory Layer (conversation/findings/audits/state)
-    - 문제 3: STATE_6 PERSIST_RESULTS — 응답 후 sandbox 자동 기록
-    - 문제 4: Memory Injection — _load_memory_context()
-    - 문제 5: Gemini Function Calling API 전환
-    - 제니 제언 1: Memory Pruning — RESOLVED/CLOSED findings 주입 제외
-    - 제니 제언 2: Quota Lock — sandbox 50MB 초과 시 오래된 audits 롤링 삭제
   v4.1.0 (S199): Gemini 503 자동 재시도 1회 추가
   v4.4.0 (S211): NO_PARTS Exponential Backoff 재시도 3회 추가 (EAG-S211-JENI-001)
-    - _parse_response() 헬퍼 신설 — NO_PARTS 2s/4s/8s backoff
-    - 503/429 재시도 성공 경로도 _parse_response() 적용 (중복 제거)
-    - 매 재시도마다 Request 재생성 (body stream 소진 방지)
-    - _execute_gemini_request: HTTP 503 감지 시 2초 대기 후 1회 재시도
-    - 재시도 후 503 지속 시 즉시 FAIL_CLOSED
-    - S199 EAG-2: 비오(Joshua) 승인
   v4.7.0 (S277): write_file + COLLAB_DIR 추가 (EAG-S277-DOMI-JENI-WRITE-001)
   v4.8.0 (S278): SC_FINAL 자동 로드 + JENI_SESSION_BOOT_PROTOCOL 주입
   v4.9.0 (S279): /observe 엔드포인트 추가 (EAG-S279-OBSERVE-001)
-    - POST /observe: targets 지정 시 Runtime이 ALLOWED_TOOLS 자율 호출 후 결과 반환
-    - targets: session_context / runtime_snapshot / service_status
-    - EAG-S278-AGENT-BOOT-001
-    - _load_session_context(): POINTER → SC_FINAL 자동 로드 (TTL=프로세스 수명)
-    - 로드 실패 시 FAIL_CLOSED (context empty, 경고 로그)
-    - /health 응답에 sc_context_loaded 필드 추가
-  설계 근거: BRIEFING-DOMI-S193-002 Final / S199 Domi 설계
-  EAG-1: 비오(Joshua) S193 승인
-  Jeni TRUST_READY: PASS (BRIEFING-JENI-S193-003)
+  v4.10.0 (S284): 503/429 _retry_http_with_backoff() 통일 (EAG-S284-JENI-RETRY-001)
+  v4.11.0 (S288): EAG-S287-RUNTIME-STABILIZE-001 B/C/D 패치 (모델 미변경, A계층 보류)
+    - B-J-1+C-5: SC_FINAL 캐시 POINTER hash + SC_FINAL mtime 이중 무효화
+    - B-J-2: MAX_MEMORY_TURNS 20→5, MAX_FINDINGS_INJECT 10→3
+    - B-J-3: MAX_TOOL_ROUNDS 5→8
+    - B-J-4: MAX_TOTAL_SECONDS 120→180, TIMEOUT_PREEMPT 110→170
+    - B-J-5: SC_FINAL 로드 실패 시 content=None → Fail-Closed 강제
+    - C-1: Circuit Breaker (연속 동일 오류 2회 차단)
+    - C-2: GEMINI_MAX_OUTPUT_TOKENS 4096→1500
+    - C-4: Per-call 비용 관측 로그 (COST_LOG) + 일일 누적 추적
+    - D-3: read_file 결과 20KB I/O 페이로드 캡
+    - 제니 J-2: MAX_DAILY_USD 사전 차단기 (env 제어, 디폴트 1.0)
+    - 모델/escalate 환경변수 구조 불변 (secrets.env 미변경)
+  설계 근거: AIBA_RUNTIME_OPTIMIZATION_S287.md v1.3 (EAG 승인본)
+  EAG: EAG-S287-RUNTIME-STABILIZE-001 (A계층 보류, B/C/D 선행 — 비오 S288 지시)
 """
 
 from __future__ import annotations
 
 import glob
+import hashlib
 import json
 import os
 import re
@@ -56,13 +49,13 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.10.0"
+RUNTIME_VERSION = "4.11.0"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.0-flash")
 GEMINI_MODEL_ESCALATE = os.environ.get("AIBA_GEMINI_MODEL_ESCALATE", "gemini-2.5-pro")
 GEMINI_TIMEOUT = 55
-GEMINI_MAX_OUTPUT_TOKENS = 4096
+GEMINI_MAX_OUTPUT_TOKENS = 1500  # C-2: 4096 → 1500 (판정 블록 실측 최대 1200 + 마진)
 
 GEMINI_API_KEY = os.environ.get("AIBA_GEMINI_API_KEY", "")
 
@@ -75,9 +68,20 @@ NO_PARTS_RETRY_BASE_SLEEP = 2   # NO_PARTS 기반 대기 시간(초) — 2s/4s/8
 HTTP_RETRY_MAX = 3              # 503/429 재시도 최대 횟수 (EAG-S284-JENI-RETRY-001)
 HTTP_RETRY_BASE_SLEEP = 2       # 503/429 기반 대기 시간(초) — 2s/4s/8s
 
-MAX_TOOL_ROUNDS = 5
-MAX_TOTAL_SECONDS = 120
-TIMEOUT_PREEMPT_SECONDS = 110
+MAX_TOOL_ROUNDS = 8             # B-J-3: 5 → 8
+MAX_TOTAL_SECONDS = 180         # B-J-4: 120 → 180
+TIMEOUT_PREEMPT_SECONDS = 170   # B-J-4: 110 → 170
+
+# C-4: 비용 단가 (env 오버라이드 가능). 디폴트 = gemini-2.5-pro 표준 단가.
+GEMINI_COST_RATE_INPUT = float(os.environ.get("AIBA_GEMINI_COST_RATE_INPUT", "1.25"))
+GEMINI_COST_RATE_OUTPUT = float(os.environ.get("AIBA_GEMINI_COST_RATE_OUTPUT", "10.00"))
+
+# 제니 J-2: 일일 비용 하드 리밋 (env 제어). 디폴트 $1.0/일 (비오 비용 기준 반영).
+MAX_DAILY_USD = float(os.environ.get("AIBA_MAX_DAILY_USD", "1.0"))
+# CHANGE_ID: S287-J2-WARN (도미 ④ — 2단계 예산 가드: WARN 임계 = cap 80%)
+MAX_DAILY_USD_WARN = float(os.environ.get("AIBA_MAX_DAILY_USD_WARN", str(round(MAX_DAILY_USD * 0.8, 5))))
+
+MAX_FILE_BYTES = 20_000  # D-3: read_file 결과 페이로드 캡 (약 500줄)
 
 BRIDGE_BASE = "http://127.0.0.1:8443"
 BRIDGE_TOKEN_ENDPOINT = f"{BRIDGE_BASE}/token"
@@ -93,45 +97,85 @@ BOOT_PROTOCOL_PATH = os.path.join(
     ARSS_ROOT, "tools/design/JENI_SESSION_BOOT_PROTOCOL.md")
 SESSION_POINTER_PATH = os.path.join(ARSS_ROOT, "SESSION_CONTEXT_POINTER.json")
 
-# ── Session Context Auto-Load (EAG-S278-AGENT-BOOT-001) ──────────────────────
+# ── Session Context Auto-Load (B-J-1 + C-5 + B-J-5) ──────────────────────────
 
-_sc_cache: dict = {"content": None, "loaded": False}
+# B-J-1 + C-5: POINTER hash + SC_FINAL mtime 이중 무효화 캐시
+_sc_cache: dict = {
+    "content": None,
+    "loaded": False,
+    "pointer_hash": "",
+    "sc_final_mtime": 0.0,
+    "loaded_at": 0.0,
+}
 
 
-def _load_session_context() -> str:
-    """
-    SESSION_CONTEXT_POINTER.json → SC_FINAL 자동 로드.
-    TTL = 프로세스 수명 (세션 내 SC_FINAL 불변 보장).
-    로드 실패 시 FAIL_CLOSED: 빈 문자열 반환 + 경고 로그.
-    """
-    if _sc_cache["loaded"]:
-        return _sc_cache["content"] or ""
+def _get_pointer_hash() -> str:
+    """POINTER.json 내용 hash (변경 감지용)."""
     try:
-        # STEP 1: POINTER 읽기
+        with open(SESSION_POINTER_PATH, "rb") as f:
+            return hashlib.md5(f.read()).hexdigest()
+    except Exception:
+        return ""
+
+
+def _resolve_sc_final_path() -> str:
+    """현재 POINTER 기준 SC_FINAL 경로 산출 (mtime 확인용)."""
+    try:
+        with open(SESSION_POINTER_PATH, encoding="utf-8") as f:
+            pointer = json.load(f)
+        last_session = pointer.get("last_session") or pointer.get("current_session")
+        if last_session is None:
+            return ""
+        return os.path.join(ARSS_ROOT, f"SESSION_CONTEXT_S{last_session}_FINAL.json")
+    except Exception:
+        return ""
+
+
+def _load_session_context() -> str | None:
+    """
+    CHANGE_ID: S287-BJ1 + S287-C5 + S287-BJ5
+    SESSION_CONTEXT_POINTER.json → SC_FINAL 자동 로드.
+    B-J-1: 캐시 유효 조건 = loaded AND pointer_hash 일치.
+    C-5: SC_FINAL mtime 이중 확인 (POINTER 불변 + SC_FINAL 직접 수정 감지).
+    B-J-5: 로드 실패 시 content=None 반환 → caller가 Fail-Closed 처리.
+    """
+    current_hash = _get_pointer_hash()
+    sc_final_path = _resolve_sc_final_path()
+    try:
+        sc_mtime = os.path.getmtime(sc_final_path) if sc_final_path else 0.0
+    except Exception:
+        sc_mtime = 0.0
+
+    # 캐시 유효성 (B-J-1 + C-5): hash 일치 AND mtime 1초 이내
+    if (_sc_cache["loaded"]
+            and _sc_cache["content"] is not None
+            and _sc_cache["pointer_hash"] == current_hash
+            and abs(_sc_cache["sc_final_mtime"] - sc_mtime) < 1.0):
+        return _sc_cache["content"]
+
+    # 캐시 무효화 → 재로드
+    try:
         with open(SESSION_POINTER_PATH, encoding="utf-8") as f:
             pointer = json.load(f)
         last_session = pointer.get("last_session") or pointer.get("current_session")
         if last_session is None:
             raise ValueError("POINTER: last_session 키 없음")
-        # STEP 2: SC_FINAL 읽기
         sc_path = os.path.join(
             ARSS_ROOT, f"SESSION_CONTEXT_S{last_session}_FINAL.json")
         with open(sc_path, encoding="utf-8") as f:
             sc_data = json.load(f)
-        # STEP 3: 직렬화 (필요 키만)
         summary_keys = [
             "session_count", "chain", "next_steps", "agent_focus",
-            "pytest_status", "session_reentry",
+            "pytest_status", "session_reentry", "aif_v1_definition",
         ]
         sc_summary = {k: sc_data[k] for k in summary_keys if k in sc_data}
         sc_text = json.dumps(sc_summary, ensure_ascii=False, indent=2)
-        # STEP 4: BOOT_PROTOCOL 읽기 (선택적)
         boot_text = ""
         try:
             with open(BOOT_PROTOCOL_PATH, encoding="utf-8") as f:
                 boot_text = f.read()
         except Exception:
-            pass  # 문서 없어도 SC_FINAL 로드는 유효
+            pass
         content = (
             "[JENI SESSION BOOT — SC_FINAL 자동 로드]\n"
             f"{sc_text}\n\n"
@@ -140,17 +184,24 @@ def _load_session_context() -> str:
             content += f"[JENI SESSION BOOT PROTOCOL]\n{boot_text}\n\n"
         _sc_cache["content"] = content
         _sc_cache["loaded"] = True
+        _sc_cache["pointer_hash"] = current_hash
+        _sc_cache["sc_final_mtime"] = sc_mtime
+        _sc_cache["loaded_at"] = time.time()
         print(
             f"[JENI_RUNTIME] SC_FINAL loaded: session={last_session} "
-            f"chain_tip={sc_data.get('chain', {}).get('tip', 'unknown')}",
+            f"chain_tip={sc_data.get('chain', {}).get('tip', 'unknown')} "
+            f"(pointer_hash={current_hash[:8]} mtime={sc_mtime:.0f})",
             file=sys.stderr)
         return content
     except Exception as e:
-        _sc_cache["loaded"] = True  # 재시도 방지
-        _sc_cache["content"] = ""
-        print(f"[JENI_RUNTIME] WARN: SC_FINAL load FAILED — {e} (FAIL_CLOSED: context empty)",
+        # B-J-5: 빈 문자열이 아니라 None → Fail-Closed 신호
+        _sc_cache["loaded"] = True
+        _sc_cache["content"] = None
+        _sc_cache["pointer_hash"] = ""
+        _sc_cache["sc_final_mtime"] = 0.0
+        print(f"[JENI_RUNTIME] CRITICAL: SC_FINAL load FAILED — {e} (FAIL_CLOSED)",
               file=sys.stderr)
-        return ""
+        return None
 
 
 # WRITE_SCOPE = SANDBOX_ONLY (문제 1)
@@ -162,8 +213,8 @@ MEM_AUDITS_DIR = os.path.join(SANDBOX_ACTIVE, "audits")
 MEM_STATE_DIR = os.path.join(SANDBOX_ACTIVE, "state")
 MEM_STATE_FILE = os.path.join(MEM_STATE_DIR, "runtime_state.json")
 
-MAX_MEMORY_TURNS = 20
-MAX_FINDINGS_INJECT = 10
+MAX_MEMORY_TURNS = 5       # B-J-2: 20 → 5
+MAX_FINDINGS_INJECT = 3    # B-J-2: 10 → 3
 MAX_AUDITS_INJECT = 5
 
 SANDBOX_QUOTA_BYTES = 50 * 1024 * 1024  # 50MB
@@ -272,10 +323,61 @@ def _extract_function_calls(parts: list) -> list:
     return calls
 
 
+# ── C-4: 비용 관측 로그 + 일일 누적 추적 (제니 J-2 Hard Limit) ────────────────
+
+_daily_cost_tracker: dict = {"date": "", "total_usd": 0.0}
+
+
+def _emit_event(event: dict) -> None:
+    """CHANGE_ID: S287-C4 — 운영 이벤트를 JSON Lines로 stderr 출력 (기계 분석 통일 포맷)."""
+    print(json.dumps(event, ensure_ascii=False), file=sys.stderr)
+
+
+def _today_str() -> str:
+    return datetime.now(timezone.utc).strftime("%Y%m%d")
+
+
+def _daily_budget_exceeded() -> bool:
+    """제니 J-2: 당일 누적 비용이 MAX_DAILY_USD 초과 시 True (다음 호출 차단)."""
+    today = _today_str()
+    if _daily_cost_tracker["date"] != today:
+        _daily_cost_tracker["date"] = today
+        _daily_cost_tracker["total_usd"] = 0.0
+    return _daily_cost_tracker["total_usd"] >= MAX_DAILY_USD
+
+
+def _log_call_cost(model: str, usage: dict, session: str, round_num: int) -> float:
+    """CHANGE_ID: S287-C4 / 도미 ③ — usage 부재 시 WARN(중단 금지). 출력은 JSON Lines."""
+    if not usage:
+        _emit_event({"tag": "COST_LOG", "level": "WARN", "agent": "jeni",
+                     "session": session, "round": round_num, "model": model,
+                     "note": "usage metadata missing, cost tracking skipped"})
+        return 0.0
+    inp = usage.get("prompt_token_count", 0)
+    out = usage.get("candidates_token_count", 0)
+    cost = (inp / 1_000_000 * GEMINI_COST_RATE_INPUT) + (out / 1_000_000 * GEMINI_COST_RATE_OUTPUT)
+    today = _today_str()
+    if _daily_cost_tracker["date"] != today:
+        _daily_cost_tracker["date"] = today
+        _daily_cost_tracker["total_usd"] = 0.0
+    _daily_cost_tracker["total_usd"] += cost
+    _emit_event({"tag": "COST_LOG", "agent": "jeni", "session": session,
+                 "round": round_num, "model": model, "input": inp, "output": out,
+                 "est_usd": round(cost, 5),
+                 "daily_total": round(_daily_cost_tracker["total_usd"], 5),
+                 "daily_cap": MAX_DAILY_USD})
+    # CHANGE_ID: S287-J2-WARN / 도미 ④ — WARN 임계 도달 시 경고 (HARD 차단 전 가시성)
+    if _daily_cost_tracker["total_usd"] >= MAX_DAILY_USD_WARN:
+        _emit_event({"tag": "BUDGET_WARN", "agent": "jeni",
+                     "daily_total": round(_daily_cost_tracker["total_usd"], 5),
+                     "warn": MAX_DAILY_USD_WARN, "cap": MAX_DAILY_USD})
+    return cost
+
+
 # ── OAuth Token ───────────────────────────────────────────────────────────────
 
 _token_cache: dict = {"access_token": "", "expires_at": 0.0, "refresh_count": 0}
-_MAX_TOKEN_REFRESH = None  # EAG-S211-OAUTH-001: 장기 실행 안정성 확보 — None = 무제한 자동 재발급
+_MAX_TOKEN_REFRESH = None  # EAG-S211-OAUTH-001: None = 무제한 자동 재발급
 
 
 def _fetch_new_token() -> tuple:
@@ -405,10 +507,24 @@ def _call_bridge_tool(tool: str, params: dict) -> tuple:
     return resp.get("content", [{}])[0].get("text", ""), None
 
 
+def _truncate_tool_result(tool_name: str, result_text: str) -> str:
+    """CHANGE_ID: S287-D3 — read_file 결과가 MAX_FILE_BYTES 초과 시 절단 + 경고."""
+    if tool_name != "read_file":
+        return result_text
+    encoded = result_text.encode("utf-8")
+    if len(encoded) <= MAX_FILE_BYTES:
+        return result_text
+    truncated = encoded[:MAX_FILE_BYTES].decode("utf-8", errors="ignore")
+    return (
+        truncated
+        + "\n\n[WARNING: FILE TOO LARGE — TRUNCATED. "
+        "Use grep_scoped to find specific patterns instead of reading the full file.]"
+    )
+
+
 def _execute_function_call(name: str, args: dict) -> tuple:
     if name not in ALLOWED_TOOLS:
         return "", f"TOOL_NOT_ALLOWED: '{name}'"
-    # write_file 분기 (S277 추가)
     if name == "write_file":
         target_path = args.get("target_path", "")
         content = args.get("content", "")
@@ -417,7 +533,6 @@ def _execute_function_call(name: str, args: dict) -> tuple:
         if not _is_write_allowed(target_path):
             return "", f"WRITE_DENIED: path not in jeni whitelist: {target_path}"
         return _call_bridge_tool("write_file", {"target_path": target_path, "content": content})
-    # 읽기 도구 분기
     path = args.get("path", "")
     if path and not _is_path_allowed(path):
         return "", f"PATH_NOT_ALLOWED: '{path}'"
@@ -430,7 +545,52 @@ def _execute_function_call(name: str, args: dict) -> tuple:
         call_params["tail_lines"] = int(args["tail_lines"])
     if "max_results" in args:
         call_params["max_results"] = int(args["max_results"])
-    return _call_bridge_tool(name, call_params)
+    result_text, err = _call_bridge_tool(name, call_params)
+    # CHANGE_ID: S287-D3 (정정) — 원본만 반환. truncate는 _prepare_llm_tool_message에서만.
+    return result_text, err
+
+
+# ── C-1: Circuit Breaker — 연속 동일 오류 조기 종료 ──────────────────────────
+
+_cb_error_type: str = ""
+_cb_error_count: int = 0
+
+
+def _reset_circuit_breaker() -> None:
+    global _cb_error_type, _cb_error_count
+    _cb_error_type = ""
+    _cb_error_count = 0
+
+
+def _classify_tool_error(tool_name: str, result_text: str) -> str:
+    """도구 오류 유형 분류. 정상 결과는 "" 반환."""
+    if "NOT_A_FILE" in result_text or "DENIED" in result_text:
+        return f"FILE_ERROR:{tool_name}"
+    if "PERMISSION" in result_text or "403" in result_text:
+        return f"AUTH_ERROR:{tool_name}"
+    if "TIMEOUT" in result_text or "TIMED_OUT" in result_text:
+        return f"TIMEOUT:{tool_name}"
+    return ""
+
+
+def _circuit_breaker_check(tool_name: str, result_text: str, round_num: int) -> bool:
+    """CHANGE_ID: S287-C1 — 연속 동일 오류 2회 이상 발생 시 차단(True)."""
+    global _cb_error_type, _cb_error_count
+    err = _classify_tool_error(tool_name, result_text)
+    if err == "":
+        _cb_error_type = ""
+        _cb_error_count = 0
+        return False
+    if err == _cb_error_type:
+        _cb_error_count += 1
+    else:
+        _cb_error_type = err
+        _cb_error_count = 1
+    if _cb_error_count >= 2:
+        _emit_event({"tag": "CIRCUIT_BREAKER", "agent": "jeni", "round": round_num,
+                     "error_type": err, "count": _cb_error_count, "action": "ABORT"})
+        return True
+    return False
 
 
 # ── Audit ─────────────────────────────────────────────────────────────────────
@@ -657,6 +817,21 @@ def _make_fail_closed_result(reason: str, detail: str, rounds_used: int,
     return result
 
 
+def _make_budget_block_result(detail: str) -> dict:
+    """CHANGE_ID: S287-J2 / 도미 ④ — 예산 차단은 거버넌스 판정(TRUST_READY=FAIL)과 구분.
+    verification_run=False 로 '검증 미실행(인프라 가드)'임을 명시하여 거버넌스 오인 방지."""
+    text = (
+        "[JENI RUNTIME — BUDGET GUARD]\n"
+        "VERIFICATION_RUN = FALSE\n"
+        "REASON = DAILY_BUDGET_EXCEEDED\n"
+        f"DETAIL = {detail}\n"
+        "NOTE = 제니의 설계 판정이 아니라 인프라 비용 가드에 의한 검증 미실행 상태입니다. "
+        "예산 한도 조정 또는 DEP 승인 후 재요청하십시오.\n"
+    )
+    return {"ok": False, "text": text, "error": "DAILY_BUDGET_EXCEEDED",
+            "budget_block": True, "verification_run": False, "rounds_used": 0}
+
+
 # ── Gemini 호출 ────────────────────────────────────────────────────────────────
 
 
@@ -669,7 +844,8 @@ def _read_http_error_body(e: urllib.error.HTTPError) -> str:
 
 def _execute_gemini_request(req: urllib.request.Request) -> dict:
     """Gemini API 단일 요청 실행.
-    503/429 재시도 유지. NO_PARTS 발생 시 Exponential Backoff 재시도 추가 (EAG-S211-JENI-001).
+    503/429 재시도 유지. NO_PARTS Exponential Backoff 재시도.
+    C-4: 성공 응답에 usage(usageMetadata) 포함.
     """
     started_at = time.time()
 
@@ -687,19 +863,20 @@ def _execute_gemini_request(req: urllib.request.Request) -> dict:
         return (elapsed + extra_sleep) < min(GEMINI_TIMEOUT, MAX_TOTAL_SECONDS)
 
     def _parse_response(data: dict) -> dict:
-        """parts 추출 시도. NO_PARTS 되면 exponential backoff 재시도."""
         parts = _extract_parts(data)
         if parts:
             return {"ok": True, "text": _extract_text_from_parts(parts),
                     "function_calls": _extract_function_calls(parts),
-                    "parts": parts, "error": None}
+                    "parts": parts, "usage": data.get("usageMetadata", {}),
+                    "error": None}
 
         finish = _extract_finish_reason(data)
 
         for retry_idx in range(NO_PARTS_RETRY_MAX):
-            sleep_sec = NO_PARTS_RETRY_BASE_SLEEP * (2 ** retry_idx)  # 2/4/8
+            sleep_sec = NO_PARTS_RETRY_BASE_SLEEP * (2 ** retry_idx)
             if not _budget_ok(sleep_sec):
                 return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "usage": {},
                         "error": "FAIL_CLOSED: NO_PARTS retry would exceed time budget"}
             time.sleep(sleep_sec)
             try:
@@ -709,25 +886,25 @@ def _execute_gemini_request(req: urllib.request.Request) -> dict:
                     if rp:
                         return {"ok": True, "text": _extract_text_from_parts(rp),
                                 "function_calls": _extract_function_calls(rp),
-                                "parts": rp, "error": None}
+                                "parts": rp, "usage": rd.get("usageMetadata", {}),
+                                "error": None}
                     finish = _extract_finish_reason(rd)
             except Exception as re_err:
                 return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "usage": {},
                         "error": f"FAIL_CLOSED: NO_PARTS retry error — {re_err}"}
 
         return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                "usage": {},
                 "error": f"NO_PARTS: finish_reason={finish} (after_{NO_PARTS_RETRY_MAX}_retries)"}
 
     def _retry_http_with_backoff(code: int) -> dict:
-        """503/429 공통 지수 백오프 재시도 (EAG-S284-JENI-RETRY-001).
-        NO_PARTS 백오프와 동일 패턴: 최대 3회, 2/4/8초.
-        시간 예산 초과 시 즉시 FAIL_CLOSED.
-        """
         tag = f"after_{code}_retry"
         for retry_idx in range(HTTP_RETRY_MAX):
-            sleep_sec = HTTP_RETRY_BASE_SLEEP * (2 ** retry_idx)  # 2/4/8
+            sleep_sec = HTTP_RETRY_BASE_SLEEP * (2 ** retry_idx)
             if not _budget_ok(sleep_sec):
                 return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "usage": {},
                         "error": f"FAIL_CLOSED: HTTP_{code} retry would exceed time budget ({tag})"}
             time.sleep(sleep_sec)
             try:
@@ -740,11 +917,14 @@ def _execute_gemini_request(req: urllib.request.Request) -> dict:
                     tag = f"after_{code}_retry"
                     continue
                 return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "usage": {},
                         "error": f"HTTP_{e_r.code}: {_read_http_error_body(e_r)} ({tag})"}
             except Exception as e_r:
                 return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "usage": {},
                         "error": f"FAIL_CLOSED: HTTP_{code} retry error — {e_r} ({tag})"}
         return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                "usage": {},
                 "error": f"HTTP_{code}: persisted after {HTTP_RETRY_MAX} retries ({tag})"}
 
     try:
@@ -755,21 +935,26 @@ def _execute_gemini_request(req: urllib.request.Request) -> dict:
         if e.code in (503, 429):
             return _retry_http_with_backoff(e.code)
         return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                "usage": {},
                 "error": f"HTTP_{e.code}: {_read_http_error_body(e)}"}
     except urllib.error.URLError as e:
         return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                "usage": {},
                 "error": f"FAIL_CLOSED: Gemini unreachable — {e}"}
     except TimeoutError:
         return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                "usage": {},
                 "error": f"FAIL_CLOSED: Gemini timeout ({GEMINI_TIMEOUT}s)"}
     except Exception as e:
         return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                "usage": {},
                 "error": f"FAIL_CLOSED: unexpected error — {e}"}
 
 
 def _call_gemini(contents: list, escalate: bool = False) -> dict:
     if not GEMINI_API_KEY:
         return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                "usage": {},
                 "error": "FAIL_CLOSED: AIBA_GEMINI_API_KEY not configured"}
     _model = GEMINI_MODEL_ESCALATE if escalate else GEMINI_MODEL
     body = {
@@ -811,25 +996,25 @@ def _build_function_response_message(name: str, result_text: str, error) -> dict
             "parts": [{"functionResponse": {"name": name, "response": response_payload}}]}
 
 
+def _prepare_llm_tool_message(name: str, result_text: str, error) -> dict:
+    """CHANGE_ID: S287-D3 — LLM 전달 직전 토큰 보호 전담 (책임 분리).
+    _execute_function_call은 원본만 반환하고, D-3 truncate는 오직 여기서만 수행한다.
+    /observe 등 내부 JSON 파싱 경로는 이 함수를 거치지 않으므로 절단되지 않는다."""
+    if not error:
+        result_text = _truncate_tool_result(name, result_text)
+    return _build_function_response_message(name, result_text, error)
+
+
 # ── Observe Loop (EAG-S279-OBSERVE-001) ──────────────────────────────────────
 
 
 def _run_observe_loop(targets: list, session: str = "S000") -> dict:
-    """
-    /observe 엔드포인트 처리.
-    targets 목록에 따라 ALLOWED_TOOLS 자율 호출 후 결과를 dict로 반환.
-    targets:
-      - "session_context"    : SESSION_CONTEXT_POINTER + SC_FINAL 읽기
-      - "runtime_snapshot"   : get_runtime_snapshot 호출
-      - "service_status"     : runtime_snapshot 내 services 필드 추출
-    """
     results: dict = {}
     errors: dict = {}
 
     for target in targets:
         try:
             if target == "session_context":
-                # POINTER 읽기
                 ptr_text, ptr_err = _execute_function_call(
                     "read_file",
                     {"path": "/opt/arss/engine/arss-protocol/SESSION_CONTEXT_POINTER.json"}
@@ -843,7 +1028,6 @@ def _run_observe_loop(targets: list, session: str = "S000") -> dict:
                 if last_session is None:
                     errors[target] = "POINTER: last_session 키 없음"
                     continue
-                # SC_FINAL 읽기
                 sc_path = (
                     f"/opt/arss/engine/arss-protocol/"
                     f"SESSION_CONTEXT_S{last_session}_FINAL.json"
@@ -888,14 +1072,29 @@ def _run_observe_loop(targets: list, session: str = "S000") -> dict:
     }
 
 
-
 # ── Persistent Multi-Turn Loop ────────────────────────────────────────────────
 
 
 def _run_verification_loop(prompt: str, context: str, session: str = "S000", escalate: bool = False) -> dict:
     loop_start = time.time()
 
+    # CHANGE_ID: S287-J2 / 제니 J-2 + 도미 ④ — 일일 예산 HARD 차단 (이벤트 로그 후 Fail-Closed)
+    if _daily_budget_exceeded():
+        _emit_event({"tag": "BUDGET_BLOCK", "agent": "jeni",
+                     "daily_total": round(_daily_cost_tracker["total_usd"], 5),
+                     "cap": MAX_DAILY_USD, "action": "FAIL_CLOSED"})
+        return _make_budget_block_result(
+            f"daily_total={_daily_cost_tracker['total_usd']:.5f} >= cap={MAX_DAILY_USD:.2f} USD")
+
+    # B-J-5: SC_FINAL 로드 실패 시 Fail-Closed
     sc_context = _load_session_context()
+    if sc_context is None:
+        return _make_fail_closed_result(
+            "SC_CONTEXT_UNAVAILABLE",
+            "SESSION_CONTEXT load failed. Manual recovery required.",
+            0, _make_audit_bundle(0, []))
+
+    _reset_circuit_breaker()  # C-1: 루프 시작 시 초기화
     memory = _load_memory_context()
     memory_preamble = _build_memory_preamble(memory)
 
@@ -919,6 +1118,11 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
                 "VALIDATION_PARSE_FAILURE", call_result.get("error") or "",
                 round_num, _make_audit_bundle(round_num, audit_trail))
             break
+
+        # C-4: 비용 로그 + 일일 누적
+        _log_call_cost(
+            GEMINI_MODEL_ESCALATE if escalate else GEMINI_MODEL,
+            call_result.get("usage", {}), session, round_num)
 
         model_parts = call_result["parts"]
         accumulated.append({"role": "model", "parts": model_parts})
@@ -945,9 +1149,18 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
                 status="ALLOW" if not tool_err else "DENY",
                 duration_ms=duration_ms, path=path))
 
+            # C-1: Circuit Breaker (도구 결과 직후)
+            cb_text = tool_err if tool_err else result_text
+            if _circuit_breaker_check(name, cb_text or "", round_num + 1):
+                final_result = _make_fail_closed_result(
+                    "CIRCUIT_BREAKER_TRIGGERED",
+                    f"Consecutive same error x2: {_cb_error_type}. Escalate to Caddy.",
+                    round_num + 1, _make_audit_bundle(round_num + 1, audit_trail))
+                break
+
             round_num += 1
             accumulated.append(
-                _build_function_response_message(name, result_text, tool_err))
+                _prepare_llm_tool_message(name, result_text, tool_err))
             continue
 
         final_result = {"ok": True, "text": call_result["text"], "error": None,
@@ -993,10 +1206,17 @@ class JeniRuntimeHandler(BaseHTTPRequestHandler):
                 "key_present": bool(GEMINI_API_KEY),
                 "max_tool_rounds": MAX_TOOL_ROUNDS,
                 "max_total_seconds": MAX_TOTAL_SECONDS,
+                "max_output_tokens": GEMINI_MAX_OUTPUT_TOKENS,
                 "persistent_memory": True, "function_calling": True,
                 "gemini_503_retry": True,
                 "http_retry_backoff": "3x_2_4_8",
                 "sc_context_loaded": _sc_cache["loaded"],
+                "sc_cache_invalidation": "pointer_hash+sc_final_mtime",
+                "circuit_breaker": True,
+                "cost_log": True,
+                "max_daily_usd": MAX_DAILY_USD,
+                "daily_cost_total": round(_daily_cost_tracker["total_usd"], 5),
+                "payload_cap_bytes": MAX_FILE_BYTES,
                 "observe_endpoint": True})
             return
         self._send_json(403, {"error": "forbidden"})
@@ -1033,7 +1253,7 @@ class JeniRuntimeHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"ok": False, "error": "prompt required"})
             return
         result = _run_verification_loop(prompt, context, session, escalate=escalate)
-        self._send_json(200, result)  # v4.2.0: 항상 200, ok=false 시 body에 error 포함
+        self._send_json(200, result)
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
@@ -1053,8 +1273,9 @@ def main():
 
     print(f"[JENI_RUNTIME] starting v{RUNTIME_VERSION} model={GEMINI_MODEL} "
           f"key={_mask_key(GEMINI_API_KEY)} max_tool_rounds={MAX_TOOL_ROUNDS} "
-          f"persistent_memory=True function_calling=True "
-          f"gemini_503_retry=True sleep={GEMINI_503_RETRY_SLEEP}s sc_auto_load=True", file=sys.stderr)
+          f"max_total_seconds={MAX_TOTAL_SECONDS} max_output_tokens={GEMINI_MAX_OUTPUT_TOKENS} "
+          f"circuit_breaker=True cost_log=True max_daily_usd={MAX_DAILY_USD} "
+          f"persistent_memory=True function_calling=True sc_auto_load=True", file=sys.stderr)
     if not GEMINI_API_KEY:
         print("[JENI_RUNTIME] WARN: AIBA_GEMINI_API_KEY not set — /ask will FAIL_CLOSED",
               file=sys.stderr)
