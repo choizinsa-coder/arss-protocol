@@ -361,7 +361,9 @@ def test_loop_timeout_preempt(monkeypatch):
         call_n["n"] += 1
         if call_n["n"] <= 1:
             return original_time()
-        return original_time() + 115
+        # S289-FIX (EAG-S289-STALE-TEST-FIX-001): S288 TIMEOUT_PREEMPT 110→170 상향 반영.
+        # 선점(170s) 발동을 위해 +175 (구 +115는 170 미만이라 미발동 → stale).
+        return original_time() + 175
 
     monkeypatch.setattr(_runtime.time, "time", _fake_time)
     _patch_gemini(monkeypatch, [

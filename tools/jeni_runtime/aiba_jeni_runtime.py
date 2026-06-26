@@ -14,6 +14,9 @@ PT-S193-JENI-PERSIST-001
   v4.8.0 (S278): SC_FINAL 자동 로드 + JENI_SESSION_BOOT_PROTOCOL 주입
   v4.9.0 (S279): /observe 엔드포인트 추가 (EAG-S279-OBSERVE-001)
   v4.10.0 (S284): 503/429 _retry_http_with_backoff() 통일 (EAG-S284-JENI-RETRY-001)
+  v4.11.1 (S289): /observe session_context 버그 수정 (EAG-S289-OBSERVE-FIX-001)
+    - S279 유래 결함: _run_observe_loop ptr_text/sc_text MCP 브릿지 래퍼 이중 파싱 누락
+    - _ptr_outer["content"] / _sc_outer["content"] 추출 후 재파싱 적용
   v4.11.0 (S288): EAG-S287-RUNTIME-STABILIZE-001 B/C/D 패치 (모델 미변경, A계층 보류)
     - B-J-1+C-5: SC_FINAL 캐시 POINTER hash + SC_FINAL mtime 이중 무효화
     - B-J-2: MAX_MEMORY_TURNS 20→5, MAX_FINDINGS_INJECT 10→3
@@ -49,7 +52,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.11.0"
+RUNTIME_VERSION = "4.11.1"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.0-flash")
@@ -1023,7 +1026,17 @@ def _run_observe_loop(targets: list, session: str = "S000") -> dict:
                     errors[target] = f"POINTER_READ_FAILED: {ptr_err}"
                     continue
                 import json as _json
-                pointer = _json.loads(ptr_text)
+                # S289-FIX (EAG-S289-OBSERVE-FIX-001):
+                # _call_bridge_tool read_file 반환값은 MCP 브릿지 래퍼 포함:
+                #   {"status":"ALLOW","path":"...","content":"<실제 파일 JSON>"}
+                # outer["content"] 추출 후 재파싱해야 실제 POINTER 키에 접근 가능.
+                _ptr_outer = _json.loads(ptr_text)
+                _ptr_content = (
+                    _ptr_outer.get("content", ptr_text)
+                    if isinstance(_ptr_outer, dict) and "status" in _ptr_outer
+                    else ptr_text
+                )
+                pointer = _json.loads(_ptr_content)
                 last_session = pointer.get("last_session") or pointer.get("current_session")
                 if last_session is None:
                     errors[target] = "POINTER: last_session 키 없음"
@@ -1036,7 +1049,14 @@ def _run_observe_loop(targets: list, session: str = "S000") -> dict:
                 if sc_err:
                     errors[target] = f"SC_FINAL_READ_FAILED: {sc_err}"
                     continue
-                sc_data = _json.loads(sc_text)
+                # S289-FIX: 동일 MCP 브릿지 래퍼 구조 → content 추출 후 재파싱
+                _sc_outer = _json.loads(sc_text)
+                _sc_content = (
+                    _sc_outer.get("content", sc_text)
+                    if isinstance(_sc_outer, dict) and "status" in _sc_outer
+                    else sc_text
+                )
+                sc_data = _json.loads(_sc_content)
                 summary_keys = [
                     "session_count", "chain", "next_steps",
                     "agent_focus", "pytest_status", "session_reentry",
