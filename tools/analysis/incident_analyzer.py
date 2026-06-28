@@ -190,11 +190,50 @@ class IncidentAnalyzer:
         recurring_res = {res: c for res, c in res_counter.items() if c >= 2}
         total_rc = len(rc_counter)
         recurrence_rate = round(len(recurring_rc) / total_rc, 3) if total_rc else 0.0
+
+        # ── Phase 1.5: category 단위 재발 감지 (EAG-S290-ANALYZER-PHASE15-001) ──
+        # 조건 1: 기존 4개 키 절대 유지. 신규 키만 추가.
+        # 조건 2: category_details = 원시 집계(count, sessions, distinct_root_causes) 필수 포함
+        # 조건 3: evidence_missing_count / unverified_count 모든 category에 통일 (0 기본값)
+        cat_groups = defaultdict(list)
+        for i in self.incidents:
+            if i.category:
+                cat_groups[i.category].append(i)
+
+        category_details = {}
+        for cat, items in cat_groups.items():
+            count = len(items)
+            sessions = sorted({x.session for x in items if x.session})
+            distinct_rcs = len({self._normalize(x.root_cause) for x in items if x.root_cause})
+            severity = self._severity(count)
+            # 스키마 통일: 모든 category에 0 기본값 (도미 조건 3)
+            em_count = sum(1 for x in items if getattr(x, "evidence_missing", False))
+            uv_count = sum(1 for x in items if not getattr(x, "verified", True))
+            category_details[cat] = {
+                # 원시 집계 (도미 조건 2)
+                "count": count,
+                "sessions": sessions,
+                "distinct_root_causes": distinct_rcs,
+                # 파생 집계
+                "severity": severity,
+                # RC-7 전용이지만 스키마 통일로 모든 cat에 포함 (도미 조건 3)
+                "evidence_missing_count": em_count,
+                "unverified_count": uv_count,
+            }
+
+        recurring_categories = {
+            cat: info for cat, info in category_details.items() if info["count"] >= 2
+        }
+
         self.recurring = {
+            # 기존 Phase 1 키 — 절대 불변 (도미 조건 1)
             "recurring_root_causes": recurring_rc,
             "recurring_resolutions": recurring_res,
             "structural_recurrence_rate": recurrence_rate,
             "distinct_root_causes": total_rc,
+            # Phase 1.5 신규 키
+            "category_details": category_details,
+            "recurring_categories": recurring_categories,
         }
         return self.recurring
 
@@ -227,6 +266,40 @@ class IncidentAnalyzer:
                 "observed_resolutions": resolutions,
                 "approval": "Pending EAG",
             })
+        # ── Phase 1.5: category 기반 CAT-GRD (도미 조건 4: ID 체계 분리) ──────────
+        # CAT-GRD-XXX 는 기존 GRD-XXX 와 별도 ID 체계를 사용
+        cat_idx = 0
+        recurring_cats = self.recurring.get("recurring_categories", {})
+        for cat, info in sorted(recurring_cats.items(), key=lambda kv: kv[1]["count"], reverse=True):
+            cat_idx += 1
+            severity = info["severity"]
+            priority = "CRITICAL" if cat == "RC-7" else ("HIGH" if severity == "SYSTEMIC" else "MEDIUM")
+            problem = (
+                "category %s가 %d건 반복 발생 (distinct root_cause %d종, sessions: %s)"
+                % (cat, info["count"], info["distinct_root_causes"], ", ".join(info["sessions"]))
+            )
+            proposal = {
+                "id": "CAT-GRD-%03d" % cat_idx,
+                "type": "CATEGORY_RECURRENCE",
+                "priority": priority,
+                "severity": severity,
+                "problem": problem,
+                "evidence_sessions": info["sessions"],
+                "evidence_incidents": [],
+                "related_rc": [cat],
+                "occurrences": info["count"],
+                "observed_resolutions": [],
+                "approval": "Pending EAG",
+            }
+            # RC-7 특수: 누적 TRUST_NOT_READY 경고 (EAG-S290-RC7-NEWCAT-001)
+            if cat == "RC-7" and info["count"] >= 2:
+                proposal["rc7_warning"] = (
+                    "누적 TRUST_NOT_READY 주의: RC-7 %d회 반복. "
+                    "evidence_missing=%d, unverified=%d"
+                    % (info["count"], info["evidence_missing_count"], info["unverified_count"])
+                )
+            proposals.append(proposal)
+
         self.guard_proposals = proposals
         return proposals
 
@@ -338,6 +411,26 @@ class IncidentAnalyzer:
                 lines.append("- (" + str(c) + "x) " + res)
         else:
             lines.append("- (none)")
+        lines.append("")
+
+        # ── Phase 1.5: Category Recurrence 섹션 (EAG-S290-ANALYZER-PHASE15-001) ──
+        lines.append("## Category Recurrence (Phase 1.5)")
+        lines.append("")
+        recurring_cats = r.get("recurring_categories", {})
+        if recurring_cats:
+            for cat, info in sorted(recurring_cats.items(), key=lambda kv: kv[1]["count"], reverse=True):
+                lines.append(
+                    "- [%s] %s: %d건, distinct_rc=%d, sessions=%s"
+                    % (info["severity"], cat, info["count"],
+                       info["distinct_root_causes"], ", ".join(info["sessions"]))
+                )
+                if cat == "RC-7" and info.get("evidence_missing_count", 0) > 0:
+                    lines.append(
+                        "  ⚠ RC-7 evidence_missing=%d — 누적 TRUST_NOT_READY 주의"
+                        % info["evidence_missing_count"]
+                    )
+        else:
+            lines.append("- (category 재발 없음 — 모든 category 발생 횟수 1회 이하)")
         lines.append("")
         return "\n".join(lines)
 
