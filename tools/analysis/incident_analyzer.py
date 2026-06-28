@@ -24,6 +24,29 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 
+
+# ── RC 코드 정의 (EAG-S290-RC7-NEWCAT-001) ───────────────────────────────────
+# RC-6 vs RC-7 구분:
+#   RC-6 = 실행 오류     (기술 문제 — 실행 과정에서 발생)
+#   RC-7 = 보고 오류     (거버넌스 문제 — 보고의 신뢰성)
+#   RC-2 vs RC-7 구분:
+#   RC-2 = 검증 절차 미수행 (검증을 충분히 하지 못한 기술적 문제)
+#   RC-7 = 검증 여부와 관계없이 검증 완료로 보고한 거버넌스 문제
+ROOT_CAUSE_CODES = {
+    "RC-1": "사전 정보 부재: 필요한 문서나 규칙을 참조하지 않고 판단",
+    "RC-2": "검증 절차 미수행: 실측/확인 없이 추론이나 기억에 의존",
+    "RC-3": "구조적 오해: 시스템 구조나 흐름을 잘못 이해",
+    "RC-4": "경계 조건 미고려: 예외 상황이나 에지 케이스를 누락",
+    "RC-5": "커뮤니케이션 오류: 요구사항이나 지시를 잘못 해석",
+    "RC-6": "실행 오류: 실행 과정에서 발생한 기술적 오류",
+    "RC-7": (
+        "보고 오류(False-Reporting): 검증 가능한 사실을 검증하지 않았음에도 "
+        "검증 완료로 단정하여 보고하거나, 실행·성공 여부를 사실과 다르게 보고한 행위. "
+        "[즉시 TRUST_NOT_READY] 보안·재무·데이터 무결성 영향 또는 실행/성공 허위 보고. "
+        "[누적 TRUST_NOT_READY] 동일 유형 비중대 RC-7 2회 반복."
+    ),
+}
+
 REQUIRED_FIELDS = (
     "timestamp", "session", "error_id", "category",
     "description", "root_cause", "beo_burden", "resolution",
@@ -49,6 +72,9 @@ class Incident:
     resolution: str
     _valid: bool = True
     _issues: list = field(default_factory=list)
+    # RC-7 메타데이터 (EAG-S290-RC7-NEWCAT-001)
+    evidence_missing: bool = False  # 증거 없이 단정 보고
+    verified: bool = True           # 실제 검증 수행 여부
 
 
 class IncidentAnalyzer:
@@ -102,6 +128,8 @@ class IncidentAnalyzer:
                     resolution=raw.get("resolution", ""),
                     _valid=(len(issues) == 0),
                     _issues=issues,
+                    evidence_missing=bool(raw.get("evidence_missing", False)),
+                    verified=bool(raw.get("verified", True)),
                 )
                 self.incidents.append(inc)
         self._malformed_lines = malformed
@@ -263,6 +291,16 @@ class IncidentAnalyzer:
             lines.append("- Top Root Cause: " + info["top_root_cause"])
             lines.append("- Top Resolution: " + info["top_resolution"])
             lines.append("- Sessions: " + ", ".join(info["sessions"]))
+            lines.append("")
+        # RC-7 False-Reporting 요약 (EAG-S290-RC7-NEWCAT-001)
+        rc7_incidents = [i for i in self.incidents if i.category == "RC-7"]
+        if rc7_incidents:
+            lines.append("## RC-7 False-Reporting 요약")
+            lines.append("")
+            lines.append(f"- 총 {len(rc7_incidents)}건 (TRUST_NOT_READY 대상 포함 가능)")
+            for i in rc7_incidents:
+                flag = " [evidence_missing]" if i.evidence_missing else ""
+                lines.append(f"  - [{i.session}] {i.error_id}: {i.description}{flag}")
             lines.append("")
         lines.append("## RCA Quality Score")
         lines.append("")

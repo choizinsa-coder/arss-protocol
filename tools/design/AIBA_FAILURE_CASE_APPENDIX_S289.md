@@ -144,3 +144,98 @@ Circuit Breaker와 Budget Block은 모두 S287에서 설계되어 S288에 배포
 
 **미해결/후속 관찰**:
 - 코드 디폴트 단가(mini)가 여전히 코드에 남아 있어, env 미설정 환경(예: 신규 배포)에서는 과소측정 위험. 디폴트를 gpt-4o로 올리거나 env 필수화(미설정 시 기동 거부) 검토를 S290+ 의제로 제안.
+
+
+---
+
+## 7장. RC-7: False-Reporting (보고 오류) — EAG-S290-RC7-NEWCAT-001
+
+### 정의
+
+> 검증 가능한 사실을 검증하지 않았음에도 검증 완료로 단정하여 보고하거나,
+> 실행·성공 여부를 사실과 다르게 보고한 행위.
+
+### RC 코드 관계
+
+| 코드 | 분류 | 의미 |
+|------|------|------|
+| RC-2 | 기술 문제 | 검증 절차를 충분히 수행하지 못한 기술적 문제 (검증 부족) |
+| RC-6 | 기술 문제 | 실행 과정에서 발생한 기술적 오류 (실행 단계 오류) |
+| RC-7 | 거버넌스 문제 | 검증 여부와 관계없이 검증 완료로 보고한 신뢰성 문제 |
+
+### TRUST_NOT_READY 발동 기준 (비오님 확정, S290)
+
+**즉시 발동 (1회):**
+1. 검증하지 않았는데 검증 완료라고 명시적으로 보고
+2. 실행하지 않았는데 실행했다고 보고
+3. 실패를 성공으로 보고
+4. 보안·재무·데이터 무결성에 영향을 주는 허위 보고
+
+**누적 발동 (동일 유형 2회):**
+- 오래된 정보 사용으로 인한 오보고
+- 환경 차이 미확인 상태의 단정 보고
+- 추론을 사실처럼 표현
+- 테스트 기대값 오류로 인한 false positive 보고
+
+### caddy_errors.jsonl 메타데이터
+
+RC-7 인시던트 기록 시 다음 필드를 추가 권장:
+
+```json
+{
+  "category": "RC-7",
+  "evidence_missing": true,
+  "verified": false,
+  "description": "..."
+}
+```
+
+### 과거 RC-7 후보 사례
+
+| 세션 | 인시던트 | 내용 | 발동 기준 |
+|------|----------|------|----------|
+| S281 | INC-S281-001 | 외부 제니 VPS 접근 가능이라고 허위 보고 (미완성 구조였음) | 즉시 (실행 허위 보고) |
+| S289 | INC-S289-005 | SESSION CLOSE dry-run 전 키명 오기 인지 지연 | 누적 후보 |
+
+---
+
+## 8장. Required Env Hard-Stop — EAG-S290-HARDSTOP-001
+
+### 설계 원칙
+
+Fail-Closed 원칙: 필수 환경변수 미설정 시 예산 과소측정 또는 인증 실패를 유발.
+기동 자체를 거부하여 설정 오류를 배포 시점에 가시화한다.
+
+### Required vs Optional 분류
+
+**Required (Hard-Stop 대상) — 미설정 시 sys.exit(1):**
+
+| 변수명 | 용도 | 위험 |
+|--------|------|------|
+| AIBA_DOMI_MODEL | 비용 단가 기준 모델명 | 단가 계산 기준 불명 |
+| AIBA_DOMI_COST_RATE_INPUT | 입력 토큰 단가 (USD/1M) | 예산 과소측정 최대 16.7배 |
+| AIBA_DOMI_COST_RATE_OUTPUT | 출력 토큰 단가 (USD/1M) | 예산 과소측정 최대 16.7배 |
+| AIBA_MAX_DAILY_USD | 일일 예산 한도 | 예산 가드 무력화 |
+| AIBA_OPENAI_API_KEY | OpenAI API 인증키 | API 호출 불가 |
+
+**Optional (Default 허용):**
+
+| 변수명 | 디폴트 | 용도 |
+|--------|--------|------|
+| AIBA_DOMI_MODEL_ESCALATE | gpt-4o | Escalate 모델 |
+| AIBA_MAX_DAILY_USD_WARN | cap × 80% | 경고 임계 |
+
+### FATAL 메시지 형식
+
+```
+[DOMI_RUNTIME] FATAL: Required environment variables not set.
+  Missing: AIBA_DOMI_MODEL
+  Missing: AIBA_DOMI_COST_RATE_INPUT
+  → Set missing variables in /etc/aiba/secrets.env and restart aiba-domi-runtime.service
+```
+
+### 배경
+
+INC-S288-001: AIBA_DOMI_MODEL env 미참조로 코드 디폴트(gpt-4o-mini) 기준으로 단가
+설정, gpt-4o 실제 모델 대비 16.7배 예산 과소측정. Hard-Stop은 이 사고 패턴의
+구조적 재발 방지 장치.

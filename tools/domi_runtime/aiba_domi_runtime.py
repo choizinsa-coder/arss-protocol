@@ -70,6 +70,36 @@ MAX_DAILY_USD_WARN = float(os.environ.get("AIBA_MAX_DAILY_USD_WARN", str(round(M
 
 MAX_FILE_BYTES = 20_000  # D-3: read_file 페이로드 캡
 
+# ── Required Environment Variables — Hard-Stop (EAG-S290-HARDSTOP-001) ─────
+# Fail-Closed 원칙: 아래 변수 중 하나라도 미설정 시 기동 거부 + FATAL 진단 출력.
+# Required: 모델명·비용단가·일일예산·API키 — 모두 예산가드 정확성에 직결.
+# Optional: MODEL_ESCALATE(gpt-4o 디폴트), MAX_DAILY_USD_WARN(80% 디폴트) 등.
+_REQUIRED_ENVS = [
+    "AIBA_DOMI_MODEL",             # 비용 단가 기준 모델명
+    "AIBA_DOMI_COST_RATE_INPUT",   # 입력 토큰 단가 (USD/1M tokens)
+    "AIBA_DOMI_COST_RATE_OUTPUT",  # 출력 토큰 단가 (USD/1M tokens)
+    "AIBA_MAX_DAILY_USD",          # 일일 예산 한도 (USD)
+    "AIBA_OPENAI_API_KEY",         # OpenAI API 인증키
+]
+
+
+def _check_required_envs() -> None:
+    """EAG-S290-HARDSTOP-001: Required env 미설정 시 기동 거부 (Fail-Closed 원칙).
+    누락 변수를 명시적으로 출력하여 운영자가 즉시 조치 가능하도록 함."""
+    missing = [k for k in _REQUIRED_ENVS if not os.environ.get(k)]
+    if missing:
+        print("[DOMI_RUNTIME] FATAL: Required environment variables not set.",
+              file=sys.stderr)
+        for k in missing:
+            print(f"  Missing: {k}", file=sys.stderr)
+        print(
+            "  → Set missing variables in /etc/aiba/secrets.env "
+            "and restart aiba-domi-runtime.service",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
 BRIDGE_BASE = "http://127.0.0.1:8443"
 BRIDGE_TOKEN_ENDPOINT = f"{BRIDGE_BASE}/token"
 BRIDGE_TOKEN_TTL = 3600
@@ -1336,6 +1366,7 @@ def main():
     signal.signal(signal.SIGTERM, _handle_shutdown)
     signal.signal(signal.SIGINT, _handle_shutdown)
 
+    _check_required_envs()  # EAG-S290-HARDSTOP-001: 기동 전 필수 env 검증
     _ensure_memory_dirs()
 
     print(f"[DOMI_RUNTIME] starting v{RUNTIME_VERSION} model={OPENAI_MODEL} "
