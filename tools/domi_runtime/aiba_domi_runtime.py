@@ -45,7 +45,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.6.1"
+RUNTIME_VERSION = "1.7.0"
 
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
@@ -101,6 +101,13 @@ def _check_required_envs() -> None:
 
 
 BRIDGE_BASE = "http://127.0.0.1:8443"
+
+# -- ROOL 2단계 상수 (EAG-S297-ROOL2-IMPL-001) --------------------------------
+# 제니 TRUST-ADVISORY: ROOL_TIMEOUT -- 네트워크 하드 타임아웃 5초 강제.
+OBSERVE_BEGIN_ENDPOINT = BRIDGE_BASE + "/observe/begin"
+OBSERVE_READ_ENDPOINT = BRIDGE_BASE + "/observe/read"
+OBSERVATION_PURPOSE = "design"
+ROOL_TIMEOUT = 5
 BRIDGE_TOKEN_ENDPOINT = f"{BRIDGE_BASE}/token"
 BRIDGE_TOKEN_TTL = 3600
 BRIDGE_TIMEOUT = 15
@@ -545,6 +552,91 @@ def _measure_round_progress(tool_name: str, result_text: str, path_arg: str = ""
 
 # ── OAuth Token ───────────────────────────────────────────────────────────────
 
+# -- ROOL 2단계 함수 (EAG-S297-ROOL2-IMPL-001) --------------------------------
+
+
+def _begin_observation(session_id: str):
+    """
+    POST /observe/begin -> observation_id(str) 반환. 실패 시 None.
+    호출자(_run_design_loop)에서 None -> FAIL-CLOSED 처리.
+    제니 TRUST-ADVISORY: ROOL_TIMEOUT 5초 강제, 예외 시 Fail-Closed.
+    CHANGE_ID: S297-ROOL2-BEGIN
+    """
+    token, err = _get_access_token()
+    if err:
+        _emit_event({"tag": "ROOL_BEGIN_FAIL", "agent": "domi",
+                     "session": session_id, "reason": "OAUTH_FAILED:" + str(err)})
+        return None
+    try:
+        body = json.dumps({"session": session_id}).encode()
+        req = urllib.request.Request(
+            OBSERVE_BEGIN_ENDPOINT, data=body,
+            headers={"Content-Type": "application/json",
+                     "Authorization": "Bearer " + token,
+                     "Content-Length": str(len(body))}, method="POST")
+        with urllib.request.urlopen(req, timeout=ROOL_TIMEOUT) as r:
+            resp = json.loads(r.read().decode())
+        if resp.get("status") == "ALLOW":
+            obs_id = resp.get("observation_id", "")
+            _emit_event({"tag": "ROOL_BEGIN", "agent": "domi",
+                         "session": session_id,
+                         "observation_id": obs_id[:12] + "..."})
+            return obs_id
+        _emit_event({"tag": "ROOL_BEGIN_FAIL", "agent": "domi",
+                     "session": session_id,
+                     "reason": resp.get("reason", "UNKNOWN")})
+        return None
+    except urllib.error.HTTPError as e:
+        _emit_event({"tag": "ROOL_BEGIN_FAIL", "agent": "domi",
+                     "session": session_id, "reason": "HTTP_" + str(e.code)})
+        return None
+    except TimeoutError:
+        _emit_event({"tag": "ROOL_BEGIN_FAIL", "agent": "domi",
+                     "session": session_id,
+                     "reason": "TIMEOUT:" + str(ROOL_TIMEOUT) + "s (FAIL_CLOSED)"})
+        return None
+    except Exception as e:
+        _emit_event({"tag": "ROOL_BEGIN_FAIL", "agent": "domi",
+                     "session": session_id, "reason": "EXCEPTION:" + str(e)})
+        return None
+
+
+def _call_rool_tool(observation_id: str, session_id: str, path: str) -> tuple:
+    """
+    POST /observe/read -> (result_text, error).
+    제니 TRUST-ADVISORY: ROOL_TIMEOUT 5초 강제, 예외 시 ("", error) Fail-Closed.
+    CHANGE_ID: S297-ROOL2-READ
+    """
+    token, err = _get_access_token()
+    if err:
+        return "", "ROOL_AUTH_FAILED: " + str(err)
+    try:
+        body = json.dumps({
+            "observation_id": observation_id,
+            "session": session_id,
+            "path": path,
+            "purpose": OBSERVATION_PURPOSE,
+        }).encode()
+        req = urllib.request.Request(
+            OBSERVE_READ_ENDPOINT, data=body,
+            headers={"Content-Type": "application/json",
+                     "Authorization": "Bearer " + token,
+                     "Content-Length": str(len(body))}, method="POST")
+        with urllib.request.urlopen(req, timeout=ROOL_TIMEOUT) as r:
+            resp = json.loads(r.read().decode())
+        if resp.get("isError"):
+            content_text = resp.get("content", [{}])[0].get("text", "")
+            return "", "ROOL_DENIED: " + content_text
+        return resp.get("content", [{}])[0].get("text", ""), None
+    except urllib.error.HTTPError as e:
+        return "", "ROOL_HTTP_" + str(e.code)
+    except TimeoutError:
+        return "", ("ROOL_TIMEOUT: /observe/read exceeded "
+                    + str(ROOL_TIMEOUT) + "s (FAIL_CLOSED)")
+    except Exception as e:
+        return "", "ROOL_ERROR: " + str(e)
+
+
 _token_cache: dict = {"access_token": "", "expires_at": 0.0, "refresh_count": 0}
 _MAX_TOKEN_REFRESH = None
 
@@ -690,7 +782,10 @@ def _truncate_tool_result(tool_name: str, result_text: str) -> str:
     )
 
 
-def _execute_function_call(name: str, args: dict) -> tuple:
+def _execute_function_call(name: str, args: dict,
+                            observation_id: str = "",
+                            session_id: str = "") -> tuple:
+    # CHANGE_ID: S297-ROOL2-EXECUTE -- observation_id/session_id 추가 (하위 호환)
     if name not in ALLOWED_TOOLS:
         return "", f"TOOL_NOT_ALLOWED: '{name}'"
     if name == "write_file":
@@ -701,6 +796,20 @@ def _execute_function_call(name: str, args: dict) -> tuple:
         if not _is_write_allowed(target_path):
             return "", f"WRITE_DENIED: path not in domi whitelist: {target_path}"
         return _call_bridge_tool("write_file", {"target_path": target_path, "content": content})
+    # ROOL 2단계 (EAG-S297-ROOL2-IMPL-001): read_file -- ROOL 게이트 경유
+    # CHANGE_ID: S297-ROOL2-READ-BRANCH
+    # observation_id 있음 = design_loop 경로 -> ROOL /observe/read
+    # observation_id 없음 = observe_loop 등 S298 이월 경로 -> 기존 bridge 유지 (하위 호환)
+    if name == "read_file":
+        path = args.get("path", "")
+        if path and not _is_path_allowed(path):
+            return "", "PATH_NOT_ALLOWED: '" + path + "'"
+        if observation_id:
+            return _call_rool_tool(observation_id, session_id, path)
+        call_params_rf: dict = {"purpose": "OBSERVATION"}
+        if path:
+            call_params_rf["path"] = path
+        return _call_bridge_tool("read_file", call_params_rf)
     path = args.get("path", "")
     if path and not _is_path_allowed(path):
         return "", f"PATH_NOT_ALLOWED: '{path}'"
@@ -1159,6 +1268,17 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
             "SESSION_CONTEXT load failed. Manual recovery required.",
             0, _make_audit_bundle(0, []))
 
+    # ROOL 2단계 (EAG-S297-ROOL2-IMPL-001): Observation Session 시작
+    # CHANGE_ID: S297-ROOL2-LOOP-BEGIN
+    obs_id = _begin_observation(session)
+    if obs_id is None:
+        return _make_fail_closed_result(
+            "ROOL_BEGIN_FAILED",
+            "bridge /observe/begin 실패. Observation Session 미초기화.",
+            0, _make_audit_bundle(0, []))
+    _emit_event({"tag": "ROOL_SESSION_ACTIVE", "agent": "domi",
+                 "session": session, "observation_id": obs_id[:12] + "..."})
+
     _reset_loop_state()  # D-1/D-2/C-1 초기화
     memory = _load_memory_context()
     memory_preamble = _build_memory_preamble(memory)
@@ -1214,8 +1334,9 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
                 if dup_err:
                     result_text, tool_err = "", dup_err
                 else:
-                    # ② 도구 실행
-                    result_text, tool_err = _execute_function_call(name, args)
+                    # ② 도구 실행 (CHANGE_ID: S297-ROOL2-LOOP-EXEC -- obs_id/session 전달)
+                    result_text, tool_err = _execute_function_call(
+                        name, args, obs_id, session)
                 duration_ms = int((time.time() - t_start) * 1000)
 
                 audit_trail.append(_make_tool_audit_entry(
