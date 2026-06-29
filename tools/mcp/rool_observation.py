@@ -37,7 +37,9 @@ import uuid
 ROOL_VERSION = "1.0.0"
 
 # Bridge_Secret — 기존 bridge READ_HMAC_SECRET와 동일 환경변수 사용 (정합성)
-_BRIDGE_SECRET = os.environ.get("AIBA_READ_HMAC_SECRET", "")
+def _get_bridge_secret() -> str:
+    """Lazy secret read — avoids module-load-time env capture."""
+    return os.environ.get("AIBA_READ_HMAC_SECRET", "")
 
 # TTL 15분 (Jeni 권고: 초기값, 실측 후 조정 가능)
 OBSERVATION_TTL_SECONDS = 900
@@ -116,7 +118,7 @@ def _build_payload(actor: str, session_id: str, issued_at: int,
 def _sign_payload(payload: str) -> str:
     """HMAC-SHA256 hex 인코딩 (기존 bridge hexdigest 패턴 정합)."""
     return hmac.new(
-        _BRIDGE_SECRET.encode("utf-8"),
+        _get_bridge_secret().encode("utf-8"),
         payload.encode("utf-8"),
         hashlib.sha256,
     ).hexdigest()
@@ -128,7 +130,7 @@ def begin_observation(actor: str, session_id: str) -> dict:
     조건: actor 유효 + session_id 존재 + Bridge_Secret 설정.
     INIT_DESIGN 트리거 시에만 호출 (호출자 책임).
     """
-    if not _BRIDGE_SECRET:
+    if not _get_bridge_secret():
         return {"status": "FAIL_CLOSED", "reason": "BRIDGE_SECRET_NOT_CONFIGURED"}
     if actor not in AGENT_ROOT_ALLOWLIST:
         return {"status": "FAIL_CLOSED", "reason": f"UNKNOWN_ACTOR:{actor}"}
@@ -242,7 +244,7 @@ def _compute_integrity_manifest(manifest: dict) -> str:
     """HMAC-SHA256(Bridge_Secret, canonical_manifest)."""
     canonical = _canonical_manifest(manifest)
     return hmac.new(
-        _BRIDGE_SECRET.encode("utf-8"),
+        _get_bridge_secret().encode("utf-8"),
         canonical.encode("utf-8"),
         hashlib.sha256,
     ).hexdigest()

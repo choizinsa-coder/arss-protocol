@@ -63,12 +63,17 @@ if PHASE_C_DIR not in sys.path:
 from mcp_audit_broker import write_audit, write_deny_audit
 from mcp_containment_state import is_active as containment_is_active
 from mcp_read_server import ReadOnlyServer, AGENT_ROOT_ALLOWLIST
+from rool_observation import (
+    begin_observation as _rool_begin,
+    observe as _rool_observe,
+    record_observe_result as _rool_record,
+)
 
 # ── 상수 ──────────────────────────────────────────────────────────────────────
 
 BRIDGE_HOST = "127.0.0.1"
 BRIDGE_PORT = 8443
-BRIDGE_VERSION = "2.7.0"
+BRIDGE_VERSION = "2.8.0"
 
 # ── EDA v1.2: Constraint Registry (EAG-S275-EDA-IMPLEMENTATION) ──────────────
 CONSTRAINT_REGISTRY_PATH = (
@@ -1304,6 +1309,124 @@ def _handle_agent_request(handler, actor_id: str, endpoint_prefix: str) -> None:
     handler._send_json(200, result)
 
 
+# ── ROOL /observe/* 핸들러 (EAG-S295-ROOL-BRIDGE-001) ─────────────────────────
+
+# ROOL tool -> bridge read_tool 매핑
+_ROOL_TOOL_MAP = {
+    "read": "read_file",
+    "list": "list_dir",
+    "grep": "grep_scoped",
+    "log": "read_log",
+    "snapshot": "get_runtime_snapshot",
+}
+
+# token -> actor_id 역참조 (OAuth client actor_id 경유)
+def _resolve_actor_from_token(auth_header: str) -> tuple:
+    """
+    Bearer token -> client_id -> actor_id.
+    Returns: (actor_id or None, error_body or None)
+    """
+    import time as _time
+    if not auth_header.startswith("Bearer "):
+        return None, {"error": "unauthorized", "error_description": "Bearer token required"}
+    token = auth_header[len("Bearer "):]
+    token_entry = _OAUTH_TOKENS.get(token)
+    if not token_entry:
+        return None, {"error": "invalid_token", "error_description": "Token not found"}
+    if _time.time() > token_entry.get("expires_at", 0):
+        del _OAUTH_TOKENS[token]
+        return None, {"error": "invalid_token", "error_description": "Token expired"}
+    client_id = token_entry.get("client_id", "")
+    client = _OAUTH_CLIENTS.get(client_id, {})
+    actor_id = client.get("actor_id", "")
+    if actor_id not in ("domi", "jeni", "caddy"):
+        return None, {"error": "invalid_actor", "error_description": f"actor_id '{actor_id}' not permitted for observe"}
+    return actor_id, None
+
+
+def _handle_observe_request(handler) -> None:
+    """
+    /observe/begin 및 /observe/{read|list|grep|log|snapshot} 처리.
+    ROOL 게이트 -> 기존 _handle_read_tool 재사용 -> Manifest 기록.
+    """
+    # Bearer token -> actor_id 해석
+    auth_header = handler.headers.get("Authorization", "")
+    actor_id, err = _resolve_actor_from_token(auth_header)
+    if actor_id is None:
+        handler._send_json(401, err)
+        return
+
+    # body 파싱
+    content_length = int(handler.headers.get("Content-Length", 0))
+    raw_body = handler.rfile.read(content_length) if content_length > 0 else b"{}"
+    try:
+        req_body = json.loads(raw_body)
+    except json.JSONDecodeError:
+        handler._send_json(400, {"error": "invalid_json"})
+        return
+
+    # subpath 추출: /observe/<subpath>
+    subpath = handler.path.split("/observe/", 1)[1].split("?")[0].rstrip("/")
+    session_id = req_body.get("session", "") or req_body.get("session_id", "")
+
+    # ── /observe/begin ───────────────────────────────────────────────────────
+    if subpath == "begin":
+        if not session_id:
+            handler._send_json(400, {"error": "session_required",
+                "error_description": "session or session_id required for begin"})
+            return
+        result = _rool_begin(actor_id, session_id)
+        status_code = 200 if result.get("status") == "ALLOW" else 403
+        handler._send_json(status_code, result)
+        return
+
+    # ── /observe/<tool> ──────────────────────────────────────────────────────
+    if subpath not in _ROOL_TOOL_MAP:
+        handler._send_json(404, {"error": "not_found",
+            "error_description": f"observe tool '{subpath}' not in {sorted(_ROOL_TOOL_MAP.keys())}"})
+        return
+
+    observation_id = req_body.get("observation_id", "")
+    if not observation_id:
+        handler._send_json(400, {"error": "observation_id_required",
+            "error_description": "observation_id required (call /observe/begin first)"})
+        return
+    if not session_id:
+        handler._send_json(400, {"error": "session_required",
+            "error_description": "session or session_id required"})
+        return
+
+    bridge_tool = _ROOL_TOOL_MAP[subpath]
+    target = req_body.get("path", "") or req_body.get("target", "")
+
+    # ── ROOL 게이트: ID 검증 + FORBIDDEN 검사 ──────────────────────────────────
+    gate = _rool_observe(observation_id, actor_id, session_id, subpath, target)
+    if gate.get("status") != "ALLOW":
+        handler._send_json(gate.get("http_status", 403), gate)
+        return
+
+    # ── 게이트 통과 -> 기존 read_tool 재사용 ──────────────────────────────────
+    read_args = dict(req_body)
+    read_args["actor_id"] = actor_id
+    if "purpose" not in read_args:
+        read_args["purpose"] = "OBSERVATION"
+    # grep_scoped는 pattern 필수
+    read_result = _handle_read_tool(bridge_tool, read_args)
+    success = not read_result.get("isError", False)
+
+    # ── Manifest 기록 ─────────────────────────────────────────────────────────
+    bytes_read = 0
+    try:
+        _txt = read_result.get("content", [{}])[0].get("text", "")
+        bytes_read = len(_txt.encode("utf-8"))
+    except Exception:
+        bytes_read = 0
+    _rool_record(actor_id, session_id, observation_id, subpath, target,
+                 success, bytes_read=bytes_read)
+
+    handler._send_json(200 if success else 403, read_result)
+
+
 # ── HTTP Handler ───────────────────────────────────────────────────────────────
 
 class BridgeHandler(BaseHTTPRequestHandler):
@@ -1427,6 +1550,11 @@ class BridgeHandler(BaseHTTPRequestHandler):
         # ── /jeni/* REST Wrapper (S187 EAG-1 신규) ───────────────────────────
         if self.path.startswith("/jeni/"):
             _handle_agent_request(self, "jeni", "/jeni/")
+            return
+
+        # ── /observe/* ROOL 엔드포인트 (EAG-S295-ROOL-BRIDGE-001) ────────────
+        if self.path.startswith("/observe/"):
+            _handle_observe_request(self)
             return
 
         if self.path == "/internal/ledger-token/register":
