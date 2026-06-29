@@ -117,6 +117,191 @@ def _rollback(generated_files: list) -> None:
             print(f'[ROLLBACK-WARN] 삭제 실패: {Path(fp).name} — {e}')
 
 
+
+# ── S291 신규: Step 5 Session Report 자동 생성 ───────────────────
+
+REPORTS_DIR = ROOT / 'SESSION_REPORTS'
+
+
+def step_5_session_report(sc: dict, n: int) -> None:
+    """
+    SESSION_CONTEXT_S{n}_FINAL.json 기반으로
+    AIBA_Daily_Session_Report_S{n}.md 를 SESSION_REPORTS/ 에 자동 생성.
+    EAG: EAG-S291-SESSION-REPORT-AUTO-001
+    - 파일 이미 존재 시 SKIP (덮어쓰기 금지)
+    - 생성 실패 시 경고 후 SESSION CLOSE 계속 진행
+    """
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = REPORTS_DIR / f'AIBA_Daily_Session_Report_S{n}.md'
+
+    if out_path.exists():
+        print(f'[SKIP] step_5_session_report: {out_path.name} 이미 존재')
+        return
+
+    try:
+        chain     = sc.get('chain', {})
+        chain_tip = chain.get('tip', 'unknown')
+
+        pytest_st = sc.get('pytest_status', {})
+        p_passed  = pytest_st.get('total_passed', '?')
+        p_failed  = pytest_st.get('total_failed', '?')
+        p_skipped = pytest_st.get('total_skipped', '?')
+        p_note    = pytest_st.get('note', '')
+
+        gov_key   = f'caddy_governance_record_s{n}'
+        gov_rec   = sc.get(gov_key, {})
+        eag_gates = gov_rec.get('eag_gates_this_session', [])
+        incidents = gov_rec.get('incidents', [])
+        oi_obs    = gov_rec.get('oi_observations', [])
+        self_rep  = gov_rec.get('caddy_self_report', [])
+        notable   = gov_rec.get('notable', '')
+        stab      = gov_rec.get('stabilization_metrics', {})
+        session_date = gov_rec.get('date', _today())
+
+        sys_key  = f'system_changes_s{n}'
+        sys_ch   = sc.get(sys_key, {})
+        commits  = sys_ch.get('commits', [])
+        changes  = sys_ch.get('changes', [])
+
+        agent_focus = sc.get('agent_focus', {})
+        next_steps  = sc.get('next_steps', [])
+
+        vis_key   = f'visibility_metrics_s{n}'
+        vis       = sc.get(vis_key, {})
+        key_count = vis.get('M-01_active_canonical_key_count', '?')
+
+        lines = []
+        lines.append(f'# AIBA Daily Session Report — S{n}')
+        lines.append('')
+        lines.append(f'**날짜:** {session_date}')
+        lines.append(f'**chain.tip:** `{chain_tip}`')
+        lines.append(f'**pytest:** {p_failed} failed / {p_passed} passed / {p_skipped} skipped')
+        lines.append(f'**생성:** session_close_generator.py 자동 생성 (EAG-S291-SESSION-REPORT-AUTO-001)')
+        lines.append('')
+        lines.append('---')
+        lines.append('')
+
+        lines.append('## 1. 세션 개요')
+        lines.append('')
+        lines.append('| 항목 | 값 |')
+        lines.append('|------|---|')
+        lines.append(f'| 세션 | S{n} |')
+        lines.append(f'| chain.tip | `{chain_tip}` |')
+        lines.append(f'| pytest | {p_failed} failed / {p_passed} passed / {p_skipped} skipped |')
+        if p_note:
+            lines.append(f'| pytest 비고 | {p_note} |')
+        lines.append(f'| active canonical keys | {key_count} |')
+        if commits:
+            lines.append(f'| commits | {", ".join(f"`{c}`" for c in commits)} |')
+        lines.append('')
+        if notable:
+            lines.append(f'**세션 요약:** {notable}')
+            lines.append('')
+        lines.append('---')
+        lines.append('')
+
+        lines.append('## 2. EAG 승인 목록')
+        lines.append('')
+        if eag_gates:
+            for g in eag_gates:
+                lines.append(f'- {g}')
+        else:
+            lines.append('없음')
+        lines.append('')
+        lines.append('---')
+        lines.append('')
+
+        lines.append('## 3. 시스템 변경 내역')
+        lines.append('')
+        if changes:
+            for c in changes:
+                lines.append(f'- {c}')
+        else:
+            lines.append('없음')
+        lines.append('')
+        lines.append('---')
+        lines.append('')
+
+        lines.append('## 4. 인시던트')
+        lines.append('')
+        if incidents:
+            for inc in incidents:
+                lines.append(f'- {inc}')
+        else:
+            lines.append('없음')
+        lines.append('')
+        lines.append('---')
+        lines.append('')
+
+        lines.append('## 5. OI 관찰 및 신규 등록')
+        lines.append('')
+        if oi_obs:
+            for oi in oi_obs:
+                lines.append(f'- {oi}')
+        else:
+            lines.append('없음')
+        lines.append('')
+        lines.append('---')
+        lines.append('')
+
+        lines.append('## 6. 캐디 자기 보고')
+        lines.append('')
+        if self_rep:
+            for s in self_rep:
+                lines.append(f'- {s}')
+        else:
+            lines.append('없음')
+        lines.append('')
+        lines.append('---')
+        lines.append('')
+
+        lines.append('## 7. 안정화 지표')
+        lines.append('')
+        if stab:
+            lines.append('| 지표 | 결과 |')
+            lines.append('|------|------|')
+            for k, v in stab.items():
+                lines.append(f'| {k} | {v} |')
+        else:
+            lines.append('기록 없음')
+        lines.append('')
+        lines.append('---')
+        lines.append('')
+
+        lines.append('## 8. 에이전트 포커스')
+        lines.append('')
+        if agent_focus:
+            lines.append('| 에이전트 | 활동 |')
+            lines.append('|---------|------|')
+            for agent, activity in agent_focus.items():
+                lines.append(f'| {agent} | {activity} |')
+        else:
+            lines.append('기록 없음')
+        lines.append('')
+        lines.append('---')
+        lines.append('')
+
+        lines.append('## 9. 이월 항목 (next_steps)')
+        lines.append('')
+        if next_steps:
+            for i, step in enumerate(next_steps, 1):
+                lines.append(f'{i}. {step}')
+        else:
+            lines.append('없음')
+        lines.append('')
+        lines.append('---')
+        lines.append('')
+
+        lines.append(f'*자동 생성 | SSOT: SESSION_CONTEXT_S{n}_FINAL.json | EAG-S291-SESSION-REPORT-AUTO-001*')
+        lines.append('')
+
+        content = '\n'.join(lines)
+        out_path.write_text(content, encoding='utf-8')
+        print(f'[OK] step_5_session_report: {out_path.name} ({out_path.stat().st_size} bytes)')
+
+    except Exception as e:
+        print(f'[WARN] step_5_session_report 생성 실패 (SESSION CLOSE 계속): {e}')
+
 # ── S273 신규: Step 5.5 Freeze Sync ──────────────────────────────
 
 def step_5_5_freeze_sync() -> str:
@@ -823,6 +1008,11 @@ def main() -> None:
         _rollback(generated_files)
         print(f'[FAIL] STALE_MANIFEST 갱신 실패: {e}')
         sys.exit(1)
+
+    # ── S291 Step 5: Session Report 자동 생성
+    print()
+    print('── S291 Step 5 Session Report 생성 ────────────────────────')
+    step_5_session_report(sc, n)
 
     # ── S273 Step 5.5: Freeze Sync
     print()
