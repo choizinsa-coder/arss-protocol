@@ -1,5 +1,5 @@
 """
-aiba_domi_runtime.py v1.6.0
+aiba_domi_runtime.py v1.6.1
 AIBA Domi Runtime — Persistent Autonomous Design Agent
 PT-S194-DOMI-RUNTIME-001
 
@@ -45,7 +45,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.6.0"
+RUNTIME_VERSION = "1.6.1"
 
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
@@ -530,7 +530,9 @@ def _measure_round_progress(tool_name: str, result_text: str, path_arg: str = ""
             _progress_tracker["new_files_read"] += 1
             made_progress = True
     elif tool_name == "grep_scoped":
-        if not _is_error_response(result_text) and result_text.strip():
+        # EAG-S292-ZPB-FIX-001: 정상 완료(오류 없음)이면 결과 0건도 진척으로 인정.
+        # 빈 결과 = "해당 패턴 없음"이라는 유효한 정보. 오류 응답만 진척 없음 처리.
+        if not _is_error_response(result_text):
             _progress_tracker["new_facts_found"] += 1
             made_progress = True
 
