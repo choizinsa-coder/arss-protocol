@@ -23,7 +23,7 @@
     },
     {
       "id": "governance.rules",
-      "hash": "c3229b840d7199fa6d2c2cddc1b4c10585b9911bb6a6d16d481adc9aa065c6a1",
+      "hash": "563ab1b4573d7c1cac6a3ce4ec4757d557766483867b85cdbf1d569f87767c46",
       "domain": "governance",
       "schema_version": "phase2_shard_v1",
       "size_class": "reference",

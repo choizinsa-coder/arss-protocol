@@ -9,7 +9,7 @@
   "summary": {
     "domain": "governance.rules",
     "schema_version": "phase2_shard_v1",
-    "item_count": 50,
+    "item_count": 51,
     "latest_session_ref": 147,
     "status": "active",
     "body_ref": "context/governance/rules.json"
@@ -589,6 +589,97 @@
         "FC-2: pytest 실패 → 즉시 중단, 비오님 보고 후 다음 단계 진행 불가",
         "FC-3: 비오님이 복잡으로 재판단 → 해당 변경 롤백 + DEP 재진행"
       ]
+    },
+    "preflight_check_protocol": {
+      "version": "v1.0",
+      "approved_by": "EAG-S291-PREFLIGHT-CHECK-001",
+      "jeni_trust_ready": "PASS (S292)",
+      "status": "DESIGN_PENDING",
+      "purpose": "Mandatory pre-execution verification before any implementation work.",
+      "execution_policy": "FAIL_CLOSED",
+      "checks": [
+        {
+          "id": "PC-1",
+          "title": "VPS Deployment Method",
+          "severity": "HARD_GATE",
+          "requirement": "VPS execution must use file deployment (SCP then execute). Inline PowerShell python -c execution is prohibited.",
+          "violation": "Inline execution detected.",
+          "action": "REPORT_AND_WAIT"
+        },
+        {
+          "id": "PC-2",
+          "title": "Measured Path Only",
+          "severity": "WARNING",
+          "requirement": "All file paths and filenames must originate from measured bash output.",
+          "violation": "Remembered or guessed path used.",
+          "action": "RC-2"
+        },
+        {
+          "id": "PC-3",
+          "title": "Git Status Verification",
+          "severity": "WARNING",
+          "requirement": "git status must be executed immediately before commit.",
+          "violation": "Commit without status verification.",
+          "action": "RC-2"
+        },
+        {
+          "id": "PC-4",
+          "title": "Runtime Triple Verification",
+          "severity": "HARD_GATE",
+          "requirement": "Runtime model and environment must be cross-verified using systemctl cat, secrets.env, and /health.",
+          "violation": "One or more verification sources omitted.",
+          "action": "REPORT_AND_WAIT"
+        },
+        {
+          "id": "PC-5",
+          "title": "PowerShell Escape Validation",
+          "severity": "WARNING",
+          "requirement": "Quote collision and escaping must be self-checked before presenting PowerShell commands.",
+          "violation": "Escaping or quoting error.",
+          "action": "RC-2"
+        },
+        {
+          "id": "PC-6",
+          "title": "SESSION_CONTEXT Verification",
+          "severity": "WARNING",
+          "requirement": "Verify SESSION_CONTEXT next_steps before work begins to prevent carry-forward conflicts.",
+          "violation": "next_steps not checked.",
+          "action": "RC-2"
+        }
+      ],
+      "violation_handling": {
+        "warning": {
+          "applies_to": [
+            "PC-2",
+            "PC-3",
+            "PC-5",
+            "PC-6"
+          ],
+          "incident": "RC-2",
+          "effect": "Record incident and continue only after explicit correction."
+        },
+        "hard_gate": {
+          "applies_to": [
+            "PC-1",
+            "PC-4"
+          ],
+          "effect": "Immediate stop.",
+          "required_action": [
+            "REPORT",
+            "WAIT"
+          ]
+        },
+        "hard_gate_phase2": {
+          "status": "DESIGN_PENDING",
+          "reserved_for": "Automatic enforcement after runtime integration.",
+          "future_rules": [
+            "Automatic command interception",
+            "Mandatory evidence verification",
+            "Execution refusal on missing PC evidence",
+            "Audit trail generation"
+          ]
+        }
+      }
     }
   }
 }

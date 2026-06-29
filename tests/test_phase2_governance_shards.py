@@ -15,7 +15,7 @@ SUMMARY_REQUIRED_FIELDS = {"domain", "schema_version", "item_count",
 SUMMARY_MAX_BYTES = 2 * 1024  # 2KB per shard
 
 EXPECTED_HASHES = {
-    "rules":       "c3229b840d7199fa6d2c2cddc1b4c10585b9911bb6a6d16d481adc9aa065c6a1",
+    "rules":       "563ab1b4573d7c1cac6a3ce4ec4757d557766483867b85cdbf1d569f87767c46",
     "enforcement": "b75fea80bd012934e7fdbb56b3b22b065abe82c63d5f00599c6691d7ae32063d",
     "decisions":   "563673c06578a9cd71ac8a98785d90ce7f9f057b857588e5f27dc49ebc2d8e30",
     "refs":        "6f52ffce6568aca05dab0cc2e24d288296b900d108ef8dcfcc06f80004dec557",
