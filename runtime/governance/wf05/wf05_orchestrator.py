@@ -32,7 +32,7 @@ import audit_wf05 as audit
 import guardian_client as guardian
 import agent_client as agent
 
-ORCH_VERSION = "1.2.0"
+ORCH_VERSION = "1.3.0"
 MAX_ROUNDS = 3
 EXEC_MODE = os.environ.get("WF05_EXEC_MODE", "dry_run")  # dry_run | live
 
@@ -207,10 +207,24 @@ def run_orchestration(payload):
         jeni_prompt = ("다음 도미 설계를 검증하십시오. TRUST_READY 판정 형식으로 응답.\n\n" + design_text)
         jeni_resp = agent.ask_jeni(jeni_prompt, context, session)
         if not jeni_resp.get("ok"):
-            audit.log_stage(session, "JENI", "FAIL",
-                            jeni_resp.get("error", ""), round=rounds)
-            return {"status": "FAILED", "stage": "JENI",
-                    "error": jeni_resp.get("error"), "session": session, "round": rounds}
+            jeni_error = jeni_resp.get("error", "")
+            if jeni_error == "VALIDATION_PARSE_FAILURE":
+                # OI-S302-001: Gemini API 실패(503/429) -> gemini-2.5-pro escalate 1회 재시도
+                audit.log_stage(session, "JENI_ESCALATE", "RETRY",
+                                "VALIDATION_PARSE_FAILURE -> escalate=True", round=rounds)
+                jeni_resp = agent.ask_jeni(jeni_prompt, context, session, escalate=True)
+                if not jeni_resp.get("ok"):
+                    audit.log_stage(session, "JENI_ESCALATE", "FAIL",
+                                    jeni_resp.get("error", ""), round=rounds)
+                    return {"status": "FAILED", "stage": "JENI_ESCALATE",
+                            "error": jeni_resp.get("error"),
+                            "session": session, "round": rounds}
+                audit.log_stage(session, "JENI_ESCALATE", "PASS",
+                                "escalate succeeded", round=rounds)
+            else:
+                audit.log_stage(session, "JENI", "FAIL", jeni_error, round=rounds)
+                return {"status": "FAILED", "stage": "JENI",
+                        "error": jeni_error, "session": session, "round": rounds}
         verdict = agent.parse_jeni_verdict(jeni_resp.get("text", ""))
         audit.log_stage(session, "JENI", verdict, "verdict parsed", round=rounds)
 
