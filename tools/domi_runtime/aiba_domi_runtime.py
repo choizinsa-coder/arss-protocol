@@ -45,7 +45,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.7.1"
+RUNTIME_VERSION = "1.7.2"
 
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
@@ -1183,6 +1183,15 @@ def _prepare_llm_tool_message(tool_name: str, tool_call_id: str, result_text: st
 
 
 def _run_observe_loop(targets: list, session: str = "S000") -> dict:
+    # [S299-ROOL3-OBSERVE-001] ROOL Observation Session 시작
+    obs_id = _begin_observation(session)
+    if obs_id is None:
+        return {
+            "ok": False,
+            "session": session,
+            "results": {},
+            "errors": {"__rool__": "ROOL_BEGIN_FAILED: /observe/begin \uc2e4\ud328"},
+        }
     results: dict = {}
     errors: dict = {}
 
@@ -1191,7 +1200,9 @@ def _run_observe_loop(targets: list, session: str = "S000") -> dict:
             if target == "session_context":
                 ptr_text, ptr_err = _execute_function_call(
                     "read_file",
-                    {"path": "/opt/arss/engine/arss-protocol/SESSION_CONTEXT_POINTER.json"}
+                    {"path": "/opt/arss/engine/arss-protocol/SESSION_CONTEXT_POINTER.json"},
+                    obs_id,
+                    session,
                 )
                 if ptr_err:
                     errors[target] = f"POINTER_READ_FAILED: {ptr_err}"
@@ -1206,7 +1217,9 @@ def _run_observe_loop(targets: list, session: str = "S000") -> dict:
                     f"/opt/arss/engine/arss-protocol/"
                     f"SESSION_CONTEXT_S{last_session}_FINAL.json"
                 )
-                sc_text, sc_err = _execute_function_call("read_file", {"path": sc_path})
+                sc_text, sc_err = _execute_function_call(
+                    "read_file", {"path": sc_path},
+                    obs_id, session)
                 if sc_err:
                     errors[target] = f"SC_FINAL_READ_FAILED: {sc_err}"
                     continue
