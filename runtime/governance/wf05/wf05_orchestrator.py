@@ -32,7 +32,7 @@ import audit_wf05 as audit
 import guardian_client as guardian
 import agent_client as agent
 
-ORCH_VERSION = "1.1.0"
+ORCH_VERSION = "1.2.0"
 MAX_ROUNDS = 3
 EXEC_MODE = os.environ.get("WF05_EXEC_MODE", "dry_run")  # dry_run | live
 
@@ -128,6 +128,28 @@ def _mcp_exec_scoped(command, approval_id, params, session):
         return {"ok": False, "error": "EXEC_UNREACHABLE: " + str(e)}
 
 
+def _build_vps_path_context(base_session):
+    """OI-S301-001: Domi 호출 전 VPS 확정 경로 가이드 주입.
+    경로 미명시 -> 추측 탐색 -> DENY 403 x2 -> CIRCUIT_BREAKER 패턴 원천 차단.
+    EAG-S302-WF05-PATHFIX-001.
+    """
+    r = "/opt/arss/engine/arss-protocol"
+    return (
+        "[VPS \ud30c\uc77c \uacbd\ub85c \uac00\uc774\ub4dc - \uacbd\ub85c \ucd94\uce21 \uae08\uc9c0, \uc544\ub798 \uacbd\ub85c\ub9cc \uc0ac\uc6a9]\n"
+        f"WF-05 orchestrator : {r}/runtime/governance/wf05/wf05_orchestrator.py\n"
+        f"WF-05 agent_client : {r}/runtime/governance/wf05/agent_client.py\n"
+        f"WF-05 guardian     : {r}/runtime/governance/wf05/guardian_client.py\n"
+        f"MCP Bridge         : {r}/tools/mcp/mcp_http_bridge.py\n"
+        f"ROOL observation   : {r}/tools/mcp/rool_observation.py\n"
+        f"Domi runtime       : {r}/tools/domi_runtime/aiba_domi_runtime.py\n"
+        f"Session pointer    : {r}/SESSION_CONTEXT_POINTER.json\n\n"
+        "\u26a0 SESSION_CONTEXT_S{n}_FINAL.json\uc740 SESSION CLOSE \ud6c4 \uc0dd\uc131\ub428. "
+        "WF-05 \uc2e4\ud589 \uc911 read_file \uc2dc\ub3c4 \uae08\uc9c0. "
+        "\uc138\uc158 \ucee8\ud14d\uc2a4\ud2b8\ub294 Domi \ub7f0\ud0c0\uc784\uc774 \uc790\ub3d9 \uc8fc\uc785 \uc644\ub8cc.\n"
+        f"\ud604\uc7ac WF-05 \uc0ac\uc774\ud074 \uc138\uc158: {base_session}"
+    )
+
+
 def run_orchestration(payload):
     """메인 오케스트레이션 루프.
     payload: {"task": "...", "context": "...", "session": "S285", "command": "pytest", "params": {...}}
@@ -145,6 +167,12 @@ def run_orchestration(payload):
 
     audit.log_stage(session, "INPUT", "RECEIVED",
                     "task=" + task[:80], command=command, exec_mode=EXEC_MODE)
+
+    # OI-S301-001: VPS 경로 가이드 주입 (EAG-S302-WF05-PATHFIX-001)
+    vps_path_guide = _build_vps_path_context(base_session)
+    enriched_context = (
+        (vps_path_guide + "\n\n" + context).strip() if context else vps_path_guide
+    )
 
     # Veto 선제점검
     if _check_veto(session):
@@ -166,7 +194,7 @@ def run_orchestration(payload):
         # STEP 1: Domi 설계
         domi_prompt = task if rounds == 1 else (
             task + "\n\n[제니 REVISE 요청 - 이전 설계 재검토]\n" + design_text)
-        domi_resp = agent.ask_domi(domi_prompt, context, session)
+        domi_resp = agent.ask_domi(domi_prompt, enriched_context, session)
         if not domi_resp.get("ok"):
             audit.log_stage(session, "DOMI", "FAIL",
                             domi_resp.get("error", ""), round=rounds)
