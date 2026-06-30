@@ -45,7 +45,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.7.2"
+RUNTIME_VERSION = "1.7.3"
 
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
@@ -1208,7 +1208,11 @@ def _run_observe_loop(targets: list, session: str = "S000") -> dict:
                     errors[target] = f"POINTER_READ_FAILED: {ptr_err}"
                     continue
                 import json as _json
-                pointer = _json.loads(ptr_text)
+                # [S299-PARSE-FIX] bridge _handle_read_tool 래퍼 {status,content} 언랩
+                _ptr_wrap = _json.loads(ptr_text)
+                pointer = _json.loads(_ptr_wrap.get("content", "{}")) \
+                    if isinstance(_ptr_wrap, dict) and "content" in _ptr_wrap \
+                    else _ptr_wrap
                 last_session = pointer.get("last_session") or pointer.get("current_session")
                 if last_session is None:
                     errors[target] = "POINTER: last_session 키 없음"
@@ -1223,7 +1227,11 @@ def _run_observe_loop(targets: list, session: str = "S000") -> dict:
                 if sc_err:
                     errors[target] = f"SC_FINAL_READ_FAILED: {sc_err}"
                     continue
-                sc_data = _json.loads(sc_text)
+                # [S299-PARSE-FIX] bridge _handle_read_tool 래퍼 {status,content} 언랩
+                _sc_wrap = _json.loads(sc_text)
+                sc_data = _json.loads(_sc_wrap.get("content", "{}")) \
+                    if isinstance(_sc_wrap, dict) and "content" in _sc_wrap \
+                    else _sc_wrap
                 summary_keys = [
                     "session_count", "chain", "next_steps",
                     "agent_focus", "pytest_status", "session_reentry",
