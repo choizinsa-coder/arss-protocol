@@ -45,7 +45,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.7.0"
+RUNTIME_VERSION = "1.7.1"
 
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
@@ -615,7 +615,7 @@ def _call_rool_tool(observation_id: str, session_id: str, path: str) -> tuple:
             "observation_id": observation_id,
             "session": session_id,
             "path": path,
-            "purpose": OBSERVATION_PURPOSE,
+            "purpose": "OBSERVATION",
         }).encode()
         req = urllib.request.Request(
             OBSERVE_READ_ENDPOINT, data=body,
