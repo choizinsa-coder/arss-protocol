@@ -75,22 +75,48 @@ def _mcp_exec_scoped(command, approval_id, params, session):
         return {"ok": False, "error": "OAUTH_FAIL: " + str(e)}
     if not token:
         return {"ok": False, "error": "OAUTH_NO_TOKEN"}
-    # exec_scoped 호출
+    # MCP JSON-RPC exec_scoped 호출 (POST /mcp) -- EAG-S300-ORCH-FIX-001
+    # S300 수정: /caddy/exec_scoped(bridge 미존재) -> /mcp JSON-RPC tools/call
+    import uuid as _uuid
     call_body = {
-        "actor_id": "caddy",
-        "approval_id": approval_id,
-        "command": command,
-        "params": params,
+        "jsonrpc": "2.0",
+        "id": str(_uuid.uuid4()),
+        "method": "tools/call",
+        "params": {
+            "name": "exec_scoped",
+            "arguments": {
+                "actor_id": "caddy",
+                "approval_id": approval_id,
+                "command": command,
+                "params": params,
+            },
+        },
     }
     raw = json.dumps(call_body).encode()
     try:
         req = urllib.request.Request(
-            BRIDGE_BASE + "/caddy/exec_scoped", data=raw,
+            BRIDGE_BASE + "/mcp", data=raw,
             headers={"Content-Type": "application/json",
                      "Authorization": "Bearer " + token,
                      "Content-Length": str(len(raw))}, method="POST")
         with urllib.request.urlopen(req, timeout=BRIDGE_TIMEOUT) as r:
-            return {"ok": True, "result": json.loads(r.read().decode())}
+            resp = json.loads(r.read().decode())
+            # MCP 응답: {"jsonrpc":"2.0","result":{"isError":bool,"content":[{"type":"text","text":"..."}]}}
+            mcp_result = resp.get("result", {})
+            if mcp_result.get("isError"):
+                content_text = ""
+                try:
+                    content_text = mcp_result["content"][0]["text"]
+                except Exception:
+                    pass
+                return {"ok": False, "error": "MCP_EXEC_ERROR: " + content_text}
+            content_text = ""
+            try:
+                content_text = mcp_result["content"][0]["text"]
+                exec_result = json.loads(content_text)
+            except Exception:
+                exec_result = {"raw": content_text}
+            return {"ok": True, "result": exec_result}
     except urllib.error.HTTPError as e:
         try:
             detail = e.read().decode()[:300]
