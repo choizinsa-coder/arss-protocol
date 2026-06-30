@@ -23,6 +23,7 @@ import argparse
 import json
 import os
 import sys
+import time as _time_mod
 import urllib.request
 import urllib.error
 
@@ -31,7 +32,7 @@ import audit_wf05 as audit
 import guardian_client as guardian
 import agent_client as agent
 
-ORCH_VERSION = "1.0.0"
+ORCH_VERSION = "1.1.0"
 MAX_ROUNDS = 3
 EXEC_MODE = os.environ.get("WF05_EXEC_MODE", "dry_run")  # dry_run | live
 
@@ -133,7 +134,12 @@ def run_orchestration(payload):
     """
     task = payload.get("task", "")
     context = payload.get("context", "")
-    session = payload.get("session", "S000")
+    base_session = payload.get("session", "S000")
+    # Nesting 방지: -Cy 접미사 이미 있으면 원본만 추출 (제니 TRUST-ADVISORY S301)
+    if "-Cy" in base_session:
+        base_session = base_session.split("-Cy")[0]
+    # cycle별 고유 session ID (OI-S300-001: Persistent Memory 오염 차단)
+    session = base_session + "-Cy" + str(int(_time_mod.time()))
     command = payload.get("command", "")
     params = payload.get("params", {})
 

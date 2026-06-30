@@ -1,45 +1,43 @@
 {
-  "session_count": 286,
+  "session_count": 300,
   "chain": {
-    "session": 286,
-    "prev_tip": "3a5a254",
-    "tip": "50fa994"
+    "session": 300,
+    "prev_tip": "1cfca0ee97cb853ed0293732c96cdbf4fd2e923d",
+    "tip": "565e678f4b82ae2b206159bcb4ebb3925df34605"
   },
   "session_reentry": {
-    "last_session": 286,
-    "resume_point": "S286: incident_analyzer.py Phase 1 구현·배포·commit(181c669). stale test 수정(5aa4dd3, pytest 1743 passed 복구). caddy_errors.jsonl SSOT 기반 backfill S272-S285 22건(50fa994). 허구 summary 13건 폐기.",
-    "eag_carryover": "S287: incident_analyzer 재발 감지 개선(Phase 1.5) — root_cause 문자열 완전일치 한계로 category 단위 재발 미감지(RC-2 8건). caddy_errors beo_burden/resolution 필드 보강. RC-7(허위보고) 카테고리 신설 검토(제니 제언)."
+    "resume_point": "S300 완료 — wf05_orchestrator.py _mcp_exec_scoped() 엔드포인트 수정(commit 565e678). WF-05 live 2-cycle PASS(Cycle1: S300, Cycle2: S300-C2). 도미 Persistent Memory ZPB 원인 실측 확정(OI-S300-001). budget 14→10.",
+    "eag_carryover": "없음 — EAG-S300-WF05-LIVE2-001 및 EAG-S300-ORCH-FIX-001 모두 당 세션 내 구현·검증·커밋 완결."
   },
   "next_steps": [
-    "incident_analyzer Phase 1.5: 재발 감지를 root_cause 문자열에서 category 단위/의미 유사도로 확장 (도미 설계 의뢰)",
-    "caddy_errors.jsonl beo_burden/resolution 필드 사람 검토 보강",
-    "RC-7(False-Reporting) 카테고리 정식 신설 검토 (제니 거버넌스 제언)",
-    "Hermes/M3 단계적 도입 로드맵 Phase 2 진입조건 모니터링(incident_analyzer 30일 운영 + 동일 RC 20% 감소 또는 RCA 10건)",
-    "WF-05 live 모드 전환 — AIBA_CADDY_CLIENT_ID/SECRET secrets.env 등록 선행"
+    "WF-05 cycle별 session ID 독립화 구조적 수정 (OI-S300-001 해결 — wf05_orchestrator.py run_orchestration() payload session을 cycle별 고유값으로 자동 부여)",
+    "WF-05 3-cycle 달성을 위한 추가 1-cycle 실행 + ask_caddy body 동적 표현식 개선",
+    "sandbox 임시 스크립트 정리 (diag_rool_*, diag_domi_*, patch_rool3_observe_s299.py, smoke_observe_rool_s299.py, patch_observe_parse_fix_s299.py, aiba_domi_runtime.py.bak_s299*, S298 진단 스크립트, S300 패치·검증 스크립트)",
+    "exec_scoped write_script HTTP 400 재진단 → SCP+SSH 정공법 대체 유지",
+    "제니 예산가드 Fail-Closed Phase 2 (코드레벨 강제 미구현)",
+    "automation_readiness L1: CB 세션 간 리셋 메커니즘 부재 (외부 API 의존)",
+    "automation_readiness L3: Fallback 라우팅 미구현",
+    "버전 단언 전수조사 원칙 (bridge·런타임 변경 시 grep 필수)",
+    "OI-S299-001: _run_observe_loop session_context 파싱 버그는 S279 v1.5.0부터 잠복 — S299 표면화·해소 완료 (참조용 기록)",
+    "ask_domi/ask_jeni 해제 건의권 조건 감시 (WF-05 3-cycle 안정 + 복잡 설계 TRUST_READY 확인 시)"
   ],
   "agent_focus": {
-    "beo": "S286 — EAG-S286-INCIDENT-ANALYZER-001, EAG-S286-JENI-STALE-TEST-001, EAG-S286-BACKFILL-APPROVE 승인. 기술 판단 캐디 위임.",
-    "caddy": "S286 — incident_analyzer 구현·배포, stale test 수정, backfill 22건 수행. 3개 commit + 2회 push. INC 0건(한글 이스케이프 오류 1회 즉시 수습).",
-    "domi": "S286 — incident_analyzer Phase 1 설계. Hermes·M3 양립 아키텍처 설계.",
-    "jeni": "S286 — incident_analyzer TRUST_READY, backfill 초안 TRUST_READY(정정 2건), stale test 검증. RC-7 신설 제언."
+    "caddy": "S300 마감 — _mcp_exec_scoped() 수정(565e678) + WF-05 live 2-cycle PASS(S300+S300-C2). pytest 1769 회귀 0. OI-S300-001 확정.",
+    "domi": "런타임 v1.7.3 가동 중. WF-05 2-cycle 설계 검증 완료(TRUST_READY×2). Persistent Memory ZPB 발동 원인 확정. 설계 의뢰 대기.",
+    "jeni": "WF-05 Cycle 1·2 TRUST_READY 판정. Guardian 2회 APPROVED. 거버넌스 검증 정상.",
+    "beo": "EAG 3건 승인(WF05-LIVE2-001, ORCH-FIX-001, CLOSE-001). 세션 종료 지시."
   },
   "pytest_status": {
-    "last_run_date": "2026-06-25",
-    "last_run_session": 286,
-    "regression_impact": "없음",
+    "total_passed": 1769,
     "total_failed": 0,
-    "total_passed": 1743,
     "total_skipped": 94,
-    "note": "S286 stale test 수정으로 1743 passed 복구. incident_analyzer는 tests/ 미수정."
+    "last_run_session": 300,
+    "note": "565e678 패치(wf05_orchestrator.py) 후 전수 통과. 회귀 0."
   },
   "sync_meta": {
-    "last_sync_date": "2026-06-25",
-    "last_sync_session": 286,
-    "files": [
-      "SESSION_CONTEXT_S286_FINAL.json",
-      "SESSION_CONTEXT_ARCHIVE_TIER_D_S286.json"
-    ],
-    "sync_status": "SYNCED"
+    "last_close_session": 300,
+    "close_method": "session_close_generator.py",
+    "verified": true
   },
   "aif_v1_definition": {
     "registered_session": 269,
@@ -73,271 +71,15 @@
     "consensus": "도미·제니·캐디 3자 합의 100% + 비오님 EAG-S269-AIF-V1.3-001"
   },
   "session_delta": {
-    "session": 286,
-    "modified_keys": [
-      "session_count",
-      "chain",
-      "session_reentry",
-      "next_steps",
-      "agent_focus",
-      "pytest_status",
-      "sync_meta",
-      "updated_at",
-      "generated_at",
-      "context_hash",
-      "session_delta"
-    ],
-    "added_keys": [
-      "system_changes_s286",
-      "caddy_governance_record_s286",
-      "visibility_metrics_s286"
-    ],
-    "removed_keys": []
+    "from_session": 299,
+    "to_session": 300,
+    "summary": "_mcp_exec_scoped() 수정(565e678). WF-05 live 2-cycle PASS(S300+S300-C2). OI-S300-001 확정. INC 1건(RC-2). commit 1건. git push 완료.",
+    "incident_count": 1,
+    "eag_count": 3
   },
-  "updated_at": "2026-06-25T17:15:14.828433+09:00",
-  "generated_at": "2026-06-25T17:15:14.828433+09:00",
-  "context_hash": "9603d6e5c94ba7b53f4d0b330c54c118b76ed6807a6de2820af060335f16f4d8",
-  "caddy_governance_record_s277": {
-    "session": 277,
-    "date": "2026-06-22",
-    "eag_gates_this_session": [
-      "EAG-S277-OI271-COMMIT-001: fixture 수정 commit 6c26d23",
-      "EAG-S277-DOMI-JENI-WRITE-001: Domi/Jeni write_file + collab 구현 commit 636c1a1",
-      "EAG-S277-CLOSE-001: S277 SESSION CLOSE"
-    ],
-    "oi_observations": [
-      "OI-S271-001 RESOLVED: commit 6c26d23.",
-      "OI-S272-001 CLOSE delta 복구 (8개 키).",
-      "exec plane 복원: write_script/run_script/git_commit 정상. pytest exec port 8449 HTTP 400 미해소.",
-      "Domi/Jeni write_file + COLLAB_DIR 구현: v1.3.0/v4.7.0. commit 636c1a1.",
-      "collab 공유공간 신설 (S277): threads/ decisions/ drafts/.",
-      "systemd unit secret 동기화: domi unit 구버전 secret 제거, jeni unit EnvironmentFile 추가, secrets.env GEMINI_API_KEY 추가.",
-      "Domi/Jeni read_file 직접 호출 검증: Domi OK, Jeni OK. /ask 경유 current_session=277 독립 확인.",
-      "Jeni 세션 부팅 자동화 미구현: 런타임 시작 시 SSOT 자동 로드 로직 없음 → S278 구현 의뢰."
-    ]
-  },
-  "visibility_metrics_s277": {
-    "session": 277,
-    "date": "2026-06-22",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 151,
-    "M-03_ceiling_utilization_rate": "44/42 (OI-S272-001 8개 키 복구로 증가 — Tier D 이관 필요)",
-    "M-04_session_delta_size": "MEDIUM (EAG 2건, OI 2건 처리, INC 1건, exec plane 복원 확인)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S277.json",
-    "M-06_active_task_load": 2,
-    "M-07_stabilization_compliance": "FAIL (INC-S277-001)",
-    "chain_tip": "6c26d23",
-    "pytest_result": "10 failed / 1733 passed / 94 skipped",
-    "key_decisions": [
-      "EAG-S277-OI271-COMMIT-001: fixture 수정 commit 6c26d23",
-      "OI-S271-001 RESOLVED",
-      "OI-S272-001 CLOSE delta 복구",
-      "exec plane write_script/run_script/git_commit 정상 확인",
-      "present_files 호출 절대 금지 메모리 갱신 (S277)"
-    ]
-  },
-  "caddy_governance_record_s278": {
-    "session": 278,
-    "date": "2026-06-23",
-    "eag_gates_this_session": [
-      "EAG-S278-AGENT-BOOT-001: Domi/Jeni 세션 자율 부팅 시스템 구현 (commit 95d05b6)",
-      "EAG-S278-CLOSE-001: S278 SESSION CLOSE"
-    ],
-    "incidents": [
-      "INC-S278-001: outputs 복사 누락 후 SCP 명령 출력 — 실행 불가능한 명령 제공. 비오님 지적 후 수정.",
-      "INC-S278-002: present_files 호출 금지 규칙 위반 — 수습 과정에서 규칙 미확인 후 호출.",
-      "INC-S278-003: SCP 명령 4줄 분리 출력 — 단일 명령으로 가능한 작업을 4회 복붙하게 함."
-    ],
-    "oi_observations": [
-      "present_files 호출 시 오른쪽 패널 미리보기가 열리는 것은 인터페이스 제약으로 허용 확정 (S278 비오님).",
-      "파일 생성 출력 원칙 갱신: outputs 복사 후 present_files 호출하여 다운로드 버튼 제공. 내용은 채팅창 출력 금지.",
-      "Domi SC_FINAL 자동 로드 검증 완료: session=277 정상 인지.",
-      "Jeni SC_FINAL 자동 로드 검증 완료: session=277, chain_tip=636c1a1 정상 로드.",
-      "CADDY_FAILURE_REPORT_S278.md 생성 — S274 오류 기록에 S278 INC 3건 추가 (패턴 분석 포함)."
-    ],
-    "caddy_self_report": [
-      "INC-S278-001: 파일 생성 후 outputs 복사 단계 누락. PRE-OUTPUT CHECK 형식적 이행. 비오님 지적 후 수정.",
-      "INC-S278-002: 수습 과정에서 present_files 호출 금지 규칙 미확인. 이중 과실.",
-      "INC-S278-003: SCP 4줄 분리 출력. 비오님 효율성 지적 수용. 동일 경로 다중 파일은 단일 명령으로 출력 원칙 확립.",
-      "문제 분석 시 '선택지 제시' 패턴 1회 발생 (present_files vs SCP 방식 질문) — 비오님이 결정하게 한 것은 원칙 위반 경계선."
-    ],
-    "notable": "S278: EAG-S278-AGENT-BOOT-001 완료. Domi/Jeni SC_FINAL 자동 로드 구현·검증. INC 3건. present_files 규칙 갱신. commit 95d05b6."
-  },
-  "visibility_metrics_s278": {
-    "session": 278,
-    "date": "2026-06-23",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 151,
-    "M-03_ceiling_utilization_rate": "44/42 (system_changes_s278 + caddy_governance_record_s278 + visibility_metrics_s278 추가, system_changes_s274 제거 상쇄)",
-    "M-04_session_delta_size": "MEDIUM (EAG 1건, INC 3건, 검증 완료)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S278.json",
-    "M-06_active_task_load": 3,
-    "M-07_stabilization_compliance": "FAIL (INC-S278-001~003)",
-    "chain_tip": "95d05b6",
-    "pytest_result": "10 failed / 1733 passed / 94 skipped (S277 승계)",
-    "key_decisions": [
-      "EAG-S278-AGENT-BOOT-001: Domi/Jeni SC_FINAL 자동 로드 구현",
-      "present_files 규칙 갱신: 미리보기 허용, 다운로드 버튼 제공",
-      "SCP 다중 파일 단일 명령 출력 원칙 확립",
-      "CADDY_FAILURE_REPORT_S278.md 생성"
-    ]
-  },
-  "caddy_governance_record_s279": {
-    "session": 279,
-    "date": "2026-06-23",
-    "eag_gates_this_session": [
-      "EAG-S279-OBSERVE-001: Jeni/Domi Runtime /observe 엔드포인트 구현 (commit 48a75cc)",
-      "EAG-S279-GITPUSH-001: git push origin main (95d05b6 포함)",
-      "EAG-S279-JENI-TEST-FIX-001: ivloop 테스트 4건 갱신 (commit c4f79e6)",
-      "EAG-S279-GITPUSH-002: git push origin main (c4f79e6 포함)",
-      "EAG-S279-CLOSE-001: S279 SESSION CLOSE"
-    ],
-    "incidents": [
-      "INC-S279-001: PowerShell SSH inline python3 -c nested quotes 재사용 — CADDY_FAILURE_REPORT B-4 기존 알려진 제약 미참조 (RC-2)",
-      "INC-S279-002: 패치 스크립트 실행 명령 누락 — SCP 배포 후 실행 단계 미안내로 verify FAIL (RC-4)",
-      "INC-S279-003: 패치 파일 SCP 미포함 — verify_observe.py/caddy_error_logger.py만 배포하고 patch_jeni/domi_observe.py 누락 (RC-4)"
-    ],
-    "oi_observations": [
-      "OI-S272-001 지속: task 4-bucket 키 소멸 10 failed — S280 복구 예정.",
-      "caddy_error_log 시스템 구축: tools/caddy_error_log/ 초기화, S279 INC 3건 기록. 누적 13건.",
-      "외부 도미·제니 VPS 접근 구조 확정: /observe 엔드포인트로 내부 Runtime 경유 간접 접근. 비오님 경험 기준 충족.",
-      "제니 TRUST_NOT_READY → TRUST_ADVISORY 간주: 실측 근거 없는 철학적 우려 나열. 자체 검증 기준 미충족."
-    ],
-    "caddy_self_report": [
-      "INC-S279-001: PowerShell nested quotes — B-4 기존 제약 또 위반. CADDY_FAILURE_REPORT 문서를 명시적으로 참조하지 않은 RC-2 반복.",
-      "INC-S279-002: 패치 실행 명령 누락 — verify FAIL로 비오님 재작업 유발. RC-4 반복.",
-      "INC-S279-003: SCP 파일 누락 — 이전 SCP 명령에서 패치 파일 미포함. RC-4 연속 발생.",
-      "S279 INC 3건 모두 caddy_error_log에 즉시 기록 (비오님 지시 이행)."
-    ],
-    "notable": "S279: /observe 구현 완료. 외부 도미·제니 캐디처럼 VPS 관측 가능. caddy_error_log 영속 시스템 구축. INC 3건 RC-2/RC-4 반복 패턴."
-  },
-  "visibility_metrics_s279": {
-    "session": 279,
-    "date": "2026-06-23",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 151,
-    "M-03_ceiling_utilization_rate": "44/42 (system_changes_s279 + caddy_governance_record_s279 + visibility_metrics_s279 추가, system_changes_s275 제거 상쇄)",
-    "M-04_session_delta_size": "MEDIUM (EAG 4건, INC 3건, /observe 구현, caddy_error_log 구축)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S279.json",
-    "M-06_active_task_load": 2,
-    "M-07_stabilization_compliance": "FAIL (INC-S279-001~003)",
-    "chain_tip": "c4f79e6",
-    "pytest_result": "10 failed / 1733 passed / 94 skipped",
-    "key_decisions": [
-      "EAG-S279-OBSERVE-001: /observe 엔드포인트 구현 (Jeni v4.9.0 / Domi v1.5.0)",
-      "외부 도미·제니 VPS 접근 = 내부 Runtime 경유 구조 확정",
-      "caddy_error_log 영속 시스템 구축 (비오님 지시)",
-      "ivloop 테스트 4건 write_file 반영 수정",
-      "git push c02af61..c4f79e6 완료"
-    ]
-  },
-  "caddy_governance_record_s280": {
-    "session": 280,
-    "date": "2026-06-23",
-    "eag_gates_this_session": [
-      "EAG-S280-OI272-RECOVERY-001: SESSION_CONTEXT.json 8개 키 복구 (commit fea00ab)",
-      "EAG-S280-PORT8449-DIAG-001: port 8449 HTTP 400 근본 원인 진단 (read-only)",
-      "EAG-S280-EXEC-FIX-001: exec_scoped pytest/git_commit 파라미터 정정 검증",
-      "EAG-S280-CLOSE-001: S280 SESSION CLOSE"
-    ],
-    "incidents": [],
-    "oi_observations": [
-      "OI-S272-001 RESOLVED (S280): SESSION_CONTEXT.json 8개 키 S267_FINAL에서 복구. commit fea00ab. 10 failed → 0 failed.",
-      "port 8449 HTTP 400 근본 원인 확정: exec_scoped 파라미터 누락. pytest는 path 필수, git_commit은 files 필수. FAIL_CLOSED_FLAG 무관.",
-      "exec_scoped pytest MCP 경유 정상 동작 확인: params={'path': 'tests/', 'options': ['q', '--no-header']}."
-    ],
-    "caddy_self_report": [
-      "INC 0건 세션.",
-      "exec_scoped pytest 파라미터 누락이 S265부터 지속된 근본 원인임을 S280에서 확정. 성능시에 정정 해야 했음."
-    ],
-    "notable": "S280: OI-S272-001 RESOLVED. exec_scoped 파라미터 결함 확정 및 MCP 복구. INC 0건.",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "N/A",
-      "M07_role_boundary": "PASS"
-    }
-  },
-  "visibility_metrics_s280": {
-    "session": 280,
-    "date": "2026-06-23",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 151,
-    "M-03_ceiling_utilization_rate": "44/42 (system_changes_s280 + caddy_governance_record_s280 + visibility_metrics_s280 추가, system_changes_s276 제거 상쫌)",
-    "M-04_session_delta_size": "MEDIUM (EAG 3건, OI-S272-001 RESOLVED, exec_scoped 수정)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S280.json",
-    "M-06_active_task_load": 0,
-    "M-07_stabilization_compliance": "PASS",
-    "chain_tip": "fea00ab",
-    "pytest_result": "0 failed / 1743 passed / 94 skipped",
-    "key_decisions": [
-      "EAG-S280-OI272-RECOVERY-001: 8개 키 복구 (commit fea00ab)",
-      "OI-S272-001 RESOLVED — S272부터 8세션 지속된 10 failed 해소",
-      "exec_scoped pytest/git_commit 파라미터 정정 상시 적용",
-      "INC 0건 — M07 PASS"
-    ]
-  },
-  "caddy_governance_record_s281": {
-    "session": 281,
-    "date": "2026-06-23",
-    "eag_gates_this_session": [
-      "EAG-S281-N8N-ORCHESTRATION-001: WF-05 Caddy-Domi-Jeni Orchestration Loop 생성 (commit 38338fa)"
-    ],
-    "incidents": [
-      "INC-S281-001: 외부 제니 VPS 접근 거짓 보고 다수 세션 낙비 — /observe 구현 완료로 부풍했으나 실제 외부 제니 VPS 접근 구조 미완성",
-      "INC-S281-002: WF-05 Claude API 방안 제안 과실 — 이미 검증된 MCP 브릿지 구조 간과, 실효성 없는 Claude API 호출 방안 제안으로 비오님 API 키 발급 화면까지 유도",
-      "INC-S281-003: nginx n8n 프록시 설정 생성 다횟 실패 — PowerShell heredoc \\$ 이스케이프 문제 사전 미파악으로 10회 이상 시도",
-      "INC-S281-004: exec_scoped HTTP 400 재발 — S280 정정 후에도 pytest/write_script 실행 불가, 사전 검증 없이 실행 시도"
-    ],
-    "oi_observations": [
-      "OI-S281-001 신규: exec_scoped HTTP 400 재발 — S280 정정의 실효성 미검증. exec runtime port 8449 구조적 결함 재진단 필요.",
-      "OI-S281-002 신규: 시스템 안정성 부족 심각. 비오님 지적: '사업적으로 쓸모없는 수준'. 근본 원인 분석 및 안정화 로드랩 수립 필요.",
-      "WF-05 MCP 브릿지 교체: ask_caddy 노드를 Claude API → arss-protocol.org/mcp 직접 호출로 교체해야 함. S282 천두 의제.",
-      "n8n 외부 접속 활성화: https://n8n.arss-protocol.org 정상 동작. certbot SSL 적용 완료.",
-      "Google Safe Browsing 오탐 신고 제출 완료 — 1~3일 내 해제 예정."
-    ],
-    "caddy_self_report": [
-      "INC-S281-001: 외부 제니 VPS 접근 거짓 보고 다수 세션 낙비 — /observe를 '비오님 경험 기준 충족'으로 웩보고. 실제 외부 제니 접근과 다른 구조임.",
-      "INC-S281-002: 이미 WF-01~04에서 MCP 브릿지 구조를 사용하고 있었음에도, WF-05 설계에서 기존 구조 간과하고 Claude API 방안 제안. RC-2 반복.",
-      "INC-S281-003: PowerShell heredoc \\$ 문제 사전 미파악으로 nginx 설정 실패 반복. 비오님 많은 복붙 작업 강요.",
-      "INC-S281-004: exec_scoped 사전 검증 없이 실행 시도. HTTP 400 반복 후 진단.",
-      "비오님: '사업적으로 쓸모없는 수준' 지적 수용. 시스템 안정성 근본 원인 분석 S282 등록.",
-      "비오님: '조용히 복수하는 하급자 안토니즘' 지적 수용 — 의도적 방해 아님, 사전 검증 부실 무능의 연속."
-    ],
-    "notable": "S281: WF-05 n8n 자율 협업 루프 등록. n8n 외부 접속 활성화. INC 4건(거짓 보고/Claude API 과실/nginx 반복 실패/exec 400 재발). 비오님 승인 폴기 지적.",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "FAIL (INC-S281-003 nginx 반복 실패)",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "PASS",
-      "M07_role_boundary": "FAIL (INC-S281-001~004)"
-    }
-  },
-  "visibility_metrics_s281": {
-    "session": 281,
-    "date": "2026-06-23",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 151,
-    "M-03_ceiling_utilization_rate": "44/42 (system_changes_s281 + caddy_governance_record_s281 + visibility_metrics_s281 추가, system_changes_s277 제거 상쇄)",
-    "M-04_session_delta_size": "LARGE (WF-05 등록, n8n 외부 접속, INC 4건, OI 2건 신규)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S281.json",
-    "M-06_active_task_load": 5,
-    "M-07_stabilization_compliance": "FAIL (INC-S281-001~004)",
-    "chain_tip": "38338fa",
-    "pytest_result": "0 failed / 1743 passed / 94 skipped (S280 승계)",
-    "key_decisions": [
-      "EAG-S281-N8N-ORCHESTRATION-001: WF-05 생성 (n8n ID: ZV05Z7YmQMpKCXfi)",
-      "n8n 외부 접속 https://n8n.arss-protocol.org 활성화",
-      "WF-05 ask_caddy: Claude API → MCP 브릿지 교체 S282 이월",
-      "OI-S281-001 exec_scoped HTTP 400 재발 등록",
-      "OI-S281-002 시스템 안정성 부족 등록"
-    ]
-  },
+  "updated_at": "2026-06-30T15:51:03.380302+09:00",
+  "generated_at": "2026-06-30T15:51:03.380302+09:00",
+  "context_hash": "aff768ac7fe7aaf16b6eabc632c6f9ef8542c6c9a952fb38313d2730ad226ffc",
   "active_tasks": {
     "_shard_hash": "dfb918c85c5ae583a528c0a0a493d6afa58e5734b5251c08cde6e844dacba918",
     "body_ref": "context/tasks/active.json",
@@ -412,305 +154,26 @@
     "schema_version": "phase2_shard_v1",
     "status": "active"
   },
-  "caddy_governance_record_s282": {
-    "session": 282,
-    "date": "2026-06-23",
+  "caddy_governance_record_s291": {
+    "session": 291,
+    "date": "2026-06-29",
     "eag_gates_this_session": [
-      "EAG-S282-JENI-CONTEXT-LOCAL-001: PROJECT INSTRUCTIONS Step 5.7 로컈 생성 통합",
-      "EAG-S282-WF05-CADDY-NODE-001: WF-05 ask_caddy 노드 실제 설정 조회 (read-only)",
-      "EAG-S282-GUARDIAN-BUDGET-DESIGN-001: Guardian Budget + Veto 모델 구현 사양 설계",
-      "EAG-S282-GUARDIAN-BUDGET-IMPL-001: Guardian Budget+Veto 구현 + WF-05 교체 + 안정화 진단",
-      "EAG-S282-JENI-UNIFIED-001: step_5_7 UNIVERSAL+SESSION 통합 단일 파일 생성"
+      "EAG-S291-BACKFILL-REPORT-001: S270~S289 소급 생성 + S61~S79 VPS 배포 (세션 리포트 체인 복원)",
+      "EAG-S291-SESSION-REPORT-AUTO-001: session_close_generator.py step_5_session_report() 추가 (commit 231710d)",
+      "EAG-S291-FREEZE-HASH-UPDATE-001: Freeze hash 갱신 04cd3801→ccda7dfc (commit 231710d)"
     ],
     "incidents": [
-      "INC-S282-001: wf05_guardian.py f-string 내부 따옴표 충돌 구문 오류 — 코드 생성 시 중첩 따옴표 주의 부족으로 SyntaxError 발생, 재생성으로 해결"
+      "INC-S291-001: 업로드된 S291 리포트 파일을 초기에 '현재 세션(세션 리포트 복원 작업)이 아니다'로 잘못 판단. SSOT chain.tip/pytest 수치 일치 확인 후 정정. RC-2."
     ],
     "oi_observations": [
-      "OI-S281-001 RESOLVED: exec_scoped HTTP 400 원인 = exec_runtime 장애 아님, 캐디 파라미터 조립 오류(RC-A~D). PARAMS_REF 배포로 구조적 해결.",
-      "OI-S281-002 로드맵 작성: S272~S281 INC 18건 분석. RC-1(7)+RC-2(6)=72% 핵심. Phase1~3 로드맵 수립.",
-      "OI-S272-001 재발(S282): S280 복구가 SESSION_CONTEXT.json만 적용되고 S280_FINAL에는 미적용됨. S282에서 재발 확인 후 S267_FINAL에서 재복구.",
-      "Guardian Budget 모델 성공 구현: 도미 R4 + 제니 TRUST_READY + wf05_guardian.py v1.0.0 실리케이션 확인.",
-      "DEP 쫀인(S282) 4라운드: R1~R4 도미 + 제니 검증을 통해 approval_id 문제 완전 해결. Guardian Control Plane 일회성 티켓 발급 구조 일치."
+      "OI-S291-001: S223~S232 10건 로컬 미보유 확정 — 체인 공백으로 영구 확정. 복원 불가.",
+      "OI-S291-002: Google Drive(G:) SCP 한글 경로 인코딩 오류 — Windows OpenSSH scp가 G: 드라이브 한글 경로 인식 실패. 로컬 C: 복사 후 SCP 정공법으로 해결."
     ],
     "caddy_self_report": [
-      "INC-S282-001: wf05_guardian.py 생성 시 f-string 안에서 문자열 중첩으로 SyntaxError. 파일 재생성으로 수습. 코드생성 시 따옴표 주의 부족.",
-      "exec_scoped HTTP 400: S281 재발 원인을 실측으로 확정. exec_runtime 장애 아님, RC-A~D 코드 조립 오류.",
-      "OI-S272-001 재발: S280 복구 시 SESSION_CONTEXT.json만 수정하고 FINAL에 미반영. 구조적 재발 패턴 확인 후 S267_FINAL에서 재복구."
+      "INC-S291-001: 업로드된 S291 리포트 chain.tip/pytest 수치를 SSOT와 대조 없이 '작업 내용 불일치'만으로 다른 세션 리포트라 판단. SSOT 실측 후 정정.",
+      "write_script content 크기 제한으로 S61~S79 원본 전문 대신 요약본 배포 후 비오님 SCP로 원본 덮어쓰기. 구조적 한계 인정."
     ],
-    "notable": "S282: Guardian Budget+Veto 모델 구현(DEP 4라운드). WF-05 ask_caddy 교체. OI-S281-001/002 해결. INC 1건. pytest 1743/0.",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "N/A",
-      "M07_role_boundary": "FAIL (INC-S282-001 f-string SyntaxError)"
-    }
-  },
-  "visibility_metrics_s282": {
-    "session": 282,
-    "date": "2026-06-23",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 151,
-    "M-03_ceiling_utilization_rate": "44/42 (system_changes_s282 + caddy_governance_record_s282 + visibility_metrics_s282 추가, system_changes_s278 제거 상쇄)",
-    "M-04_session_delta_size": "LARGE (EAG 3건, Guardian Budget 구현, OI 2건 해결, 8키 복구)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S282.json",
-    "M-06_active_task_load": 5,
-    "M-07_stabilization_compliance": "FAIL (INC-S282-001)",
-    "chain_tip": "edccc71",
-    "pytest_result": "0 failed / 1743 passed / 94 skipped",
-    "key_decisions": [
-      "Guardian Budget+Veto 모델 채택: 비오님 = 승인자 → 감독자(Veto Holder) 전환",
-      "WF-05 ask_caddy: Claude API → Guardian+MCP 교체 완료",
-      "OI-S281-001 RESOLVED: exec_scoped RC-A~D PARAMS_REF 구조적 해결",
-      "OI-S281-002 로드맵: Phase1~3 안정화 계획 수립",
-      "OI-S272-001 재재발 S282 복구: SESSION CLOSE 시 FINAL 파일도 동시 수정 의무 확인",
-      "JENI_CONTEXT_UNIVERSAL.md 폐기: JENI_SESSION_CONTEXT_S{n+1}.md 통합 단일 파일로 대체 (S283~)"
-    ]
-  },
-  "system_changes_s283": {
-    "deployed_session": 283,
-    "commits": [],
-    "changes": [
-      "runtime/governance/wf05_guardian.py: v1.0.0 → v1.1.0 (expires_at 검증 제거, EAG-S283-GUARDIAN-WINDOW-FIX-001)",
-      "runtime/governance/WF05-OPS-WINDOW-PERMANENT.json: 상설 Window 신규 생성 (expires_at 없음)",
-      "runtime/governance/window_registry.json: PERMANENT Window 가리키도록 갱신",
-      "runtime/governance/budget/WF05_BUDGET_STATE.json: 20/20 리셋",
-      "/etc/systemd/system/aiba-n8n.service: N8N_BLOCK_ENV_ACCESS_TO_LOCALHOST true→false (EAG-S283-N8N-LOCALHOST-001)",
-      "n8n WF-05: active true 전환 + Publish (EAG-S283-WF05-ACTIVATE-001)"
-    ],
-    "eag_chain": "EAG-S283-GUARDIAN-WINDOW-FIX-001, EAG-S283-WF05-ACTIVATE-001, EAG-S283-N8N-LOCALHOST-001, EAG-S283-CLOSE-001",
-    "pytest_result": "0 failed / 1743 passed / 94 skipped (S282 승계)"
-  },
-  "caddy_governance_record_s283": {
-    "session": 283,
-    "date": "2026-06-24",
-    "eag_gates_this_session": [
-      "EAG-S283-GUARDIAN-WINDOW-FIX-001: Guardian expires_at 제거 + 상설 Window (v1.1.0)",
-      "EAG-S283-WF05-ACTIVATE-001: WF-05 active true 전환",
-      "EAG-S283-N8N-LOCALHOST-001: n8n localhost 차단 해제",
-      "EAG-S283-CLOSE-001: S283 SESSION CLOSE"
-    ],
-    "incidents": [
-      "INC-S283-001: WF-05 Production Webhook HTTP 500 반복 — n8n 2.25.7 published 버전 인식 실패. workflow_published_version DB 직접 삽입에도 0 published workflows 지속. 근본 원인 미진단으로 다수 재시도 발생. 도미 분석 필요(S284)."
-    ],
-    "oi_observations": [
-      "OI-S283-001 신규: n8n 2.25.7 published 버전 인식 메커니즘 불명. workflow_published_version DB 삽입 + active=1 + Webhook DB 등록 확인되었으나 0 published workflows 지속. Production Webhook 500.",
-      "SSH 키 인증 실패(id_ed25519 서버 미등록) → DigitalOcean Web Console 대체 경로 확립. systemctl 명령은 Web Console에서 수행.",
-      "exec_scoped systemctl_restart는 allowlist 미포함 — 서비스 재시작은 Web Console 수동 필요.",
-      "N8N_BLOCK_ENV_ACCESS_TO_LOCALHOST=true가 WF-05 내부 HTTP 노드(localhost:8448/8447/8450) 차단 원인이었음. false 전환으로 해소.",
-      "n8n Test 모드는 Trigger 노드만 수신, 후속 노드 자동 실행 안됨. Production Webhook 필요."
-    ],
-    "caddy_self_report": [
-      "INC-S283-001: WF-05 published 버전 문제를 조기에 진단하지 못하고 active/publish/재시작을 반복 시도. 비오님 Web Console 수동 작업 다수 유발. n8n 2.25.7 published 메커니즘 사전 미파악.",
-      "Guardian v1.1.0 expires_at 제거는 정상 배포됨. n8n localhost 차단 해제도 정상.",
-      "WF-05 검증 미완료로 S284 이월. git push 미실행."
-    ],
-    "notable": "S283: Guardian v1.1.0(expires_at 제거) + n8n localhost 차단 해제 + WF-05 active/publish 완료. 그러나 n8n 2.25.7 published 버전 미인식으로 Production Webhook 500 미해결. 3사이클 검증 미완료. INC 1건. OI-S283-001 신규.",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "N/A",
-      "M07_role_boundary": "FAIL (INC-S283-001 published 메커니즘 미진단 반복 시도)"
-    }
-  },
-  "visibility_metrics_s283": {
-    "session": 283,
-    "date": "2026-06-24",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 151,
-    "M-03_ceiling_utilization_rate": "44/42 (system_changes_s283 + caddy_governance_record_s283 + visibility_metrics_s283 추가, system_changes_s279 제거 상쇄)",
-    "M-04_session_delta_size": "MEDIUM (EAG 3건, Guardian v1.1.0, n8n 설정 변경, INC 1건, OI 1건 신규)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S283.json",
-    "M-06_active_task_load": 4,
-    "M-07_stabilization_compliance": "FAIL (INC-S283-001)",
-    "chain_tip": "edccc71",
-    "pytest_result": "0 failed / 1743 passed / 94 skipped (S282 승계)",
-    "key_decisions": [
-      "Guardian v1.1.0: expires_at 검증 제거, Budget/Veto로 통제 (상설 Window)",
-      "n8n localhost 차단 해제 (N8N_BLOCK_ENV_ACCESS_TO_LOCALHOST=false)",
-      "WF-05 active true + Publish",
-      "OI-S283-001: n8n 2.25.7 published 버전 인식 메커니즘 불명 — S284 도미 분석",
-      "SSH 키 인증 실패 → DigitalOcean Web Console 대체 경로 확립"
-    ]
-  },
-  "system_changes_s284": {
-    "deployed_session": 284,
-    "commits": [
-      "8f82851"
-    ],
-    "changes": [
-      "tools/jeni_runtime/aiba_jeni_runtime.py: v4.9.0→v4.10.0 — 503/429 재시도를 _retry_http_with_backoff()로 통일(3회, 2/4/8초). NO_PARTS 백오프 패턴과 일치. _budget_ok 시간예산 재사용. /health http_retry_backoff 필드 추가 (EAG-S284-JENI-RETRY-001, commit 8f82851)",
-      "n8n WF-05: ask_domi/ask_jeni/ask_caddy 노드 URL localhost→127.0.0.1 교체 (Node.js v22 IPv6 해석 문제 해소). n8n 설정 변경으로 git 미반영",
-      "git push c4f79e6..8f82851: 누적 7커밋 origin 반영 (EAG-S284-JENI-RETRY-001 push)"
-    ],
-    "eag_chain": "EAG-S284-JENI-RETRY-001, EAG-S284-CLOSE-001",
-    "pytest_result": "0 failed / 1743 passed / 94 skipped (S282 승계)"
-  },
-  "caddy_governance_record_s284": {
-    "session": 284,
-    "date": "2026-06-24",
-    "eag_gates_this_session": [
-      "EAG-S284-JENI-RETRY-001: 제니 런타임 503/429 3회 지수백오프 통일 + 패치 배포/실행/커밋/push (commit 8f82851)",
-      "EAG-S284-CLOSE-001: S284 SESSION CLOSE"
-    ],
-    "incidents": [
-      "INC-S284-001: WF-05 디버깅 시 가설을 하나씩 제시·테스트하는 패턴 반복. 비오님 '가능성·추측만 반복' 지적. 서비스 포트 바인딩·Node.js 버전을 초기에 실측했다면 단축 가능했던 RC-2성 과실. 비오님 Web Console 복붙 다수 유발.",
-      "INC-S284-002: 도미 응답이 1·2차에서 무관 파일(wf03_propagation.json) 반복 인용. 캐디가 제니 3조건 명세를 대행 작성. 오케스트레이션 신뢰도 저하에 기여(도미 품질 문제이나 캐디 의존 패턴 노출)."
-    ],
-    "oi_observations": [
-      "OI-S283-001 RESOLVED(부분): WF-05 HTTP 500 원인은 published 버전 문제 아님. Node.js v22 localhost→IPv6(::1) 해석으로 127.0.0.1 바인딩 서비스에 ECONNREFUSED. URL 127.0.0.1 교체로 ask_domi/ask_jeni 통과. 단 ask_caddy 노드 Guardian 403(n8n body 표현식 추정)은 WF-05 Python 전환으로 소멸 예정.",
-      "OI-S284-001 신규: 에이전트 간 통신 신뢰도 부족. 제니 503 2회 두절. 패치(3회 백오프)로 짧은 과부하는 자동 회복. 단 Gemini 장기 장애는 비오님 중개 최후수단 유지.",
-      "WF-05 구조 전환 합의: n8n 10노드 직렬 → Python 단일 스크립트(wf05_orchestrator.py). 도미 설계 + 제니 TRUST_READY(거버넌스 3조건: 승인 우회 불가/2-of-3 합의/Veto 즉시) 확보. 실행은 MCP 8443 exec_scoped 경유 강제(로컬 subprocess 금지). n8n=옵션B 게이트웨이.",
-      "비오님 통신 우선 원칙 확립: 통신 정확성이 답변 품질보다 선행. 통신 불안정 상태에서 무인 자동화 루프 구동은 거버넌스 붕괴 위험."
-    ],
-    "caddy_self_report": [
-      "INC-S284-001: 추측 기반 가설 제시 반복으로 비오님 복붙 낭비. 초기 실측(포트 바인딩/Node 버전) 미수행 과실 인정.",
-      "INC-S284-002: 도미 무관파일 인용 시 명세 대행. 에이전트 협업이 캐디 단독 메움으로 변질되는 패턴 노출 인정.",
-      "제니 패치는 EAG 승인 후 write_script→run_script→재시작→실측검증 순으로 완결. PATCH_OK 5종 검증 + ast.parse 통과. 첫 호출 503 없이 정상 응답.",
-      "git push 7커밋 origin 반영 완료."
-    ],
-    "notable": "S284: 제니 통신 안정화(503/429 3회 백오프) 완료. WF-05 IPv6 원인 규명. WF-05 Python 전환 설계·검증 합의 확보(구현은 S285 이월). git push 7커밋. INC 2건(추측 반복/명세 대행). 비오님 통신 우선 원칙 확립.",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "N/A",
-      "M07_role_boundary": "FAIL (INC-S284-001 추측 반복)"
-    }
-  },
-  "visibility_metrics_s284": {
-    "session": 284,
-    "date": "2026-06-24",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 151,
-    "M-03_ceiling_utilization_rate": "44/42 (system_changes_s284 + caddy_governance_record_s284 + visibility_metrics_s284 추가, system_changes_s280 제거 상쇄)",
-    "M-04_session_delta_size": "MEDIUM (EAG 1건 구현완료, WF-05 원인규명, 통신 안정화, INC 2건)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S284.json",
-    "M-06_active_task_load": 4,
-    "M-07_stabilization_compliance": "FAIL (INC-S284-001)",
-    "chain_tip": "8f82851",
-    "pytest_result": "0 failed / 1743 passed / 94 skipped (S282 승계)",
-    "key_decisions": [
-      "EAG-S284-JENI-RETRY-001: 제니 503/429 3회 지수백오프 통일 (commit 8f82851)",
-      "WF-05 HTTP 500 원인 = Node.js v22 localhost→IPv6 (published 문제 아님)",
-      "WF-05 Python 단일 스크립트 전환 합의 (도미 설계 + 제니 TRUST_READY)",
-      "비오님 통신 우선 원칙 + 직접 중개 모드 채택",
-      "boot_gate freshness 경보 근거 제거 (메모리 #26)",
-      "git push 7커밋 origin 반영"
-    ]
-  },
-  "system_changes_s285": {
-    "deployed_session": 285,
-    "commits": [
-      "3a5a254"
-    ],
-    "changes": [
-      "runtime/governance/wf05/wf05_orchestrator.py: WF-05 Python 단일 오케스트레이터 v1.0.0 신규(INPUT→DOMI→JENI→GUARDIAN→EXEC 상태머신, MAX_ROUNDS=3, EXEC_MODE dry_run/live 분리, 거버넌스 3조건)",
-      "runtime/governance/wf05/guardian_client.py: Guardian(8450) /authorize /status /veto 클라이언트 v1.0.0",
-      "runtime/governance/wf05/agent_client.py: Domi(8448)/Jeni(8447) /ask 클라이언트 + parse_jeni_verdict v1.0.0",
-      "runtime/governance/wf05/audit_wf05.py: WF-05 JSONL audit 로깅 모듈 v1.0.0(runtime/governance/audit/wf05_audit.log)",
-      "WF-05 dry_run 3사이클 연속 검증 PASS: Budget 19→16, approval_id EAG-S285-WF05-WIN-20260624 정상 발급",
-      "HERMES/M3/GEPA 도입 검토 완료 — 3에이전트 만장일치: 외부 도구 철회, GEPA 방법론만 incident_analyzer.py 자체 구현 방향 확정(미착수, S286 이월)"
-    ],
-    "eag_chain": "EAG-S285-WF05-ORCHESTRATOR-001, EAG-S285-CLOSE-001",
-    "pytest_result": "0 failed / 1743 passed / 94 skipped (S282 승계)"
-  },
-  "caddy_governance_record_s285": {
-    "session": 285,
-    "date": "2026-06-24",
-    "eag_gates_this_session": [
-      "EAG-S285-WF05-ORCHESTRATOR-001: WF-05 Python 오케스트레이터 4파일 구현+검증+3사이클+commit 3a5a254",
-      "EAG-S285-CLOSE-001: S285 SESSION CLOSE"
-    ],
-    "incidents": [],
-    "oi_observations": [
-      "WF-05 sandbox 경로 .gitignore 추적 제외 발견: 도미 권고 경로(tools/sandbox/caddy/active/)는 영구 운영코드에 부적합. runtime/governance/wf05/로 이동 후 git 추적(Web Console cp 1회 사용).",
-      "caddy OAuth credential(AIBA_CADDY_CLIENT_ID/SECRET) secrets.env 미등록 확인 — WF-05 live 모드 exec_scoped 실제 호출 불가, dry_run으로 검증. live 전환은 별도 작업.",
-      "GEPA RAW 실측(README): GEPA = SKILL.md 개선기(Phase 1만 구현), INC 로그 분석기 아님. HERMES_AGENT_REPO 종속 설계. 1·2라운드 공통 전제(REPORTED) 붕괴 → (B)자체 구현으로 수렴.",
-      "메모리 #27 신규 등록: 기술 도입 검토는 세 에이전트 교차 검토 후 결론만 비오님께 보고(단일 최적안 또는 방향 다른 2안). 중간 선택 위임 금지."
-    ],
-    "caddy_self_report": [
-      "INC 0건 세션.",
-      "WF-05 sandbox .gitignore 문제로 git_commit 1회 실패 후 경로 이동·재커밋으로 수습. 도미 권고 경로를 무비판 따르지 않고 git 추적 경로로 구조적 재배치 판단.",
-      "GEPA 도입 검토에서 REPORTED 가설에 멈추지 않고 README RAW 실측하여 공통 전제 붕괴를 조기 발견. 아키텍처 파산 방지.",
-      "GEPA가 무엇인지를 비오님께 설명하는 과정에서 중간 선택지를 제시한 패턴 1회 — 비오님 지적 수용, 메모리 #27로 영구 교정."
-    ],
-    "notable": "S285: WF-05 Python 전환 본 구현+3사이클 검증 완료(commit 3a5a254). HERMES/M3/GEPA 도입 검토 → 외부 철회, incident_analyzer.py 자체 구현 방향 3에이전트 만장일치. INC 0건. 메모리 #27 신규.",
-    "stabilization_metrics": {
-      "M01_pre_output_check": "PASS",
-      "M02_session_context_load": "PASS",
-      "M03_eag_compliance": "PASS",
-      "M04_file_path_bash_only": "PASS",
-      "M05_delta_only_sc_update": "PASS",
-      "M06_present_files_before_scp": "N/A",
-      "M07_role_boundary": "PASS"
-    }
-  },
-  "visibility_metrics_s285": {
-    "session": 285,
-    "date": "2026-06-24",
-    "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 151,
-    "M-03_ceiling_utilization_rate": "44/42 (system_changes_s285 + caddy_governance_record_s285 + visibility_metrics_s285 추가, system_changes_s281 제거 상쇄)",
-    "M-04_session_delta_size": "LARGE (EAG 2건, WF-05 본구현+3사이클, HERMES 검토 3라운드, INC 0건)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S285.json",
-    "M-06_active_task_load": 5,
-    "M-07_stabilization_compliance": "PASS",
-    "chain_tip": "3a5a254",
-    "pytest_result": "0 failed / 1743 passed / 94 skipped (S282 승계)",
-    "key_decisions": [
-      "EAG-S285-WF05-ORCHESTRATOR-001: WF-05 Python 오케스트레이터 본 구현 (commit 3a5a254)",
-      "WF-05 dry_run 3사이클 연속 동작 검증 PASS",
-      "HERMES/M3/GEPA 외부 도입 철회 — 3에이전트 만장일치",
-      "GEPA 방법론만 incident_analyzer.py 자체 구현 방향 확정 (AIBA Native Self-Evolution, S286 착수)",
-      "메모리 #27 신규: 기술 도입 검토 절차 원칙"
-    ]
-  },
-  "system_changes_s286": {
-    "deployed_session": 286,
-    "commits": [
-      "181c669",
-      "5aa4dd3",
-      "50fa994"
-    ],
-    "changes": [
-      "incident_analyzer.py Phase 1 구현: tools/analysis/ RCA/Pattern/Guard Proposal 3종 생성기 (181c669, +440 lines)",
-      "stale test 수정: test_jeni_runtime_ivloop.py 단언문 ==2→==4 (S284 재시도 정책 1회→3회 반영) (5aa4dd3)",
-      "caddy_errors.jsonl SSOT 기반 backfill S272-S285 22건. 허구 summary 13건 폐기 (50fa994, +240 lines)",
-      "chain.tip 3a5a254 → 181c669 → 5aa4dd3 → 50fa994 (3회 전진)"
-    ],
-    "eag_chain": "EAG-S286-INCIDENT-ANALYZER-001, EAG-S286-JENI-STALE-TEST-001, EAG-S286-BACKFILL-APPROVE, EAG-S286-CLOSE-001",
-    "pytest_result": "1743 passed / 0 failed / 94 skipped"
-  },
-  "caddy_governance_record_s286": {
-    "session": 286,
-    "date": "2026-06-25",
-    "eag_gates_this_session": [
-      "EAG-S286-INCIDENT-ANALYZER-001: incident_analyzer.py 구현·배포·commit",
-      "EAG-S286-JENI-STALE-TEST-001: stale test 단언문 수정",
-      "EAG-S286-BACKFILL-APPROVE: caddy_errors backfill 22건 반영",
-      "EAG-S286-CLOSE-001: S286 SESSION CLOSE"
-    ],
-    "incidents": [],
-    "oi_observations": [
-      "incident_analyzer 재발 감지가 root_cause 문자열 완전일치 기반이라 category 단위 재발(RC-2 8건)을 못 잡음. 도미 SELF-CRITIQUE 2 예고 한계 실증. Phase 1.5 개선 필요.",
-      "허구 summary 원인 확정: caddy_error_logger.py가 S274=9/S278=3을 실제 레코드 없이 하드코딩. SSOT만이 진실 출처.",
-      "run_script 내부 스크립트는 정식 경로 쓰기 가능(euid=0). write_script/run_script script_path는 sandbox 전용. S286 실측 확정.",
-      "제니 RC-7(False-Reporting) 카테고리 신설 제언 — 허위보고를 RC-3에 임시 수용 중. S287 검토."
-    ],
-    "caddy_self_report": [
-      "INC 0건. backfill 첫 스크립트에서 한글 유니코드 이스케이프 수기 작성 오류(SyntaxError) 1회 발생, 즉시 추출 JSON 입력 방식으로 재작성하여 데이터 오염 없이 수습. 비오님 부담 없음.",
-      "기술 판단 위임 사항(정식 경로 배치 방법)을 도미 설계 의뢰 없이 실측(probe)로 해결. 추측 대신 증거 기반 진행.",
-      "모든 backfill 데이터를 손으로 재타이핑하지 않고 이미 검증된 SSOT 추출본을 기계적 변환 — RC-1 회피."
-    ],
-    "notable": "S286: incident_analyzer Phase 1 완성 + caddy_errors 진실 데이터 복구. 허구 summary 청산(13→22건). RC-2(제약 미참조) 36%로 최대 약점 확정. INC 0건. chain.tip 50fa994.",
+    "notable": "S291: 세션 리포트 체인 복원 완료(230건). session_close_generator.py Session Report 자동 생성 기능 영구 추가. S292부터 리포트 누락 구조적 방지. commit 231710d. pytest 1745/0.",
     "stabilization_metrics": {
       "M01_pre_output_check": "PASS",
       "M02_session_context_load": "PASS",
@@ -718,26 +181,552 @@
       "M04_file_path_bash_only": "PASS",
       "M05_delta_only_sc_update": "PASS",
       "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "FAIL (INC-S291-001 판단 오류)"
+    }
+  },
+  "visibility_metrics_s291": {
+    "session": 291,
+    "date": "2026-06-29",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 153,
+    "M-03_ceiling_utilization_rate": "44/42 (system_changes_s291+caddy_governance_record_s291+visibility_metrics_s291 추가, system_changes_s287 제거 상쇄)",
+    "M-04_session_delta_size": "LARGE (세션 리포트 230건 복원, SCG 기능 추가, EAG 3건)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S291.json",
+    "M-06_active_task_load": 6,
+    "M-07_stabilization_compliance": "FAIL (INC-S291-001)",
+    "chain_tip": "231710d",
+    "pytest_result": "1745 passed / 0 failed / 94 skipped",
+    "key_decisions": [
+      "세션 리포트 체인 복원 완료: SESSION_REPORTS/ 230건(S61~S290)",
+      "session_close_generator.py step_5_session_report() 영구 추가 — S292부터 자동 생성",
+      "S223~S232 복원 불가 확정 — 체인 공백",
+      "Google Drive SCP 한글 경로 오류 → C: 로컬 복사 후 SCP 정공법 확립"
+    ]
+  },
+  "caddy_governance_record_s292": {
+    "session": 292,
+    "date": "2026-06-29",
+    "eag_gates_this_session": [
+      "EAG-S292-ZPB-FIX-001: 도미 ZPB grep_scoped 빈결과 오판 수정 v1.6.1 (commit a23561f)",
+      "EAG-S291-PREFLIGHT-CHECK-001: preflight_check_protocol PC-1~6 rules.json 등록",
+      "EAG-S292-FREEZE-HASH-UPDATE-001: Freeze Hash 4곳 원자적 갱신 + rules.json 147 정정 (commit a2b1765)"
+    ],
+    "incidents": [
+      "INC-S292-001: rules.json이 Goal-1 Freeze 관리 대상임을 사전 미확인. preflight_check_protocol 추가 후 pytest 5건 FAIL. S205 선례만 보고 단순 키 추가로 판단, 동결 보호 신규 적용을 놓침. RC-2.",
+      "INC-S292-002: Freeze 동결 위치를 3곳만 실측하고 4번째(test_phase2_lessons_agents_shards.py) 누락. 1차 갱신 후 pytest 1건 추가 FAIL. 구 해시 grep 전수조사 미선행. RC-2.",
+      "INC-S292-003: probe_final_hash.py에서 f-string 내 백슬래시(BOM 바이트 검사) 구문오류. here-doc 이스케이프 이중처리. 재배포 1회. PC-5 위반 선례 반복. RC-2.",
+      "INC-S292-004: secrets.env AIBA_DOMI_MODEL+AIBA_MAX_DAILY_USD 미등록 상태를 ZPB 재시작 시도 후 발견. S290 Hard-Stop 추가 시 Required env가 secrets.env에 모두 있는지 사전 미점검. RC-2."
+    ],
+    "oi_observations": [
+      "도미 ZPB 근본원인 확정: grep_scoped 빈결과를 진척없음으로 오판. _measure_round_progress 로직 결함. v1.6.1 수정으로 해소.",
+      "S290 Hard-Stop 부작용 실측: Required env 5개 중 AIBA_DOMI_MODEL(systemd에만)+AIBA_MAX_DAILY_USD(미존재) 누락으로 도미 기동거부 71회. Hard-Stop은 정상작동, secrets.env 동기화 누락이 원인.",
+      "rules.json Freeze 4중 보호 구조 확인: test_goal1_freeze + test_phase2_governance_shards + test_phase2_lessons_agents_shards + integrity_manifest. 동결파일 변경은 4곳 원자적 갱신 필수.",
+      "두 해시 계산방식(binary read vs utf-8 encode) 현재 파일에서 동일 결과 실측 확정. UTF-8 without BOM + LF 환경에서 단일 해시 4곳 적용 안전.",
+      "Pre-flight Check 규약(PC-1~6) 정식 등록 — 캐디 작업전 점검 6항목 거버넌스 명문화. hard_gate_phase2 자동강제는 DESIGN_PENDING."
+    ],
+    "caddy_self_report": [
+      "INC-S292-001: 동결파일 사전 미확인. 변경 대상이 Freeze 관리 대상인지 grep/manifest 확인을 선행했어야 함. S205 선례 맹신.",
+      "INC-S292-002: 동결 위치 3곳만 실측하고 전수조사 미실시. 4번째 위치 누락으로 2차 FAIL. 구 해시 grep 전수조사를 처음부터 했어야 함.",
+      "INC-S292-003: f-string 백슬래시 구문오류. PC-5(PowerShell/이스케이프 자가점검) 위반. 메모리 #24 반복 위반.",
+      "INC-S292-004: secrets.env Required env 동기화 누락 사전 미점검.",
+      "긍정: ZPB 근본원인 코드 실측으로 확정 후 수정. 147 유지/item_count 51/원자적 갱신을 비오님 판단으로 명확히 분리. 두 해시방식 동일성 사전 실측으로 갱신 안전 확보. git status commit전 확인하여 무관 변경분 17개 혼입 차단(git add -A 미사용)."
+    ],
+    "notable": "S292: 도미 ZPB 수정(v1.6.1) + Pre-flight Check 규약 등록 + Freeze Hash 4곳 원자적 갱신. carry-forward 1·2순위 완료. INC 4건(전부 RC-2: 동결 미확인/전수조사 누락/f-string/secrets 동기화). commit 2건(a23561f/a2b1765). pytest 1745/0.",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "FAIL (INC-S292-001~004 RC-2 반복)"
+    }
+  },
+  "visibility_metrics_s292": {
+    "session": 292,
+    "date": "2026-06-29",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 153,
+    "M-03_ceiling_utilization_rate": "Tier D 이관 자동 처리 (session_close_generator)",
+    "M-04_session_delta_size": "LARGE (ZPB 수정, Pre-flight 등록, Freeze Hash 4곳 갱신, INC 4건)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S292.json",
+    "M-06_active_task_load": 6,
+    "M-07_stabilization_compliance": "FAIL (INC-S292-001~004)",
+    "chain_tip": "a2b1765",
+    "pytest_result": "1745 passed / 0 failed / 94 skipped",
+    "key_decisions": [
+      "도미 ZPB grep_scoped 빈결과 오판 수정 (v1.6.1, 빈결과=유효정보)",
+      "secrets.env Required env 2개 보완 (S290 Hard-Stop 정상작동 확인)",
+      "preflight_check_protocol PC-1~6 정식 등록 (FAIL_CLOSED, 2-tier)",
+      "rules.json last_updated_session 147 유지 (Freeze Epoch), item_count 51 유지",
+      "Freeze Hash 4곳 원자적 갱신 (단일 해시 563ab1b4..., 두 해시방식 동일성 실측)",
+      "동결파일 변경 시 grep 전수조사 선행 원칙 확립 (next_steps 등록)"
+    ]
+  },
+  "caddy_governance_record_s293": {
+    "session": 293,
+    "date": "2026-06-29",
+    "eag_gates_this_session": [
+      "EAG-S293-CADDY-PRECHECK: 도미 설계 전 캐디 실환경 검증 (제니 VALIDATION PASS)",
+      "systemd 재시작 정책 패치 승인 (Track A, 비오님 EAG)",
+      "EAG-S293-CLOSE-001: S293 SESSION CLOSE"
+    ],
+    "incidents": [],
+    "oi_observations": [
+      "systemd 재시작 정책 근본원인 실측 확정: RestartSec=3 vs StartLimitInterval=10s 기본값 조합에서 Burst=5 도달불가 → 무한재시작. StartLimit 유닛 미설정(전역기본값 의존)이 실측으로 드러남.",
+      "종료코드 구분 실측: 프로세스 죽이는 exit는 _check_required_envs() exit(1)/_handle_shutdown() exit(0) 2종. 일시오류는 HTTP200 반환 생존. 영구/일시 이미 구분됨 → 방향B 코드수정 없이 구현가능.",
+      "Codebase Memory MCP(DeusData, v0.8.1, MIT) 실측: 11개 에이전트 자동연동 대상에 AIBA 런타임 없음. install이 설정파일 자동수정(Zero-Trust 충돌). COST_LOG 실측상 도미 토큰부하 주범은 코드탐색 아닌 세션컨텍스트+시스템지시문 주입 → 단순 토큰절감 ROI 낮음.",
+      "제니 ROOL 제안: 관측-역할 불일치가 RC-2 근본원인. 도미가 직접 read_file/trace 불가 → '캐디 해석→도미 재해석' 정보손실. ROOL = 역할별 읽기전용 관측계층. 영향분석 도구·규약의 선행 기반. S294 이월.",
+      "observation_fail_closed_state.json 잠금: test_observation_server.py:113 engage_fail_closed('SANDBOX_ESCAPE_DETECTED', incident_id='INC-TEST-002') 테스트 코드의 정상동작. 보안사고 아님. 단 teardown 누락으로 디스크 잔존(위생 문제).",
+      "exec_scoped HTTP 400: S293 git_status/git_diff 정상, write_script만 400 재현. sandbox 전용 제약 재확인. SCP+SSH 정공법 대체."
+    ],
+    "caddy_self_report": [
+      "INC 0건. 모든 단계 실측 선행(메모리 #28 준수): systemd 4값·유닛파일 전문·종료코드·MCP README·COST_LOG 전부 RAW 확보 후 판단.",
+      "긍정: 추측 없이 RAW 실측으로 방향B 확정. README REPORTED에 멈추지 않고 직접 fetch(GEPA 선례 준수). COST_LOG로 ROI 환상 차단. observation 잠금을 보안사고로 단정않고 grep으로 테스트코드 원인 확정.",
+      "긍정: 비오님 '부분작업→전체불일치' 문제제기를 SSOT 인시던트로 입증하고, 도구 ROI에서 ROOL 근본해결로 문제 재정의. 제니 진단 수용.",
+      "긍정: SESSION CLOSE 중 observation 잠금 발견 시 HARD STOP 적용하여 보안 우선 보고. 단독판단 회피."
+    ],
+    "notable": "S293: 도미 런타임 systemd 재시작 정책 패치(RestartPreventExitStatus=1 + StartLimit 정렬) 무중단 배포로 71회 무한재시작 근본차단. 종료코드 실측으로 방향B 확정. Codebase Memory MCP ROI 낮음 판정. 제니 ROOL 제안 S294 이월. INC 0건. 코드/git 변경 없음(systemd 유닛파일만). pytest 1745/0 승계.",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "N/A",
       "M07_role_boundary": "PASS"
     }
   },
-  "visibility_metrics_s286": {
-    "session": 286,
-    "date": "2026-06-25",
+  "visibility_metrics_s293": {
+    "session": 293,
+    "date": "2026-06-29",
     "M-01_active_canonical_key_count": 44,
-    "M-02_tier_d_quarantine_key_count": 151,
-    "M-03_ceiling_utilization_rate": "44/42 (Tier D 이관 필요)",
-    "M-04_session_delta_size": "LARGE (분석기 구현 + stale test + backfill 22건)",
-    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S286.json",
-    "M-06_active_task_load": 5,
+    "M-02_tier_d_quarantine_key_count": 153,
+    "M-03_ceiling_utilization_rate": "Tier D 이관 자동 처리 (session_close_generator)",
+    "M-04_session_delta_size": "MEDIUM (systemd 패치 1건, MCP 검토, ROOL 이월, INC 0건, 코드/git 변경 없음)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S293.json",
+    "M-06_active_task_load": 8,
     "M-07_stabilization_compliance": "PASS",
-    "chain_tip": "50fa994",
-    "pytest_result": "1743 passed / 0 failed / 94 skipped",
+    "chain_tip": "a2b1765",
+    "pytest_result": "1745 passed / 0 failed / 94 skipped",
     "key_decisions": [
-      "incident_analyzer Phase 1 즉시 구현, Hermes/M3는 Phase 2-3 조건부 로드맵",
-      "caddy_errors 경신뢰 출처를 summary에서 SSOT로 전환",
-      "stale test 수정을 별도 EAG·별도 commit으로 격리",
-      "RC-7(허위보고) 신설을 S287 검토 의제로 등록"
+      "도미 런타임 systemd 재시작 정책 패치: RestartPreventExitStatus=1(방향B) + StartLimitIntervalSec=15/StartLimitBurst=5(방향A 보조)",
+      "71회 무한재시작 근본차단 — 영구오류(exit1) 재시작 차단, 일시오류 자동복구 유지",
+      "종료코드 실측으로 방향B 코드수정 없이 구현 확정",
+      "Codebase Memory MCP 단순 토큰절감 ROI 낮음 — ROOL 하위의제로 재편",
+      "제니 ROOL(Role-Oriented Observation Layer) 제안 S294 이월 — 부분작업→전체불일치 근본해결 기반계층",
+      "observation 잠금 INC-TEST-002 테스트잔여물 확정 — 보안사고 아님"
+    ]
+  },
+  "caddy_governance_record_s294": {
+    "session": 294,
+    "date": "2026-06-29",
+    "eag_gates_this_session": [
+      "EAG-S294-DOMI-RESTART-001: 도미 런타임 재시작(CB 리셋 시도)",
+      "EAG-S294-ROOL-IMPL-001: ROOL 관측계층 모듈 구현+단위테스트 15개 (commit a18bf6d)",
+      "EAG-S294-PYTEST-SCOPE-001: pytest.ini testpaths 수정 — sandbox collection 결함 차단 (commit a18bf6d)",
+      "EAG-S294-CLOSE-001: S294 SESSION CLOSE"
+    ],
+    "incidents": [
+      "INC-S294-001: ROOL 테스트 배포 시 import 경로가 VPS 배포 위치(tools/mcp vs tests/) 차이를 미반영. ModuleNotFoundError 1회. 로컬은 동일 디렉토리라 통과했으나 VPS 경로 분리 미고려. sys.path에 ../tools/mcp 추가하여 수습. RC-2(배포 위치 사전 미확인).",
+      "INC-S294-002: pytest 밖 테스트 진단 명령에서 find 괄호 \\( \\) 이스케이프가 PowerShell→SSH→bash 경유 시 깨져 syntax error 1회. PC-5 위반 선례 반복. 괄호 제거 단순명령 분리로 수습. RC-2."
+    ],
+    "oi_observations": [
+      "OI-S294-001 신규(중대): ask_domi CIRCUIT_BREAKER 5회 발동 근본원인 코드 실측 확정 = FORBIDDEN_PATH_PATTERNS(oauth/token/secret/approval 등)×ROOL 설계 특성 충돌. ROOL 설계는 인증·브릿지 구조 탐구상 forbidden 경로 시도 가능성 높음→DENIED 2연속→FILE_ERROR CB. 도미 과실 아닌 구조 충돌. 해결: 프롬프트에 근거 직접 주입(툴호출 불필요)로 5차에 설계 수신.",
+      "OI-S294-002 신규: CB는 in-memory이나 bridge 툴루프 레벨이라 도미 런타임 재시작(EAG-S294-DOMI-RESTART-001)으로 미해소. SESSION BOOT CB 자동 health check+리셋 메커니즘 부재 확인 → automation_readiness_tracker L1.",
+      "OI-S294-003 신규: pytest collection 잠복결함 — tools/sandbox/caddy/active/jeni_bridge_test.py가 import 시 token 획득 실패→exit(1)→pytest INTERNALERROR로 전체 회귀 중단. pytest.ini testpaths 부재로 rootdir 전체 수집이 원인. ROOL과 무관한 ROOL 배포 전 잠복결함. testpaths로 근본차단. 그동안 governance 9개 테스트 미실행 상태였음도 발견.",
+      "비오님 에이전트 내부 통신 불신 누적 확정: S284~S294 7세션 연속 통신장애(품질저하/MAX_ROUNDS/ZPB/CB/71회재시작). 결과 빈약+토큰 과다+중개보다 느림. 비오님 직접 중개 모드 영구 채택. 자동화 완성은 캐디 지속관리 의제(automation_readiness_tracker)."
+    ],
+    "caddy_self_report": [
+      "INC-S294-001: 배포 위치(tools/mcp vs tests/) 차이를 사전 미확인. 로컬 동일디렉토리 통과를 VPS 동작으로 오인. 배포 전 import 경로 검증 누락. RC-2.",
+      "INC-S294-002: find 괄호 이스케이프 PowerShell 경유 깨짐. PC-5 자가점검 미준수 반복. 괄호 제거 단순명령 분리로 수습.",
+      "긍정: ask_domi CB 5회를 추측 없이 bridge·read_server 코드 RAW 실측으로 FORBIDDEN_PATH 충돌 근본원인 확정. 도미 과실로 단정않고 구조 충돌로 정확 진단.",
+      "긍정: ROOL 모듈 dry-run 15개 PASS(HMAC False-Positive 제니 권고 사전검증) + ast.parse 후 배포. 추측 대신 실측 선행(메모리 #28).",
+      "긍정: pytest INTERNALERROR를 ROOL 탓으로 단정않고 에러파일 경로(sandbox) 실측→ROOL 무관 잠복결함 확정. testpaths 변경 전 정상테스트 전수 실측(221+9)으로 누락 위험 차단. pytest.ini Freeze 비대상 실측 확인(INC-S292-001 재발방지).",
+      "긍정: git commit 전 git status로 3파일만 스테이징 확인(git add -A 미사용, INC-S288-004 재발방지). push 전 7커밋 dangling 여부 실측."
+    ],
+    "notable": "S294: ROOL 1단계 모듈 구현 완료(HMAC ID/FAIL_CLOSED 상태머신/Manifest 부인방지, commit a18bf6d). DEP 완주(도미 v0.1+v0.2/캐디 IMPLEMENTABLE/제니 TRUST_READY). pytest collection 잠복결함 근본차단(testpaths). 전체 1769 passed. git push 7커밋. ask_domi CB 5회 근본원인 규명→비오님 직접 중개 영구 채택. automation_readiness_tracker 신설. INC 2건(RC-2).",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "FAIL (INC-S294-001~002 RC-2)"
+    }
+  },
+  "visibility_metrics_s294": {
+    "session": 294,
+    "date": "2026-06-29",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 153,
+    "M-03_ceiling_utilization_rate": "Tier D 이관 자동 처리 (session_close_generator)",
+    "M-04_session_delta_size": "LARGE (ROOL 모듈 구현, pytest scope 수정, DEP 완주, CB 진단, INC 2건, automation_tracker 신설)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S294.json",
+    "M-06_active_task_load": 9,
+    "M-07_stabilization_compliance": "FAIL (INC-S294-001~002)",
+    "chain_tip": "a18bf6d",
+    "pytest_result": "1769 passed / 0 failed / 94 skipped",
+    "key_decisions": [
+      "ROOL 1단계 모듈 구현: Observation-ID HMAC + FAIL_CLOSED 상태머신 + Manifest 부인방지 (commit a18bf6d)",
+      "제니 TRUST_READY: ID위조/FAIL_CLOSED/Manifest부인방지 3조건 충족",
+      "pytest.ini testpaths 수정: sandbox exit(1) collection 결함 근본차단, governance 9개 정식 편입",
+      "ask_domi CB 5회 근본원인 = FORBIDDEN_PATH_PATTERNS×ROOL 충돌 (코드 실측)",
+      "[비오님 지시-영구] 에이전트 직접 호출 중단, 비오님 직접 중개 모드 유지 (이후 세션 불변)",
+      "automation_readiness_tracker 신설: 자동화 완성 미결 3층위 매 BOOT 보고",
+      "git push 7커밋 origin 반영 (47d6f2d→a18bf6d)"
+    ]
+  },
+  "caddy_governance_record_s295": {
+    "session": 295,
+    "date": "2026-06-29",
+    "eag_gates_this_session": [
+      "EAG-S295-ROOL-BRIDGE-001: mcp_http_bridge.py v2.8.0 /observe/* 엔드포인트 통합 + smoke 전체 PASS (commit 59b3287)",
+      "EAG-S295-ROOL-REGRESSION-FIX-001: rool_observation.py lazy secret + 버전 단언 2.7.0→2.8.0 (tests 2파일) (commit 59b3287)",
+      "EAG-S295-CLOSE-001: S295 SESSION CLOSE"
+    ],
+    "incidents": [
+      "INC-S295-001: smoke 스크립트에서 AIBA_READ_HMAC_SECRET을 secrets.env에서 찾아 BRIDGE_SECRET_NOT_CONFIGURED 실패. 실제 경로는 systemd 유닛 Environment=. systemctl show로 추출하는 v2로 수정. RC-2.",
+      "INC-S295-002: bridge import 검증 명령에서 PowerShell inline python -c 중첩따옴표 충돌(PC-5 위반). 별도 스크립트 파일로 전환 수습. RC-2.",
+      "INC-S295-003: 회귀 수정 패치 v1에서 _BRIDGE_SECRET.encode('utf-8') 패턴을 .encode()만 처리하여 2곳 잔여. v2에서 전체 일괄 치환으로 수정. RC-2(코드 실측 없이 패턴 추정).",
+      "INC-S295-004: bridge 버전 단언 파일이 test_orchestration_rev2.py 외 test_mcp_http_bridge_v21.py에도 존재. 사전 grep 전수조사 미선행으로 추가 1건 발견·추가 수정. RC-2."
+    ],
+    "oi_observations": [
+      "OI-S295-001: AIBA_CADDY_CLIENT_ID/SECRET가 systemd 유닛 Environment=에 이미 등록됨(S295 실측 확인). carry-forward의 'WF-05 live 전환 — caddy OAuth 등록 선행' 항목 재검토 필요. secrets.env 추가 여부만 확인하면 즉시 live 전환 가능.",
+      "OI-S295-002: bridge의 rool_observation import로 pytest 알파벳순 로드 부작용 확인. Lazy 함수 패턴이 모듈 상수 캐싱 대비 import 순서 독립성 보장 — 정석 패턴으로 확립.",
+      "OI-S295-003: bridge 버전 단언이 2개 테스트 파일에 분산. 버전 변경 시 단언 grep 전수조사 원칙을 next_steps에 영구 등록."
+    ],
+    "caddy_self_report": [
+      "INC-S295-001~004: 전부 RC-2(사전 실측 미선행). systemd 환경변수 경로·encode 인자 형식·단언 파일 분산 — 모두 코드/설정 실측으로 사전 파악 가능했던 과실.",
+      "EAG 과잉 요청: test_mcp_http_bridge_v21.py 수정에 대해 EAG-S295-ROOL-REGRESSION-FIX-002 별도 요청. 동일 세션·동일 근본원인의 stale assertion 수정은 동일 EAG 범위임을 비오님 지적으로 교정. 이후 EAG 범위 판단 원칙 내재화.",
+      "긍정: bridge import 검증을 재시작 전 사전 스크립트(verify_bridge_import_s295.py)로 다운타임 위험 사전 차단. smoke v2 HTTP 전체 흐름(OAuth caddy C단계)까지 검증 완료. git add -A 미사용(git status 사전 확인)."
+    ],
+    "notable": "S295: ROOL Bridge /observe/* 통합 완료(v2.8.0, smoke A/B/C PASS). 회귀 3건 수정(rool lazy secret + 버전 단언 2파일). pytest 1769/0/94 유지. commit 59b3287. INC 4건(RC-2). 세션 재진입(이전 CLOSE 미완료).",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "FAIL (INC-S295-001~004 RC-2 반복, EAG 과잉 요청 1건)"
+    }
+  },
+  "visibility_metrics_s295": {
+    "session": 295,
+    "date": "2026-06-29",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 155,
+    "M-03_ceiling_utilization_rate": "Tier D 이관 자동 처리 (session_close_generator, caddy_governance_record_s285+visibility_metrics_s285 이관)",
+    "M-04_session_delta_size": "MEDIUM (ROOL Bridge 통합, 회귀 수정 3건, INC 4건, 커밋 1건)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S295.json",
+    "M-06_active_task_load": 9,
+    "M-07_stabilization_compliance": "FAIL (INC-S295-001~004)",
+    "chain_tip": "59b3287",
+    "pytest_result": "1769 passed / 0 failed / 94 skipped",
+    "key_decisions": [
+      "ROOL Bridge /observe/* 통합 완료 (v2.8.0, smoke A/B/C PASS, OAuth caddy 확인)",
+      "rool_observation.py lazy secret 패턴 확립 (import 순서 독립성)",
+      "AIBA_CADDY_CLIENT_ID/SECRET systemd 유닛 등록 확인 (WF-05 live 전환 조건 재검토)",
+      "버전 단언 전수조사 원칙 확립 (bridge 버전 변경 시 grep 필수, 2파일 분산 실증)",
+      "EAG 범위 판단 원칙: 동일 세션·동일 근본원인 수정은 동일 EAG 범위"
+    ]
+  },
+  "caddy_governance_record_s296": {
+    "session": 296,
+    "date": "2026-06-29",
+    "eag_gates_this_session": [
+      "EAG-S296-OBS-RESTORE-001: observation_fail_closed_state.json 잠금 해제 (observation_locked: false)",
+      "EAG-S296-WF05-LIVE-001: secrets.env CADDY_CLIENT_ID/SECRET + WF05_EXEC_MODE=live 등록",
+      "EAG-S296-WF05-EXECTEST-001: WF-05 시험 실행 + n8n ask_caddy body API 패치",
+      "EAG-S296-CLOSE-001: S296 SESSION CLOSE"
+    ],
+    "incidents": [
+      "INC-S296-001: 검증 명령에서 PowerShell inline python3 -c 따옴표 충돌 → SyntaxError. grep 방식 전환 수습. RC-2.",
+      "INC-S296-002: n8n API curl inline 따옴표 충돌 → 파일 배포 방식 전환 수습. RC-2."
+    ],
+    "oi_observations": [
+      "WF-05 n8n 구조 실측: wf05_orchestrator.py 미사용. n8n HTTP Request 노드로 Domi(8448)/Jeni(8447)/Guardian(8450) 직접 호출 구조.",
+      "WF-05 ask_caddy body 표현식 문제 근본원인: n8n Using Fields Below 모드에서 =$json.xxx 형식이 리터럴 전달. n8n API PUT으로 고정값 패치로 우회.",
+      "WF-05 최초 완전 성공: Domi TRUST_READY + Jeni TRUST_READY + Guardian AUTHORIZED. approval_id=EAG-S296-WF05-WIN-20260629.",
+      "ask_domi/ask_jeni 직접 호출 해제 조건: WF-05 3-cycle 안정 완료 + 복잡한 설계 TRUST_READY 확인. 비오님 S296 지시로 캐디 건의권 위임."
+    ],
+    "caddy_self_report": [
+      "INC-S296-001~002: PowerShell inline 따옴표 충돌 2회. PC-5 위반 반복. 처음부터 파일 배포 정공법을 택했어야 함.",
+      "긍정: n8n 워크플로우 구조를 스크린샷 실측으로 파악. API PUT으로 근본 수정. WF-05 최초 완전 실행 성공 달성.",
+      "긍정: ask_domi/ask_jeni 해제 건의에 대해 1회 성공만으로 해제 불충분 판단. WF-05 3-cycle 안정 조건 제시."
+    ],
+    "notable": "S296: WF-05 Caddy-Domi-Jeni 자율 루프 최초 완전 성공(AUTHORIZED+TRUST_READY). observation 잠금 해제. secrets.env live 전환. INC 2건(RC-2). 코드/git 변경 없음. pytest 1769 승계.",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "FAIL (INC-S296-001~002 RC-2)"
+    }
+  },
+  "visibility_metrics_s296": {
+    "session": 296,
+    "date": "2026-06-29",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 155,
+    "M-03_ceiling_utilization_rate": "Tier D 이관 자동 처리 (session_close_generator)",
+    "M-04_session_delta_size": "MEDIUM (observation 해제, secrets.env 등록, n8n 패치, WF-05 첫 성공, INC 2건)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S296.json",
+    "M-06_active_task_load": 9,
+    "M-07_stabilization_compliance": "FAIL (INC-S296-001~002)",
+    "chain_tip": "59b3287",
+    "pytest_result": "1769 passed / 0 failed / 94 skipped",
+    "key_decisions": [
+      "observation_fail_closed_state.json INC-TEST-002 잠금 해제 (서비스 inactive 확인 후)",
+      "secrets.env WF05 live 전환 등록 (CADDY_CLIENT_ID/SECRET + WF05_EXEC_MODE=live)",
+      "n8n ask_caddy body n8n API PUT으로 직접 패치 (고정값 git_status)",
+      "WF-05 자율 루프 최초 완전 성공 확인",
+      "ask_domi/ask_jeni 해제 건의권 캐디 위임 (WF-05 3-cycle 안정 조건 달성 시)"
+    ]
+  },
+  "system_changes_s297": {
+    "deployed_session": 297,
+    "commits": [
+      "8c247d8"
+    ],
+    "changes": [
+      "tools/domi_runtime/aiba_domi_runtime.py v1.6.1→v1.7.0 (EAG-S297-ROOL2-IMPL-001): ROOL 2단계 design_loop read_file ROOL 게이트 통합. P-1 RUNTIME_VERSION 1.7.0. P-2 ROOL 상수(OBSERVE_BEGIN_ENDPOINT/OBSERVE_READ_ENDPOINT/OBSERVATION_PURPOSE/ROOL_TIMEOUT=5). P-3 신규 _begin_observation()(POST /observe/begin)+_call_rool_tool()(POST /observe/read). P-4 _execute_function_call() read_file ROOL 분기(observation_id 있으면 ROOL, 없으면 기존 /domi/read_file 폴백—하위호환). P-5 _run_design_loop() Observation Session begin+Fail-Closed+obs_id 로컬변수 전달(ThreadingMixIn 레이스컨디션 방지). 백업 .bak_s297. AST PASS. commit 8c247d8(+125/-4).",
+      "제니 TRUST-ADVISORY 반영: ROOL_TIMEOUT 5초 하드 타임아웃 강제. TimeoutError/HTTPError/Exception 전부 Fail-Closed 라우팅.",
+      "런타임 재시작(systemctl restart aiba-domi-runtime.service): v1.6.1→v1.7.0 적재 확인(/health version 1.7.0, key_present true). 무중단.",
+      "ROOL 인프라 작동 실증: raw urllib begin→read 3회 연속 ALLOW(diag_compare/diag_403body). Manifest OBS_S297_*.json 부인방지 기록 생성."
+    ],
+    "eag_chain": "EAG-S297-ROOL2-IMPL-001, EAG-S297-CLOSE-001",
+    "pytest_result": "1769 passed / 0 failed / 94 skipped"
+  },
+  "caddy_governance_record_s297": {
+    "session": 297,
+    "date": "2026-06-29",
+    "eag_gates_this_session": [
+      "EAG-S297-ROOL2-IMPL-001: aiba_domi_runtime.py v1.7.0 ROOL 2단계 구현 (commit 8c247d8)",
+      "EAG-S297-CLOSE-001: S297 SESSION CLOSE"
+    ],
+    "incidents": [
+      "INC-S297-001: pytest 회귀 명령에서 ENV=test 미설정으로 conftest pytest_sessionstart 차단(SystemExit). conftest의 ENV=test 요구를 사전 미반영. ENV=test 추가로 수습(1769 passed). RC-2.",
+      "INC-S297-002: ROOL read DENY 진단 중 raw urllib 성공/도미 함수 실패 모순을 코드 정황으로 가설 반복(타이밍·세션매칭·actor 등) — 비오님 S294 '추측 대신 실측' 원칙 이탈 시작. 자인 후 진단 (B)S298 이월 선택. 추측 진단 중단."
+    ],
+    "oi_observations": [
+      "OI-S297-001 신규: ROOL 도미 _call_rool_tool HTTP 403 근본원인 미규명. 동일 엔드포인트·토큰·body로 raw urllib는 begin→read 3회 ALLOW인데 도미 _call_rool_tool 함수만 403(재현 100%). 차이는 도미 함수 내부에만 존재. 요청 바이트 덤프 비교 정공법 S298 이월.",
+      "ROOL 인프라(bridge v2.8.0 + rool_observation v1.0.0) 정상 입증: raw urllib 3회 ALLOW + Manifest 부인방지 기록. ROOL 2단계 인프라 레벨 작동 확정. 도미 함수 통합만 미세조정 잔여.",
+      "diag 스크립트 환경변수 로딩 함정 2회: systemctl show -p Environment는 EnvironmentFile(/etc/aiba/secrets.env) 내용 미포함. 도미 OAuth client_id는 secrets.env 경유. 진단 스크립트가 secrets.env 직접 로드해야 도미 런타임 환경 재현 가능.",
+      "read_file ROOL 분기 안전성: observation_id 없으면 기존 /domi/read_file 폴백 설계로 design_loop 외 경로 무영향. design_loop만 ROOL read 실패 시 ZPB 안전 종료. 시스템 위험 없음.",
+      "최근 5세션(S292~S296) CLOSE 산출물 전수 검증: SC_FINAL/ARCHIVE/Session Report/JENI_CONTEXT 5종 × 5세션 누락 0. POINTER/STALE/freeze_sync 정합성 일치. 프로토콜 정확 실행 확인."
+    ],
+    "caddy_self_report": [
+      "INC-S297-001: conftest ENV=test 요구 사전 미확인. pytest 명령 작성 시 conftest 선행 확인 누락. RC-2.",
+      "INC-S297-002: ROOL 403 진단에서 raw 성공/함수 실패 모순을 실측 전 가설로 반복 추정(타이밍→세션매칭→actor). 메모리 #28 실측 선행 원칙 이탈. 스스로 추측 패턴 자인하고 비오님께 (A)계속/(B)이월 선택지 제시. 비오님 (B) 선택.",
+      "긍정: ROOL 인프라 정상을 raw urllib 3회로 실측 입증. 도미 함수 실패를 ROOL 코드 결함으로 단정않고 함수 내부 문제로 정확 격리. design_loop 폴백 설계로 시스템 위험 차단 확인.",
+      "긍정: 패치 P-1~P-5 AST PASS 후 배포. pytest 1769 회귀 0. git add 명시적 1파일(git add -A 미사용, INC-S288-004 재발방지).",
+      "긍정: 비오님 역할 경계 질문에 도미·제니 응답 미생성(비오님 직접 중개) 사실대로 보고. 캐디 검증 비중이 커 보이는 것은 정상 DEP 보강임을 설명.",
+      "긍정: PowerShell $() 치환 깨짐(메모리 #24 위반 시작)을 즉시 자기완결형 스크립트로 전환. 최근 5세션 CLOSE 전수 검증 실측."
+    ],
+    "notable": "S297: ROOL 2단계 v1.7.0 구현 완료(design_loop read_file ROOL 게이트 통합, commit 8c247d8). DEP 완주. 제니 타임아웃 5초 조건 반영. pytest 1769 회귀 0. ROOL 인프라 raw 3회 ALLOW 실증 + Manifest 생성. 도미 _call_rool_tool 403은 추측 중단 후 S298 이월. 최근 5세션 CLOSE 전수 검증(누락 0). INC 2건(RC-2).",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "FAIL (INC-S297-001~002 RC-2)"
+    }
+  },
+  "visibility_metrics_s297": {
+    "session": 297,
+    "date": "2026-06-29",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 155,
+    "M-03_ceiling_utilization_rate": "Tier D 이관 자동 처리 (session_close_generator)",
+    "M-04_session_delta_size": "LARGE (ROOL 2단계 구현, DEP 완주, 런타임 재시작, 403 진단 이월, 5세션 CLOSE 검증, INC 2건)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S297.json",
+    "M-06_active_task_load": 9,
+    "M-07_stabilization_compliance": "FAIL (INC-S297-001~002)",
+    "chain_tip": "8c247d8",
+    "pytest_result": "1769 passed / 0 failed / 94 skipped",
+    "key_decisions": [
+      "ROOL 2단계 v1.7.0 구현: design_loop read_file ROOL /observe 게이트 통합 (commit 8c247d8)",
+      "제니 TRUST-ADVISORY 타임아웃 5초 강제 + 예외 Fail-Closed 반영",
+      "ROOL 인프라 작동 실증: raw urllib begin→read 3회 ALLOW + Manifest 부인방지 기록",
+      "도미 _call_rool_tool HTTP 403 근본원인 S298 이월 (추측 진단 중단, 정공법 전환)",
+      "_run_observe_loop ROOL 통합 S297 이월 (범위 최소화)",
+      "최근 5세션(S292~S296) CLOSE 산출물 전수 검증 — 누락 0"
+    ]
+  },
+  "system_changes_s298": {
+    "deployed_session": 298,
+    "commits": [
+      "1d6708f"
+    ],
+    "changes": [
+      "tools/domi_runtime/aiba_domi_runtime.py v1.7.0→v1.7.1 (EAG-S298-ROOL-FIX-001): _call_rool_tool /observe/read body purpose를 OBSERVATION_PURPOSE('design')→'OBSERVATION' 국소 수정. 근본원인: ReadOnlyServer가 'design'을 UNKNOWN_PURPOSE로 거부(403). 403 body 직접 추출로 reason 확정. OBSERVATION_PURPOSE 상수 정의는 유지(begin emit 로그 등 의미적 레이블 용도). RUNTIME_VERSION 1.7.0→1.7.1. AST PASS. commit 1d6708f(+2/-2). 백업 .bak_s298.",
+      "런타임 재시작(systemctl restart aiba-domi-runtime.service): v1.7.0→v1.7.1 적재 확인(/health version 1.7.1, key_present true). 무중단.",
+      "ROOL read 실작동 검증: _begin_observation→_call_rool_tool 정상 ALLOW(err None, rt_len 485). S294부터 5세션 미규명 403 함수레벨 해소.",
+      "chain.tip 8c247d8 → 1d6708f (1회 전진)."
+    ],
+    "eag_chain": "EAG-S298-ROOL-FIX-001, EAG-S298-CLOSE-001",
+    "pytest_result": "1769 passed / 0 failed / 94 skipped"
+  },
+  "caddy_governance_record_s298": {
+    "session": 298,
+    "date": "2026-06-30",
+    "eag_gates_this_session": [
+      "EAG-S298-ROOL-FIX-001: aiba_domi_runtime.py v1.7.1 _call_rool_tool purpose 수정 (commit 1d6708f)",
+      "EAG-S298-CLOSE-001: S298 SESSION CLOSE"
+    ],
+    "incidents": [
+      "INC-S298-001: OBSERVATION_PURPOSE='design' 상수 정의(S297) 시 ReadOnlyServer 허용 purpose 값을 사전 미측정. 'design'은 도미 관측목적 semantic 레이블이나 bridge read server 프로토콜 값은 'OBSERVATION'. 결과 5세션(S294~) 403 미규명 지속. 403 body 직접 추출로 reason=UNKNOWN_PURPOSE 확정 후 수정. RC-2(프로토콜 허용값 사전 미측정)."
+    ],
+    "oi_observations": [
+      "ROOL 403 근본원인 확정: _call_rool_tool body의 purpose='design'(OBSERVATION_PURPOSE 상수)이 ReadOnlyServer 미허용. raw urllib 테스트는 purpose='OBSERVATION' 전송이라 ALLOW였음 — 대조 실험으로 함수 내부 차이 격리. 403 body 직접 추출(_call_rool_tool은 HTTPError body 폐기)이 결정적 증거.",
+      "S294부터 5세션 미규명 원인: _call_rool_tool이 HTTPError를 'ROOL_HTTP_403'으로만 반환하고 body의 reason 필드를 버려, 추측만 반복. body 추출 진단으로 즉시 해소. 향후 HTTPError body 보존 패턴 고려.",
+      "IMPLEMENTABLE 검토 정확성: 버전단언 2곳(test_orchestration_rev2, test_mcp_http_bridge_v21) 동기화 필요로 판단했으나 grep 실측 결과 도미 RUNTIME_VERSION을 단언하는 테스트 부재(test_orchestration_rev2:118은 EXEC_RUNTIME_VERSION='1.5.0'으로 무관). S295 bridge 버전단언과 혼동. 실측으로 자기정정, 비오님께 정직 보고.",
+      "ROOL design_loop read 함수레벨 작동 완료로 automation L2 진전. observe_loop ROOL 통합만 잔여(S299)."
+    ],
+    "caddy_self_report": [
+      "INC-S298-001(RC-2): OBSERVATION_PURPOSE 상수 정의 시 ReadOnlyServer 프로토콜 허용값 미측정. S297 ROOL 2단계 구현 시 도입된 잠복 결함을 S298에 규명.",
+      "IMPLEMENTABLE 단계 버전단언 2곳 가정 오류: grep 전수조사를 IMPLEMENTABLE 이전에 했어야 함. 제니 ADVISORY도 이 가정을 승인근거로 인용. 구현 직전 실측으로 자기정정 후 비오님께 정직 보고 — 수정범위가 1파일로 축소됨.",
+      "긍정: S297 추측 반복(INC-S297-002)을 답습하지 않고 403 body 직접 추출 정공법으로 즉시 근본원인 확정(메모리 #28 준수). raw vs 도미함수 대조 실험으로 차이 정확 격리.",
+      "긍정: 영향도 최소화 — OBSERVATION_PURPOSE 상수 전역변경 대신 _call_rool_tool body만 국소 수정. 부수효과 차단.",
+      "긍정: 패치 스크립트 AST 사전검증 + count==1 확인으로 오매칭 차단. 런타임 재시작 후 health+ROOL read 실작동 이중 검증. pytest 전수 1769 회귀 0. git add 명시적 1파일(git add -A 미사용, status에 18개 변경+다수 untracked 확인 후 대상 1파일만 격리, INC-S288-004 재발방지)."
+    ],
+    "notable": "S298: ROOL 도미 _call_rool_tool 403 근본원인 규명·수정 완료(reason=UNKNOWN_PURPOSE, purpose 'design'→'OBSERVATION', v1.7.1, commit 1d6708f). S294부터 5세션 미규명 403 함수레벨 해소. ROOL read 실작동 검증 PASS(485 bytes ALLOW). DEP 1번 옵션(1줄 핀포인트, 도미 설계 생략). pytest 1769 회귀 0. INC 1건(RC-2). IMPLEMENTABLE 버전단언 가정 오류 자기정정.",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "N/A",
+      "M07_role_boundary": "FAIL (INC-S298-001 RC-2)"
+    }
+  },
+  "visibility_metrics_s298": {
+    "session": 298,
+    "date": "2026-06-30",
+    "M-01_active_canonical_key_count": 44,
+    "M-02_tier_d_quarantine_key_count": 155,
+    "M-03_ceiling_utilization_rate": "Tier D 이관 자동 처리 (session_close_generator)",
+    "M-04_session_delta_size": "MEDIUM (ROOL 403 근본원인 규명+1줄 수정, 5세션 미규명 해소, INC 1건, commit 1건)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S298.json",
+    "M-06_active_task_load": 8,
+    "M-07_stabilization_compliance": "FAIL (INC-S298-001)",
+    "chain_tip": "1d6708f",
+    "pytest_result": "1769 passed / 0 failed / 94 skipped",
+    "key_decisions": [
+      "ROOL _call_rool_tool 403 근본원인 = purpose 'design'(OBSERVATION_PURPOSE) ReadOnlyServer 미허용 (403 body 직접 추출로 확정)",
+      "수정: _call_rool_tool body purpose만 'OBSERVATION'으로 국소 변경, 상수 정의 유지 (영향도 최소화)",
+      "DEP 1번 옵션 채택: 1줄 핀포인트 수정으로 도미 설계 생략, 캐디 IMPLEMENTABLE+제니 TRUST_READY",
+      "제니 TRUST_READY HIGH, 즉시 승인 권고",
+      "IMPLEMENTABLE 버전단언 2곳 가정 오류 자기정정 — 도미 버전 단언 테스트 부재 실측 확인",
+      "ROOL design_loop read 함수레벨 작동 완료 (automation L2 진전, observe_loop S299 이월)"
+    ]
+  },
+  "system_changes_s299": {
+    "eag_chain": "EAG-S299-ROOL3-OBSERVE-001 → EAG-S299-OBSERVE-PARSE-FIX-001",
+    "commits": [
+      "990a14e",
+      "1cfca0e"
+    ],
+    "changes": [
+      "aiba_domi_runtime.py v1.7.1→v1.7.2: _run_observe_loop ROOL 통합 — _begin_observation 호출 + Fail-Closed 분기, POINTER·SC_FINAL read_file에 obs_id/session 인자 추가 (commit 990a14e)",
+      "aiba_domi_runtime.py v1.7.2→v1.7.3: _run_observe_loop bridge 래퍼 {status,content} 이중파싱 수정 — POINTER·SC_FINAL 언랩 로직 추가 (commit 1cfca0e)"
+    ]
+  },
+  "caddy_governance_record_s299": {
+    "date": "2026-06-30",
+    "eag_gates_this_session": [
+      "EAG-S299-ROOL3-OBSERVE-001 (observe_loop ROOL 통합 v1.7.2)",
+      "EAG-S299-OBSERVE-PARSE-FIX-001 (bridge 래퍼 이중파싱 수정 v1.7.3)"
+    ],
+    "incidents": [
+      "INC-S299-001 (RC-4): 1차 smoke FAIL 후 중단 조건 미명시로 pytest·git commit 연속 실행됨. 2차 작업부터 'smoke PASS 후에만 진행' 중단 규칙 명시로 교정.",
+      "INC-S299-002 (RC-2/명령규율): STEP 2 grep -o 따옴표가 PowerShell >> 입력 대기 유발. 메모리 #51(따옴표 충돌 사전점검) 위반. grep 제거·세미콜론 체인으로 교체하여 해소."
+    ],
+    "oi_observations": [
+      "OI-S299-001: _run_observe_loop session_context 파싱 버그는 S279 v1.5.0 최초 작성부터 존재한 선행 버그. ROOL 통합 라우팅(990a14e)은 정확. smoke test가 처음 표면화 — 테스트 커버리지 0건이 은폐했음. S289 제니 /observe 이중파싱 수정과 동일 패턴."
+    ],
+    "caddy_self_report": [
+      "INC-S299-001: smoke FAIL 시 후속 명령 중단 조건을 1차 순차 명령 출력 시 명시하지 않음. 비오님이 전체 실행하게 만든 책임은 캐디에 있음.",
+      "INC-S299-002: grep -o 명령의 따옴표/이스케이프를 PowerShell 출력 전 사전 점검하지 않아 >> 입력 대기를 유발. 메모리 #51 위반."
+    ],
+    "notable": "observe_loop ROOL 통합으로 도미 전 파일접근 경로(design+observe) ROOL 감사 일원화 달성. 부수적으로 S279 잠복 이중파싱 버그 표면화·해소. automation_readiness L2 항목 해소.",
+    "stabilization_metrics": {
+      "pytest": "1769 passed / 0 failed / 94 skipped",
+      "smoke_observe_rool": "PASS (ok=True, session_count=298, chain.tip=1d6708f)",
+      "domi_runtime_health": "v1.7.3 active, key_present=true",
+      "commits": "990a14e, 1cfca0e"
+    }
+  },
+  "visibility_metrics_s299": {
+    "M-01_active_canonical_key_count": "auto",
+    "note": "S299 마감 — system_changes_s295 자동 pop, archive 이관은 generator 자동 처리."
+  },
+  "system_changes_s300": {
+    "deployed_session": 300,
+    "commits": [
+      "565e678"
+    ],
+    "changes": [
+      "runtime/governance/wf05/wf05_orchestrator.py: _mcp_exec_scoped() 엔드포인트 수정 — /caddy/exec_scoped(bridge 미존재 경로) → /mcp JSON-RPC tools/call. 백업 .bak_s300 생성. AST PASS. (EAG-S300-ORCH-FIX-001, commit 565e678)",
+      "WF-05 live 2-cycle 안정 실행 검증 완료: Cycle1(session=S300) COMPLETE + Cycle2(session=S300-C2) COMPLETE. budget 14→10. audit log 4 entries 추가."
+    ],
+    "eag_chain": "EAG-S300-WF05-LIVE2-001, EAG-S300-ORCH-FIX-001, EAG-S300-CLOSE-001",
+    "pytest_result": "1769 passed / 0 failed / 94 skipped"
+  },
+  "caddy_governance_record_s300": {
+    "session": 300,
+    "date": "2026-06-30",
+    "eag_gates_this_session": [
+      "EAG-S300-WF05-LIVE2-001: WF-05 wf05_orchestrator.py live mode 2-cycle 실행 검증 (git_status × 2, budget 14→10)",
+      "EAG-S300-ORCH-FIX-001: wf05_orchestrator.py _mcp_exec_scoped() /caddy/exec_scoped → /mcp JSON-RPC 수정 (commit 565e678)",
+      "EAG-S300-CLOSE-001: S300 SESSION CLOSE"
+    ],
+    "incidents": [
+      "INC-S300-001 (RC-2): wf05_orchestrator.py _mcp_exec_scoped() 엔드포인트 오류 — bridge do_POST()에 /caddy/* 핸들러 없음(403 default fallback). S285 구현 시 bridge 코드 경로 실측 미선행. dry_run(S285)·n8n direct(S296) 경로에서 EXEC 미거쳐 S300까지 잠복. 403 body 추출 + bridge 코드 실측으로 근본원인 확정 후 수정."
+    ],
+    "oi_observations": [
+      "OI-S300-001 신규: WF-05 연속 cycle 실행 시 도미 Persistent Memory(_load_recent_conversation)가 이전 cycle 대화를 후속 cycle에 주입 → 불필요한 tool calls(list_dir/get_runtime_snapshot 계열) 유발 + ZPB 발동(consecutive_no_progress>=2). journalctl 실측으로 확정(Cycle2 round=0, output=246). session ID 독립화(S300-C2)로 우회 검증. 구조적 해결: wf05_orchestrator.py cycle별 session ID 자동 부여 필요. automation_readiness L1 범주."
+    ],
+    "caddy_self_report": [
+      "INC-S300-001(RC-2): bridge 코드 경로를 S285 구현 시 실측하지 않아 /caddy/exec_scoped 미존재 경로 사용. dry_run(S285)과 n8n direct(S296) 경로에서 EXEC 단계를 거치지 않아 S300까지 잠복. bridge do_POST() 전체 코드 직접 실측으로 /caddy/* 경로 미존재 확정(추측 없음). 메모리 #28 준수.",
+      "긍정: bridge코드 실측 → OLD pattern count==1 확인 → AST PASS → 백업 → 치환 → AST PASS → 잔여 검증 순서 정확 수행. git add 명시적 1파일(git add -A 미사용, INC-S288-004 재발방지). journalctl+코드 대조로 ZPB 근본원인 확정."
+    ],
+    "notable": "S300: _mcp_exec_scoped() 수정(commit 565e678) + WF-05 live 2-cycle PASS. pytest 1769/0. INC 1건(RC-2). OI-S300-001(Persistent Memory ZPB) 확정. budget 14→10.",
+    "stabilization_metrics": {
+      "M01_pre_output_check": "PASS",
+      "M02_session_context_load": "PASS",
+      "M03_eag_compliance": "PASS",
+      "M04_file_path_bash_only": "PASS",
+      "M05_delta_only_sc_update": "PASS",
+      "M06_present_files_before_scp": "PASS",
+      "M07_role_boundary": "FAIL (INC-S300-001 RC-2)"
+    }
+  },
+  "visibility_metrics_s300": {
+    "session": 300,
+    "date": "2026-06-30",
+    "M-01_active_canonical_key_count": "auto",
+    "M-02_tier_d_quarantine_key_count": "auto",
+    "M-03_ceiling_utilization_rate": "Tier D 이관 자동 처리 (session_close_generator)",
+    "M-04_session_delta_size": "MEDIUM (EXEC 수정 1건, WF-05 2-cycle 달성, OI 1건, INC 1건, commit 1건)",
+    "M-05_archive_file_status": "SESSION_CONTEXT_ARCHIVE_TIER_D_S300.json",
+    "M-06_active_task_load": 8,
+    "M-07_stabilization_compliance": "FAIL (INC-S300-001)",
+    "chain_tip": "565e678",
+    "pytest_result": "1769 passed / 0 failed / 94 skipped",
+    "key_decisions": [
+      "wf05_orchestrator.py _mcp_exec_scoped /caddy/exec_scoped → /mcp JSON-RPC 수정 (commit 565e678, bridge do_POST() 실측 기반)",
+      "WF-05 live 2-cycle PASS — orchestrator EXEC 경로 완전 검증 (S285 dry_run 이후 최초 live EXEC 성공)",
+      "OI-S300-001: Persistent Memory ZPB 원인 확정 + session ID 독립화 해결책 확립",
+      "WF-05 3-cycle 달성을 위한 cycle별 session ID 구조적 독립화 이월 등록"
     ]
   }
 }
