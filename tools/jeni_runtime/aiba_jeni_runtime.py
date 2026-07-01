@@ -356,8 +356,8 @@ def _log_call_cost(model: str, usage: dict, session: str, round_num: int) -> flo
                      "session": session, "round": round_num, "model": model,
                      "note": "usage metadata missing, cost tracking skipped"})
         return 0.0
-    inp = usage.get("prompt_token_count", 0)
-    out = usage.get("candidates_token_count", 0)
+    inp = usage.get("promptTokenCount", 0)
+    out = usage.get("candidatesTokenCount", 0)
     cost = (inp / 1_000_000 * GEMINI_COST_RATE_INPUT) + (out / 1_000_000 * GEMINI_COST_RATE_OUTPUT)
     today = _today_str()
     if _daily_cost_tracker["date"] != today:
