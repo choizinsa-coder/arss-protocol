@@ -52,6 +52,8 @@ OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
 OPENAI_MODEL_ESCALATE = os.environ.get("AIBA_DOMI_MODEL_ESCALATE", "gpt-4o")
 OPENAI_TIMEOUT = 55
 OPENAI_MAX_OUTPUT_TOKENS = 2048  # C-2: 4096 → 2048
+OPENAI_HTTP_RETRY_MAX = 3        # EAG-S305-DOMI-RETRY-001: 503/429 재시도
+OPENAI_HTTP_RETRY_BASE_SLEEP = 2 # 2s/4s/8s 지수 백오프
 
 OPENAI_API_KEY = os.environ.get("AIBA_OPENAI_API_KEY", "")
 
@@ -1103,20 +1105,69 @@ def _read_http_error_body(e: urllib.error.HTTPError) -> str:
         return "<unreadable>"
 
 
-def _execute_openai_request(req: urllib.request.Request) -> dict:
-    try:
-        with urllib.request.urlopen(req, timeout=OPENAI_TIMEOUT) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            message = _extract_message(data)
-            if not message:
-                finish = _extract_finish_reason(data)
+def _execute_openai_request(req: urllib.request.Request, loop_start: float = None) -> dict:
+    # EAG-S305-DOMI-RETRY-001: 503/429 재시도(a) + 예산가드(e). 제니 정합.
+    started_at = time.time()
+    _orig_url = req.full_url
+    _orig_data = req.data
+    _orig_headers = dict(req.headers)
+
+    def _new_req():
+        return urllib.request.Request(
+            _orig_url, data=_orig_data, headers=_orig_headers, method="POST")
+
+    def _retry_budget_ok(next_backoff):
+        base = loop_start if loop_start is not None else started_at
+        elapsed = time.time() - base
+        return (elapsed + OPENAI_TIMEOUT + next_backoff) < TIMEOUT_PREEMPT_SECONDS
+
+    def _parse_ok(data):
+        message = _extract_message(data)
+        if not message:
+            finish = _extract_finish_reason(data)
+            return {"ok": False, "text": "", "tool_calls": [], "message": {},
+                    "usage": {}, "error": f"NO_MESSAGE: finish_reason={finish}"}
+        return {"ok": True, "text": _extract_text_from_message(message),
+                "tool_calls": _extract_tool_calls(message),
+                "message": message, "usage": data.get("usage", {}), "error": None}
+
+    def _retry_http_with_backoff(code):
+        tag = f"after_{code}_retry"
+        for retry_idx in range(OPENAI_HTTP_RETRY_MAX):
+            sleep_sec = OPENAI_HTTP_RETRY_BASE_SLEEP * (2 ** retry_idx)
+            if not _retry_budget_ok(sleep_sec):
                 return {"ok": False, "text": "", "tool_calls": [], "message": {},
-                        "usage": {}, "error": f"NO_MESSAGE: finish_reason={finish}"}
-            return {"ok": True, "text": _extract_text_from_message(message),
-                    "tool_calls": _extract_tool_calls(message),
-                    "message": message, "usage": data.get("usage", {}),
-                    "error": None}
+                        "usage": {},
+                        "error": f"FAIL_CLOSED: HTTP_{code} retry would exceed time budget ({tag})"}
+            if _daily_budget_exceeded():
+                return {"ok": False, "text": "", "tool_calls": [], "message": {},
+                        "usage": {},
+                        "error": f"FAIL_CLOSED: HTTP_{code} retry blocked by daily budget ({tag})"}
+            time.sleep(sleep_sec)
+            try:
+                with urllib.request.urlopen(_new_req(), timeout=OPENAI_TIMEOUT) as resp_r:
+                    data_r = json.loads(resp_r.read().decode("utf-8"))
+                    return _parse_ok(data_r)
+            except urllib.error.HTTPError as e_r:
+                if e_r.code in (503, 429):
+                    code = e_r.code
+                    tag = f"after_{code}_retry"
+                    continue
+                return {"ok": False, "text": "", "tool_calls": [], "message": {},
+                        "usage": {}, "error": f"HTTP_{e_r.code}: {_read_http_error_body(e_r)} ({tag})"}
+            except Exception as e_r:
+                return {"ok": False, "text": "", "tool_calls": [], "message": {},
+                        "usage": {}, "error": f"FAIL_CLOSED: HTTP_{code} retry error — {e_r} ({tag})"}
+        return {"ok": False, "text": "", "tool_calls": [], "message": {},
+                "usage": {}, "error": f"HTTP_{code}: persisted after {OPENAI_HTTP_RETRY_MAX} retries ({tag})"}
+
+    try:
+        with urllib.request.urlopen(_new_req(), timeout=OPENAI_TIMEOUT) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return _parse_ok(data)
     except urllib.error.HTTPError as e:
+        if e.code in (503, 429):
+            return _retry_http_with_backoff(e.code)
         return {"ok": False, "text": "", "tool_calls": [], "message": {},
                 "usage": {}, "error": f"HTTP_{e.code}: {_read_http_error_body(e)}"}
     except urllib.error.URLError as e:
@@ -1130,7 +1181,7 @@ def _execute_openai_request(req: urllib.request.Request) -> dict:
                 "usage": {}, "error": f"FAIL_CLOSED: unexpected error — {e}"}
 
 
-def _call_openai(messages: list, escalate: bool = False) -> dict:
+def _call_openai(messages: list, escalate: bool = False, loop_start: float = None) -> dict:
     if not OPENAI_API_KEY:
         return {"ok": False, "text": "", "tool_calls": [], "message": {},
                 "usage": {}, "error": "FAIL_CLOSED: AIBA_OPENAI_API_KEY not configured"}
@@ -1147,7 +1198,7 @@ def _call_openai(messages: list, escalate: bool = False) -> dict:
         headers={"Content-Type": "application/json",
                  "Authorization": f"Bearer {OPENAI_API_KEY}",
                  "Content-Length": str(len(raw_body))}, method="POST")
-    return _execute_openai_request(req)
+    return _execute_openai_request(req, loop_start)
 
 
 # ── Message 조립 ──────────────────────────────────────────────────────────────
@@ -1323,7 +1374,7 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
                 round_num, _make_audit_bundle(round_num, audit_trail))
             break
 
-        call_result = _call_openai(accumulated, escalate=escalate)
+        call_result = _call_openai(accumulated, escalate=escalate, loop_start=loop_start)
         if not call_result["ok"]:
             final_result = _make_fail_closed_result(
                 "DESIGN_PARSE_FAILURE", call_result.get("error") or "",

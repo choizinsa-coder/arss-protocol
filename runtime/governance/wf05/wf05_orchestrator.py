@@ -32,7 +32,7 @@ import audit_wf05 as audit
 import guardian_client as guardian
 import agent_client as agent
 
-ORCH_VERSION = "1.3.0"
+ORCH_VERSION = "1.4.0"
 MAX_ROUNDS = 3
 EXEC_MODE = os.environ.get("WF05_EXEC_MODE", "dry_run")  # dry_run | live
 
@@ -196,10 +196,23 @@ def run_orchestration(payload):
             task + "\n\n[제니 REVISE 요청 - 이전 설계 재검토]\n" + design_text)
         domi_resp = agent.ask_domi(domi_prompt, enriched_context, session)
         if not domi_resp.get("ok"):
-            audit.log_stage(session, "DOMI", "FAIL",
-                            domi_resp.get("error", ""), round=rounds)
-            return {"status": "FAILED", "stage": "DOMI",
-                    "error": domi_resp.get("error"), "session": session, "round": rounds}
+            domi_error = domi_resp.get("error", "")
+            if domi_error == "DESIGN_PARSE_FAILURE":
+                # Layer 2 (EAG-S305-DOMI-RETRY-001): OpenAI API 실패 -> escalate 1회 재시도
+                audit.log_stage(session, "DOMI_ESCALATE", "RETRY",
+                                "DESIGN_PARSE_FAILURE -> escalate=True", round=rounds)
+                domi_resp = agent.ask_domi(domi_prompt, enriched_context, session, escalate=True)
+                if not domi_resp.get("ok"):
+                    audit.log_stage(session, "DOMI_ESCALATE", "FAIL",
+                                    domi_resp.get("error", ""), round=rounds)
+                    return {"status": "FAILED", "stage": "DOMI_ESCALATE",
+                            "error": domi_resp.get("error"), "session": session, "round": rounds}
+                audit.log_stage(session, "DOMI_ESCALATE", "PASS", "escalate succeeded", round=rounds)
+            else:
+                audit.log_stage(session, "DOMI", "FAIL",
+                                domi_error, round=rounds)
+                return {"status": "FAILED", "stage": "DOMI",
+                        "error": domi_error, "session": session, "round": rounds}
         design_text = domi_resp.get("text", "")
         audit.log_stage(session, "DOMI", "PASS", "design received", round=rounds)
 
