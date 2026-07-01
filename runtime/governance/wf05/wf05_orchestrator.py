@@ -32,7 +32,7 @@ import audit_wf05 as audit
 import guardian_client as guardian
 import agent_client as agent
 
-ORCH_VERSION = "1.5.0"
+ORCH_VERSION = "1.6.0"
 MAX_ROUNDS = 3
 EXEC_MODE = os.environ.get("WF05_EXEC_MODE", "dry_run")  # dry_run | live
 
@@ -181,6 +181,7 @@ def run_orchestration(payload):
     # 오케스트레이션 루프 (Domi -> Jeni -> REVISE 반복)
     design_text = ""
     verdict = "UNKNOWN"
+    jeni_feedback = ""
     rounds = 0
 
     while rounds < MAX_ROUNDS:
@@ -192,8 +193,12 @@ def run_orchestration(payload):
                     "session": session, "round": rounds}
 
         # STEP 1: Domi 설계
-        domi_prompt = task if rounds == 1 else (
-            task + "\n\n[제니 REVISE 요청 - 이전 설계 재검토]\n" + design_text)
+        if rounds == 1:
+            domi_prompt = task
+        else:
+            domi_prompt = (
+                task + "\n\n[제니 REVISE 요청 - 이전 설계 재검토]\n" + design_text
+                + (("\n\n[제니 판정 피드백]\n" + jeni_feedback) if jeni_feedback else ""))
         domi_resp = agent.ask_domi(domi_prompt, enriched_context, session)
         if not domi_resp.get("ok"):
             domi_error = domi_resp.get("error", "")
@@ -243,6 +248,7 @@ def run_orchestration(payload):
 
         if verdict == "TRUST_READY":
             break
+        jeni_feedback = jeni_resp.get("text", "")
         # TRUST_NOT_READY / TRUST_ADVISORY / UNKNOWN -> 다음 라운드 REVISE
 
     # MAX_ROUNDS 초과 처리
