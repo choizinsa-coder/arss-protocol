@@ -32,7 +32,7 @@ import audit_wf05 as audit
 import guardian_client as guardian
 import agent_client as agent
 
-ORCH_VERSION = "1.4.0"
+ORCH_VERSION = "1.5.0"
 MAX_ROUNDS = 3
 EXEC_MODE = os.environ.get("WF05_EXEC_MODE", "dry_run")  # dry_run | live
 
@@ -298,6 +298,24 @@ def run_orchestration(payload):
             "rounds": rounds, "session": session}
 
 
+def run_cycle_with_retry(payload):
+    """Layer 3 (EAG-S305-DOMI-RETRY-L3-001): 외부 API 계열 실패 시 cycle 1회 재시도.
+    DOMI_ESCALATE/JENI_ESCALATE(Layer 1·2 소진) 실패만 대상. budget>=1 확인 후 재시도.
+    재시도는 run_orchestration 재호출로 새 -Cy epoch 자동 부여(OI-S300 오염 방지).
+    Guardian DENIED/EXEC/MAX_ROUNDS/VETO/Logic은 제외(복구 불가 반복 차단).
+    """
+    result = run_orchestration(payload)
+    if (result.get("status") == "FAILED"
+            and result.get("stage") in ("DOMI_ESCALATE", "JENI_ESCALATE")):
+        st = guardian.status()
+        if st.get("ok") and st.get("budget_remaining", 0) >= 1:
+            audit.log_stage(result.get("session", "S000"), "CYCLE_RETRY", "RETRY",
+                            "stage=" + str(result.get("stage"))
+                            + " budget=" + str(st.get("budget_remaining")))
+            result = run_orchestration(payload)
+    return result
+
+
 def load_input():
     """--payload <json> 또는 stdin으로 payload 수신."""
     parser = argparse.ArgumentParser()
@@ -316,7 +334,7 @@ def main():
     if not payload:
         print(json.dumps({"status": "FAILED", "error": "NO_PAYLOAD"}))
         return
-    result = run_orchestration(payload)
+    result = run_cycle_with_retry(payload)
     print(json.dumps(result, ensure_ascii=False))
 
 
