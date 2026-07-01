@@ -531,15 +531,20 @@ def _measure_round_progress(tool_name: str, result_text: str, path_arg: str = ""
     """
     made_progress = False
     if tool_name == "read_file":
-        if (not _is_error_response(result_text)
-                and len(result_text) > 100
+        # S304-FIX (EAG-S304-DOMI-ZPB-FIX-001): _is_error_response가 성공한 read의
+        # 파일 내용 속 "403"/"DENIED" 토큰을 오분류하여 허위 무진척 -> ZPB.
+        # 에러 시 caller가 progress_text=""를 넘겨 len>100에서 자동 탈락하므로
+        # 마커 스캔 제거. CB _classify_tool_error와 동일 종류 결함의 형제 수정.
+        if (len(result_text) > 100
                 and path_arg not in _visited_paths):
             _progress_tracker["new_files_read"] += 1
             made_progress = True
     elif tool_name == "grep_scoped":
         # EAG-S292-ZPB-FIX-001: 정상 완료(오류 없음)이면 결과 0건도 진척으로 인정.
-        # 빈 결과 = "해당 패턴 없음"이라는 유효한 정보. 오류 응답만 진척 없음 처리.
-        if not _is_error_response(result_text):
+        # S304-FIX (EAG-S304-DOMI-ZPB-FIX-001): _is_error_response가 성공 grep 결과의
+        # 마커 토큰을 오분류하므로, caller의 "에러 시 빈 문자열" 규약에 의존하여
+        # 비어있지 않으면(성공) 진척으로 판정.
+        if result_text:
             _progress_tracker["new_facts_found"] += 1
             made_progress = True
 
@@ -1369,7 +1374,10 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
                     _prepare_llm_tool_message(name, tc["id"], result_text, tool_err))
 
                 # C-1: Circuit Breaker
-                cb_text = tool_err if tool_err else result_text
+                # S304-FIX (EAG-S304-DOMI-CB-FIX-001): 성공한 tool 결과(result_text=
+                # 파일내용)를 분류기에 넘기면 파일 내용 속 "TIMEOUT"/"403"/"DENIED"
+                # 토큰이 에러로 오분류되어 허위 CB가 발동함. 실제 실패(tool_err)에서만 분류.
+                cb_text = tool_err if tool_err else ""
                 if _circuit_breaker_check(name, cb_text or "", round_num + 1):
                     cb_break = True
 
