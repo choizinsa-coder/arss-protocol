@@ -1170,7 +1170,7 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
                 duration_ms=duration_ms, path=path))
 
             # C-1: Circuit Breaker (도구 결과 직후)
-            cb_text = tool_err if tool_err else result_text
+            cb_text = tool_err if tool_err else ""
             if _circuit_breaker_check(name, cb_text or "", round_num + 1):
                 final_result = _make_fail_closed_result(
                     "CIRCUIT_BREAKER_TRIGGERED",
