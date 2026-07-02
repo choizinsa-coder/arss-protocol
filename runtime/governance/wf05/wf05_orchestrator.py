@@ -31,8 +31,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import audit_wf05 as audit
 import guardian_client as guardian
 import agent_client as agent
+import ollama_classifier
 
-ORCH_VERSION = "1.8.0"
+ORCH_VERSION = "1.9.0"
 MAX_ROUNDS = 3
 EXEC_MODE = os.environ.get("WF05_EXEC_MODE", "dry_run")  # dry_run | live
 
@@ -427,6 +428,18 @@ def main():
     if not payload:
         print(json.dumps({"status": "FAILED", "error": "NO_PAYLOAD"}))
         return
+    # Ollama 분류레이어 (S315 Step 3 - EAG-S315-OLLAMA-STEP3-001)
+    task = payload.get('task', '')
+    classify = ollama_classifier.classify_task(task)
+    if classify.get('verdict') == 'SIMPLE' and classify.get('ok'):
+        session = payload.get('session', 'S000')
+        audit.log_stage(session, 'OLLAMA_CLASSIFY', 'SIMPLE', 'phi4-mini direct')
+        print(json.dumps({'status': 'COMPLETE_VIA_OLLAMA',
+                          'response': classify.get('raw', ''),
+                          'model': 'phi4-mini',
+                          'session': session}, ensure_ascii=False))
+        return
+
     result = run_cycle_with_retry(payload)
     result = fallback_router(result)  # Layer 4: Fallback Router (EAG-S310-WF05-FALLBACK-001)
     print(json.dumps(result, ensure_ascii=False))
