@@ -73,7 +73,7 @@ from rool_observation import (
 
 BRIDGE_HOST = "127.0.0.1"
 BRIDGE_PORT = 8443
-BRIDGE_VERSION = "2.9.0"
+BRIDGE_VERSION = "3.0.0"
 
 # ── EDA v1.2: Constraint Registry (EAG-S275-EDA-IMPLEMENTATION) ──────────────
 CONSTRAINT_REGISTRY_PATH = (
@@ -836,6 +836,21 @@ def _handle_ask_domi(arguments: dict) -> dict:
         return {"isError": True, "content": [{"type": "text", "text": f"FAIL_CLOSED: unexpected error — {e}"}]}
 
 
+def _build_exec_required_paths(arguments: dict) -> list:
+    """exec_scoped 실행 전 L2 게이트에 넘길 필수 읽기 경로 목록.
+    EDA v1.2 L2 게이트 연결 (EAG-S320-EDA-L2L3-001).
+    - run_script: params.script_path 가 있으면 해당 경로가 사전에 read_file로 읽혔어야 함.
+    - 목록이 비어 있으면 L2 게이트는 항상 PASS (단순 명령은 읽기 증거 불필요).
+    """
+    required = []
+    params = arguments.get("params", {}) or {}
+    script_path = params.get("script_path", "")
+    if script_path:
+        required.append(script_path)
+    required.extend(arguments.get("required_reads", []))
+    return required
+
+
 # -- exec_scoped 핸들러 (PT-S196-EXEC-SCOPED-001, S196 EAG-1) -----------------
 # v2.5.0 (S197 EAG-1): session_audit_id 발행 — Rev.2 C-5 병렬 audit 통합
 
@@ -862,6 +877,12 @@ def _handle_exec_scoped(arguments: dict) -> dict:
     }).encode()
     if len(body) > EXEC_MAX_PAYLOAD_BYTES:
         return {"isError": True, "content": [{"type": "text", "text": f"DENY: payload too large"}]}
+    # ── EDA v1.2 L2 Gate (EAG-S320-EDA-L2L3-001) ────────────────────────────
+    _l2_required = _build_exec_required_paths(arguments)
+    _l2_deny = _l2_gate(_l2_required)
+    if _l2_deny:
+        return {"isError": True, "content": [{"type": "text", "text": _l2_deny}]}
+    # ─────────────────────────────────────────────────────────────────────────
     try:
         req = urllib.request.Request(EXEC_RUNTIME_URL, data=body, headers={"Content-Type":"application/json","Content-Length":str(len(body))}, method="POST")
         with urllib.request.urlopen(req, timeout=EXEC_RUNTIME_TIMEOUT) as resp:
@@ -880,6 +901,11 @@ def _handle_exec_scoped(arguments: dict) -> dict:
                 result="PASS" if result.get("ok") else "FAIL",
                 sa_id=_sa_match.group(0) if _sa_match else "",
             )
+            # ─────────────────────────────────────────────────────────────────
+            # ── EDA v1.2 L3 Gate (EAG-S320-EDA-L2L3-001) ───────────────────
+            _l3_deny = _l3_gate(_exec_text)
+            if _l3_deny:
+                return {"isError": True, "content": [{"type": "text", "text": _l3_deny}]}
             # ─────────────────────────────────────────────────────────────────
             return {"isError": not result.get("ok", False), "content": [{"type": "text", "text": _exec_text}]}
     except urllib.error.URLError as e:

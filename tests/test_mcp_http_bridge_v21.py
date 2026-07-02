@@ -218,7 +218,7 @@ def test_tcb14_initialize():
         "params": {"protocolVersion": "2024-11-05"},
     }
     result = _handle_jsonrpc(body, gov_ctx)
-    assert result["result"]["serverInfo"]["version"] == "2.9.0"
+    assert result["result"]["serverInfo"]["version"] == "3.0.0"
 
 # ── TC-B15: notification (id=None) → None 반환 ───────────────────
 def test_tcb15_notification_returns_none():
