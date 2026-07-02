@@ -46,7 +46,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.7.11"
+RUNTIME_VERSION = "1.7.12"
 
 OPENAI_API_URL = "https://api.deepseek.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
@@ -517,14 +517,29 @@ _CB_THRESHOLDS: dict = {
 }
 _CB_THRESHOLD_DEFAULT = 2
 
-_cb_error_type: str = ""
-_cb_error_count: int = 0
+_thread_local = threading.local()  # CB-RESET-01 P2 (EAG-S319-CB-RESET-P2-001)
+
+
+def _get_loop_state():
+    # per-request loop state via thread-local. init on first access.
+    # CB-RESET-01 P2: isolates CB/ZPB/visited across concurrent requests.
+    ls = _thread_local
+    if not hasattr(ls, 'cb_error_type'):
+        ls.cb_error_type = ""
+        ls.cb_error_count = 0
+        ls.visited_paths = set()
+        ls.progress_tracker = {
+            "new_files_read": 0,
+            "new_facts_found": 0,
+            "consecutive_no_progress": 0,
+        }
+    return ls
 
 
 def _reset_circuit_breaker() -> None:
-    global _cb_error_type, _cb_error_count
-    _cb_error_type = ""
-    _cb_error_count = 0
+    ls = _get_loop_state()
+    ls.cb_error_type = ""
+    ls.cb_error_count = 0
 
 
 def _classify_tool_error(tool_name: str, result_text: str) -> str:
@@ -544,22 +559,22 @@ def _classify_tool_error(tool_name: str, result_text: str) -> str:
 
 def _circuit_breaker_check(tool_name: str, result_text: str, round_num: int) -> bool:
     """CHANGE_ID: S287-C1 — 연속 동일 오류 2회 이상 발생 시 차단(True)."""
-    global _cb_error_type, _cb_error_count
+    ls = _get_loop_state()
     err = _classify_tool_error(tool_name, result_text)
     if err == "":
-        _cb_error_type = ""
-        _cb_error_count = 0
+        ls.cb_error_type = ""
+        ls.cb_error_count = 0
         return False
-    if err == _cb_error_type:
-        _cb_error_count += 1
+    if err == ls.cb_error_type:
+        ls.cb_error_count += 1
     else:
-        _cb_error_type = err
-        _cb_error_count = 1
+        ls.cb_error_type = err
+        ls.cb_error_count = 1
     err_prefix = err.split(":")[0] if ":" in err else err
     threshold = _CB_THRESHOLDS.get(err_prefix, _CB_THRESHOLD_DEFAULT)
-    if _cb_error_count >= threshold:
+    if ls.cb_error_count >= threshold:
         _emit_event({"tag": "CIRCUIT_BREAKER", "agent": "domi", "round": round_num,
-                     "error_type": err, "count": _cb_error_count,
+                     "error_type": err, "count": ls.cb_error_count,
                      "threshold": threshold, "action": "ABORT"})
         return True
     return False
@@ -567,21 +582,19 @@ def _circuit_breaker_check(tool_name: str, result_text: str, round_num: int) -> 
 
 # ── D-1: visited_paths 중복 차단 + D-2: Zero Progress Breaker ─────────────────
 
-_visited_paths: set = set()
-_progress_tracker: dict = {
-    "new_files_read": 0,
-    "new_facts_found": 0,
-    "consecutive_no_progress": 0,
-}
 
 
 def _reset_loop_state() -> None:
     """루프 시작 시 D-1/D-2/C-1 상태 초기화."""
-    _visited_paths.clear()
-    _progress_tracker["new_files_read"] = 0
-    _progress_tracker["new_facts_found"] = 0
-    _progress_tracker["consecutive_no_progress"] = 0
-    _reset_circuit_breaker()
+    ls = _get_loop_state()
+    ls.visited_paths = set()
+    ls.progress_tracker = {
+        "new_files_read": 0,
+        "new_facts_found": 0,
+        "consecutive_no_progress": 0,
+    }
+    ls.cb_error_type = ""
+    ls.cb_error_count = 0
 
 
 def _is_error_response(text: str) -> bool:
@@ -599,8 +612,9 @@ def _check_duplicate_action(tool_name: str, path_arg: str) -> str | None:
     CHANGE_ID: S287-D1 — 중복 검사만 수행 (visited 추가는 진척 측정 후 별도).
     실행 순서: 중복검사(여기) → 도구실행 → 진척측정 → visited 추가.
     """
+    ls = _get_loop_state()
     if tool_name in ("read_file", "list_dir") and path_arg:
-        if path_arg in _visited_paths:
+        if path_arg in ls.visited_paths:
             return (
                 f"DUPLICATE_ACTION: {path_arg}는 이미 탐색한 경로입니다. "
                 "다른 경로를 탐색하거나 지금 바로 [DESIGN]을 출력하십시오."
@@ -613,6 +627,7 @@ def _measure_round_progress(tool_name: str, result_text: str, path_arg: str = ""
     CHANGE_ID: S287-D2 — 진척 측정 (visited 추가 전 호출).
     True 반환 시 → 2라운드 연속 무진전 → ZPB 발동.
     """
+    ls = _get_loop_state()
     made_progress = False
     if tool_name == "read_file":
         # S304-FIX (EAG-S304-DOMI-ZPB-FIX-001): _is_error_response가 성공한 read의
@@ -620,8 +635,8 @@ def _measure_round_progress(tool_name: str, result_text: str, path_arg: str = ""
         # 에러 시 caller가 progress_text=""를 넘겨 len>100에서 자동 탈락하므로
         # 마커 스캔 제거. CB _classify_tool_error와 동일 종류 결함의 형제 수정.
         if (result_text  # [ZPB-ALGO-01] EAG-S317-CB-ZPB-FIX-001
-                and path_arg not in _visited_paths):
-            _progress_tracker["new_files_read"] += 1
+                and path_arg not in ls.visited_paths):
+            ls.progress_tracker["new_files_read"] += 1
             made_progress = True
     elif tool_name == "grep_scoped":
         # EAG-S292-ZPB-FIX-001: 정상 완료(오류 없음)이면 결과 0건도 진척으로 인정.
@@ -629,14 +644,14 @@ def _measure_round_progress(tool_name: str, result_text: str, path_arg: str = ""
         # 마커 토큰을 오분류하므로, caller의 "에러 시 빈 문자열" 규약에 의존하여
         # 비어있지 않으면(성공) 진척으로 판정.
         if result_text:
-            _progress_tracker["new_facts_found"] += 1
+            ls.progress_tracker["new_facts_found"] += 1
             made_progress = True
 
     if not made_progress:
-        _progress_tracker["consecutive_no_progress"] += 1
+        ls.progress_tracker["consecutive_no_progress"] += 1
     else:
-        _progress_tracker["consecutive_no_progress"] = 0
-    return _progress_tracker["consecutive_no_progress"] >= 2
+        ls.progress_tracker["consecutive_no_progress"] = 0
+    return ls.progress_tracker["consecutive_no_progress"] >= 2
 
 
 # ── OAuth Token ───────────────────────────────────────────────────────────────
@@ -1555,7 +1570,7 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
 
                 # CHANGE_ID: S287-D1 — ④ visited 추가 (진척 측정 후, 중복 아닐 때만)
                 if name in ("read_file", "list_dir") and path and not dup_err:
-                    _visited_paths.add(path)
+                    _get_loop_state().visited_paths.add(path)
 
             if cb_break:
                 final_result = _make_fail_closed_result(
@@ -1565,6 +1580,7 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
                 break
             if zpb_break:
                 _emit_event({"tag": "ZERO_PROGRESS_BREAKER", "agent": "domi",
+                             "session": session,
                              "round": round_num + 1, "action": "FAIL_CLOSED"})
                 final_result = _make_fail_closed_result(
                     "ZERO_PROGRESS_BREAKER",
