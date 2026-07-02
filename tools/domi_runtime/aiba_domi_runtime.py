@@ -46,7 +46,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.7.3"
+RUNTIME_VERSION = "1.7.6"
 
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
@@ -658,6 +658,29 @@ def _begin_observation(session_id: str):
                      "reason": resp.get("reason", "UNKNOWN")})
         return None
     except urllib.error.HTTPError as e:
+        if e.code == 401:
+            # 브리지 재시작 후 토큰 만료: 무효화 후 1회 재시도 (EAG-S311-DOMI-ROOL-FAILOPEN-001)
+            _invalidate_token()
+            token2, err2 = _get_access_token()
+            if not err2:
+                try:
+                    body2 = json.dumps({"session": session_id}).encode()
+                    req2 = urllib.request.Request(
+                        OBSERVE_BEGIN_ENDPOINT, data=body2,
+                        headers={"Content-Type": "application/json",
+                                 "Authorization": "Bearer " + token2,
+                                 "Content-Length": str(len(body2))}, method="POST")
+                    with urllib.request.urlopen(req2, timeout=ROOL_TIMEOUT) as r2:
+                        resp2 = json.loads(r2.read().decode())
+                    if resp2.get("status") == "ALLOW":
+                        obs_id2 = resp2.get("observation_id", "")
+                        _emit_event({"tag": "ROOL_BEGIN", "agent": "domi",
+                                     "session": session_id,
+                                     "observation_id": obs_id2[:12] + "...",
+                                     "note": "401_token_refresh_retry"})
+                        return obs_id2
+                except Exception:
+                    pass
         _emit_event({"tag": "ROOL_BEGIN_FAIL", "agent": "domi",
                      "session": session_id, "reason": "HTTP_" + str(e.code)})
         return None
@@ -869,14 +892,25 @@ def _execute_function_call(name: str, args: dict,
         return _call_bridge_tool("write_file", {"target_path": target_path, "content": content})
     # ROOL 2단계 (EAG-S297-ROOL2-IMPL-001): read_file -- ROOL 게이트 경유
     # CHANGE_ID: S297-ROOL2-READ-BRANCH
-    # observation_id 있음 = design_loop 경로 -> ROOL /observe/read
-    # observation_id 없음 = observe_loop 등 S298 이월 경로 -> 기존 bridge 유지 (하위 호환)
+    # CHANGE_ID: S311-ROOL-READ-FAILOPEN (EAG-S311-ROOL-READ-FAILOPEN-001)
+    # observation_id 있음 = ROOL /observe/read (실패 시 bridge Fail-Open → CB 차단)
+    # observation_id 없음 = 기존 bridge 유지 (하위 호환)
     if name == "read_file":
         path = args.get("path", "")
         if path and not _is_path_allowed(path):
             return "", "PATH_NOT_ALLOWED: '" + path + "'"
         if observation_id:
-            return _call_rool_tool(observation_id, session_id, path)
+            rool_result, rool_err = _call_rool_tool(observation_id, session_id, path)
+            if rool_err:
+                # Fail-Open: ROOL read 실패 → bridge 경로로 조용히 전환 (CB 차단)
+                _emit_event({"tag": "ROOL_READ_FAIL_OPEN", "agent": "domi",
+                             "session": session_id, "path": path,
+                             "error": str(rool_err)[:120]})
+                fo_params: dict = {"purpose": "OBSERVATION"}
+                if path:
+                    fo_params["path"] = path
+                return _call_bridge_tool("read_file", fo_params)
+            return rool_result, None
         call_params_rf: dict = {"purpose": "OBSERVATION"}
         if path:
             call_params_rf["path"] = path
@@ -1409,16 +1443,12 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
             "SESSION_CONTEXT load failed. Manual recovery required.",
             0, _make_audit_bundle(0, []))
 
-    # ROOL 2단계 (EAG-S297-ROOL2-IMPL-001): Observation Session 시작
-    # CHANGE_ID: S297-ROOL2-LOOP-BEGIN
-    obs_id = _begin_observation(session)
-    if obs_id is None:
-        return _make_fail_closed_result(
-            "ROOL_BEGIN_FAILED",
-            "bridge /observe/begin 실패. Observation Session 미초기화.",
-            0, _make_audit_bundle(0, []))
-    _emit_event({"tag": "ROOL_SESSION_ACTIVE", "agent": "domi",
-                 "session": session, "observation_id": obs_id[:12] + "..."})
+    # ROOL 2단계: /observe/read 403 원인 미확정으로 임시 중단 (EAG-S311-ROOL-SUSPEND-001)
+    # 재활성화 조건: /observe/read 403 원인 확정 + 수정 후 DEP 완주
+    # ROOL 인프라 코드(_begin_observation/_call_rool_tool)는 보존됨
+    obs_id = None
+    _emit_event({"tag": "ROOL_SUSPENDED", "agent": "domi", "session": session,
+                 "note": "ROOL /observe/read 403 미확정. obs_id=None, bridge 경로 사용."})
 
     _reset_loop_state()  # D-1/D-2/C-1 초기화
     memory = _load_memory_context()
