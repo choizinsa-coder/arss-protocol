@@ -46,7 +46,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.7.10"
+RUNTIME_VERSION = "1.7.11"
 
 OPENAI_API_URL = "https://api.deepseek.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
@@ -1442,7 +1442,7 @@ def _run_observe_loop(targets: list, session: str = "S000") -> dict:
 # ── Persistent Multi-Turn Loop ────────────────────────────────────────────────
 
 
-def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate: bool = False) -> dict:
+def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate: bool = False, max_rounds=None) -> dict:
     loop_start = time.time()
 
     # CHANGE_ID: S287-J2 / 도미 ④ — 일일 예산 HARD 차단 (이벤트 로그 후 Fail-Closed)
@@ -1477,7 +1477,11 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
     round_num = 0
     final_result = None
 
-    while round_num <= MAX_TOOL_ROUNDS:
+    _effective_rounds = (
+        max_rounds if (isinstance(max_rounds, int) and 1 <= max_rounds <= 20)
+        else MAX_TOOL_ROUNDS
+    )  # EAG-S318-ROUNDS-SCALE-001
+    while round_num <= _effective_rounds:
         elapsed = time.time() - loop_start
         if elapsed >= TIMEOUT_PREEMPT_SECONDS:
             final_result = _make_fail_closed_result(
@@ -1506,7 +1510,7 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
             if round_num >= MAX_TOOL_ROUNDS:
                 final_result = _make_fail_closed_result(
                     "MAX_ROUNDS_EXCEEDED",
-                    f"tool_call at round {round_num}, max={MAX_TOOL_ROUNDS}",
+                    f"tool_call at round {round_num}, max={_effective_rounds}",
                     round_num, _make_audit_bundle(round_num, audit_trail))
                 break
 
@@ -1613,6 +1617,7 @@ class DomiRuntimeHandler(BaseHTTPRequestHandler):
                 "model": OPENAI_MODEL, "model_escalate": OPENAI_MODEL_ESCALATE,
                 "key_present": bool(OPENAI_API_KEY),
                 "max_tool_rounds": MAX_TOOL_ROUNDS,
+                "max_tool_rounds_effective": MAX_TOOL_ROUNDS,  # EAG-S318-ROUNDS-SCALE-001
                 "max_total_seconds": MAX_TOTAL_SECONDS,
                 "max_output_tokens": OPENAI_MAX_OUTPUT_TOKENS,
                 "persistent_memory": True, "function_calling": True,
@@ -1658,10 +1663,11 @@ class DomiRuntimeHandler(BaseHTTPRequestHandler):
         context = req_body.get("context", "")
         session = req_body.get("session", "S000")
         escalate = bool(req_body.get("escalate", False))
+        max_rounds = req_body.get("max_rounds", None)  # EAG-S318-ROUNDS-SCALE-001
         if not prompt:
             self._send_json(400, {"ok": False, "error": "prompt required"})
             return
-        result = _run_design_loop(prompt, context, session, escalate=escalate)
+        result = _run_design_loop(prompt, context, session, escalate=escalate, max_rounds=max_rounds)
         if not result.get("ok"):
             print(f"[DOMI_RUNTIME] FAIL: {result.get('error', 'unknown')}",
                   file=sys.stderr, flush=True)
