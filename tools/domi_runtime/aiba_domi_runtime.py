@@ -46,7 +46,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.7.9"
+RUNTIME_VERSION = "1.7.10"
 
 OPENAI_API_URL = "https://api.deepseek.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
@@ -507,6 +507,16 @@ def _log_call_cost(model: str, usage: dict, session: str, round_num: int) -> flo
 
 # ── C-1: Circuit Breaker ──────────────────────────────────────────────────────
 
+# [CB-THRESHOLD-01] (EAG-S317-CB-ZPB-FIX-001):
+_CB_THRESHOLDS: dict = {
+    "AUTH_ERROR": 1,
+    "FILE_ERROR": 2,
+    "DEPTH_LIMIT_ERROR": 3,
+    "TIMEOUT": 3,
+    "DUPLICATE": 3,
+}
+_CB_THRESHOLD_DEFAULT = 2
+
 _cb_error_type: str = ""
 _cb_error_count: int = 0
 
@@ -545,9 +555,12 @@ def _circuit_breaker_check(tool_name: str, result_text: str, round_num: int) -> 
     else:
         _cb_error_type = err
         _cb_error_count = 1
-    if _cb_error_count >= 2:
+    err_prefix = err.split(":")[0] if ":" in err else err
+    threshold = _CB_THRESHOLDS.get(err_prefix, _CB_THRESHOLD_DEFAULT)
+    if _cb_error_count >= threshold:
         _emit_event({"tag": "CIRCUIT_BREAKER", "agent": "domi", "round": round_num,
-                     "error_type": err, "count": _cb_error_count, "action": "ABORT"})
+                     "error_type": err, "count": _cb_error_count,
+                     "threshold": threshold, "action": "ABORT"})
         return True
     return False
 
@@ -606,7 +619,7 @@ def _measure_round_progress(tool_name: str, result_text: str, path_arg: str = ""
         # 파일 내용 속 "403"/"DENIED" 토큰을 오분류하여 허위 무진척 -> ZPB.
         # 에러 시 caller가 progress_text=""를 넘겨 len>100에서 자동 탈락하므로
         # 마커 스캔 제거. CB _classify_tool_error와 동일 종류 결함의 형제 수정.
-        if (len(result_text) > 100
+        if (result_text  # [ZPB-ALGO-01] EAG-S317-CB-ZPB-FIX-001
                 and path_arg not in _visited_paths):
             _progress_tracker["new_files_read"] += 1
             made_progress = True

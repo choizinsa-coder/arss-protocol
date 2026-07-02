@@ -53,7 +53,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.11.3"
+RUNTIME_VERSION = "4.11.4"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.0-flash")
@@ -622,6 +622,15 @@ def _execute_function_call(name: str, args: dict) -> tuple:
 
 # ── C-1: Circuit Breaker — 연속 동일 오류 조기 종료 ──────────────────────────
 
+# [CB-THRESHOLD-01] (EAG-S317-CB-ZPB-FIX-001):
+_CB_THRESHOLDS: dict = {
+    "AUTH_ERROR": 1,
+    "FILE_ERROR": 2,
+    "DEPTH_LIMIT_ERROR": 3,
+    "TIMEOUT": 3,
+}
+_CB_THRESHOLD_DEFAULT = 2
+
 _cb_error_type: str = ""
 _cb_error_count: int = 0
 
@@ -659,9 +668,12 @@ def _circuit_breaker_check(tool_name: str, result_text: str, round_num: int) -> 
     else:
         _cb_error_type = err
         _cb_error_count = 1
-    if _cb_error_count >= 2:
+    err_prefix = err.split(":")[0] if ":" in err else err
+    threshold = _CB_THRESHOLDS.get(err_prefix, _CB_THRESHOLD_DEFAULT)
+    if _cb_error_count >= threshold:
         _emit_event({"tag": "CIRCUIT_BREAKER", "agent": "jeni", "round": round_num,
-                     "error_type": err, "count": _cb_error_count, "action": "ABORT"})
+                     "error_type": err, "count": _cb_error_count,
+                     "threshold": threshold, "action": "ABORT"})
         return True
     return False
 
