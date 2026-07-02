@@ -1,5 +1,5 @@
 """
-agent_client.py v1.0.0
+agent_client.py v1.0.1
 WF-05 Orchestrator -- Domi/Jeni Runtime Client
 EAG: EAG-S285-WF05-ORCHESTRATOR-001
 
@@ -19,9 +19,11 @@ JENI_BASE = "http://127.0.0.1:8447"
 ASK_TIMEOUT = 125  # 런타임 MAX_TOTAL_SECONDS=120 + 여유
 
 
-def _ask(base, prompt, context, session, escalate=False):
+def _ask(base, prompt, context, session, escalate=False, max_rounds=None):
     body = {"prompt": prompt, "context": context,
             "session": session, "escalate": escalate}
+    if max_rounds is not None:
+        body["max_rounds"] = max_rounds
     raw = json.dumps(body).encode("utf-8")
     req = urllib.request.Request(
         base + "/ask", data=raw,
@@ -40,9 +42,9 @@ def _ask(base, prompt, context, session, escalate=False):
         return None, "AGENT_UNREACHABLE: " + str(e)
 
 
-def ask_domi(prompt, context, session, escalate=False):
+def ask_domi(prompt, context, session, escalate=False, max_rounds=None):
     """도미 설계 요청. 성공 시 text 반환."""
-    resp, err = _ask(DOMI_BASE, prompt, context, session, escalate)
+    resp, err = _ask(DOMI_BASE, prompt, context, session, escalate, max_rounds)
     if err:
         return {"ok": False, "error": err}
     return resp

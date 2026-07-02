@@ -33,7 +33,7 @@ import guardian_client as guardian
 import agent_client as agent
 import ollama_classifier
 
-ORCH_VERSION = "1.9.0"
+ORCH_VERSION = "1.9.1"
 MAX_ROUNDS = 3
 EXEC_MODE = os.environ.get("WF05_EXEC_MODE", "dry_run")  # dry_run | live
 
@@ -157,7 +157,7 @@ def _build_vps_path_context(base_session):
     )
 
 
-def run_orchestration(payload):
+def run_orchestration(payload, max_rounds=None):
     """메인 오케스트레이션 루프.
     payload: {"task": "...", "context": "...", "session": "S285", "command": "pytest", "params": {...}}
     """
@@ -206,14 +206,14 @@ def run_orchestration(payload):
             domi_prompt = (
                 task + "\n\n[제니 REVISE 요청 - 이전 설계 재검토]\n" + design_text
                 + (("\n\n[제니 판정 피드백]\n" + jeni_feedback) if jeni_feedback else ""))
-        domi_resp = agent.ask_domi(domi_prompt, enriched_context, session)
+        domi_resp = agent.ask_domi(domi_prompt, enriched_context, session, max_rounds=max_rounds)
         if not domi_resp.get("ok"):
             domi_error = domi_resp.get("error", "")
             if domi_error == "DESIGN_PARSE_FAILURE":
                 # Layer 2 (EAG-S305-DOMI-RETRY-001): OpenAI API 실패 -> escalate 1회 재시도
                 audit.log_stage(session, "DOMI_ESCALATE", "RETRY",
                                 "DESIGN_PARSE_FAILURE -> escalate=True", round=rounds)
-                domi_resp = agent.ask_domi(domi_prompt, enriched_context, session, escalate=True)
+                domi_resp = agent.ask_domi(domi_prompt, enriched_context, session, escalate=True, max_rounds=max_rounds)
                 if not domi_resp.get("ok"):
                     audit.log_stage(session, "DOMI_ESCALATE", "FAIL",
                                     domi_resp.get("error", ""), round=rounds)
@@ -311,13 +311,13 @@ def run_orchestration(payload):
             "rounds": rounds, "session": session}
 
 
-def run_cycle_with_retry(payload):
+def run_cycle_with_retry(payload, max_rounds=None):
     """Layer 3 (EAG-S305-DOMI-RETRY-L3-001): 외부 API 계열 실패 시 cycle 1회 재시도.
     DOMI_ESCALATE/JENI_ESCALATE(Layer 1·2 소진) 실패만 대상. budget>=1 확인 후 재시도.
     재시도는 run_orchestration 재호출로 새 -Cy epoch 자동 부여(OI-S300 오염 방지).
     Guardian DENIED/EXEC/MAX_ROUNDS/VETO/Logic은 제외(복구 불가 반복 차단).
     """
-    result = run_orchestration(payload)
+    result = run_orchestration(payload, max_rounds=max_rounds)
     if (result.get("status") == "FAILED"
             and result.get("stage") in ("DOMI_ESCALATE", "JENI_ESCALATE")):
         st = guardian.status()
@@ -325,7 +325,7 @@ def run_cycle_with_retry(payload):
             audit.log_stage(result.get("session", "S000"), "CYCLE_RETRY", "RETRY",
                             "stage=" + str(result.get("stage"))
                             + " budget=" + str(st.get("budget_remaining")))
-            result = run_orchestration(payload)
+            result = run_orchestration(payload, max_rounds=max_rounds)
     return result
 
 
@@ -440,7 +440,12 @@ def main():
                           'session': session}, ensure_ascii=False))
         return
 
-    result = run_cycle_with_retry(payload)
+    # ROUNDS-SCALE-01 WF-05 연동 (EAG-S319-ROUNDS-WF05-001)
+    max_rounds_for_domi = payload.get('max_rounds', None)
+    if max_rounds_for_domi is None:
+        if classify.get('ok') and classify.get('verdict') == 'COMPLEX':
+            max_rounds_for_domi = 12  # 확인된 복잡 태스트 -> 툴 라운드 상향
+    result = run_cycle_with_retry(payload, max_rounds=max_rounds_for_domi)
     result = fallback_router(result)  # Layer 4: Fallback Router (EAG-S310-WF05-FALLBACK-001)
     print(json.dumps(result, ensure_ascii=False))
 
