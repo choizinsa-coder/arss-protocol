@@ -222,7 +222,7 @@ class TestBridgeSessionAuditIdIssuing(unittest.TestCase):
         import importlib
         import mcp_http_bridge as bridge
         importlib.reload(bridge)
-        self.assertEqual(bridge.BRIDGE_VERSION, "2.8.0")
+        self.assertEqual(bridge.BRIDGE_VERSION, "2.9.0")
 
     def test_c5_exec_scoped_generates_session_audit_id(self):
         """C-5-6: exec_scoped 호출 시 session_audit_id가 발행된다"""

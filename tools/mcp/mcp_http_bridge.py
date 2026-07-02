@@ -73,7 +73,7 @@ from rool_observation import (
 
 BRIDGE_HOST = "127.0.0.1"
 BRIDGE_PORT = 8443
-BRIDGE_VERSION = "2.8.0"
+BRIDGE_VERSION = "2.9.0"
 
 # ── EDA v1.2: Constraint Registry (EAG-S275-EDA-IMPLEMENTATION) ──────────────
 CONSTRAINT_REGISTRY_PATH = (
@@ -253,6 +253,13 @@ INTERNAL_CONNECTOR_NAME = "ARSS Protocol"
 EXTERNAL_PAYLOAD_ACTOR_TRUSTED = False
 
 READ_HMAC_SECRET = os.environ.get("AIBA_READ_HMAC_SECRET", "")
+
+
+def _get_read_hmac_secret() -> str:
+    """Lazy HMAC secret read. OI-S311-001 fix: avoids module-load-time env capture."""
+    return os.environ.get("AIBA_READ_HMAC_SECRET", "")
+
+
 INTERNAL_CONNECTOR_IDENTITY = "claude.ai-arss-protocol"
 
 READ_ALLOWED_ACTORS = frozenset(AGENT_ROOT_ALLOWLIST.keys())  # domi, jeni, caddy
@@ -731,7 +738,7 @@ def _oauth_token(form_body: str) -> tuple:
 
 def _make_internal_hmac(actor_id: str, nonce: str, ts: float, payload: str) -> str:
     msg = f"{actor_id}:{INTERNAL_CONNECTOR_IDENTITY}:{nonce}:{ts}:{payload}"
-    return hmac_lib.new(READ_HMAC_SECRET.encode(), msg.encode(), hashlib.sha256).hexdigest()
+    return hmac_lib.new(_get_read_hmac_secret().encode(), msg.encode(), hashlib.sha256).hexdigest()
 
 
 def _build_read_kwargs(actor_id: str, payload: str) -> dict:
@@ -743,7 +750,7 @@ def _build_read_kwargs(actor_id: str, payload: str) -> dict:
         hmac_value=_make_internal_hmac(actor_id, nonce, ts, payload),
         nonce=nonce,
         timestamp=ts,
-        hmac_secret=READ_HMAC_SECRET,
+        hmac_secret=_get_read_hmac_secret(),
     )
 
 
@@ -1111,7 +1118,7 @@ def _handle_tool_list() -> dict:
 
 
 def _handle_read_tool(tool_name: str, arguments: dict) -> dict:
-    if not READ_HMAC_SECRET:
+    if not _get_read_hmac_secret():
         return {"isError": True, "content": [{"type": "text", "text": "DENY: READ_HMAC_SECRET not configured"}]}
     actor_id = arguments.get("actor_id", "")
     purpose = arguments.get("purpose", "")

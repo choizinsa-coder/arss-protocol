@@ -14,6 +14,7 @@ import json
 import time
 import importlib
 import unittest.mock as mock
+import os
 import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -87,7 +88,7 @@ def test_tcb03_ping_still_works():
 
 # ── TC-B04: READ_HMAC_SECRET 미설정 시 DENY ──────────────────────
 def test_tcb04_no_hmac_secret_deny():
-    with patch('mcp_http_bridge.READ_HMAC_SECRET', ''):
+    with patch.dict(os.environ, {'AIBA_READ_HMAC_SECRET': ''}):
         result = _handle_tool_call("read_file", {
             "path": "/some/path",
             "actor_id": "caddy",
@@ -98,7 +99,7 @@ def test_tcb04_no_hmac_secret_deny():
 
 # ── TC-B05: unknown actor_id DENY ────────────────────────────────
 def test_tcb05_unknown_actor_deny():
-    with patch('mcp_http_bridge.READ_HMAC_SECRET', 'test-secret'):
+    with patch.dict(os.environ, {'AIBA_READ_HMAC_SECRET': 'test-secret'}):
         result = _handle_tool_call("read_file", {
             "path": "/some/path",
             "actor_id": "hacker",
@@ -111,7 +112,7 @@ def test_tcb05_unknown_actor_deny():
 def test_tcb06_read_server_delegation():
     mock_instance = MagicMock()
     mock_instance.read_file.return_value = {"status": "ALLOW", "content": "hello"}
-    with patch('mcp_http_bridge.READ_HMAC_SECRET', 'test-secret'), \
+    with patch.dict(os.environ, {'AIBA_READ_HMAC_SECRET': 'test-secret'}), \
          patch('mcp_http_bridge._read_server', mock_instance):
         result = _handle_tool_call("read_file", {
             "path": "/opt/arss/engine/arss-protocol/some.py",
@@ -124,7 +125,7 @@ def test_tcb06_read_server_delegation():
 def test_tcb07_read_deny_maps_to_error():
     mock_instance = MagicMock()
     mock_instance.read_file.return_value = {"status": "DENY", "reason": "PATH_NOT_IN_WHITELIST"}
-    with patch('mcp_http_bridge.READ_HMAC_SECRET', 'test-secret'), \
+    with patch.dict(os.environ, {'AIBA_READ_HMAC_SECRET': 'test-secret'}), \
          patch('mcp_http_bridge._read_server', mock_instance):
         result = _handle_tool_call("read_file", {
             "path": "/etc/passwd",
@@ -172,7 +173,7 @@ def test_tcb11_runtime_snapshot_delegation():
     mock_instance.get_runtime_snapshot.return_value = {
         "status": "ALLOW", "snapshot": {"services": {}}
     }
-    with patch('mcp_http_bridge.READ_HMAC_SECRET', 'test-secret'), \
+    with patch.dict(os.environ, {'AIBA_READ_HMAC_SECRET': 'test-secret'}), \
          patch('mcp_http_bridge._read_server', mock_instance):
         result = _handle_tool_call("get_runtime_snapshot", {
             "actor_id": "domi",
@@ -184,7 +185,7 @@ def test_tcb11_runtime_snapshot_delegation():
 def test_tcb12_domi_actor_allowed():
     mock_instance = MagicMock()
     mock_instance.read_file.return_value = {"status": "ALLOW", "content": "design"}
-    with patch('mcp_http_bridge.READ_HMAC_SECRET', 'test-secret'), \
+    with patch.dict(os.environ, {'AIBA_READ_HMAC_SECRET': 'test-secret'}), \
          patch('mcp_http_bridge._read_server', mock_instance):
         result = _handle_tool_call("read_file", {
             "path": "/opt/arss/engine/arss-protocol/design.md",
@@ -197,7 +198,7 @@ def test_tcb12_domi_actor_allowed():
 def test_tcb13_jeni_actor_allowed():
     mock_instance = MagicMock()
     mock_instance.read_audit_event.return_value = {"status": "ALLOW", "events": []}
-    with patch('mcp_http_bridge.READ_HMAC_SECRET', 'test-secret'), \
+    with patch.dict(os.environ, {'AIBA_READ_HMAC_SECRET': 'test-secret'}), \
          patch('mcp_http_bridge._read_server', mock_instance):
         result = _handle_tool_call("read_audit_event", {
             "log_path": "/opt/arss/engine/arss-protocol/tools/mcp/audit.log",
@@ -217,7 +218,7 @@ def test_tcb14_initialize():
         "params": {"protocolVersion": "2024-11-05"},
     }
     result = _handle_jsonrpc(body, gov_ctx)
-    assert result["result"]["serverInfo"]["version"] == "2.8.0"
+    assert result["result"]["serverInfo"]["version"] == "2.9.0"
 
 # ── TC-B15: notification (id=None) → None 반환 ───────────────────
 def test_tcb15_notification_returns_none():

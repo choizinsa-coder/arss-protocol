@@ -46,7 +46,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.7.6"
+RUNTIME_VERSION = "1.7.7"
 
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
@@ -1443,12 +1443,12 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
             "SESSION_CONTEXT load failed. Manual recovery required.",
             0, _make_audit_bundle(0, []))
 
-    # ROOL 2단계: /observe/read 403 원인 미확정으로 임시 중단 (EAG-S311-ROOL-SUSPEND-001)
-    # 재활성화 조건: /observe/read 403 원인 확정 + 수정 후 DEP 완주
-    # ROOL 인프라 코드(_begin_observation/_call_rool_tool)는 보존됨
-    obs_id = None
-    _emit_event({"tag": "ROOL_SUSPENDED", "agent": "domi", "session": session,
-                 "note": "ROOL /observe/read 403 미확정. obs_id=None, bridge 경로 사용."})
+    # ROOL 2단계: OI-S311-001 해소 — 브리지 _get_read_hmac_secret() lazy 전환 완료
+    # EAG-S313-ROOL-REACTIVATE-001
+    obs_id = _begin_observation(session)
+    if obs_id is None:
+        _emit_event({"tag": "ROOL_BEGIN_FAIL_OPEN", "agent": "domi", "session": session,
+                     "note": "ROOL begin 실패. bridge 경로로 Fail-Open."})
 
     _reset_loop_state()  # D-1/D-2/C-1 초기화
     memory = _load_memory_context()
