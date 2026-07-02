@@ -193,7 +193,12 @@ def _validate_and_build_cmd(command: str, params: dict) -> tuple[bool, str, list
             if opt not in ALLOWED_PYTEST_OPTIONS:
                 return False, f"pytest: option '{opt}' not in allowlist", []
 
-        cmd = ["python3", "-m", "pytest", real_path] + list(options)
+        # EAG-S316-PYTEST-FIX-001: path 생략 시 pytest.ini testpaths 사용
+        # path 제공 시 경로 검증만 수행, cmd에 추가하지 않음 (sandbox 수집 방지)
+        if params.get("path", ""):
+            cmd = ["python3", "-m", "pytest", real_path] + list(options)
+        else:
+            cmd = ["python3", "-m", "pytest"] + list(options)
         return True, "", cmd
 
     if command == "git_commit":
