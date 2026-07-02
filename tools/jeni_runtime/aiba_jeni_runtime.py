@@ -53,13 +53,13 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.11.2"
+RUNTIME_VERSION = "4.11.3"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.0-flash")
 GEMINI_MODEL_ESCALATE = os.environ.get("AIBA_GEMINI_MODEL_ESCALATE", "gemini-2.5-pro")
 GEMINI_TIMEOUT = 55
-GEMINI_MAX_OUTPUT_TOKENS = 1500  # C-2: 4096 → 1500 (판정 블록 실측 최대 1200 + 마진)
+GEMINI_MAX_OUTPUT_TOKENS = 2500  # EAG-S316-TOKEN-FIX-001: 1500 → 2500 (효율 우선)
 
 GEMINI_API_KEY = os.environ.get("AIBA_GEMINI_API_KEY", "")
 
@@ -251,6 +251,7 @@ JENI_SYSTEM_INSTRUCTION = (
     "이전 세션의 검증 이력(findings, audits, runtime_state)이 제공되면 "
     "맥락 연속성을 위해 참고하되, 이미 RESOLVED/CLOSED 처리된 항목이 "
     "현재의 독립적 판단을 편향시키지 않도록 주의하십시오."
+    "[판정 우선 출력] 판정 요청 시 [JENI VERIFICATION] 블록을 응답 첫머리에 출력한다. 서론이나 세션 컨텍스트 확인 요약은 판정 이후에 두거나 생략한다. 토큰 한도 내에 판정 결론이 전달되는 것이 최우선이다."
 )
 
 
