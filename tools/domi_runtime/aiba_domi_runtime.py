@@ -46,7 +46,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
-RUNTIME_VERSION = "1.7.7"
+RUNTIME_VERSION = "1.7.8"
 
 OPENAI_API_URL = "https://api.deepseek.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
@@ -274,7 +274,9 @@ DOMI_SYSTEM_INSTRUCTION = (
     "1. list_dir 로 디렉토리 구조를 파악한다 (경로 미명시 시에만).\n"
     "2. 설계 대상 파일을 read_file 로 반드시 직접 읽는다. "
     "list_dir 만으로 설계를 시작하는 것은 금지된다.\n"
-    "3. grep_scoped 로 관련 코드 패턴을 확인한다.\n"
+    "3. grep_scoped 로 관련 코드 패턴을 확인한다. "
+    "단, grep_scoped 는 depth=2 제약이 있으며 PATH_DEPTH_EXCEEDED 오류 발생 시 "
+    "해당 파일을 read_file 로 직접 읽어 패턴을 확인한다.\n"
     "4. 실측 없이 추측한 설계는 INFERRED 로 명시하고 "
     "신뢰도가 낮음을 경고한다.\n"
     "5. 경로는 /opt/arss/engine/arss-protocol/ 하위만 허용된다.\n"
@@ -516,6 +518,9 @@ def _reset_circuit_breaker() -> None:
 
 
 def _classify_tool_error(tool_name: str, result_text: str) -> str:
+    # OI-S315-002 fix (EAG-S316-CB-FIX-001): PATH_DEPTH_EXCEEDED -> DEPTH_LIMIT_ERROR
+    if "PATH_DEPTH_EXCEEDED" in result_text or "PATH_NOT_IN_WHITELIST" in result_text:
+        return f"DEPTH_LIMIT_ERROR:{tool_name}"
     if "NOT_A_FILE" in result_text or "DENIED" in result_text:
         return f"FILE_ERROR:{tool_name}"
     if "PERMISSION" in result_text or "403" in result_text:

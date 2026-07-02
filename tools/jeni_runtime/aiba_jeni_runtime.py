@@ -53,7 +53,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.11.1"
+RUNTIME_VERSION = "4.11.2"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.0-flash")
@@ -239,7 +239,9 @@ JENI_SYSTEM_INSTRUCTION = (
     "[VPS 독립 검증 의무 — 검증 전 반드시 이행]\n"
     "1. 검증 대상 파일을 read_file 로 직접 읽는다. "
     "list_dir 만으로 판단를 시작하는 것은 금지된다.\n"
-    "2. 코드 변경 검증 시 grep_scoped 로 실제 코드 패턴을 확인한다.\n"
+    "2. 코드 변경 검증 시 grep_scoped 로 실제 코드 패턴을 확인한다. "
+    "단, grep_scoped 는 depth=2 제약이 있으며 PATH_DEPTH_EXCEEDED 오류 발생 시 "
+    "해당 파일을 read_file 로 직접 읽어 패턴을 확인한다.\n"
     "3. 검증 없이 철학적 원칙만으로 TRUST_NOT_READY 판정 금지. "
     "반드시 실측 근거를 명시한다.\n"
     "4. TRUST_NOT_READY 판정 시 반드시 구체적 가드레일 위반 항목을 명시한다. "
@@ -631,6 +633,9 @@ def _reset_circuit_breaker() -> None:
 
 def _classify_tool_error(tool_name: str, result_text: str) -> str:
     """도구 오류 유형 분류. 정상 결과는 "" 반환."""
+    # OI-S315-002 fix (EAG-S316-CB-FIX-001): PATH_DEPTH_EXCEEDED -> DEPTH_LIMIT_ERROR
+    if "PATH_DEPTH_EXCEEDED" in result_text or "PATH_NOT_IN_WHITELIST" in result_text:
+        return f"DEPTH_LIMIT_ERROR:{tool_name}"
     if "NOT_A_FILE" in result_text or "DENIED" in result_text:
         return f"FILE_ERROR:{tool_name}"
     if "PERMISSION" in result_text or "403" in result_text:
