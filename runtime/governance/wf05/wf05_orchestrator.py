@@ -32,7 +32,7 @@ import audit_wf05 as audit
 import guardian_client as guardian
 import agent_client as agent
 
-ORCH_VERSION = "1.7.0"
+ORCH_VERSION = "1.8.0"
 MAX_ROUNDS = 3
 EXEC_MODE = os.environ.get("WF05_EXEC_MODE", "dry_run")  # dry_run | live
 
@@ -328,6 +328,87 @@ def run_cycle_with_retry(payload):
     return result
 
 
+
+
+def _write_fallback_log(session, category, status, stage, result):
+    """caddy_errors.jsonl 에 WF-05 최종 실패 기록.
+    EAG-S310-WF05-FALLBACK-001.
+    Jeni TRUST-ADVISORY: 로깅 실패가 오케스트레이터 크래시로 전이 금지.
+    """
+    import datetime as _dt
+    _this_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(_this_dir)))
+    log_path = os.path.join(repo_root, "tools", "caddy_error_log", "caddy_errors.jsonl")
+    error_str = result.get("error", result.get("reason", ""))
+    entry = {
+        "timestamp": _dt.datetime.utcnow().isoformat() + "+00:00",
+        "session": session,
+        "error_id": "WF05-" + session + "-" + status,
+        "category": category,
+        "description": "WF-05 최종 실패: status=" + status + " stage=" + stage,
+        "root_cause": error_str,
+        "beo_burden": "",
+        "resolution": "",
+    }
+    try:
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False))
+            f.write(chr(10))
+    except Exception:
+        pass  # 로깅 실패 무음 처리 — 오케스트레이터 크래시 전이 차단
+
+
+def fallback_router(result):
+    """Layer 4: WF-05 최종 실패 후 Fallback Router.
+    EAG-S310-WF05-FALLBACK-001.
+    run_cycle_with_retry() 결과를 받아 실패 유형별 분류 후 기록.
+    exec_scoped / AI 호출 없음 (예산 소비 0).
+    CATEGORY:
+      WF05-GOVERNANCE : VETOED / GUARDIAN DENIED / CADDY_OAUTH_NOT_CONFIGURED
+      WF05-LOGICAL    : MAX_ROUNDS_EXCEEDED / ESCALATED
+      WF05-INFRA      : 외부 API 실패 / 통신 오류 (기본값)
+    성공(COMPLETE / DRY_RUN_COMPLETE)은 그대로 통과.
+    """
+    status = result.get("status", "")
+    stage = result.get("stage", "")
+    error_str = result.get("error", result.get("reason", ""))
+
+    # SUCCESS passthrough — 변경 없이 그대로 반환
+    if status in ("COMPLETE", "DRY_RUN_COMPLETE"):
+        return result
+
+    # 실패 분류
+    if status == "VETOED":
+        failure_type = "GOVERNANCE_FAILURE"
+    elif stage == "GUARDIAN":
+        failure_type = "GOVERNANCE_FAILURE"
+    elif stage == "EXEC" and "OAUTH" in error_str:
+        failure_type = "GOVERNANCE_FAILURE"
+    elif status == "ESCALATED":
+        failure_type = "LOGICAL_FAILURE"
+    else:
+        # INFRA: DOMI_ESCALATE / JENI_ESCALATE / DOMI / JENI / EXEC(통신) 전부 포함
+        failure_type = "INFRA_FAILURE"
+
+    _category_map = {
+        "GOVERNANCE_FAILURE": "WF05-GOVERNANCE",
+        "LOGICAL_FAILURE":    "WF05-LOGICAL",
+        "INFRA_FAILURE":      "WF05-INFRA",
+    }
+    category = _category_map[failure_type]
+    session = result.get("session", "S000")
+
+    # audit 기록
+    audit.log_stage(session, "FALLBACK_ROUTER", failure_type,
+                    "stage=" + stage + " status=" + status)
+
+    # caddy_errors.jsonl 기록 (예외처리 가드레일 내부)
+    _write_fallback_log(session, category, status, stage, result)
+
+    # 결과에 fallback_category 추가 후 반환
+    result["fallback_category"] = failure_type
+    return result
+
 def load_input():
     """--payload <json> 또는 stdin으로 payload 수신."""
     parser = argparse.ArgumentParser()
@@ -347,6 +428,7 @@ def main():
         print(json.dumps({"status": "FAILED", "error": "NO_PAYLOAD"}))
         return
     result = run_cycle_with_retry(payload)
+    result = fallback_router(result)  # Layer 4: Fallback Router (EAG-S310-WF05-FALLBACK-001)
     print(json.dumps(result, ensure_ascii=False))
 
 
