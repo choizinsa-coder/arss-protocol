@@ -51,7 +51,7 @@ from typing import Any
 
 # ── 상수 ────────────────────────────────────────────────────────────────────
 
-EXEC_RUNTIME_VERSION = "1.5.0"
+EXEC_RUNTIME_VERSION = "1.5.1"
 EXEC_HOST = "127.0.0.1"
 EXEC_PORT = 8449
 
@@ -176,11 +176,9 @@ def _validate_and_build_cmd(command: str, params: dict) -> tuple[bool, str, list
     git_push의 경우 cmd_list 자리에 push_spec dict 반환.
     """
     if command == "pytest":
-        path = params.get("path", "")
+        # EAG-S316-PYTEST-FIX-001: path 생략 가능, 기본값=ARSS_ROOT
+        path = params.get("path", ARSS_ROOT)
         options: list = params.get("options", [])
-
-        if not path:
-            return False, "pytest: path required", []
 
         # path: ARSS_ROOT 이하만 허용 (경로 탈출 방어)
         real_path = os.path.realpath(os.path.abspath(path))
