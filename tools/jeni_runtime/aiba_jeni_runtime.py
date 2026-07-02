@@ -41,6 +41,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 import urllib.request
 import urllib.error
@@ -330,6 +331,63 @@ def _extract_function_calls(parts: list) -> list:
 
 _daily_cost_tracker: dict = {"date": "", "total_usd": 0.0}
 
+# ── EAG-S308-BUDGET-PERSIST-001: 일일 비용 파일 영속화 ────────────────────────
+# 재시작 시 in-memory tracker가 0으로 초기화되어 일일 예산 가드가 무력화되는
+# 결함(OI-S306-001) 해소. WF05_BUDGET_STATE.json 선행 패턴 준용.
+DAILY_COST_STATE_PATH = os.path.join(
+    ARSS_ROOT, "runtime/governance/budget/JENI_DAILY_COST_STATE.json")
+DAILY_COST_SCHEMA = "DAILY_BUDGET_STATE_v1"
+_cost_state_lock = threading.Lock()
+_cost_state_loaded = False
+
+
+def _persist_cost_state() -> None:
+    """tmp 파일 → fsync → os.replace 원자적 쓰기. 호출자가 lock 보유 전제."""
+    try:
+        os.makedirs(os.path.dirname(DAILY_COST_STATE_PATH), exist_ok=True)
+        payload = {
+            "schema": DAILY_COST_SCHEMA,
+            "date": _daily_cost_tracker["date"],
+            "total_usd": round(_daily_cost_tracker["total_usd"], 6),
+            "updated_at": _utc_now_iso(),
+        }
+        tmp = DAILY_COST_STATE_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, DAILY_COST_STATE_PATH)
+    except Exception as e:
+        _emit_event({"tag": "COST_STATE_PERSIST_FAIL", "agent": "jeni",
+                     "error": str(e)})
+
+
+def _load_cost_state() -> None:
+    """기동 시 1회 파일 복원. Fail-Open: 부재/손상 시 today 0.0으로 시작."""
+    global _cost_state_loaded
+    today = _today_str()
+    try:
+        with open(DAILY_COST_STATE_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        stored_date = data.get("date", "")
+        stored_total = float(data.get("total_usd", 0.0))
+        if stored_date == today:
+            _daily_cost_tracker["date"] = today
+            _daily_cost_tracker["total_usd"] = stored_total
+            _emit_event({"tag": "COST_STATE_RESTORED", "agent": "jeni",
+                         "date": today, "total_usd": round(stored_total, 5)})
+        else:
+            _daily_cost_tracker["date"] = today
+            _daily_cost_tracker["total_usd"] = 0.0
+            _emit_event({"tag": "COST_STATE_NEW_DAY", "agent": "jeni",
+                         "date": today, "prev_date": stored_date})
+    except Exception as e:
+        _daily_cost_tracker["date"] = today
+        _daily_cost_tracker["total_usd"] = 0.0
+        _emit_event({"tag": "COST_STATE_FAIL_OPEN", "agent": "jeni",
+                     "date": today, "note": str(e)})
+    _cost_state_loaded = True
+
 
 def _emit_event(event: dict) -> None:
     """CHANGE_ID: S287-C4 — 운영 이벤트를 JSON Lines로 stderr 출력 (기계 분석 통일 포맷)."""
@@ -341,11 +399,14 @@ def _today_str() -> str:
 
 
 def _daily_budget_exceeded() -> bool:
-    """제니 J-2: 당일 누적 비용이 MAX_DAILY_USD 초과 시 True (다음 호출 차단)."""
+    """제니 J-2: 당일 누적 비용이 MAX_DAILY_USD 초과 시 True (다음 호출 차단).
+    EAG-S308-BUDGET-PERSIST-001: 날짜 경계 전환 시 파일에도 즉시 반영."""
     today = _today_str()
     if _daily_cost_tracker["date"] != today:
-        _daily_cost_tracker["date"] = today
-        _daily_cost_tracker["total_usd"] = 0.0
+        with _cost_state_lock:
+            _daily_cost_tracker["date"] = today
+            _daily_cost_tracker["total_usd"] = 0.0
+            _persist_cost_state()
     return _daily_cost_tracker["total_usd"] >= MAX_DAILY_USD
 
 
@@ -360,10 +421,13 @@ def _log_call_cost(model: str, usage: dict, session: str, round_num: int) -> flo
     out = usage.get("candidatesTokenCount", 0)
     cost = (inp / 1_000_000 * GEMINI_COST_RATE_INPUT) + (out / 1_000_000 * GEMINI_COST_RATE_OUTPUT)
     today = _today_str()
-    if _daily_cost_tracker["date"] != today:
-        _daily_cost_tracker["date"] = today
-        _daily_cost_tracker["total_usd"] = 0.0
-    _daily_cost_tracker["total_usd"] += cost
+    # EAG-S308-BUDGET-PERSIST-001: 누적 + 파일 영속화 (lock 보호, 원자적 쓰기)
+    with _cost_state_lock:
+        if _daily_cost_tracker["date"] != today:
+            _daily_cost_tracker["date"] = today
+            _daily_cost_tracker["total_usd"] = 0.0
+        _daily_cost_tracker["total_usd"] += cost
+        _persist_cost_state()
     _emit_event({"tag": "COST_LOG", "agent": "jeni", "session": session,
                  "round": round_num, "model": model, "input": inp, "output": out,
                  "est_usd": round(cost, 5),
@@ -1290,6 +1354,7 @@ def main():
     signal.signal(signal.SIGINT, _handle_shutdown)
 
     _ensure_memory_dirs()
+    _load_cost_state()  # EAG-S308-BUDGET-PERSIST-001: 일일 비용 파일 복원
 
     print(f"[JENI_RUNTIME] starting v{RUNTIME_VERSION} model={GEMINI_MODEL} "
           f"key={_mask_key(GEMINI_API_KEY)} max_tool_rounds={MAX_TOOL_ROUNDS} "
