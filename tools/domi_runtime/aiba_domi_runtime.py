@@ -48,7 +48,7 @@ RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
 RUNTIME_VERSION = "1.7.7"
 
-OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+OPENAI_API_URL = "https://api.deepseek.com/v1/chat/completions"
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
 OPENAI_MODEL_ESCALATE = os.environ.get("AIBA_DOMI_MODEL_ESCALATE", "gpt-4o")
 OPENAI_TIMEOUT = 55
@@ -56,7 +56,7 @@ OPENAI_MAX_OUTPUT_TOKENS = 2048  # C-2: 4096 → 2048
 OPENAI_HTTP_RETRY_MAX = 3        # EAG-S305-DOMI-RETRY-001: 503/429 재시도
 OPENAI_HTTP_RETRY_BASE_SLEEP = 2 # 2s/4s/8s 지수 백오프
 
-OPENAI_API_KEY = os.environ.get("AIBA_OPENAI_API_KEY", "")
+OPENAI_API_KEY = os.environ.get("AIBA_DOMI_API_KEY", "")
 
 MAX_TOOL_ROUNDS = 8             # B-D-2: 5 → 8
 MAX_TOTAL_SECONDS = 180         # B-D-2: 120 → 180
@@ -82,7 +82,7 @@ _REQUIRED_ENVS = [
     "AIBA_DOMI_COST_RATE_INPUT",   # 입력 토큰 단가 (USD/1M tokens)
     "AIBA_DOMI_COST_RATE_OUTPUT",  # 출력 토큰 단가 (USD/1M tokens)
     "AIBA_MAX_DAILY_USD",          # 일일 예산 한도 (USD)
-    "AIBA_OPENAI_API_KEY",         # OpenAI API 인증키
+    "AIBA_DOMI_API_KEY",           # Domi API 인증키
 ]
 
 
@@ -1288,7 +1288,7 @@ def _call_openai(messages: list, escalate: bool = False, loop_start: float = Non
         "model": _model,
         "messages": messages,
         "tools": _build_tools(),
-        "max_completion_tokens": OPENAI_MAX_OUTPUT_TOKENS,
+        "max_tokens": OPENAI_MAX_OUTPUT_TOKENS,
     }
     raw_body = json.dumps(body).encode("utf-8")
     req = urllib.request.Request(
