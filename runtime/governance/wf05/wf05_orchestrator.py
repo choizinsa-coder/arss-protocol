@@ -32,7 +32,7 @@ import audit_wf05 as audit
 import guardian_client as guardian
 import agent_client as agent
 
-ORCH_VERSION = "1.6.0"
+ORCH_VERSION = "1.7.0"
 MAX_ROUNDS = 3
 EXEC_MODE = os.environ.get("WF05_EXEC_MODE", "dry_run")  # dry_run | live
 
@@ -143,6 +143,12 @@ def _build_vps_path_context(base_session):
         f"ROOL observation   : {r}/tools/mcp/rool_observation.py\n"
         f"Domi runtime       : {r}/tools/domi_runtime/aiba_domi_runtime.py\n"
         f"Session pointer    : {r}/SESSION_CONTEXT_POINTER.json\n\n"
+        "[OI-S305-001 서비스 관찰 주의사항]\n"
+        "서비스명은 하이픈 표기: aiba-mcp-bridge / aiba-jeni-runtime / aiba-domi-runtime / aiba-exec-runtime\n"
+        "-> 파일 경로 아님. read_file 시도 불가.\n"
+        "/health 는 HTTP 엔드포인트(포트 8443/8447/8448/8449), 파일 아님.\n"
+        "-> read_file('/health') 시도 금지.\n"
+        "서비스 상태 확인은 check_service_state 툴만 사용.\n\n"
         "\u26a0 SESSION_CONTEXT_S{n}_FINAL.json\uc740 SESSION CLOSE \ud6c4 \uc0dd\uc131\ub428. "
         "WF-05 \uc2e4\ud589 \uc911 read_file \uc2dc\ub3c4 \uae08\uc9c0. "
         "\uc138\uc158 \ucee8\ud14d\uc2a4\ud2b8\ub294 Domi \ub7f0\ud0c0\uc784\uc774 \uc790\ub3d9 \uc8fc\uc785 \uc644\ub8cc.\n"
