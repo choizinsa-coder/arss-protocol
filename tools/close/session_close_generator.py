@@ -772,6 +772,17 @@ def apply_delta(sc: dict, n: int, chain_tip: str, prev_tip: str, delta: dict):
     sc['session_delta']                     = delta['session_delta']
     sc['sync_meta']                         = delta['sync_meta']
     sc.pop(f'system_changes_s{n - 4}', None)
+    # Always-On Phase 1: review_schedule init/preserve (EAG-S324-REVIEW-SCHEDULE-001)
+    if 'review_schedule' not in sc:
+        _now_kst = datetime.now(KST)
+        _next_week  = (_now_kst + timedelta(days=7)).strftime('%Y-%m-%d')
+        _next_month = (_now_kst.replace(day=28) + timedelta(days=4)).replace(day=1).strftime('%Y-%m-%d')
+        sc['review_schedule'] = {
+            'weekly_failure_audit':         {'last_run': None, 'next_due': _next_week},
+            'monthly_assumption_review':     {'last_run': None, 'next_due': _next_month},
+            'quarterly_constitution_review': {'last_run': None, 'next_due': '2026-10-01'},
+        }
+        print('[OK] review_schedule init (Always-On Phase 1, EAG-S324-REVIEW-SCHEDULE-001)')
     archive_candidates = identify_archive_candidates(sc, n)
     return sc, archive_candidates
 
