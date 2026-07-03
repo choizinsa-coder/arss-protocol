@@ -4,12 +4,13 @@
     "schema_version": "phase2_shard_v1",
     "domain": "governance",
     "session_created": 147,
-    "last_updated_session": 147
+    "last_updated_session": 147,
+    "item_count": 53
   },
   "summary": {
     "domain": "governance.rules",
     "schema_version": "phase2_shard_v1",
-    "item_count": 51,
+    "item_count": 53,
     "latest_session_ref": 147,
     "status": "active",
     "body_ref": "context/governance/rules.json"
@@ -680,6 +681,81 @@
           ]
         }
       }
+    },
+    "session_boot_step7": {
+      "rule_id": "SESSION-BOOT-STEP-7",
+      "version": "1.0.0",
+      "dep_chain": {
+        "designer": "domi",
+        "implementer": "caddy",
+        "verifier": "jeni",
+        "eag_approver": "beo"
+      },
+      "description": "SESSION BOOT 완료 직후 캐디가 boot_briefing.json을 자동 read_file하여 GHS 상태를 비오님께 보고한다.",
+      "procedure": {
+        "trigger_point": "SESSION BOOT 완료 직후, 최초 사용자 메시지 처리 이전",
+        "step_1_read_briefing": {
+          "action": "read_file",
+          "target_path": "/opt/arss/engine/arss-protocol/tools/monitor/boot_briefing.json",
+          "expected_keys": [
+            "generated_at",
+            "ghs",
+            "triggers_fired_count",
+            "triggers_fired",
+            "alerts_created",
+            "overdue_reviews",
+            "last_run_id"
+          ]
+        },
+        "step_2_report": {
+          "format": "[GHS] {ghs.status} (score={ghs.score}) | triggers_fired={triggers_fired_count} | alerts_created={alerts_created}",
+          "placement": "SESSION BOOT Step 6 완료 보고 직후"
+        }
+      },
+      "ghs_status_actions": {
+        "NORMAL": {
+          "proceed_without_eag": true,
+          "behavior": "보고 후 정상 작업 진행"
+        },
+        "WARNING": {
+          "proceed_without_eag": true,
+          "behavior": "WARNING 고지 후 비오님 확인 후 진행"
+        },
+        "FAIL_CLOSED": {
+          "proceed_without_eag": false,
+          "eag_required_for_new_work": true,
+          "exception": "SESSION CLOSE EAG는 FAIL_CLOSED 상태에서도 허용",
+          "behavior": "FAIL_CLOSED 고지. 신규 EAG 전 명시적 상태 고지 필수. COND-EAG-001 연동"
+        }
+      },
+      "activated_session": 325,
+      "activated_by_eag": "EAG-S325-STEP7-COND-001"
+    },
+    "conditional_eag_registry": {
+      "schema_version": "1.0.0",
+      "description": "조건부 EAG 등록소 — 특정 조건 충족 시 자동 발동되는 EAG 템플릿",
+      "registry": [
+        {
+          "eag_id": "COND-EAG-001",
+          "title": "Always-On Phase 2 전환 조건 게이트",
+          "status": "REGISTERED",
+          "registered_session": 325,
+          "trigger_condition": {
+            "type": "ghs_threshold",
+            "metric": "ghs.score",
+            "operator": ">=",
+            "value": 0.85,
+            "window_days": 14,
+            "description": "GHS 0.85 이상이 14일 연속 유지 시 Always-On Phase 2 전환 EAG 자동 생성"
+          },
+          "phase1_status": "registry_declaration_only",
+          "phase2_note": "실제 폴링/발동 로직은 Phase 2에서 aiba_monitor.py 연동 예정",
+          "monitoring_source": "boot_briefing.json → ghs.score",
+          "exception_for_session_close": true,
+          "last_evaluated": null,
+          "evaluation_result": null
+        }
+      ]
     }
   }
 }

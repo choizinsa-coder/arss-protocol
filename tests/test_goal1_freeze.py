@@ -39,7 +39,7 @@ FROZEN_HASHES = {
     "docs/goal1_metrics_framework_v1.0.md":
         "97442eec4a59de39c37d23fd5eea0373abd4d8fab8a6bea4f5076cefecb5f079",
     "context/governance/rules.json":
-        "563ab1b4573d7c1cac6a3ce4ec4757d557766483867b85cdbf1d569f87767c46",
+        "4bbf4231917ec885a74ae6ab8cce0bc3114d3890396d13969e99193d15c08988",
     "GOAL1_FREEZE_RECORD.md":
         "d641082eaec8878aa0e568ceedf0df9c6c0b0e9a1411a69f3268a94ebc34c56f",
     "tools/ledger/ledger_writer.py":

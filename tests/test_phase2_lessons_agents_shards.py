@@ -164,7 +164,7 @@ def test_advisory1_rule_present():
 def test_phase2_governance_shards_unchanged():
     manifest = load_json(os.path.join(RUNTIME_DIR, "integrity_manifest.json"))
     GOV_HASHES = {
-        "governance.rules":       "563ab1b4573d7c1cac6a3ce4ec4757d557766483867b85cdbf1d569f87767c46",
+        "governance.rules":       "4bbf4231917ec885a74ae6ab8cce0bc3114d3890396d13969e99193d15c08988",
         "governance.enforcement": "b75fea80bd012934e7fdbb56b3b22b065abe82c63d5f00599c6691d7ae32063d",
         "governance.decisions":   "563673c06578a9cd71ac8a98785d90ce7f9f057b857588e5f27dc49ebc2d8e30",
         "governance.refs":        "6f52ffce6568aca05dab0cc2e24d288296b900d108ef8dcfcc06f80004dec557",
