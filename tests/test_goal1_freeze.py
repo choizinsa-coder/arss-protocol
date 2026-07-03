@@ -62,6 +62,9 @@ FROZEN_HASHES = {
     # AIBA Decision OS Architecture v1.0 (EAG-S323-DECISION-OS-V1-001)
     "docs/AIBA_Decision_OS_Architecture_v1.0.md":
         "08ea9265f47551a6f1046730da415f7bbd5a4bd208b7d1d3bb45acf8b5659638",
+    # AIBA Manifesto v0.2 (EAG-S323-MANIFESTO-V02-001)
+    "docs/AIBA_Manifesto_v0.2.md":
+        "dac816ce0e6eb95d05c0e9b8d54fb7c188f8ec6ca3d63829c98c79f7f47216f8",
     # 조건부 동결 (버그픽스 EAG 하 허용 — hash 갱신 시 EAG 필수)
     "tools/guard/pointer_guard_s231.py":
         "3e25cf94bf0bf13635aa7f9675aafffb88927e6ecc5ccf3581e6639effd0c9c0",
