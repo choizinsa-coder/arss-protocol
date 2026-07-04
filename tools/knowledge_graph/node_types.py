@@ -3,6 +3,7 @@
 import uuid
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
+from typing import Optional
 
 VERSION = "1.0.0"
 EAG_ID  = "EAG-S332-MVKG-001"
@@ -39,6 +40,7 @@ class DecisionNode:
     status: str = "active"
     references: list = field(default_factory=list)
     workitem_ids: list = field(default_factory=list)
+    predicted_confidence: Optional[float] = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -46,6 +48,8 @@ class DecisionNode:
     def validate(self) -> list:
         """유효성 검증. 오류 메시지 리스트 반환."""
         errors = []
+        if self.predicted_confidence is not None and not (0.0 <= self.predicted_confidence <= 1.0):
+            errors.append("predicted_confidence must be in [0.0, 1.0]")
         if self.dc and self.dc not in VALID_DCS:
             errors.append("Invalid dc: " + self.dc)
         if not self.subject:
