@@ -217,5 +217,69 @@ class TestOutput(unittest.TestCase):
         self.assertTrue({"run_id", "ghs", "triggers_fired", "alerts_created"}.issubset(set(result.keys())))
 
 
+
+
+class TestOverdueReviews(unittest.TestCase):
+    def _mon(self):
+        m = GovernanceMonitor.__new__(GovernanceMonitor)
+        m.run_id = "MON-OD"
+        m.timestamp_iso = "2026-07-04T00:00:00+00:00"
+        return m
+
+    def test_overdue_detected(self):
+        import tempfile
+        m = self._mon()
+        sc = {
+            "review_schedule": {
+                "weekly_failure_audit": {"last_run": None, "next_due": "2026-01-01"},
+            }
+        }
+        pointer = {"current_session": 9901}
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            (tmp / "SESSION_CONTEXT_POINTER.json").write_text(json.dumps(pointer))
+            (tmp / "SESSION_CONTEXT_S9901_FINAL.json").write_text(json.dumps(sc))
+            orig = mon_mod.ROOT
+            mon_mod.ROOT = tmp
+            try:
+                result = m._check_overdue_reviews()
+            finally:
+                mon_mod.ROOT = orig
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["name"], "weekly_failure_audit")
+
+    def test_no_overdue_future_date(self):
+        import tempfile
+        m = self._mon()
+        sc = {
+            "review_schedule": {
+                "weekly_failure_audit": {"last_run": None, "next_due": "2099-12-31"},
+            }
+        }
+        pointer = {"current_session": 9902}
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            (tmp / "SESSION_CONTEXT_POINTER.json").write_text(json.dumps(pointer))
+            (tmp / "SESSION_CONTEXT_S9902_FINAL.json").write_text(json.dumps(sc))
+            orig = mon_mod.ROOT
+            mon_mod.ROOT = tmp
+            try:
+                result = m._check_overdue_reviews()
+            finally:
+                mon_mod.ROOT = orig
+        self.assertEqual(len(result), 0)
+
+    def test_missing_files_returns_empty(self):
+        import tempfile
+        m = self._mon()
+        with tempfile.TemporaryDirectory() as td:
+            orig = mon_mod.ROOT
+            mon_mod.ROOT = Path(td)
+            try:
+                result = m._check_overdue_reviews()
+            finally:
+                mon_mod.ROOT = orig
+        self.assertEqual(result, [])
+
 if __name__ == "__main__":
     unittest.main()

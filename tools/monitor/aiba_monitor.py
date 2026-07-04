@@ -12,7 +12,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 EAG_ID  = "EAG-S323-AIBA-MONITOR-001"
 
 ROOT        = Path("/opt/arss/engine/arss-protocol")
@@ -262,6 +262,41 @@ class GovernanceMonitor:
         with open(BRIEFING_PATH, "w", encoding="utf-8") as f:
             json.dump(briefing, f, ensure_ascii=False, indent=2)
 
+
+    def _check_overdue_reviews(self) -> list:
+        """SESSION_CONTEXT review_schedule 기반 오버듀 항목 감지 (EAG-S332-MONITOR-OVERDUE-001)."""
+        try:
+            pointer_path = ROOT / "SESSION_CONTEXT_POINTER.json"
+            with open(pointer_path, encoding="utf-8") as f:
+                pointer = json.load(f)
+            current_session = pointer.get("current_session") or pointer.get("last_session")
+            if current_session is None:
+                return []
+            sc_path = ROOT / f"SESSION_CONTEXT_S{current_session}_FINAL.json"
+            if not sc_path.exists():
+                return []
+            with open(sc_path, encoding="utf-8") as f:
+                sc_data = json.load(f)
+            review_schedule = sc_data.get("review_schedule", {})
+            today = datetime.now(timezone.utc).date()
+            overdue = []
+            for name, info in review_schedule.items():
+                next_due_str = info.get("next_due")
+                if next_due_str:
+                    try:
+                        due_date = datetime.fromisoformat(next_due_str).date()
+                        if due_date <= today:
+                            overdue.append({
+                                "name": name,
+                                "next_due": next_due_str,
+                                "last_run": info.get("last_run"),
+                            })
+                    except (ValueError, TypeError):
+                        pass
+            return overdue
+        except Exception:
+            return []
+
     # ── 메인 실행 ─────────────────────────────────────────────
     def run(self) -> dict:
         # ① GHS
@@ -278,8 +313,8 @@ class GovernanceMonitor:
         ]
         triggers_fired = [t["trigger"] for t in triggers if t["fired"]]
 
-        # ④ 오버듀 Review (Phase 1: 비워둠)
-        overdue_reviews: list = []
+        # ④ 오버듀 Review -- review_schedule 기반 실측
+        overdue_reviews = self._check_overdue_reviews()
 
         # ⑤ Alert 생성
         alerts_created = 0
