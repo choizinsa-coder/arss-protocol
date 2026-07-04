@@ -13,7 +13,9 @@ from tools.governance.area_2_vps_autoguard import (
     VPSAutoGuard,
     VERSION,
     EAG_ID,
+    EAG_ID_P2,
     AIBA_PORTS,
+    VALID_SERVICES,
 )
 
 
@@ -175,3 +177,52 @@ def test_12_get_security_summary(tmp_path):
     assert summary["by_event_type"]["service_down"] == 2
     assert summary["by_event_type"]["rc_pattern"] == 1
     assert len(summary["recent_5"]) == 3
+
+# ===== Phase 2 Tests (EAG-S327-AIF-AREA2-P2-001) =====
+
+# 13: request_isolation basic
+def test_13_request_isolation_basic(tmp_path):
+    guard = VPSAutoGuard(log_dir=tmp_path)
+    result = guard.request_isolation(
+        service_name="bridge",
+        reason="Unexpected file change detected",
+        priority="CRITICAL",
+    )
+    assert result["id"].startswith("ISO-")
+    assert result["schema"] == "isolation_request_v1"
+    assert result["service_name"] == "bridge"
+    assert result["priority"] == "CRITICAL"
+    assert result["status"] == "pending_eag"
+    assert result["eag"] == EAG_ID_P2
+    iso_log = tmp_path / "isolation_request_log.jsonl"
+    assert iso_log.exists()
+    lines = [l for l in iso_log.read_text().splitlines() if l.strip()]
+    assert len(lines) == 1
+
+# 14: request_isolation invalid service_name
+def test_14_request_isolation_invalid_service(tmp_path):
+    guard = VPSAutoGuard(log_dir=tmp_path)
+    with pytest.raises(AutoGuardError, match="service_name"):
+        guard.request_isolation(
+            service_name="INVALID",
+            reason="test reason",
+            priority="HIGH",
+        )
+
+# 15: request_isolation empty reason
+def test_15_request_isolation_empty_reason(tmp_path):
+    guard = VPSAutoGuard(log_dir=tmp_path)
+    with pytest.raises(AutoGuardError, match="reason"):
+        guard.request_isolation(
+            service_name="domi",
+            reason="   ",
+            priority="MEDIUM",
+        )
+
+# 16: request_isolation all valid services
+def test_16_request_isolation_all_services(tmp_path):
+    guard = VPSAutoGuard(log_dir=tmp_path)
+    for svc in sorted(VALID_SERVICES):
+        r = guard.request_isolation(service_name=svc, reason=f"{svc} test", priority="LOW")
+        assert r["service_name"] == svc
+        assert r["status"] == "pending_eag"

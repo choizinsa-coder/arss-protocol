@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-area_4_agent_debate.py v1.0.0
+area_4_agent_debate.py v1.1.0
 AIF Area 4: Agent Debate Protocol (에이전트 간 토론)
 EAG: EAG-S324-AIF-AREA4-001
 
@@ -8,7 +8,8 @@ Phase 1: open_debate / record_position / record_round_result / close_debate
          get_debate_summary / get_open_debates
          append-only 상태 추적 (type='open'/'round_result'/'close')
 
-Phase 2 placeholders: 자동 합의 판정, Area 11 양방향 연결, WF-05 연동.
+Phase 2 (EAG-S327-AIF-AREA4-P2-001): link_wf05_workitem (WF-05 연동, append-only).
+Phase 3 placeholders: 자동 합의 판정, Area 11 양방향 연결.
 
 Pattern: area_7_org_learning.py (class, log_dir override, 2 jsonl)
 """
@@ -18,8 +19,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-VERSION = "1.0.0"
-EAG_ID  = "EAG-S324-AIF-AREA4-001"
+VERSION = "1.1.0"
+EAG_ID    = "EAG-S324-AIF-AREA4-001"
+EAG_ID_P2 = "EAG-S327-AIF-AREA4-P2-001"
 
 ROOT            = Path("/opt/arss/engine/arss-protocol")
 DEFAULT_LOG_DIR = ROOT / "tools" / "governance"
@@ -282,6 +284,46 @@ class AgentDebateEngine:
         with open(self._debate_log, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
         return entry
+
+    # --- Phase 2: WF-05 Workitem Link ---
+
+    def link_wf05_workitem(
+        self,
+        debate_id: str,
+        workitem_id: str,
+        actor: str = "system",
+    ) -> dict:
+        """
+        Links a WF-05 workitem to an existing close entry (append-only).
+        Finds the latest close entry for debate_id, sets wf05_workitem,
+        and appends updated entry to debate_log.jsonl.
+        debate_id, workitem_id: both required.
+        Raises DebateError if debate not found.
+        EAG: EAG-S327-AIF-AREA4-P2-001
+        """
+        if not debate_id or not str(debate_id).strip():
+            raise DebateError("required field missing: debate_id")
+        if not workitem_id or not str(workitem_id).strip():
+            raise DebateError("required field missing: workitem_id")
+        # Find latest close entry for debate_id
+        all_entries = self._load_debates()
+        close_entry = None
+        for e in reversed(all_entries):
+            if e.get("id") == debate_id.strip() and e.get("type") == "close":
+                close_entry = dict(e)
+                break
+        if close_entry is None:
+            raise DebateError(
+                f"no close entry found for debate_id {debate_id!r}")
+        # Append updated close entry (append-only, wf05_workitem set)
+        now = datetime.now(timezone.utc)
+        close_entry["wf05_workitem"] = workitem_id.strip()
+        close_entry["linked_at"]     = now.isoformat()
+        close_entry["eag"]           = EAG_ID_P2
+        self._ensure_dir()
+        with open(self._debate_log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(close_entry, ensure_ascii=False) + "\n")
+        return close_entry
 
     # --- Query ---
 

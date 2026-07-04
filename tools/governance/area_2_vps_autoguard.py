@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-area_2_vps_autoguard.py v1.0.0
+area_2_vps_autoguard.py v1.1.0
 AIF Area 2: VPS AutoGuard (3-stage security detection)
 EAG: EAG-S324-AIF-AREA2-001
 
@@ -8,7 +8,8 @@ Stage 1: record_security_event  -> security_event_log.jsonl
 Stage 2: check_service_health, check_file_integrity, detect_rc_pattern_threat
 Stage 3: generate_security_alert -> security_alert_log.jsonl (pending_review)
 
-Phase 2 placeholders: auto-isolation, external intrusion, agent ID anomaly.
+Phase 2 (EAG-S327-AIF-AREA2-P2-001): request_isolation -> isolation_request_log.jsonl.
+Phase 3 placeholders: external intrusion, agent ID anomaly, inotify monitoring.
 Pattern: area_7_org_learning.py (append-only jsonl, validate -> entry -> append)
 """
 import json
@@ -19,8 +20,9 @@ from hashlib import sha256
 from pathlib import Path
 from typing import List, Optional
 
-VERSION = "1.0.0"
-EAG_ID  = "EAG-S324-AIF-AREA2-001"
+VERSION = "1.1.0"
+EAG_ID    = "EAG-S324-AIF-AREA2-001"
+EAG_ID_P2 = "EAG-S327-AIF-AREA2-P2-001"
 
 ROOT            = Path("/opt/arss/engine/arss-protocol")
 DEFAULT_LOG_DIR = ROOT / "tools" / "governance"
@@ -40,6 +42,9 @@ AIBA_PORTS = {
     "exec":     8449,
     "guardian": 8450,
 }
+
+
+VALID_SERVICES = frozenset({"bridge", "jeni", "domi", "exec", "guardian"})
 
 
 class AutoGuardError(ValueError):
@@ -84,7 +89,8 @@ class VPSAutoGuard:
     def __init__(self, log_dir: Optional[Path] = None) -> None:
         self._log_dir   = Path(log_dir) if log_dir else DEFAULT_LOG_DIR
         self._event_log = self._log_dir / "security_event_log.jsonl"
-        self._alert_log = self._log_dir / "security_alert_log.jsonl"
+        self._alert_log     = self._log_dir / "security_alert_log.jsonl"
+        self._isolation_log = self._log_dir / "isolation_request_log.jsonl"
 
     def _ensure_dir(self) -> None:
         self._log_dir.mkdir(parents=True, exist_ok=True)
@@ -281,6 +287,50 @@ class VPSAutoGuard:
         }
         self._ensure_dir()
         with open(self._alert_log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        return entry
+
+    # --- Phase 2: Isolation Request ---
+
+    def request_isolation(
+        self,
+        service_name: str,
+        reason: str,
+        priority: str,
+        actor: str = "system",
+    ) -> dict:
+        """
+        Records service isolation request to isolation_request_log.jsonl.
+        status: always pending_eag (auto-execution forbidden, EAG required).
+        service_name: bridge|jeni|domi|exec|guardian.
+        priority: CRITICAL|HIGH|MEDIUM|LOW.
+        EAG: EAG-S327-AIF-AREA2-P2-001
+        """
+        if service_name not in VALID_SERVICES:
+            raise AutoGuardError(
+                f"service_name must be one of {sorted(VALID_SERVICES)}, got {service_name!r}"
+            )
+        if not reason or not str(reason).strip():
+            raise AutoGuardError("required field missing: reason")
+        if priority not in VALID_PRIORITIES:
+            raise AutoGuardError(
+                f"priority must be one of {sorted(VALID_PRIORITIES)}, got {priority!r}"
+            )
+        now = datetime.now(timezone.utc)
+        entry = {
+            "schema":       "isolation_request_v1",
+            "version":      VERSION,
+            "id":           f"ISO-{uuid.uuid4()}",
+            "service_name": service_name,
+            "reason":       reason.strip(),
+            "priority":     priority,
+            "status":       "pending_eag",
+            "actor":        actor.strip(),
+            "recorded_at":  now.isoformat(),
+            "eag":          EAG_ID_P2,
+        }
+        self._ensure_dir()
+        with open(self._isolation_log, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
         return entry
 

@@ -11,6 +11,7 @@ from tools.governance.area_4_agent_debate import (
     AgentDebateEngine,
     VERSION,
     EAG_ID,
+    EAG_ID_P2,
 )
 
 
@@ -176,3 +177,41 @@ def test_12_record_position_closed_debate_raises(tmp_path):
             debate_id=debate["id"], agent="beo",
             position_type="oppose", content="Too late", confidence=0.5,
         )
+
+# ===== Phase 2 Tests (EAG-S327-AIF-AREA4-P2-001) =====
+
+# 13: link_wf05_workitem basic
+def test_13_link_wf05_workitem_basic(tmp_path):
+    engine = AgentDebateEngine(log_dir=tmp_path)
+    deb = engine.open_debate(topic_id="T1", topic_title="Test topic", initiator="caddy")
+    did = deb["id"]
+    engine.close_debate(debate_id=did, outcome="consensus", consensus_level=0.9)
+    result = engine.link_wf05_workitem(debate_id=did, workitem_id="WI-test-001")
+    assert result["wf05_workitem"] == "WI-test-001"
+    assert result["type"] == "close"
+    assert result["eag"] == EAG_ID_P2
+    assert "linked_at" in result
+    import json
+    lines = [l for l in (tmp_path / "debate_log.jsonl").read_text().splitlines() if l.strip()]
+    entries = [json.loads(l) for l in lines]
+    last = entries[-1]
+    assert last["wf05_workitem"] == "WI-test-001"
+
+# 14: link_wf05_workitem no close entry
+def test_14_link_wf05_workitem_no_close(tmp_path):
+    engine = AgentDebateEngine(log_dir=tmp_path)
+    deb = engine.open_debate(topic_id="T2", topic_title="Open topic", initiator="domi")
+    with pytest.raises(DebateError, match="no close entry"):
+        engine.link_wf05_workitem(debate_id=deb["id"], workitem_id="WI-test-002")
+
+# 15: link_wf05_workitem empty debate_id
+def test_15_link_wf05_workitem_empty_debate_id(tmp_path):
+    engine = AgentDebateEngine(log_dir=tmp_path)
+    with pytest.raises(DebateError, match="debate_id"):
+        engine.link_wf05_workitem(debate_id="", workitem_id="WI-003")
+
+# 16: link_wf05_workitem empty workitem_id
+def test_16_link_wf05_workitem_empty_workitem_id(tmp_path):
+    engine = AgentDebateEngine(log_dir=tmp_path)
+    with pytest.raises(DebateError, match="workitem_id"):
+        engine.link_wf05_workitem(debate_id="DEB-test", workitem_id="   ")
