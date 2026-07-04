@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-area_7_org_learning.py v1.0.0
+area_7_org_learning.py v1.1.0
 AIF Area 7: Organizational Learning Engine (Recursive Self-Improvement)
 EAG: EAG-S324-AIF-AREA7-001
 
@@ -10,10 +10,11 @@ Phase 1 scope:
   - ImprovementProposal generation (pending_eag always)
   - review_schedule overdue detection
 
-Phase 2 placeholders:
-  - Constitution Review Proposal auto-generation
-  - Self-Improvement Debt measurement
-  - External Change detection (VEV monitoring)
+Phase 2 (EAG-S327-AIF-AREA7-P2-001):
+  - propose_constitution_review: constitution_review_log.jsonl
+  - record_improvement_debt: improvement_debt_log.jsonl
+  - absorb_learning: optional review_proposal_ids / improvement_debt_ids
+  - External Change detection (VEV monitoring): Phase 3 placeholder
 
 Pattern: area_15_failure_memory.py (append-only jsonl, validate -> entry -> append)
 """
@@ -23,8 +24,9 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 EAG_ID  = "EAG-S324-AIF-AREA7-001"
+EAG_ID_P2 = "EAG-S327-AIF-AREA7-P2-001"
 
 ROOT            = Path("/opt/arss/engine/arss-protocol")
 DEFAULT_LOG_DIR = ROOT / "tools" / "governance"
@@ -61,8 +63,10 @@ class OrgLearningEngine:
 
     def __init__(self, log_dir: Optional[Path] = None) -> None:
         self._log_dir      = Path(log_dir) if log_dir else DEFAULT_LOG_DIR
-        self._learning_log = self._log_dir / "learning_log.jsonl"
-        self._proposal_log = self._log_dir / "improvement_proposal_log.jsonl"
+        self._learning_log      = self._log_dir / "learning_log.jsonl"
+        self._proposal_log     = self._log_dir / "improvement_proposal_log.jsonl"
+        self._cr_log           = self._log_dir / "constitution_review_log.jsonl"
+        self._debt_log         = self._log_dir / "improvement_debt_log.jsonl"
 
     def _ensure_dir(self) -> None:
         self._log_dir.mkdir(parents=True, exist_ok=True)
@@ -222,8 +226,8 @@ class OrgLearningEngine:
             "description":                  description.strip(),
             "priority":                     priority,
             "status":                       "pending_eag",  # Phase 1: always pending
-            "constitution_review_proposal": None,           # Phase 2 placeholder
-            "self_improvement_debt":         None,           # Phase 2 placeholder
+            "constitution_review_proposal": None,           # linked CR id
+            "self_improvement_debt":         None,           # linked IMP id
             "actor":                        actor.strip(),
             "recorded_at":                  now.isoformat(),
             "eag":                          EAG_ID,
@@ -286,6 +290,154 @@ class OrgLearningEngine:
             "next_upcoming": upcoming,
             "checked_at":    today_str,
         }
+
+    # --- Phase 2: Constitution Review ---
+
+    def propose_constitution_review(
+        self,
+        reason: str,
+        proposer: str,
+        priority: str,
+    ) -> dict:
+        """
+        Appends ConstitutionReviewProposal to constitution_review_log.jsonl.
+        id: CR-{uuid4}, status: pending.
+        priority: CRITICAL | HIGH | MEDIUM | LOW.
+        EAG: EAG-S327-AIF-AREA7-P2-001
+        """
+        if not reason or not str(reason).strip():
+            raise LearningEngineError("required field missing: reason")
+        if not proposer or not str(proposer).strip():
+            raise LearningEngineError("required field missing: proposer")
+        if priority not in VALID_PRIORITIES:
+            raise LearningEngineError(
+                f"priority must be one of {sorted(VALID_PRIORITIES)}, got {priority!r}"
+            )
+        now = datetime.now(timezone.utc)
+        entry = {
+            "schema":     "constitution_review_v1",
+            "version":    VERSION,
+            "id":         f"CR-{uuid.uuid4()}",
+            "reason":     reason.strip(),
+            "proposer":   proposer.strip(),
+            "priority":   priority,
+            "status":     "pending",
+            "created_at": now.isoformat(),
+            "updated_at": now.isoformat(),
+            "eag":        EAG_ID_P2,
+        }
+        self._ensure_dir()
+        with open(self._cr_log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        return entry
+
+    def _load_constitution_reviews(self) -> list:
+        if not self._cr_log.exists():
+            return []
+        entries: list = []
+        with open(self._cr_log, encoding="utf-8") as f:
+            for line in f:
+                stripped = line.strip()
+                if stripped:
+                    try:
+                        entries.append(json.loads(stripped))
+                    except json.JSONDecodeError:
+                        pass
+        return entries
+
+    # --- Phase 2: Self-Improvement Debt ---
+
+    def record_improvement_debt(
+        self,
+        description: str,
+        area: str,
+        debt_type: str,
+        estimated_sessions: int,
+        actor: str = "system",
+    ) -> dict:
+        """
+        Appends ImprovementDebt to improvement_debt_log.jsonl.
+        id: IMP-{uuid4}, status: open.
+        debt_type: DESIGN | IMPL | TEST | GOVERNANCE.
+        estimated_sessions: positive int.
+        EAG: EAG-S327-AIF-AREA7-P2-001
+        """
+        VALID_DEBT_TYPES = frozenset({"DESIGN", "IMPL", "TEST", "GOVERNANCE"})
+        if not description or not str(description).strip():
+            raise LearningEngineError("required field missing: description")
+        if not area or not str(area).strip():
+            raise LearningEngineError("required field missing: area")
+        if debt_type not in VALID_DEBT_TYPES:
+            raise LearningEngineError(
+                f"debt_type must be one of {sorted(VALID_DEBT_TYPES)}, got {debt_type!r}"
+            )
+        if not isinstance(estimated_sessions, int) or estimated_sessions <= 0:
+            raise LearningEngineError(
+                f"estimated_sessions must be a positive integer, got {estimated_sessions!r}"
+            )
+        now = datetime.now(timezone.utc)
+        entry = {
+            "schema":             "improvement_debt_v1",
+            "version":            VERSION,
+            "id":                 f"IMP-{uuid.uuid4()}",
+            "description":        description.strip(),
+            "area":               area.strip(),
+            "debt_type":          debt_type,
+            "estimated_sessions": estimated_sessions,
+            "status":             "open",
+            "created_at":         now.isoformat(),
+            "updated_at":         now.isoformat(),
+            "actor":              actor.strip(),
+            "eag":                EAG_ID_P2,
+        }
+        self._ensure_dir()
+        with open(self._debt_log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        return entry
+
+    def _load_improvement_debts(self) -> list:
+        if not self._debt_log.exists():
+            return []
+        entries: list = []
+        with open(self._debt_log, encoding="utf-8") as f:
+            for line in f:
+                stripped = line.strip()
+                if stripped:
+                    try:
+                        entries.append(json.loads(stripped))
+                    except json.JSONDecodeError:
+                        pass
+        return entries
+
+    # --- Phase 2: absorb_learning ---
+
+    def absorb_learning(
+        self,
+        source: str,
+        content: str,
+        area_ref: str,
+        confidence: float,
+        actor: str = "system",
+        review_proposal_ids: Optional[List[str]] = None,
+        improvement_debt_ids: Optional[List[str]] = None,
+    ) -> dict:
+        """
+        Records learning node and optionally links CR / IMP ids.
+        Delegates to record_learning; Phase 2 adds optional linkage.
+        EAG: EAG-S327-AIF-AREA7-P2-001
+        """
+        entry = self.record_learning(
+            source=source,
+            content=content,
+            area_ref=area_ref,
+            confidence=confidence,
+            actor=actor,
+        )
+        if review_proposal_ids:
+            entry["related_constitution_reviews"] = list(review_proposal_ids)
+        if improvement_debt_ids:
+            entry["related_improvement_debts"] = list(improvement_debt_ids)
+        return entry
 
     # --- Query ---
 

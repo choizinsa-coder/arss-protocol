@@ -191,3 +191,98 @@ def test_12_get_pending_proposals_filter(tmp_path):
     assert len(all_pending) == 3
     assert len(high_only)   == 1
     assert high_only[0]["priority"] == "HIGH"
+
+# ===== Phase 2 Tests (EAG-S327-AIF-AREA7-P2-001) =====
+
+# 13: propose_constitution_review basic
+def test_13_propose_constitution_review_basic(tmp_path):
+    engine = OrgLearningEngine(log_dir=tmp_path)
+    result = engine.propose_constitution_review(
+        reason="VPS access policy needs revision",
+        proposer="caddy",
+        priority="HIGH",
+    )
+    assert result["id"].startswith("CR-")
+    assert result["schema"] == "constitution_review_v1"
+    assert result["reason"] == "VPS access policy needs revision"
+    assert result["proposer"] == "caddy"
+    assert result["priority"] == "HIGH"
+    assert result["status"] == "pending"
+    assert result["eag"] == "EAG-S327-AIF-AREA7-P2-001"
+    assert "created_at" in result
+    # jsonl file written
+    cr_log = tmp_path / "constitution_review_log.jsonl"
+    assert cr_log.exists()
+    lines = [l for l in cr_log.read_text().splitlines() if l.strip()]
+    assert len(lines) == 1
+
+
+# 14: propose_constitution_review invalid priority
+def test_14_propose_constitution_review_invalid_priority(tmp_path):
+    engine = OrgLearningEngine(log_dir=tmp_path)
+    with pytest.raises(LearningEngineError, match="priority"):
+        engine.propose_constitution_review(
+            reason="some reason",
+            proposer="caddy",
+            priority="INVALID",
+        )
+
+
+# 15: propose_constitution_review empty reason
+def test_15_propose_constitution_review_empty_reason(tmp_path):
+    engine = OrgLearningEngine(log_dir=tmp_path)
+    with pytest.raises(LearningEngineError, match="reason"):
+        engine.propose_constitution_review(
+            reason="   ",
+            proposer="caddy",
+            priority="MEDIUM",
+        )
+
+
+# 16: record_improvement_debt basic
+def test_16_record_improvement_debt_basic(tmp_path):
+    engine = OrgLearningEngine(log_dir=tmp_path)
+    result = engine.record_improvement_debt(
+        description="Area 6 WF-05 dispatch not yet live",
+        area="area_6",
+        debt_type="IMPL",
+        estimated_sessions=2,
+        actor="caddy",
+    )
+    assert result["id"].startswith("IMP-")
+    assert result["schema"] == "improvement_debt_v1"
+    assert result["description"] == "Area 6 WF-05 dispatch not yet live"
+    assert result["area"] == "area_6"
+    assert result["debt_type"] == "IMPL"
+    assert result["estimated_sessions"] == 2
+    assert result["status"] == "open"
+    assert result["eag"] == "EAG-S327-AIF-AREA7-P2-001"
+    # jsonl file written
+    debt_log = tmp_path / "improvement_debt_log.jsonl"
+    assert debt_log.exists()
+    lines = [l for l in debt_log.read_text().splitlines() if l.strip()]
+    assert len(lines) == 1
+
+
+# 17: record_improvement_debt invalid debt_type
+def test_17_record_improvement_debt_invalid_debt_type(tmp_path):
+    engine = OrgLearningEngine(log_dir=tmp_path)
+    with pytest.raises(LearningEngineError, match="debt_type"):
+        engine.record_improvement_debt(
+            description="some debt",
+            area="area_7",
+            debt_type="INVALID",
+            estimated_sessions=1,
+        )
+
+
+# 18: record_improvement_debt invalid estimated_sessions
+def test_18_record_improvement_debt_invalid_sessions(tmp_path):
+    engine = OrgLearningEngine(log_dir=tmp_path)
+    with pytest.raises(LearningEngineError, match="estimated_sessions"):
+        engine.record_improvement_debt(
+            description="some debt",
+            area="area_7",
+            debt_type="TEST",
+            estimated_sessions=0,
+        )
