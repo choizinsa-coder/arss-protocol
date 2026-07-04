@@ -12,7 +12,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 EAG_ID  = "EAG-S323-AIBA-MONITOR-001"
 
 ROOT        = Path("/opt/arss/engine/arss-protocol")
@@ -75,13 +75,25 @@ class GovernanceMonitor:
                 window_minutes=1440,
                 threshold=self.FAILURE_REPEAT_THRESHOLD
             )
-            return 0.3 if patterns.get("has_alert") else 0.0
+            repeats = patterns.get("consecutive_repeat", [])
+            if not repeats:
+                return 0.0
+            max_count = max(r.get("count", 0) for r in repeats)
+            normalized = min(1.0, max_count / (self.FAILURE_REPEAT_THRESHOLD + 2))
+            return round(normalized, 4)
         except Exception:
             return 0.0
 
     def _get_opportunity_decay_rate(self) -> float:
-        """Phase 1 플레이스홀더 — 항상 0.0"""
-        return 0.0
+        """Phase 1 proxy: Area 15 M04(24h RC-1/RC-2 count) normalized as opp decay."""
+        try:
+            from tools.governance.area_15_failure_memory import get_m04_contribution
+            m04 = get_m04_contribution(window_minutes=1440)
+            count = m04.get("count", 0)
+            OPP_DECAY_MAX_CAP = 10
+            return round(min(1.0, count / OPP_DECAY_MAX_CAP), 4)
+        except Exception:
+            return 0.0
 
     def _get_process_compliance_rate(self) -> float:
         if not DECISION_LEDGER.exists():
@@ -96,11 +108,14 @@ class GovernanceMonitor:
                             entries.append(json.loads(line))
                         except json.JSONDecodeError:
                             pass
-            critical = [e for e in entries if e.get("dc") in ("DC-3", "DC-4")]
-            if not critical:
+            if not entries:
                 return 1.0
-            compliant = sum(1 for e in critical if e.get("eag"))
-            return round(compliant / len(critical), 4)
+            total = len(entries)
+            critical = [e for e in entries if e.get("dc") in ("DC-3", "DC-4")]
+            critical_compliant = sum(1 for e in critical if e.get("eag"))
+            routine = total - len(critical)
+            compliant = routine + critical_compliant
+            return round(compliant / total, 4)
         except Exception:
             return 1.0
 
