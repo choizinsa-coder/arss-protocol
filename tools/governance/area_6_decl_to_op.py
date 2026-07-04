@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-area_6_decl_to_op.py v1.0.0
+area_6_decl_to_op.py v1.1.0
 AIF Area 6: Declaration-to-Operation Engine
-EAG: EAG-S324-AIF-AREA6-001
+EAG: EAG-S328-AIF-AREA6-P2-001
 
 Phase 1: WorkItem management + DEP chain auto-generation + Ready Queue query.
-Phase 2 placeholders: WF-05 dispatch, SLA alerts, Differential EAG.
+Phase 2: dispatch_wf05 (WF-05 live dispatch). SLA/DiffEAG placeholders.
 
 Pattern: area_7_org_learning.py (append-only jsonl, validate -> entry -> append)
 """
@@ -14,9 +14,11 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
+import os
+import subprocess
 
-VERSION = "1.0.0"
-EAG_ID  = "EAG-S324-AIF-AREA6-001"
+VERSION = "1.1.0"
+EAG_ID  = "EAG-S328-AIF-AREA6-P2-001"
 
 ROOT            = Path("/opt/arss/engine/arss-protocol")
 DEFAULT_LOG_DIR = ROOT / "tools" / "governance"
@@ -24,6 +26,11 @@ DEFAULT_LOG_DIR = ROOT / "tools" / "governance"
 VALID_ACTORS     = frozenset({"domi", "jeni", "caddy", "beo", "external"})
 VALID_WORK_TYPES = frozenset({"DESIGN", "VERIFY", "IMPLEMENT", "TEST", "EAG", "REVIEW"})
 VALID_STATUSES   = frozenset({"waiting", "ready", "in_progress", "done", "blocked"})
+
+WF05_ORCH_PATH = Path("/opt/arss/engine/arss-protocol/runtime/governance/wf05/wf05_orchestrator.py")
+WF05_DISPATCH_MODE_KEY = "WF05_DISPATCH_MODE"
+WF05_DISPATCH_DEFAULT_MODE = "dry_run"
+WF05_SUBPROCESS_TIMEOUT = 180
 
 
 class DeclToOpError(ValueError):
@@ -271,9 +278,71 @@ class DeclToOpEngine:
 
     # --- Phase 2 Placeholders ---
 
-    def _dispatch_wf05(self, workitem_id: str) -> str:
-        """Phase 2: WF-05 dispatch. NotImplementedError."""
-        raise NotImplementedError("WF-05 dispatch is Phase 2.")
+    def dispatch_wf05(
+        self,
+        workitem_id: str,
+        session: str,
+        command: str = "run_script",
+        params=None,
+    ):
+        """Phase 2: WF-05 dispatch (EAG-S328-AIF-AREA6-P2-001).
+
+        dry_run(default): records dispatch without subprocess call.
+        live: calls wf05_orchestrator.py via subprocess (timeout=180s).
+        Returns dispatch_result_v1 dict.
+        """
+        wi = self.get_workitem_by_id(workitem_id)
+        if wi is None:
+            raise DeclToOpError("WorkItem not found: " + repr(workitem_id))
+        if wi.get("status") != "ready":
+            _st = wi.get("status")
+            raise DeclToOpError(
+                "WorkItem " + repr(workitem_id) + " not ready, status=" + repr(_st)
+            )
+        payload = {
+            "task": wi.get("title", ""),
+            "context": wi.get("decision_subject", ""),
+            "session": session,
+            "command": command,
+            "params": params or {},
+        }
+        mode = os.environ.get(WF05_DISPATCH_MODE_KEY, WF05_DISPATCH_DEFAULT_MODE)
+        now = datetime.now(timezone.utc)
+        if mode == "dry_run":
+            wf05_session_id = session + "-DRY"
+            dispatch_status = "dry_run"
+        else:
+            pj = json.dumps(payload, ensure_ascii=False)
+            wf05_session_id = session
+            try:
+                res = subprocess.run(
+                    ["python3", str(WF05_ORCH_PATH), "--payload", pj],
+                    capture_output=True, text=True,
+                    timeout=WF05_SUBPROCESS_TIMEOUT,
+                )
+                dispatch_status = "live_success" if res.returncode == 0 else "live_error"
+            except subprocess.TimeoutExpired:
+                dispatch_status = "live_timeout"
+            except FileNotFoundError:
+                raise DeclToOpError(
+                    "WF-05 not found at " + str(WF05_ORCH_PATH)
+                )
+        new_e = dict(wi)
+        new_e["wf05_task_id"] = wf05_session_id
+        new_e["status"] = "in_progress"
+        new_e["dispatch_status"] = dispatch_status
+        new_e["actor_id"] = "system"
+        new_e["recorded_at"] = now.isoformat()
+        self._ensure_dir()
+        with open(self._workitem_log, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(new_e, ensure_ascii=False) + chr(10))
+        return {
+            "schema": "dispatch_result_v1",
+            "workitem_id": workitem_id,
+            "wf05_session_id": wf05_session_id,
+            "dispatch_status": dispatch_status,
+            "recorded_at": now.isoformat(),
+        }
 
     def _check_sla_alerts(self) -> list:
         """Phase 2: SLA deadline alerts. Returns empty list in Phase 1."""

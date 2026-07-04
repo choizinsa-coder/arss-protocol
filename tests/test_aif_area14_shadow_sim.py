@@ -134,3 +134,72 @@ def test_12_get_simulation_status(tmp_path):
     assert status["sim_by_risk"]["HIGH"] == 1
     assert status["sim_by_outcome"]["success"] == 2
     assert status["interlock_rules"] == 1
+
+
+from unittest.mock import patch, MagicMock
+import json as _jmod
+
+
+# 13: run_simulation_llm mock success
+def test_13_run_simulation_llm_success(tmp_path):
+    e = ShadowSimEngine(log_dir=tmp_path)
+    e.record_shadow_run(
+        scenario_id="SC-s328-01", description="test scenario",
+        target_area="area_6", predicted_outcome="uncertain",
+        risk_level="MEDIUM", confidence=0.5,
+    )
+    inner = {"predicted_outcome": "success", "risk_level": "LOW", "confidence": 0.9, "reasoning": "ok"}
+    resp_d = {"ok": True, "text": _jmod.dumps(inner)}
+    rbytes = _jmod.dumps(resp_d).encode("utf-8")
+    mock_h = MagicMock()
+    mock_h.read.return_value = rbytes
+    with patch("urllib.request.urlopen") as mu:
+        mu.return_value.__enter__ = MagicMock(return_value=mock_h)
+        mu.return_value.__exit__ = MagicMock(return_value=False)
+        result = e.run_simulation_llm("SC-s328-01", session="S328")
+    assert result["source"] == "llm_simulation"
+    assert result["predicted_outcome"] == "success"
+    assert result["risk_level"] == "LOW"
+    assert abs(result["confidence"] - 0.9) < 0.01
+
+
+# 14: run_simulation_llm URLError
+def test_14_run_simulation_llm_unreachable(tmp_path):
+    e = ShadowSimEngine(log_dir=tmp_path)
+    e.record_shadow_run(
+        scenario_id="SC-s328-02", description="unreachable",
+        target_area="area_14", predicted_outcome="uncertain",
+        risk_level="LOW", confidence=0.5,
+    )
+    import urllib.error as _ue
+    with patch("urllib.request.urlopen", side_effect=_ue.URLError("refused")):
+        with pytest.raises(ShadowSimError):
+            e.run_simulation_llm("SC-s328-02", session="S328")
+
+
+# 15: run_simulation_llm no scenario
+def test_15_run_simulation_llm_no_scenario(tmp_path):
+    e = ShadowSimEngine(log_dir=tmp_path)
+    with pytest.raises(ShadowSimError):
+        e.run_simulation_llm("SC-does-not-exist", session="S328")
+
+
+# 16: run_simulation_llm parse fallback
+def test_16_run_simulation_llm_parse_fallback(tmp_path):
+    e = ShadowSimEngine(log_dir=tmp_path)
+    e.record_shadow_run(
+        scenario_id="SC-s328-03", description="fallback",
+        target_area="area_14", predicted_outcome="failure",
+        risk_level="HIGH", confidence=0.3,
+    )
+    resp_d = {"ok": True, "text": "no valid json here at all"}
+    rbytes = _jmod.dumps(resp_d).encode("utf-8")
+    mock_h = MagicMock()
+    mock_h.read.return_value = rbytes
+    with patch("urllib.request.urlopen") as mu:
+        mu.return_value.__enter__ = MagicMock(return_value=mock_h)
+        mu.return_value.__exit__ = MagicMock(return_value=False)
+        result = e.run_simulation_llm("SC-s328-03", session="S328")
+    assert result["source"] == "llm_simulation"
+    assert result["predicted_outcome"] == "failure"
+    assert result["risk_level"] == "HIGH"

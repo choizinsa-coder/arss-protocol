@@ -170,3 +170,48 @@ def test_12_get_workitem_summary(tmp_path):
     assert summary["by_actor"]["caddy"] == 1
     assert summary["by_actor"]["beo"] == 1
     assert len(summary["recent_5"]) == 4
+
+
+# 13: dispatch_wf05 dry_run basic
+def test_13_dispatch_wf05_dry_run(tmp_path):
+    engine = DeclToOpEngine(log_dir=tmp_path)
+    wi = engine.create_workitem(
+        parent_decision="D-s328-01", actor="caddy",
+        work_type="IMPLEMENT", title="WF05 dispatch test", status="ready",
+    )
+    r = engine.dispatch_wf05(wi["id"], session="S328")
+    assert r["schema"] == "dispatch_result_v1"
+    assert r["wf05_session_id"] == "S328-DRY"
+    assert r["dispatch_status"] == "dry_run"
+    assert r["workitem_id"] == wi["id"]
+
+
+# 14: dispatch_wf05 workitem not found
+def test_14_dispatch_wf05_not_found(tmp_path):
+    engine = DeclToOpEngine(log_dir=tmp_path)
+    with pytest.raises(DeclToOpError):
+        engine.dispatch_wf05("WI-nonexistent-s328", session="S328")
+
+
+# 15: dispatch_wf05 status not ready
+def test_15_dispatch_wf05_not_ready(tmp_path):
+    engine = DeclToOpEngine(log_dir=tmp_path)
+    wi = engine.create_workitem(
+        parent_decision="D-s328-02", actor="caddy",
+        work_type="IMPLEMENT", title="Not ready test", status="waiting",
+    )
+    with pytest.raises(DeclToOpError):
+        engine.dispatch_wf05(wi["id"], session="S328")
+
+
+# 16: dispatch_wf05 result schema
+def test_16_dispatch_wf05_result_schema(tmp_path):
+    engine = DeclToOpEngine(log_dir=tmp_path)
+    wi = engine.create_workitem(
+        parent_decision="D-s328-03", actor="domi",
+        work_type="DESIGN", title="Schema test", status="ready",
+    )
+    r = engine.dispatch_wf05(wi["id"], session="S328-SCH")
+    for k in ("schema", "workitem_id", "wf05_session_id", "dispatch_status", "recorded_at"):
+        assert k in r, "missing key: " + k
+    assert r["wf05_session_id"] == "S328-SCH-DRY"

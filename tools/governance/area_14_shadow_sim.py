@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-area_14_shadow_sim.py v1.0.0
+area_14_shadow_sim.py v1.1.0
 AIF Area 14: Shadow Simulation (meta+Interlock)
-EAG: EAG-S324-AIF-AREA14-001
+EAG: EAG-S328-AIF-AREA14-P2-001
 
 Phase 1: Shadow Run record + Interlock rule record + check_interlock (read-only).
-Phase 2 placeholders: LLM simulation, auto-interlock, dependency map.
+Phase 2: run_simulation_llm (Domi LLM via 8448/ask). auto-interlock/dep-map placeholders.
 Pattern: area_7_org_learning.py (class, log_dir override, 2 jsonl, append-only)
 """
 import json
@@ -13,9 +13,15 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+import re
+import urllib.request
+import urllib.error
 
-VERSION = "1.0.0"
-EAG_ID  = "EAG-S324-AIF-AREA14-001"
+VERSION = "1.1.0"
+EAG_ID  = "EAG-S328-AIF-AREA14-P2-001"
+
+LLM_TIMEOUT = 125
+DOMI_ASK_URL = "http://127.0.0.1:8448/ask"
 
 ROOT            = Path("/opt/arss/engine/arss-protocol")
 DEFAULT_LOG_DIR = ROOT / "tools" / "governance"
@@ -231,9 +237,82 @@ class ShadowSimEngine:
 
     # === Phase 2 Placeholders ===
 
-    def _run_simulation_llm(self, scenario_id: str) -> dict:
-        """Phase 2: LLM-based simulation engine."""
-        raise NotImplementedError("Phase 2: LLM simulation engine not implemented.")
+    def run_simulation_llm(self, scenario_id: str, session: str, actor: str = "system") -> dict:
+        """Phase 2: LLM-based shadow simulation via Domi (EAG-S328-AIF-AREA14-P2-001).
+
+        Calls Domi 8448/ask with scenario data, parses JSON response,
+        records new shadow run with [LLM_SIM] prefix.
+        """
+        runs = self._load_shadow_runs()
+        latest = None
+        for r in reversed(runs):
+            if r.get("scenario_id") == scenario_id.strip():
+                latest = r
+                break
+        if latest is None:
+            raise ShadowSimError("No shadow run for scenario: " + repr(scenario_id))
+        desc = latest.get("description", "")
+        tgt  = latest.get("target_area", "")
+        risk = latest.get("risk_level", "LOW")
+        prompt = (
+            "Simulate: scenario_id=" + scenario_id
+            + " desc=" + desc + " tgt=" + tgt + " risk=" + risk
+            + ". Respond JSON only: predicted_outcome, risk_level, confidence, reasoning."
+        )
+        body = json.dumps({
+            "prompt": prompt, "context": "shadow_simulation",
+            "session": session, "escalate": False,
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            DOMI_ASK_URL, data=body,
+            headers={"Content-Type": "application/json",
+                     "Content-Length": str(len(body))},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=LLM_TIMEOUT) as resp:
+                rdata = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.URLError as e:
+            raise ShadowSimError("Domi LLM unreachable: " + str(e))
+        text = rdata.get("text", "") if isinstance(rdata, dict) else ""
+        parsed = None
+        if text:
+            _m = re.search(r"{.*?}", text, re.DOTALL)
+            if _m:
+                try:
+                    parsed = json.loads(_m.group(0))
+                except json.JSONDecodeError:
+                    parsed = None
+        if parsed:
+            po = parsed.get("predicted_outcome", latest.get("predicted_outcome", "uncertain"))
+            rl = parsed.get("risk_level", latest.get("risk_level", "LOW"))
+            try:
+                cf = max(0.0, min(1.0, float(parsed.get("confidence", latest.get("confidence", 0.5)))))
+            except (ValueError, TypeError):
+                cf = latest.get("confidence", 0.5)
+            if po not in VALID_PREDICTED_OUTCOMES:
+                po = latest.get("predicted_outcome", "uncertain")
+            if rl not in VALID_RISK_LEVELS:
+                rl = latest.get("risk_level", "LOW")
+            reasoning = str(parsed.get("reasoning", ""))
+        else:
+            po = latest.get("predicted_outcome", "uncertain")
+            rl = latest.get("risk_level", "LOW")
+            cf = latest.get("confidence", 0.5)
+            reasoning = "parse_failed"
+        entry = self.record_shadow_run(
+            scenario_id=scenario_id,
+            description="[LLM_SIM] " + latest.get("description", ""),
+            target_area=latest.get("target_area", ""),
+            predicted_outcome=po,
+            risk_level=rl,
+            confidence=cf,
+            actor=actor,
+        )
+        entry["source"] = "llm_simulation"
+        entry["llm_session"] = session
+        entry["reasoning"] = reasoning
+        return entry
 
     def _auto_engage_interlock(self, area_name: str) -> None:
         """Phase 2: Automatic interlock enforcement — actual area blocking."""
