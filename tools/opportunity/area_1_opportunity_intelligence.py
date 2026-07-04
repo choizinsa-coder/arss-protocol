@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
-area_1_opportunity_intelligence.py v1.0.0
+area_1_opportunity_intelligence.py v1.1.0
 AIF Area 1: Trust-Bound Opportunity Intelligence Engine (Phase 1 MVKG)
 EAG: EAG-S323-AIF-AREA1-001
 
 Phase 1 scope:
   Evidence / Assumption / Opportunity nodes + Opportunity Score engine.
-  Signal Verification Gate, Pre-Mortem Gate, Differential EAG = Phase 2 placeholder.
+  Signal Verification Gate: verify_signal() (EAG-S327-AIF-AREA1-P2-001).
+  Pre-Mortem Gate: run_pre_mortem() (EAG-S327-AIF-AREA1-P2-001).
+  Differential EAG = Phase 3 placeholder.
   Counter-Hypothesis Loop, Belief Revision propagation = Phase 2 placeholder.
 
 Pattern: area_15_failure_memory.py (append-only jsonl, validate -> entry -> append).
@@ -18,8 +20,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
 
-VERSION = "1.0.0"
-EAG_ID  = "EAG-S323-AIF-AREA1-001"
+VERSION = "1.1.0"
+EAG_ID    = "EAG-S323-AIF-AREA1-001"
+EAG_ID_P2 = "EAG-S327-AIF-AREA1-P2-001"
 
 ROOT            = Path("/opt/arss/engine/arss-protocol")
 DEFAULT_LOG_DIR = ROOT / "tools" / "opportunity"
@@ -27,6 +30,7 @@ DEFAULT_LOG_DIR = ROOT / "tools" / "opportunity"
 REVERSIBILITY_PENALTY: dict = {"HIGH": 1.0, "MEDIUM": 1.5, "LOW": 2.0}
 VALID_REVERSIBILITY   = frozenset({"HIGH", "MEDIUM", "LOW"})
 VALID_STATUS          = frozenset({"active", "stale", "quarantine", "retired"})
+VALID_SIGNAL_SOURCES  = frozenset({"evidence", "assumption", "external", "review"})
 
 
 class OpportunityError(ValueError):
@@ -45,7 +49,9 @@ class OpportunityIntelligenceEngine:
         self._log_dir         = Path(log_dir) if log_dir else DEFAULT_LOG_DIR
         self._evidence_log    = self._log_dir / "evidence_log.jsonl"
         self._assumption_log  = self._log_dir / "assumption_log.jsonl"
-        self._opportunity_log = self._log_dir / "opportunity_log.jsonl"
+        self._opportunity_log     = self._log_dir / "opportunity_log.jsonl"
+        self._signal_verify_log   = self._log_dir / "signal_verification_log.jsonl"
+        self._pre_mortem_log      = self._log_dir / "pre_mortem_log.jsonl"
 
     def _ensure_dir(self) -> None:
         self._log_dir.mkdir(parents=True, exist_ok=True)
@@ -303,6 +309,125 @@ class OpportunityIntelligenceEngine:
                     except json.JSONDecodeError:
                         pass
         return entries
+
+    # --- Phase 2: Signal Verification Gate ---
+
+    def verify_signal(
+        self,
+        opportunity_id: str,
+        signal_source: str,
+        signal_confidence: float,
+        actor: str = "system",
+    ) -> dict:
+        """
+        Signal Verification Gate.
+        signal_source: evidence|assumption|external|review.
+        verdict: VERIFIED (>= 0.7) / UNVERIFIED (< 0.7).
+        Appends to signal_verification_log.jsonl (id: SV-{uuid4}).
+        Updates opportunity_log.jsonl signal_verification_gate field (append-only).
+        EAG: EAG-S327-AIF-AREA1-P2-001
+        """
+        if not opportunity_id or not str(opportunity_id).strip():
+            raise OpportunityError("required field missing: opportunity_id")
+        if signal_source not in VALID_SIGNAL_SOURCES:
+            raise OpportunityError(
+                f"signal_source must be one of {sorted(VALID_SIGNAL_SOURCES)}, got {signal_source!r}"
+            )
+        if not isinstance(signal_confidence, (int, float)):
+            raise OpportunityError("signal_confidence must be a float")
+        signal_confidence = float(signal_confidence)
+        if not (0.0 <= signal_confidence <= 1.0):
+            raise OpportunityError(
+                f"signal_confidence must be 0.0~1.0, got {signal_confidence}"
+            )
+        verdict = "VERIFIED" if signal_confidence >= 0.7 else "UNVERIFIED"
+        now = datetime.now(timezone.utc)
+        sv_entry = {
+            "schema":             "signal_verification_v1",
+            "version":            VERSION,
+            "id":                 f"SV-{uuid.uuid4()}",
+            "opportunity_id":     opportunity_id.strip(),
+            "signal_source":      signal_source,
+            "signal_confidence":  round(signal_confidence, 4),
+            "verdict":            verdict,
+            "actor":              actor.strip(),
+            "recorded_at":        now.isoformat(),
+            "eag":                EAG_ID_P2,
+        }
+        self._ensure_dir()
+        with open(self._signal_verify_log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(sv_entry, ensure_ascii=False) + "\n")
+        # Update opportunity entry (append-only: re-append with updated field)
+        all_ops = self._load_opportunities()
+        matched = None
+        for op in reversed(all_ops):
+            if op.get("id") == opportunity_id.strip():
+                matched = dict(op)
+                break
+        if matched:
+            matched["signal_verification_gate"] = sv_entry
+            matched["recorded_at"] = now.isoformat()
+            with open(self._opportunity_log, "a", encoding="utf-8") as f:
+                f.write(json.dumps(matched, ensure_ascii=False) + "\n")
+        return sv_entry
+
+    # --- Phase 2: Pre-Mortem Gate ---
+
+    def run_pre_mortem(
+        self,
+        opportunity_id: str,
+        failure_scenarios: List[str],
+        actor: str = "system",
+    ) -> dict:
+        """
+        Pre-Mortem Gate. Failure scenario analysis.
+        failure_scenarios: List[str], 1 or more required.
+        risk_level: HIGH (>= 3) / MEDIUM (2) / LOW (1).
+        Appends to pre_mortem_log.jsonl (id: PM-{uuid4}).
+        Updates opportunity_log.jsonl pre_mortem_gate field (append-only).
+        EAG: EAG-S327-AIF-AREA1-P2-001
+        """
+        if not opportunity_id or not str(opportunity_id).strip():
+            raise OpportunityError("required field missing: opportunity_id")
+        if not failure_scenarios or not isinstance(failure_scenarios, list):
+            raise OpportunityError("failure_scenarios must be a non-empty list")
+        if len(failure_scenarios) < 1:
+            raise OpportunityError("at least one failure_scenario is required")
+        n = len(failure_scenarios)
+        if n >= 3:
+            risk_level = "HIGH"
+        elif n == 2:
+            risk_level = "MEDIUM"
+        else:
+            risk_level = "LOW"
+        now = datetime.now(timezone.utc)
+        pm_entry = {
+            "schema":             "pre_mortem_v1",
+            "version":            VERSION,
+            "id":                 f"PM-{uuid.uuid4()}",
+            "opportunity_id":     opportunity_id.strip(),
+            "failure_scenarios":  [s.strip() for s in failure_scenarios if s.strip()],
+            "risk_level":         risk_level,
+            "actor":              actor.strip(),
+            "recorded_at":        now.isoformat(),
+            "eag":                EAG_ID_P2,
+        }
+        self._ensure_dir()
+        with open(self._pre_mortem_log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(pm_entry, ensure_ascii=False) + "\n")
+        # Update opportunity entry (append-only: re-append with updated field)
+        all_ops = self._load_opportunities()
+        matched = None
+        for op in reversed(all_ops):
+            if op.get("id") == opportunity_id.strip():
+                matched = dict(op)
+                break
+        if matched:
+            matched["pre_mortem_gate"] = pm_entry
+            matched["recorded_at"] = now.isoformat()
+            with open(self._opportunity_log, "a", encoding="utf-8") as f:
+                f.write(json.dumps(matched, ensure_ascii=False) + "\n")
+        return pm_entry
 
     # --- Query ---
 

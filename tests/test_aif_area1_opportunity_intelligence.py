@@ -15,6 +15,7 @@ from tools.opportunity.area_1_opportunity_intelligence import (
     REVERSIBILITY_PENALTY,
     VERSION,
     EAG_ID,
+    EAG_ID_P2,
 )
 
 
@@ -219,3 +220,97 @@ def test_12_get_active_opportunities_filter(tmp_path):
     assert len(all_active) == 2
     assert len(high_only)  == 1
     assert high_only[0]["title"] == "High Score"
+
+# ===== Phase 2 Tests (EAG-S327-AIF-AREA1-P2-001) =====
+
+# 13: verify_signal VERIFIED
+def test_13_verify_signal_verified(tmp_path):
+    engine = OpportunityIntelligenceEngine(log_dir=tmp_path)
+    op = engine.record_opportunity(
+        title="Test opportunity", evidence_ids=[], assumption_ids=[],
+        strategic_alignment=0.8, wrong_cost_factor=1.0, reversibility="HIGH",
+    )
+    sv = engine.verify_signal(
+        opportunity_id=op["id"],
+        signal_source="evidence",
+        signal_confidence=0.85,
+    )
+    assert sv["id"].startswith("SV-")
+    assert sv["schema"] == "signal_verification_v1"
+    assert sv["verdict"] == "VERIFIED"
+    assert sv["signal_confidence"] == 0.85
+    assert sv["eag"] == EAG_ID_P2
+    sv_log = tmp_path / "signal_verification_log.jsonl"
+    assert sv_log.exists()
+    lines = [l for l in sv_log.read_text().splitlines() if l.strip()]
+    assert len(lines) == 1
+
+# 14: verify_signal UNVERIFIED
+def test_14_verify_signal_unverified(tmp_path):
+    engine = OpportunityIntelligenceEngine(log_dir=tmp_path)
+    op = engine.record_opportunity(
+        title="Test opportunity", evidence_ids=[], assumption_ids=[],
+        strategic_alignment=0.8, wrong_cost_factor=1.0, reversibility="HIGH",
+    )
+    sv = engine.verify_signal(
+        opportunity_id=op["id"],
+        signal_source="assumption",
+        signal_confidence=0.5,
+    )
+    assert sv["verdict"] == "UNVERIFIED"
+
+# 15: verify_signal invalid source
+def test_15_verify_signal_invalid_source(tmp_path):
+    engine = OpportunityIntelligenceEngine(log_dir=tmp_path)
+    with pytest.raises(OpportunityError, match="signal_source"):
+        engine.verify_signal(
+            opportunity_id="OP-test",
+            signal_source="INVALID",
+            signal_confidence=0.8,
+        )
+
+# 16: run_pre_mortem HIGH risk
+def test_16_run_pre_mortem_high_risk(tmp_path):
+    engine = OpportunityIntelligenceEngine(log_dir=tmp_path)
+    op = engine.record_opportunity(
+        title="Test opportunity", evidence_ids=[], assumption_ids=[],
+        strategic_alignment=0.8, wrong_cost_factor=1.0, reversibility="HIGH",
+    )
+    pm = engine.run_pre_mortem(
+        opportunity_id=op["id"],
+        failure_scenarios=["scenario A", "scenario B", "scenario C"],
+    )
+    assert pm["id"].startswith("PM-")
+    assert pm["schema"] == "pre_mortem_v1"
+    assert pm["risk_level"] == "HIGH"
+    assert len(pm["failure_scenarios"]) == 3
+    assert pm["eag"] == EAG_ID_P2
+    pm_log = tmp_path / "pre_mortem_log.jsonl"
+    assert pm_log.exists()
+
+# 17: run_pre_mortem MEDIUM risk
+def test_17_run_pre_mortem_medium_risk(tmp_path):
+    engine = OpportunityIntelligenceEngine(log_dir=tmp_path)
+    op = engine.record_opportunity(
+        title="Test", evidence_ids=[], assumption_ids=[],
+        strategic_alignment=0.8, wrong_cost_factor=1.0, reversibility="HIGH",
+    )
+    pm = engine.run_pre_mortem(
+        opportunity_id=op["id"],
+        failure_scenarios=["scenario A", "scenario B"],
+    )
+    assert pm["risk_level"] == "MEDIUM"
+
+# 18: run_pre_mortem LOW risk (1 scenario)
+def test_18_run_pre_mortem_low_risk(tmp_path):
+    engine = OpportunityIntelligenceEngine(log_dir=tmp_path)
+    op = engine.record_opportunity(
+        title="Test", evidence_ids=[], assumption_ids=[],
+        strategic_alignment=0.8, wrong_cost_factor=1.0, reversibility="HIGH",
+    )
+    pm = engine.run_pre_mortem(
+        opportunity_id=op["id"],
+        failure_scenarios=["only one scenario"],
+    )
+    assert pm["risk_level"] == "LOW"
+    assert len(pm["failure_scenarios"]) == 1
