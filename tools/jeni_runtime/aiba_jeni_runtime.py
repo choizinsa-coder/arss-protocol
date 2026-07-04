@@ -1046,7 +1046,7 @@ def _call_gemini(contents: list, escalate: bool = False) -> dict:
         "system_instruction": {"parts": [{"text": JENI_SYSTEM_INSTRUCTION}]},
         "contents": contents,
         "tools": [{"functionDeclarations": _build_function_declarations()}],
-        "generationConfig": {"temperature": 0.4,
+        "generationConfig": {"temperature": 0,
                              "maxOutputTokens": GEMINI_MAX_OUTPUT_TOKENS},
     }
     raw_body = json.dumps(body).encode("utf-8")
