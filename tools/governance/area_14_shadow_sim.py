@@ -168,6 +168,7 @@ class ShadowSimEngine:
         now = datetime.now(timezone.utc)
         entry = {
             "schema":            "interlock_rule_v1",
+            "event_type":        "rule",
             "version":           VERSION,
             "id":                f"ILK-{uuid.uuid4()}",
             "rule_id":           rule_id.strip(),
@@ -314,13 +315,181 @@ class ShadowSimEngine:
         entry["reasoning"] = reasoning
         return entry
 
-    def _auto_engage_interlock(self, area_name: str) -> None:
+    def _auto_engage_interlock(self, area_name: str, actor: str = "shadow_sim") -> Optional[str]:
         """Phase 2: Automatic interlock enforcement — actual area blocking."""
-        raise NotImplementedError("Phase 2: Auto interlock engagement not implemented.")
+        area = str(area_name).strip()
+        if not area:
+            raise ShadowSimError("required field missing: area_name")
+        if area in self.get_blocked_areas():
+            return None
+        rule_ids = [
+            r.get("rule_id", r.get("id", ""))
+            for r in self._load_interlock_rules()
+            if r.get("event_type", "rule") == "rule" and r.get("blocked_area") == area
+        ]
+        now = datetime.now(timezone.utc)
+        entry = {
+            "schema":      "interlock_event_v1",
+            "version":     VERSION,
+            "id":          "BLK-" + str(uuid.uuid4()),
+            "event_type":  "block",
+            "area_name":   area,
+            "rule_ids":    rule_ids,
+            "reason":      "Auto interlock: " + str(len(rule_ids)) + " rule(s)",
+            "actor":       str(actor).strip(),
+            "recorded_at": now.isoformat(),
+            "eag":         EAG_ID,
+        }
+        self._ensure_dir()
+        with open(self._interlock_log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + chr(10))
+        return entry["id"]
+
+    def get_blocked_areas(self) -> list:
+        """Return sorted list of currently blocked areas. Latest event wins."""
+        rules = self._load_interlock_rules()
+        events = [
+            r for r in rules
+            if r.get("event_type") in ("block", "unblock")
+            and r.get("area_name")
+            and r.get("recorded_at")
+        ]
+        latest_state = {}
+        latest_time = {}
+        for ev in events:
+            a_n = ev["area_name"]
+            ts = ev["recorded_at"]
+            if a_n not in latest_time or ts >= latest_time[a_n]:
+                latest_time[a_n] = ts
+                latest_state[a_n] = ev["event_type"]
+        return sorted([a for a, s in latest_state.items() if s == "block"])
+
+    def unblock_area(self, area_name: str, actor: str = "beo", eag_id: str = "") -> Optional[str]:
+        """Append an unblock event. EAG recovery only; no auto-resume."""
+        area = str(area_name).strip()
+        if not area:
+            raise ShadowSimError("required field missing: area_name")
+        if area not in self.get_blocked_areas():
+            return None
+        now = datetime.now(timezone.utc)
+        entry = {
+            "schema":      "interlock_event_v1",
+            "version":     VERSION,
+            "id":          "UNB-" + str(uuid.uuid4()),
+            "event_type":  "unblock",
+            "area_name":   area,
+            "reason":      eag_id or "manual unblock",
+            "actor":       str(actor).strip(),
+            "eag_id":      eag_id,
+            "recorded_at": now.isoformat(),
+            "eag":         EAG_ID,
+        }
+        self._ensure_dir()
+        with open(self._interlock_log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + chr(10))
+        return entry["id"]
 
     def build_dependency_map(self) -> dict:
         """Phase 2: Cross-area Dependency Map."""
-        raise NotImplementedError("Phase 2: Dependency Map not implemented.")
+        rules = self._load_interlock_rules()
+        interlock_rules = [r for r in rules if r.get("event_type", "rule") == "rule"]
+        runs = self._load_shadow_runs()
+        blocked = set(self.get_blocked_areas())
+        areas = set()
+        for r in interlock_rules:
+            if r.get("trigger_area"):
+                areas.add(r["trigger_area"])
+            if r.get("blocked_area"):
+                areas.add(r["blocked_area"])
+        for run in runs:
+            if run.get("target_area"):
+                areas.add(run["target_area"])
+        latest_run = {}
+        run_count = {}
+        for run in runs:
+            ta = run.get("target_area")
+            if not ta:
+                continue
+            run_count[ta] = run_count.get(ta, 0) + 1
+            ts = run.get("recorded_at", "")
+            if ta not in latest_run or ts >= latest_run[ta].get("recorded_at", ""):
+                latest_run[ta] = run
+        nodes = []
+        for a in sorted(areas):
+            lr = latest_run.get(a, {})
+            nodes.append({
+                "area_name":         a,
+                "blocked":           a in blocked,
+                "risk_level":        lr.get("risk_level", "unknown"),
+                "predicted_outcome": lr.get("predicted_outcome", "unknown"),
+                "confidence":        lr.get("confidence"),
+                "total_runs":        run_count.get(a, 0),
+            })
+        edge_map = {}
+        for r in interlock_rules:
+            src_a = r.get("trigger_area")
+            tgt_a = r.get("blocked_area")
+            if not src_a or not tgt_a:
+                continue
+            key = src_a + ">" + tgt_a
+            if key not in edge_map:
+                edge_map[key] = {
+                    "source":            src_a,
+                    "target":            tgt_a,
+                    "type":              "interlock",
+                    "trigger_condition": r.get("trigger_condition", ""),
+                    "reason":            r.get("reason", ""),
+                    "weight":            0,
+                }
+            edge_map[key]["weight"] += 1
+        edges = list(edge_map.values())
+        cycles = self._detect_cycles(edges)
+        return {
+            "schema":       "dependency_map_v1",
+            "version":      VERSION,
+            "eag":          EAG_ID,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "nodes":        nodes,
+            "edges":        edges,
+            "cycles":       cycles,
+            "stats": {
+                "total_nodes":   len(nodes),
+                "total_edges":   len(edges),
+                "cycle_count":   len(cycles),
+                "blocked_nodes": len(blocked),
+            },
+        }
+
+    def _detect_cycles(self, edges: list) -> list:
+        """Detect directed cycles via DFS. Returns list of node-path lists."""
+        adj = {}
+        for e in edges:
+            adj.setdefault(e["source"], []).append(e["target"])
+            adj.setdefault(e["target"], [])
+        visited = set()
+        rec = []
+        cycles = []
+        seen = set()
+
+        def _dfs(node):
+            visited.add(node)
+            rec.append(node)
+            for nb in adj.get(node, []):
+                if nb not in visited:
+                    _dfs(nb)
+                elif nb in rec:
+                    idx = rec.index(nb)
+                    cyc = rec[idx:] + [nb]
+                    key = frozenset(cyc)
+                    if key not in seen:
+                        seen.add(key)
+                        cycles.append(cyc)
+            rec.pop()
+
+        for n in list(adj.keys()):
+            if n not in visited:
+                _dfs(n)
+        return cycles
 
 
 if __name__ == "__main__":
