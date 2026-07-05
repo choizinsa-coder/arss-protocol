@@ -11,7 +11,7 @@ Pattern: area_7_org_learning.py (append-only jsonl, validate -> entry -> append)
 """
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import List, Optional
 import os
@@ -26,6 +26,9 @@ DEFAULT_LOG_DIR = ROOT / "tools" / "governance"
 VALID_ACTORS     = frozenset({"domi", "jeni", "caddy", "beo", "external"})
 VALID_WORK_TYPES = frozenset({"DESIGN", "VERIFY", "IMPLEMENT", "TEST", "EAG", "REVIEW"})
 VALID_STATUSES   = frozenset({"waiting", "ready", "in_progress", "done", "blocked"})
+
+WORK_TYPE_SLA_DEFAULTS = {"DESIGN": 72, "VERIFY": 48, "IMPLEMENT": 72, "TEST": 48, "EAG": 168, "REVIEW": 168}
+APPROACHING_THRESHOLD_SECONDS = 3600
 
 WF05_ORCH_PATH = Path("/opt/arss/engine/arss-protocol/runtime/governance/wf05/wf05_orchestrator.py")
 WF05_DISPATCH_MODE_KEY = "WF05_DISPATCH_MODE"
@@ -89,6 +92,9 @@ class DeclToOpEngine:
         depends_on: Optional[List[str]] = None,
         actor_id: str = "system",
         decision_subject: str = "",
+        sla_deadline: Optional[str] = None,
+        escalate_at: Optional[str] = None,
+        apply_default_sla: bool = False,
     ) -> dict:
         """
         Creates a WorkItem and appends to workitem_log.jsonl.
@@ -131,6 +137,14 @@ class DeclToOpEngine:
             "recorded_at":      now.isoformat(),
             "eag":              EAG_ID,
         }
+        if sla_deadline is not None:
+            entry["sla_deadline"] = sla_deadline
+        elif apply_default_sla:
+            _h = WORK_TYPE_SLA_DEFAULTS.get(work_type)
+            if _h is not None:
+                entry["sla_deadline"] = (datetime.now(timezone.utc) + timedelta(hours=_h)).isoformat()
+        if escalate_at is not None:
+            entry["escalate_at"] = escalate_at
         self._ensure_dir()
         with open(self._workitem_log, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -344,9 +358,50 @@ class DeclToOpEngine:
             "recorded_at": now.isoformat(),
         }
 
-    def _check_sla_alerts(self) -> list:
-        """Phase 2: SLA deadline alerts. Returns empty list in Phase 1."""
-        return []
+    def _check_sla_alerts(self) -> dict:
+        """Phase 2: SLA deadline alerts (overdue/approaching). Alerts only, no auto-action."""
+        now = datetime.now(timezone.utc)
+        overdue = []
+        approaching = []
+        for item in self._load_latest_workitems():
+            sla_str = item.get("sla_deadline")
+            if sla_str is None:
+                continue
+            if not isinstance(sla_str, str):
+                continue
+            try:
+                sla_dt = datetime.fromisoformat(sla_str)
+            except (ValueError, TypeError):
+                continue
+            if sla_dt.tzinfo is None:
+                sla_dt = sla_dt.replace(tzinfo=timezone.utc)
+            diff_seconds = (sla_dt - now).total_seconds()
+            if diff_seconds < 0:
+                overdue.append({
+                    "workitem_id": item.get("id"),
+                    "title": item.get("title", ""),
+                    "work_type": item.get("work_type"),
+                    "actor": item.get("actor"),
+                    "sla_deadline": sla_str,
+                    "overdue_seconds": int(abs(diff_seconds)),
+                    "alert_type": "overdue",
+                })
+            elif diff_seconds <= APPROACHING_THRESHOLD_SECONDS:
+                approaching.append({
+                    "workitem_id": item.get("id"),
+                    "title": item.get("title", ""),
+                    "work_type": item.get("work_type"),
+                    "actor": item.get("actor"),
+                    "sla_deadline": sla_str,
+                    "remaining_seconds": int(diff_seconds),
+                    "alert_type": "approaching",
+                })
+        return {
+            "has_alerts": len(overdue) > 0 or len(approaching) > 0,
+            "overdue": overdue,
+            "approaching": approaching,
+            "checked_at": now.isoformat(),
+        }
 
 
 if __name__ == "__main__":
