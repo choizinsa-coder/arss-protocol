@@ -49,12 +49,14 @@ def test_cascade_trips_two_components(tmp_path, monkeypatch):
     assert gcb.get_state()["reason"] == "CASCADING_FAILURE_NO_RECOVERY"
 
 
-def test_single_component_failure_no_trip(tmp_path, monkeypatch):
+def test_single_component_consecutive_failure_trips(tmp_path, monkeypatch):
     gcb = _fresh(tmp_path, monkeypatch)
     gcb.report_failure("domi")
     gcb.report_failure("domi")
-    gcb.report_failure("domi")
     assert gcb.is_tripped() is False
+    gcb.report_failure("domi")
+    assert gcb.is_tripped() is True
+    assert gcb.get_state()["reason"] == "CONSECUTIVE_FAILURE"
 
 
 def test_reset_requires_eag(tmp_path, monkeypatch):

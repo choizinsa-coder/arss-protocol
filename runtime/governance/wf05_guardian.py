@@ -16,6 +16,8 @@ GUARDIAN_PORT = 8450
 ROOT = "/opt/arss/engine/arss-protocol/runtime/governance"
 KST = timezone(timedelta(hours=9))
 _lock = threading.Lock()
+GCB_SECRET_PATH = "/opt/arss/engine/arss-protocol/runtime/governance/gcb/.gcb_secret"
+VALID_VETO_ISSUERS = {"Beo", "SYSTEM"}
 
 def _now(): return datetime.now(KST).isoformat()
 def _load_json(p):
@@ -107,14 +109,24 @@ def handle_status(body):
                 "timestamp":_now()}
     except Exception as e: return {"ok":False,"error":str(e)}
 
-def handle_veto(body):
-    if body.get("issued_by") != "Beo": return {"ok":False,"error":"DENY: veto must be issued by Beo"}
+def handle_veto(body, secret_header=""):
+    issuer = body.get("issued_by", "")
+    if issuer not in VALID_VETO_ISSUERS:
+        return {"ok":False,"error":"DENY: unknown veto issuer"}
+    if issuer == "SYSTEM":
+        try:
+            with open(GCB_SECRET_PATH, encoding="utf-8") as f:
+                expected = f.read().strip()
+        except Exception:
+            return {"ok":False,"error":"DENY: GCB_SECRET_NOT_FOUND"}
+        if not expected or secret_header != expected:
+            return {"ok":False,"error":"DENY: INVALID_SECRET"}
     try:
         p = _load_policy()
-        p["status"] = "PAUSED"; p["paused_at"] = _now(); p["paused_by"] = "Beo"
+        p["status"] = "PAUSED"; p["paused_at"] = _now(); p["paused_by"] = issuer
         _save_json(ROOT+"/WF05_POLICY.json", p)
-        _emit_alert("CRITICAL", "BEO_VETO_ISSUED", "Beo", body.get("reason",""))
-        _record_consensus("VETO", "Beo", "PAUSED", "reason="+body.get("reason",""))
+        _emit_alert("CRITICAL", issuer.upper()+"_VETO_ISSUED", issuer, body.get("reason",""))
+        _record_consensus("VETO", issuer, "PAUSED", "reason="+body.get("reason",""))
         return {"ok":True,"status":"PAUSED","timestamp":_now()}
     except Exception as e: return {"ok":False,"error":str(e)}
 
@@ -151,7 +163,7 @@ class GuardianHandler(BaseHTTPRequestHandler):
             r = handle_authorize(body)
             self._send_json(200 if r["ok"] else 403, r)
         elif self.path=="/veto":
-            r = handle_veto(body)
+            r = handle_veto(body, self.headers.get("X-AIBA-Secret",""))
             self._send_json(200 if r["ok"] else 403, r)
         elif self.path=="/resume":
             r = handle_resume(body)

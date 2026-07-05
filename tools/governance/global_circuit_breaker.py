@@ -8,6 +8,7 @@ import fcntl
 import json
 import os
 import time
+import urllib.request
 from datetime import datetime, timezone
 
 ARSS_ROOT = "/opt/arss/engine/arss-protocol"
@@ -17,6 +18,9 @@ GCB_SCHEMA = "GCB_STATE_v1"
 NO_PROGRESS_TRIP_N = int(os.environ.get("AIBA_GCB_NO_PROGRESS_N", "5"))
 CASCADE_WINDOW_SEC = int(os.environ.get("AIBA_GCB_CASCADE_WINDOW", "60"))
 CASCADE_MIN_COMPONENTS = int(os.environ.get("AIBA_GCB_CASCADE_MIN", "2"))
+CONSECUTIVE_FAIL_TRIP_N = int(os.environ.get("AIBA_GCB_CONSEC_N", "3"))
+GCB_SECRET_PATH = os.path.join(ARSS_ROOT, "runtime/governance/gcb/.gcb_secret")
+GUARDIAN_VETO_URL = "http://127.0.0.1:8450/veto"
 
 STATE_CLOSED = "CLOSED"
 STATE_TRIPPED = "TRIPPED"
@@ -35,6 +39,7 @@ def _default_state():
         "reason": None,
         "no_progress": {},
         "cascade_events": [],
+        "consecutive_failures": {},
         "updated_at": _utc_now_iso(),
     }
 
@@ -107,10 +112,18 @@ def report_progress(component):
         state = _read_state()
         if state.get("state") == STATE_TRIPPED:
             return state
+        changed = False
         counts = dict(state.get("no_progress", {}))
         if counts.get(component):
             counts[component] = 0
             state["no_progress"] = counts
+            changed = True
+        cf = dict(state.get("consecutive_failures", {}))
+        if cf.get(component):
+            cf[component] = 0
+            state["consecutive_failures"] = cf
+            changed = True
+        if changed:
             _atomic_write(state)
         return state
     return _with_lock(_op)
@@ -120,20 +133,50 @@ def report_failure(component):
     def _op():
         state = _read_state()
         if state.get("state") == STATE_TRIPPED:
-            return state
+            return state, None
         now = time.time()
         events = [e for e in state.get("cascade_events", []) if now - e[1] <= CASCADE_WINDOW_SEC]
         events.append([component, now])
         state["cascade_events"] = events
+        cf = dict(state.get("consecutive_failures", {}))
+        cf[component] = int(cf.get(component, 0)) + 1
+        state["consecutive_failures"] = cf
         distinct = set(e[0] for e in events)
+        trip_reason = None
         if len(distinct) >= CASCADE_MIN_COMPONENTS:
+            trip_reason = "CASCADING_FAILURE_NO_RECOVERY"
+        elif cf[component] >= CONSECUTIVE_FAIL_TRIP_N:
+            trip_reason = "CONSECUTIVE_FAILURE"
+        if trip_reason:
             state["state"] = STATE_TRIPPED
             state["triggered_at"] = _utc_now_iso()
             state["triggered_by"] = component
-            state["reason"] = "CASCADING_FAILURE_NO_RECOVERY"
+            state["reason"] = trip_reason
+            state["consecutive_failures"] = {}
         _atomic_write(state)
-        return state
-    return _with_lock(_op)
+        return state, trip_reason
+    state, trip_reason = _with_lock(_op)
+    if trip_reason:
+        _send_guardian_pause(component, trip_reason)
+    return state
+
+
+def _send_guardian_pause(component, reason):
+    try:
+        with open(GCB_SECRET_PATH, encoding="utf-8") as f:
+            secret = f.read().strip()
+    except Exception:
+        return
+    if not secret:
+        return
+    payload = json.dumps({"issued_by": "SYSTEM", "reason": "GCB_TRIP:" + str(reason) + ":" + str(component)}).encode("utf-8")
+    req = urllib.request.Request(GUARDIAN_VETO_URL, data=payload, method="POST")
+    req.add_header("Content-Type", "application/json")
+    req.add_header("X-AIBA-Secret", secret)
+    try:
+        urllib.request.urlopen(req, timeout=3)
+    except Exception:
+        pass
 
 
 def gcb_reset(eag_id):

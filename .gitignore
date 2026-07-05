@@ -145,3 +145,6 @@ tools/design/JENI_SESSION_CONTEXT_S*.md
 
 # === S337 post-purge finalize (EAG-S337-POST-PURGE-FINALIZE-001) ===
 tools/close/*_delta.json
+
+# GCB SYSTEM veto secret (EAG-S337-GCB-CONSEC-PAUSE-001)
+runtime/governance/gcb/.gcb_secret
