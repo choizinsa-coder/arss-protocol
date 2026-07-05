@@ -122,6 +122,26 @@ ARSS_ROOT = "/opt/arss/engine/arss-protocol"
 
 BOOT_PROTOCOL_PATH = os.path.join(
     ARSS_ROOT, "tools/design/DOMI_SESSION_BOOT_PROTOCOL.md")
+
+# [GCB] 전역 서킷브레이커 연동 (EAG-S336-GCB-PHASE2-001)
+if ARSS_ROOT not in sys.path:
+    sys.path.insert(0, ARSS_ROOT)
+try:
+    from tools.governance.global_circuit_breaker import (
+        gcb_check as _gcb_check,
+        report_no_progress as _gcb_report_no_progress,
+        report_progress as _gcb_report_progress,
+        report_failure as _gcb_report_failure,
+    )
+except Exception:
+    def _gcb_check():
+        return False
+    def _gcb_report_no_progress(component):
+        return None
+    def _gcb_report_progress(component):
+        return None
+    def _gcb_report_failure(component):
+        return None
 SESSION_POINTER_PATH = os.path.join(ARSS_ROOT, "SESSION_CONTEXT_POINTER.json")
 
 # ── Session Context Auto-Load (B-D-1 + C-5 + B-D-1b Fail-Closed) ─────────────
@@ -1460,6 +1480,16 @@ def _run_observe_loop(targets: list, session: str = "S000") -> dict:
 def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate: bool = False, max_rounds=None) -> dict:
     loop_start = time.time()
 
+    # [GCB] 진입 게이트: 전역 서킷브레이커 TRIPPED 시 진입 차단 (EAG-S336-GCB-PHASE2-001)
+    try:
+        if _gcb_check():
+            return _make_fail_closed_result(
+                "GCB_GLOBAL_TRIP",
+                "Global Circuit Breaker is TRIPPED. EAG reset required. No auto-resume.",
+                0, _make_audit_bundle(0, []))
+    except Exception:
+        pass
+
     # CHANGE_ID: S287-J2 / 도미 ④ — 일일 예산 HARD 차단 (이벤트 로그 후 Fail-Closed)
     if _daily_budget_exceeded():
         _emit_event({"tag": "BUDGET_BLOCK", "agent": "domi",
@@ -1499,6 +1529,10 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
     while round_num <= _effective_rounds:
         elapsed = time.time() - loop_start
         if elapsed >= TIMEOUT_PREEMPT_SECONDS:
+            try:
+                _gcb_report_no_progress("domi")
+            except Exception:
+                pass
             final_result = _make_fail_closed_result(
                 "TIMEOUT_BUDGET_EXCEEDED",
                 f"elapsed={elapsed:.1f}s >= preempt={TIMEOUT_PREEMPT_SECONDS}s",
@@ -1507,6 +1541,10 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
 
         call_result = _call_openai(accumulated, escalate=escalate, loop_start=loop_start)
         if not call_result["ok"]:
+            try:
+                _gcb_report_failure("domi")
+            except Exception:
+                pass
             final_result = _make_fail_closed_result(
                 "DESIGN_PARSE_FAILURE", call_result.get("error") or "",
                 round_num, _make_audit_bundle(round_num, audit_trail))
@@ -1523,6 +1561,10 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
         tool_calls = call_result["tool_calls"]
         if tool_calls:
             if round_num >= MAX_TOOL_ROUNDS:
+                try:
+                    _gcb_report_no_progress("domi")
+                except Exception:
+                    pass
                 final_result = _make_fail_closed_result(
                     "MAX_ROUNDS_EXCEEDED",
                     f"tool_call at round {round_num}, max={_effective_rounds}",
@@ -1573,12 +1615,21 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
                     _get_loop_state().visited_paths.add(path)
 
             if cb_break:
+                _cb_ls = _get_loop_state()
+                try:
+                    _gcb_report_failure("domi")
+                except Exception:
+                    pass
                 final_result = _make_fail_closed_result(
                     "CIRCUIT_BREAKER_TRIGGERED",
-                    f"Consecutive same error x2: {_cb_error_type}. Escalate to Caddy.",
+                    f"Consecutive same error x2: {_cb_ls.cb_error_type}. Escalate to Caddy.",
                     round_num + 1, _make_audit_bundle(round_num + 1, audit_trail))
                 break
             if zpb_break:
+                try:
+                    _gcb_report_no_progress("domi")
+                except Exception:
+                    pass
                 _emit_event({"tag": "ZERO_PROGRESS_BREAKER", "agent": "domi",
                              "session": session,
                              "round": round_num + 1, "action": "FAIL_CLOSED"})
@@ -1591,6 +1642,10 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
             round_num += 1
             continue
 
+        try:
+            _gcb_report_progress("domi")
+        except Exception:
+            pass
         final_result = {"ok": True, "text": call_result["text"], "error": None,
                         "rounds_used": round_num,
                         "audit": _make_audit_bundle(round_num, audit_trail)}

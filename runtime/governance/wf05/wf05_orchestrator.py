@@ -33,6 +33,43 @@ import guardian_client as guardian
 import agent_client as agent
 import ollama_classifier
 
+# [GCB] 전역 서킷브레이커 연동 (EAG-S336-GCB-PHASE2-001)
+_ARSS_ROOT = "/opt/arss/engine/arss-protocol"
+if _ARSS_ROOT not in sys.path:
+    sys.path.insert(0, _ARSS_ROOT)
+try:
+    from tools.governance.global_circuit_breaker import (
+        gcb_check as _gcb_check,
+        report_no_progress as _gcb_report_no_progress,
+        report_progress as _gcb_report_progress,
+        report_failure as _gcb_report_failure,
+    )
+except Exception:
+    def _gcb_check():
+        return False
+    def _gcb_report_no_progress(component):
+        return None
+    def _gcb_report_progress(component):
+        return None
+    def _gcb_report_failure(component):
+        return None
+
+
+def _emit_gcb_signal(result):
+    # [GCB] 최종 결과 status -> GCB 신호 중앙 변환 (EAG-S336-GCB-PHASE2-001)
+    # 거버넌스 반환(VETOED / FAILED stage=GUARDIAN)은 신호 제외 (S335: 자율 구성요소만).
+    try:
+        status = result.get("status", "") if isinstance(result, dict) else ""
+        stage = result.get("stage", "") if isinstance(result, dict) else ""
+        if status in ("COMPLETE", "DRY_RUN_COMPLETE"):
+            _gcb_report_progress("wf05")
+        elif status == "ESCALATED":
+            _gcb_report_no_progress("wf05")
+        elif status == "FAILED" and stage not in ("GUARDIAN",):
+            _gcb_report_failure("wf05")
+    except Exception:
+        pass
+
 ORCH_VERSION = "1.9.1"
 MAX_ROUNDS = 3
 EXEC_MODE = os.environ.get("WF05_EXEC_MODE", "dry_run")  # dry_run | live
@@ -317,6 +354,15 @@ def run_cycle_with_retry(payload, max_rounds=None):
     재시도는 run_orchestration 재호출로 새 -Cy epoch 자동 부여(OI-S300 오염 방지).
     Guardian DENIED/EXEC/MAX_ROUNDS/VETO/Logic은 제외(복구 불가 반복 차단).
     """
+    # [GCB] 진입 게이트: 전역 서킷브레이커 TRIPPED 시 사이클 시작 차단 (EAG-S336-GCB-PHASE2-001)
+    try:
+        if _gcb_check():
+            return {"status": "GCB_GLOBAL_TRIP",
+                    "detail": "Global Circuit Breaker is TRIPPED. EAG reset required. No auto-resume.",
+                    "cycle_result": "FAIL_CLOSED",
+                    "session": payload.get("session", "S000") if isinstance(payload, dict) else "S000"}
+    except Exception:
+        pass
     result = run_orchestration(payload, max_rounds=max_rounds)
     if (result.get("status") == "FAILED"
             and result.get("stage") in ("DOMI_ESCALATE", "JENI_ESCALATE")):
@@ -326,6 +372,7 @@ def run_cycle_with_retry(payload, max_rounds=None):
                             "stage=" + str(result.get("stage"))
                             + " budget=" + str(st.get("budget_remaining")))
             result = run_orchestration(payload, max_rounds=max_rounds)
+    _emit_gcb_signal(result)  # [GCB] 최종 결과 중앙 신호 변환 (EAG-S336-GCB-PHASE2-001)
     return result
 
 

@@ -101,6 +101,26 @@ BOOT_PROTOCOL_PATH = os.path.join(
     ARSS_ROOT, "tools/design/JENI_SESSION_BOOT_PROTOCOL.md")
 SESSION_POINTER_PATH = os.path.join(ARSS_ROOT, "SESSION_CONTEXT_POINTER.json")
 
+# [GCB] 전역 서킷브레이커 연동 (EAG-S336-GCB-PHASE2-001)
+if ARSS_ROOT not in sys.path:
+    sys.path.insert(0, ARSS_ROOT)
+try:
+    from tools.governance.global_circuit_breaker import (
+        gcb_check as _gcb_check,
+        report_no_progress as _gcb_report_no_progress,
+        report_progress as _gcb_report_progress,
+        report_failure as _gcb_report_failure,
+    )
+except Exception:
+    def _gcb_check():
+        return False
+    def _gcb_report_no_progress(component):
+        return None
+    def _gcb_report_progress(component):
+        return None
+    def _gcb_report_failure(component):
+        return None
+
 # ── Session Context Auto-Load (B-J-1 + C-5 + B-J-5) ──────────────────────────
 
 # B-J-1 + C-5: POINTER hash + SC_FINAL mtime 이중 무효화 캐시
@@ -1180,6 +1200,16 @@ def _run_observe_loop(targets: list, session: str = "S000") -> dict:
 def _run_verification_loop(prompt: str, context: str, session: str = "S000", escalate: bool = False) -> dict:
     loop_start = time.time()
 
+    # [GCB] 진입 게이트: 전역 서킷브레이커 TRIPPED 시 진입 차단 (EAG-S336-GCB-PHASE2-001)
+    try:
+        if _gcb_check():
+            return _make_fail_closed_result(
+                "GCB_GLOBAL_TRIP",
+                "Global Circuit Breaker is TRIPPED. EAG reset required. No auto-resume.",
+                0, _make_audit_bundle(0, []))
+    except Exception:
+        pass
+
     # CHANGE_ID: S287-J2 / 제니 J-2 + 도미 ④ — 일일 예산 HARD 차단 (이벤트 로그 후 Fail-Closed)
     if _daily_budget_exceeded():
         _emit_event({"tag": "BUDGET_BLOCK", "agent": "jeni",
@@ -1208,6 +1238,10 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
     while round_num <= MAX_TOOL_ROUNDS:
         elapsed = time.time() - loop_start
         if elapsed >= TIMEOUT_PREEMPT_SECONDS:
+            try:
+                _gcb_report_no_progress("jeni")
+            except Exception:
+                pass
             final_result = _make_fail_closed_result(
                 "TIMEOUT_BUDGET_EXCEEDED",
                 f"elapsed={elapsed:.1f}s >= preempt={TIMEOUT_PREEMPT_SECONDS}s",
@@ -1216,6 +1250,10 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
 
         call_result = _call_gemini(accumulated, escalate=escalate)
         if not call_result["ok"]:
+            try:
+                _gcb_report_failure("jeni")
+            except Exception:
+                pass
             final_result = _make_fail_closed_result(
                 "VALIDATION_PARSE_FAILURE", call_result.get("error") or "",
                 round_num, _make_audit_bundle(round_num, audit_trail))
@@ -1232,6 +1270,10 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
         function_calls = call_result["function_calls"]
         if function_calls:
             if round_num >= MAX_TOOL_ROUNDS:
+                try:
+                    _gcb_report_no_progress("jeni")
+                except Exception:
+                    pass
                 final_result = _make_fail_closed_result(
                     "MAX_ROUNDS_EXCEEDED",
                     f"function_call at round {round_num}, max={MAX_TOOL_ROUNDS}",
@@ -1254,6 +1296,10 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
             # C-1: Circuit Breaker (도구 결과 직후)
             cb_text = tool_err if tool_err else ""
             if _circuit_breaker_check(name, cb_text or "", round_num + 1):
+                try:
+                    _gcb_report_failure("jeni")
+                except Exception:
+                    pass
                 final_result = _make_fail_closed_result(
                     "CIRCUIT_BREAKER_TRIGGERED",
                     f"Consecutive same error x2: {_cb_error_type}. Escalate to Caddy.",
@@ -1265,12 +1311,20 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
                 _prepare_llm_tool_message(name, result_text, tool_err))
             continue
 
+        try:
+            _gcb_report_progress("jeni")
+        except Exception:
+            pass
         final_result = {"ok": True, "text": call_result["text"], "error": None,
                         "rounds_used": round_num,
                         "audit": _make_audit_bundle(round_num, audit_trail)}
         break
 
     if final_result is None:  # pragma: no cover
+        try:
+            _gcb_report_failure("jeni")
+        except Exception:
+            pass
         final_result = _make_fail_closed_result(
             "MAX_ROUNDS_EXCEEDED", "loop exit without resolution",
             round_num, _make_audit_bundle(round_num, audit_trail))

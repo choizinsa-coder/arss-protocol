@@ -10,7 +10,7 @@ def _fresh(tmp_path, monkeypatch):
     monkeypatch.setenv("AIBA_GCB_CASCADE_MIN", "2")
     import tools.governance.global_circuit_breaker as gcb
     importlib.reload(gcb)
-    gcb.GCB_STATE_PATH = str(tmp_path / "gcb_state.json")
+    monkeypatch.setattr(gcb, "GCB_STATE_PATH", str(tmp_path / "gcb_state.json"))
     return gcb
 
 
