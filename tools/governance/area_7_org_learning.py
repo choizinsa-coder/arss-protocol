@@ -67,6 +67,8 @@ class OrgLearningEngine:
         self._proposal_log     = self._log_dir / "improvement_proposal_log.jsonl"
         self._cr_log           = self._log_dir / "constitution_review_log.jsonl"
         self._debt_log         = self._log_dir / "improvement_debt_log.jsonl"
+        self._prev_context_hash = None
+        self._prev_dl_total     = None
 
     def _ensure_dir(self) -> None:
         self._log_dir.mkdir(parents=True, exist_ok=True)
@@ -189,7 +191,69 @@ class OrgLearningEngine:
         except Exception:
             pass
 
-        # Channel 3: External Change (Phase 2 placeholder)
+        # Channel 3: External Change (Phase 2)
+        opportunities.extend(self._detect_ch3_external_change(now_str))
+        return opportunities
+
+    # --- Phase 2: Channel 3 External Change ---
+
+    def _get_decision_summary(self):
+        """Area 11 get_decision_summary() proxy. None on failure."""
+        try:
+            from tools.governance.area_11_decision_ledger import get_decision_summary
+            return get_decision_summary()
+        except Exception:
+            return None
+
+    def _get_context_hash(self):
+        """SESSION_CONTEXT_POINTER.json context_hash proxy. None on failure."""
+        try:
+            data = json.loads((ROOT / "SESSION_CONTEXT_POINTER.json").read_text())
+            return data.get("context_hash")
+        except Exception:
+            return None
+
+    def _detect_ch3_external_change(self, now_str):
+        """Channel 3: External Change detection (Phase 2)."""
+        opportunities = []
+        summary = self._get_decision_summary()
+        if summary is not None:
+            total = summary.get("total_count", 0)
+            cc = summary.get("class_counts", {})
+            if self._prev_dl_total is not None:
+                dc3 = cc.get("DC-3", 0)
+                dc4 = cc.get("DC-4", 0)
+                if dc3 + dc4 >= 5:
+                    opportunities.append({
+                        "id":          f"IO-{uuid.uuid4()}",
+                        "trigger":     "external",
+                        "description": f"DC-3+DC-4 load {dc3 + dc4} >= 5 threshold",
+                        "priority":    "HIGH",
+                        "source_ref":  {"area": "area_11", "detail": {"dc3": dc3, "dc4": dc4}},
+                        "detected_at": now_str,
+                    })
+                elif total != self._prev_dl_total:
+                    opportunities.append({
+                        "id":          f"IO-{uuid.uuid4()}",
+                        "trigger":     "external",
+                        "description": f"Decision Ledger total change: {self._prev_dl_total} -> {total}",
+                        "priority":    "MEDIUM",
+                        "source_ref":  {"area": "area_11", "detail": {"prev_total": self._prev_dl_total, "current_total": total}},
+                        "detected_at": now_str,
+                    })
+            self._prev_dl_total = total
+        context_hash = self._get_context_hash()
+        if context_hash is not None:
+            if self._prev_context_hash is not None and context_hash != self._prev_context_hash:
+                opportunities.append({
+                    "id":          f"IO-{uuid.uuid4()}",
+                    "trigger":     "external",
+                    "description": f"context_hash changed: {self._prev_context_hash[:8]} -> {context_hash[:8]}",
+                    "priority":    "HIGH",
+                    "source_ref":  {"area": "session_pointer", "detail": {"prev": self._prev_context_hash, "current": context_hash}},
+                    "detected_at": now_str,
+                })
+            self._prev_context_hash = context_hash
         return opportunities
 
     # --- Improvement Proposal ---
