@@ -1,7 +1,8 @@
 """
-wf05_guardian.py v1.0.0
+wf05_guardian.py v1.1.0
 Guardian Control Plane -- WF-05 Budget + Veto + Consensus
 EAG: EAG-S282-GUARDIAN-BUDGET-IMPL-001
+Patch: EAG-S283-GUARDIAN-WINDOW-FIX-001 (expires_at 검증 제거)
 Port: 8450
 """
 import json, os, re, threading, time, uuid
@@ -9,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 
-GUARDIAN_VERSION = "1.0.0"
+GUARDIAN_VERSION = "1.1.0"
 GUARDIAN_HOST = "127.0.0.1"
 GUARDIAN_PORT = 8450
 ROOT = "/opt/arss/engine/arss-protocol/runtime/governance"
@@ -33,10 +34,8 @@ def _load_active_window():
     w = _load_json(wp)
     st = w.get("status", "")
     if st != "ACTIVE": return None, "WINDOW_NOT_ACTIVE:"+st
-    exp = datetime.fromisoformat(w["expires_at"])
-    if datetime.now(KST) > exp:
-        w["status"] = "EXPIRED"; _save_json(wp, w)
-        return None, "WINDOW_EXPIRED"
+    # expires_at 검증 제거 (EAG-S283-GUARDIAN-WINDOW-FIX-001)
+    # 예산 통제: budget_remaining / Veto: /veto 엔드포인트로 충분
     return w, None
 
 def _load_budget(): return _load_json(ROOT+"/budget/WF05_BUDGET_STATE.json")
@@ -78,7 +77,8 @@ def handle_authorize(body):
             _save_budget(budget)
             _emit_alert("HIGH", "BUDGET_EXHAUSTED", "guardian")
             return {"ok":False,"error":"BUDGET_EXHAUSTED"}
-        m = re.search(r"\d+", session)
+        import re as _re
+        m = _re.search(r"\d+", session)
         sn = m.group(0) if m else "000"
         ds = datetime.now(KST).strftime("%Y%m%d")
         approval_id = "EAG-S"+sn+"-WF05-WIN-"+ds
@@ -102,6 +102,7 @@ def handle_status(body):
                 "window_id":win["window_id"] if win else None,
                 "window_error":err,
                 "budget_remaining":bud.get("budget_remaining"),
+                "budget_used":bud.get("budget_used"),
                 "budget_state":bud.get("state"),
                 "timestamp":_now()}
     except Exception as e: return {"ok":False,"error":str(e)}

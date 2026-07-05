@@ -142,3 +142,6 @@ tools/close/delta_s*.json
 tools/design/JENI_SESSION_CONTEXT_S*.md
 *.s287bak
 *.s289bak
+
+# === S337 post-purge finalize (EAG-S337-POST-PURGE-FINALIZE-001) ===
+tools/close/*_delta.json
