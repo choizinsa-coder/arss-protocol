@@ -256,6 +256,9 @@ class VPSAutoGuard:
         description: str,
         priority: str,
         actor: str = "system",
+        *,
+        auto_request_isolation: bool = False,
+        isolation_service: Optional[str] = None,
     ) -> dict:
         """
         Appends SecurityAlert to security_alert_log.jsonl.
@@ -285,10 +288,25 @@ class VPSAutoGuard:
             "recorded_at":    now.isoformat(),
             "eag":            EAG_ID,
         }
+        if auto_request_isolation and isolation_service is not None and self._should_auto_request_isolation(priority):
+            try:
+                iso = self.request_isolation(
+                    service_name=isolation_service,
+                    reason="Auto-isolation from SecurityAlert " + entry["id"] + ": " + description.strip()[:120],
+                    priority=priority,
+                    actor=actor,
+                )
+                entry["auto_isolation"] = iso["id"]
+            except AutoGuardError:
+                pass
         self._ensure_dir()
         with open(self._alert_log, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
         return entry
+
+    def _should_auto_request_isolation(self, priority: str) -> bool:
+        """Auto isolation-request trigger condition. CRITICAL only."""
+        return priority == "CRITICAL"
 
     # --- Phase 2: Isolation Request ---
 
