@@ -1,9 +1,0 @@
-{
-  "observation_locked": false,
-  "locked_at": null,
-  "reason": null,
-  "incident_id": null,
-  "locked_by": null,
-  "unlock_required_by": "beo",
-  "updated_at": "2026-05-21T00:00:00+09:00"
-}

@@ -120,3 +120,25 @@ setup_collab_space.py
 
 # 기타 임시 빌드 파일
 docs/AIBA_Direction_S215.md
+
+# === S337 repo hygiene (EAG-S337-WORKTREE-GITIGNORE-001) ===
+runtime/governance/alerts.jsonl
+runtime/governance/budget/*STATE.json
+runtime/governance/ledger/*.jsonl
+runtime/governance/window_registry.json
+tools/boot/*result*.json
+tools/boot/boot_gate_monotonic.json
+tools/close/close_manifest.json
+tools/close/freeze_sync_report.json
+tools/sandbox/audit/*state.json
+tools/mcp/audit_trail.log
+DELTA_LOG/INDEX.json
+registry/transport_failures/FAIL-*.json
+SESSION_CONTEXT_STALE_MANIFEST.json
+tools/monitor/*.json
+tools/monitor/*.jsonl
+/delta_s*.json
+tools/close/delta_s*.json
+tools/design/JENI_SESSION_CONTEXT_S*.md
+*.s287bak
+*.s289bak
