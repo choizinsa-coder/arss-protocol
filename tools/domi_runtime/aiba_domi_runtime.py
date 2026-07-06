@@ -646,6 +646,8 @@ def _measure_round_progress(tool_name: str, result_text: str, path_arg: str = ""
     """
     CHANGE_ID: S287-D2 — 진척 측정 (visited 추가 전 호출).
     True 반환 시 → 2라운드 연속 무진전 → ZPB 발동.
+    CHANGE_ID: S343-DOMI-ZPB-LISTDIR-FIX (EAG-S343-DOMI-ZPB-LISTDIR-FIX-001):
+    list_dir 신규경로+비어있지않음 조건부 진척 인정 추가.
     """
     ls = _get_loop_state()
     made_progress = False
@@ -665,6 +667,13 @@ def _measure_round_progress(tool_name: str, result_text: str, path_arg: str = ""
         # 비어있지 않으면(성공) 진척으로 판정.
         if result_text:
             ls.progress_tracker["new_facts_found"] += 1
+            made_progress = True
+    elif tool_name == "list_dir":
+        # CHANGE_ID: S343-DOMI-ZPB-LISTDIR-FIX (EAG-S343-DOMI-ZPB-LISTDIR-FIX-001):
+        # list_dir 성공(신규경로+비어있지않음)도 진척으로 인정하여 오발동 ZPB 방지.
+        # 동일경로 반복 list_dir은 visited_paths 체크로 계속 무진전 처리(가드 유지).
+        if (result_text
+                and path_arg not in ls.visited_paths):
             made_progress = True
 
     if not made_progress:
