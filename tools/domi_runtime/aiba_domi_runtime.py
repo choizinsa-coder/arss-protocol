@@ -1156,7 +1156,7 @@ def _build_memory_preamble(mem: dict) -> str:
     conv = mem.get("recent_conversation", [])
     if conv:
         conv_text = "\n".join(
-            f"  [{t.get('role','?')}] {str(t.get('content',''))[:200]}" for t in conv)
+            f"  [{t.get('role','?')}] {str(t.get('content',''))[:2000]}" for t in conv)
         parts.append(f"recent_conversation (최근 {len(conv)}턴):\n{conv_text}")
     if len(parts) == 1:
         return ""
