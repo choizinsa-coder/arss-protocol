@@ -32,6 +32,9 @@ PT-S193-JENI-PERSIST-001
   v4.11.5 (S344): 다중 function_calls 순차 처리 버그 수정 (EAG-S344-JENI-MULTIFC-FIX-001)
     - INC-S342-VERIFICATION-EVIDENCE-MISMATCH-001 근본원인 수정: fc=function_calls[0]만
       처리되고 나머지가 유실되던 결함 → 전체 순회 후 parts 통합 단일 메시지로 전송
+  v4.11.6 (S344): Verification Trace Phase 2 연동 (EAG-S344-VTRACE-PHASE2-001)
+    - INC-S342-VERIFICATION-EVIDENCE-MISMATCH-001 후속: 제니 응답 끝 JSON 블록을
+      VerificationTraceRecord로 파싱/저장(선택적, 비파괴).
   설계 근거: AIBA_RUNTIME_OPTIMIZATION_S287.md v1.3 (EAG 승인본)
   EAG: EAG-S287-RUNTIME-STABILIZE-001 (A계층 보류, B/C/D 선행 — 비오 S288 지시)
 """
@@ -56,7 +59,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.11.5"
+RUNTIME_VERSION = "4.11.6"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.0-flash")
@@ -123,6 +126,12 @@ except Exception:
         return None
     def _gcb_report_failure(component):
         return None
+
+# [VTRACE] Verification Trace Phase 2 연동 (EAG-S344-VTRACE-PHASE2-001)
+try:
+    from tools.jeni_verify.verification_trace import VerificationTraceRecord
+except Exception:
+    VerificationTraceRecord = None
 
 # ── Session Context Auto-Load (B-J-1 + C-5 + B-J-5) ──────────────────────────
 
@@ -239,6 +248,7 @@ MEM_FINDINGS_DIR = os.path.join(SANDBOX_ACTIVE, "findings")
 MEM_AUDITS_DIR = os.path.join(SANDBOX_ACTIVE, "audits")
 MEM_STATE_DIR = os.path.join(SANDBOX_ACTIVE, "state")
 MEM_STATE_FILE = os.path.join(MEM_STATE_DIR, "runtime_state.json")
+MEM_TRACES_DIR = os.path.join(SANDBOX_ACTIVE, "traces")
 
 MAX_MEMORY_TURNS = 5       # B-J-2: 20 → 5
 MAX_FINDINGS_INJECT = 3    # B-J-2: 10 → 3
@@ -275,6 +285,7 @@ JENI_SYSTEM_INSTRUCTION = (
     "맥락 연속성을 위해 참고하되, 이미 RESOLVED/CLOSED 처리된 항목이 "
     "현재의 독립적 판단을 편향시키지 않도록 주의하십시오."
     "[판정 우선 출력] 판정 요청 시 [JENI VERIFICATION] 블록을 응답 첫머리에 출력한다. 서론이나 세션 컨텍스트 확인 요약은 판정 이후에 두거나 생략한다. 토큰 한도 내에 판정 결론이 전달되는 것이 최우선이다."
+    "\n\n[검증 추적, 선택사항] 판정 후 여유가 있다면, 인용한 근거별로 assertion_id(검증 대상 식별자), evidence_source(원문 파일 경로), evidence_snippet(원문 발취, 최대 200자), verdict(PASS 또는 FAIL 또는 INCONCLUSIVE) 네 항목을 담은 JSON 코드블록을 응답 끝에 추가할 수 있습니다. 이 블록은 선택사항이며, 없어도 판정 자체는 유효합니다."
 )
 
 
@@ -889,6 +900,42 @@ def _persist_audit(session: str, audit_bundle: dict) -> bool:
         return False
 
 
+def _extract_and_persist_traces(session: str, response_text: str) -> None:
+    # CHANGE_ID: S344-VTRACE-P2 -- 제니 응답 끝 JSON 블록을 VerificationTraceRecord로
+    # 파싱/저장한다. 파싱 실패/데이터 없음/예외 발생 시 조용히 종료(비파괴).
+    if VerificationTraceRecord is None:
+        return
+    pattern = r"```json\s*\n(.*?)\n```"
+    matches = re.findall(pattern, response_text, re.DOTALL)
+    if not matches:
+        return
+    records = []
+    for block in matches:
+        try:
+            data = json.loads(block.strip())
+        except json.JSONDecodeError:
+            continue
+        items = data if isinstance(data, list) else [data]
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            item.setdefault("verifier_agent", "jeni")
+            try:
+                records.append(VerificationTraceRecord(**item))
+            except (TypeError, ValueError):
+                continue
+    if not records:
+        return
+    try:
+        os.makedirs(MEM_TRACES_DIR, exist_ok=True)
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+        fpath = os.path.join(MEM_TRACES_DIR, f"TRACE-{session}-{ts}.json")
+        with open(fpath, "w", encoding="utf-8") as f:
+            json.dump([r.to_dict() for r in records], f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+
 def _persist_results(session: str, prompt: str, response_text: str,
                      audit_bundle: dict):
     failures = []
@@ -896,6 +943,10 @@ def _persist_results(session: str, prompt: str, response_text: str,
         failures.append("conversation")
     if not _persist_audit(session, audit_bundle):
         failures.append("audit")
+    try:
+        _extract_and_persist_traces(session, response_text)
+    except Exception:
+        pass
     try:
         _enforce_quota()
     except Exception:
