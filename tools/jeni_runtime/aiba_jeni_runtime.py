@@ -29,6 +29,9 @@ PT-S193-JENI-PERSIST-001
     - D-3: read_file 결과 20KB I/O 페이로드 캡
     - 제니 J-2: MAX_DAILY_USD 사전 차단기 (env 제어, 디폴트 1.0)
     - 모델/escalate 환경변수 구조 불변 (secrets.env 미변경)
+  v4.11.5 (S344): 다중 function_calls 순차 처리 버그 수정 (EAG-S344-JENI-MULTIFC-FIX-001)
+    - INC-S342-VERIFICATION-EVIDENCE-MISMATCH-001 근본원인 수정: fc=function_calls[0]만
+      처리되고 나머지가 유실되던 결함 → 전체 순회 후 parts 통합 단일 메시지로 전송
   설계 근거: AIBA_RUNTIME_OPTIMIZATION_S287.md v1.3 (EAG 승인본)
   EAG: EAG-S287-RUNTIME-STABILIZE-001 (A계층 보류, B/C/D 선행 — 비오 S288 지시)
 """
@@ -53,7 +56,7 @@ from socketserver import ThreadingMixIn
 
 RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8447
-RUNTIME_VERSION = "4.11.4"
+RUNTIME_VERSION = "4.11.5"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.0-flash")
@@ -1280,22 +1283,35 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
                     round_num, _make_audit_bundle(round_num, audit_trail))
                 break
 
-            fc = function_calls[0]
-            name = fc["name"]
-            args = fc.get("args", {})
-            path = args.get("path", "")
-            t_start = time.time()
-            result_text, tool_err = _execute_function_call(name, args)
-            duration_ms = int((time.time() - t_start) * 1000)
+            all_parts = []
+            cb_triggered = False
+            for fc in function_calls:
+                name = fc["name"]
+                args = fc.get("args", {})
+                path = args.get("path", "")
+                t_start = time.time()
+                result_text, tool_err = _execute_function_call(name, args)
+                duration_ms = int((time.time() - t_start) * 1000)
 
-            audit_trail.append(_make_tool_audit_entry(
-                round_num=round_num + 1, tool=name,
-                status="ALLOW" if not tool_err else "DENY",
-                duration_ms=duration_ms, path=path))
+                audit_trail.append(_make_tool_audit_entry(
+                    round_num=round_num + 1, tool=name,
+                    status="ALLOW" if not tool_err else "DENY",
+                    duration_ms=duration_ms, path=path))
 
-            # C-1: Circuit Breaker (도구 결과 직후)
-            cb_text = tool_err if tool_err else ""
-            if _circuit_breaker_check(name, cb_text or "", round_num + 1):
+                # C-1: Circuit Breaker (도구 결과 직후)
+                cb_text = tool_err if tool_err else ""
+                if _circuit_breaker_check(name, cb_text or "", round_num + 1):
+                    tool_msg = _prepare_llm_tool_message(name, result_text, tool_err)
+                    all_parts.extend(tool_msg["parts"])
+                    cb_triggered = True
+                    break
+
+                tool_msg = _prepare_llm_tool_message(name, result_text, tool_err)
+                all_parts.extend(tool_msg["parts"])
+
+            round_num += 1
+
+            if cb_triggered:
                 try:
                     _gcb_report_failure("jeni")
                 except Exception:
@@ -1303,12 +1319,11 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
                 final_result = _make_fail_closed_result(
                     "CIRCUIT_BREAKER_TRIGGERED",
                     f"Consecutive same error x2: {_cb_error_type}. Escalate to Caddy.",
-                    round_num + 1, _make_audit_bundle(round_num + 1, audit_trail))
+                    round_num, _make_audit_bundle(round_num, audit_trail))
                 break
 
-            round_num += 1
-            accumulated.append(
-                _prepare_llm_tool_message(name, result_text, tool_err))
+            if all_parts:
+                accumulated.append({"role": "user", "parts": all_parts})
             continue
 
         try:
