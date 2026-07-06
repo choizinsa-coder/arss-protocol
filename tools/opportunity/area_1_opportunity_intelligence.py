@@ -524,6 +524,132 @@ class OpportunityIntelligenceEngine:
             reactivated.append(reactivated_entry)
         return reactivated
 
+    # --- Phase 2: Belief Revision Propagation ---
+
+    def record_belief_revision(
+        self,
+        assumption_id: str,
+        new_confidence: float,
+        reason: str,
+        evidence_ref: Optional[str] = None,
+        actor: str = "system",
+    ) -> dict:
+        """
+        Assumption Graph - Belief Revision (Section 4.4). append-only,
+        reject_opportunity()와 동일 패턴. 기존 줄 덮어쓰기/삭제 없음.
+        confidence 하락시에만 depends_on 그래프를 따라 비대칭 하향 전파.
+        EAG: EAG-S346-AIF-AREA1-BELIEFREVISION-001
+        """
+        all_entries = self._load_assumptions()
+        target = None
+        for entry in reversed(all_entries):
+            if entry.get("id") == assumption_id:
+                target = entry
+                break
+        if target is None:
+            raise OpportunityError(f"Assumption not found: {assumption_id}")
+
+        previous_confidence = target.get("confidence", 0.0)
+        if not (0.0 <= new_confidence <= 1.0):
+            raise OpportunityError(
+                f"new_confidence must be in [0.0, 1.0], got {new_confidence}"
+            )
+
+        now = datetime.now(timezone.utc).isoformat()
+        revised_entry = dict(target)
+        revised_entry["confidence"] = new_confidence
+        revised_entry["revised_at"] = now
+        revised_entry["revised_by"] = actor.strip()
+
+        events = list(revised_entry.get("belief_revision_events", []))
+        events.append({
+            "revised_at": now,
+            "previous_confidence": previous_confidence,
+            "new_confidence": new_confidence,
+            "reason": reason.strip(),
+            "evidence_ref": evidence_ref.strip() if evidence_ref else evidence_ref,
+        })
+        revised_entry["belief_revision_events"] = events
+
+        if new_confidence < previous_confidence:
+            self._propagate_revision_downward(
+                revised_entry, new_confidence, reason, evidence_ref, actor, _depth=0
+            )
+
+        self._ensure_dir()
+        with open(self._assumption_log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(revised_entry, ensure_ascii=False) + "\n")
+
+        return {
+            "assumption_id": assumption_id,
+            "previous_confidence": previous_confidence,
+            "new_confidence": new_confidence,
+            "revised_at": now,
+            "propagated": new_confidence < previous_confidence,
+        }
+
+    def _propagate_revision_downward(
+        self,
+        entry: dict,
+        new_confidence: float,
+        reason: str,
+        evidence_ref: Optional[str],
+        actor: str,
+        _depth: int = 0,
+    ) -> None:
+        """
+        depends_on 그래프 역방향 탐색: entry에 의존하는(depends_on에 entry.id 포함)
+        하위 노드들을 찾아 confidence를 min()으로 재계산(비대칭, 하락시만).
+        MAX_DEPTH=5로 순환참조/무한재귀 방지.
+        """
+        MAX_DEPTH = 5
+        if _depth >= MAX_DEPTH:
+            return
+
+        all_entries = self._load_assumptions()
+        latest_map: dict = {}
+        for e in reversed(all_entries):
+            eid = e.get("id")
+            if eid and eid not in latest_map:
+                latest_map[eid] = e
+
+        entry_id = entry.get("id")
+        dependent_ids = [
+            eid for eid, e in latest_map.items()
+            if entry_id in e.get("depends_on", []) and eid != entry_id
+        ]
+
+        for dep_id in dependent_ids:
+            dep_target = latest_map[dep_id]
+            dep_prev = dep_target.get("confidence", 0.0)
+            dep_new = min(dep_prev, new_confidence)
+            if dep_new >= dep_prev:
+                continue
+
+            now = datetime.now(timezone.utc).isoformat()
+            revised_dep = dict(dep_target)
+            revised_dep["confidence"] = dep_new
+            revised_dep["revised_at"] = now
+            revised_dep["revised_by"] = actor.strip()
+
+            dep_events = list(revised_dep.get("belief_revision_events", []))
+            dep_events.append({
+                "revised_at": now,
+                "previous_confidence": dep_prev,
+                "new_confidence": dep_new,
+                "reason": f"[propagated] {reason.strip()}",
+                "evidence_ref": evidence_ref.strip() if evidence_ref else evidence_ref,
+            })
+            revised_dep["belief_revision_events"] = dep_events
+
+            self._ensure_dir()
+            with open(self._assumption_log, "a", encoding="utf-8") as f:
+                f.write(json.dumps(revised_dep, ensure_ascii=False) + "\n")
+
+            self._propagate_revision_downward(
+                revised_dep, dep_new, reason, evidence_ref, actor, _depth=_depth + 1
+            )
+
     # --- Query ---
 
     def get_active_opportunities(self, min_score: float = 0.0) -> list:
@@ -562,12 +688,19 @@ class OpportunityIntelligenceEngine:
         }
 
     def get_assumption_summary(self) -> dict:
-        """Total count, active/invalidated classification."""
-        all_entries   = self._load_assumptions()
-        now           = datetime.now(timezone.utc)
+        """Total count, active/invalidated classification. id-기준 last-wins 보정(append-only 중복집계 방지)."""
+        all_entries = self._load_assumptions()
+        now         = datetime.now(timezone.utc)
+
+        latest_map: dict = {}
+        for e in reversed(all_entries):
+            eid = e.get("id")
+            if eid and eid not in latest_map:
+                latest_map[eid] = e
+
         active_count  = 0
         invalid_count = 0
-        for a in all_entries:
+        for a in latest_map.values():
             try:
                 exp = datetime.fromisoformat(a["expires_at"])
                 if exp > now:
@@ -580,7 +713,7 @@ class OpportunityIntelligenceEngine:
             "schema":            "assumption_summary_v1",
             "version":           VERSION,
             "eag":               EAG_ID,
-            "total_count":       len(all_entries),
+            "total_count":       len(latest_map),
             "active_count":      active_count,
             "invalidated_count": invalid_count,
             "log_path":          str(self._assumption_log),
