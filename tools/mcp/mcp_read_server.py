@@ -109,6 +109,9 @@ class DenyResult(Exception):
 
 # ── 경로 안전성 검증 ───────────────────────────────────────────────
 def _validate_path(path: Path, allowed_roots: list[Path], max_depth: int) -> Path:
+    # EAG-S345-DEPA-PATHFIX-001: 상대경로는 프로세스 cwd가 아니라 CODE_ROOT 기준으로 합성.
+    if not path.is_absolute():
+        path = CODE_ROOT / path
     try:
         resolved = path.resolve()
     except Exception:
