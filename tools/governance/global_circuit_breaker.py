@@ -93,18 +93,23 @@ def report_no_progress(component):
     def _op():
         state = _read_state()
         if state.get("state") == STATE_TRIPPED:
-            return state
+            return state, False
         counts = dict(state.get("no_progress", {}))
         counts[component] = int(counts.get(component, 0)) + 1
         state["no_progress"] = counts
+        tripped = False
         if counts[component] >= NO_PROGRESS_TRIP_N:
             state["state"] = STATE_TRIPPED
             state["triggered_at"] = _utc_now_iso()
             state["triggered_by"] = component
             state["reason"] = "NO_PROGRESS_REPETITION"
+            tripped = True
         _atomic_write(state)
-        return state
-    return _with_lock(_op)
+        return state, tripped
+    state, tripped = _with_lock(_op)
+    if tripped:
+        _send_guardian_pause(component, "NO_PROGRESS_REPETITION")
+    return state
 
 
 def report_progress(component):
