@@ -553,6 +553,7 @@ def _get_loop_state():
             "new_facts_found": 0,
             "consecutive_no_progress": 0,
         }
+        ls.last_fallback = None  # EAG-S345-DEPB-GREPFALLBACK-001
     return ls
 
 
@@ -615,6 +616,7 @@ def _reset_loop_state() -> None:
     }
     ls.cb_error_type = ""
     ls.cb_error_count = 0
+    ls.last_fallback = None  # EAG-S345-DEPB-GREPFALLBACK-001
 
 
 def _is_error_response(text: str) -> bool:
@@ -990,6 +992,24 @@ def _execute_function_call(name: str, args: dict,
     if "max_results" in args:
         call_params["max_results"] = int(args["max_results"])
     result_text, err = _call_bridge_tool(name, call_params)
+    # EAG-S345-DEPB-GREPFALLBACK-001: grep_scoped가 PATH_DEPTH_EXCEEDED로 실패하면
+    # 동일 경로로 read_file을 즉시 폴백(MCP 경유). 실패 시 원래 DENY 유지.
+    if name == "grep_scoped" and err and "PATH_DEPTH_EXCEEDED" in str(err):
+        fb_params: dict = {"purpose": "OBSERVATION"}
+        if path:
+            fb_params["path"] = path
+        fb_result, fb_err = _call_bridge_tool("read_file", fb_params)
+        fb_used = not (fb_err and "NOT_A_FILE" in str(fb_err))
+        _get_loop_state().last_fallback = {
+            "used": fb_used,
+            "reason": "PATH_DEPTH_EXCEEDED_AUTO_FALLBACK",
+            "fallback_tool": "read_file" if fb_used else None,
+            "original_status": "DENY",
+            "final_status": "ALLOW" if fb_used else "DENY",
+        }
+        if fb_used:
+            return fb_result, fb_err
+        return result_text, err
     # CHANGE_ID: S287-D3 (정정) — 원본만 반환. truncate는 _prepare_llm_tool_message에서만.
     return result_text, err
 
@@ -1590,6 +1610,7 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
                 # CHANGE_ID: S287-D1 — 실행 순서: ① 중복검사
                 dup_err = _check_duplicate_action(name, path)
                 t_start = time.time()
+                _get_loop_state().last_fallback = None  # EAG-S345-DEPB-GREPFALLBACK-001
                 if dup_err:
                     result_text, tool_err = "", dup_err
                 else:
@@ -1598,10 +1619,14 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
                         name, args, obs_id, session)
                 duration_ms = int((time.time() - t_start) * 1000)
 
-                audit_trail.append(_make_tool_audit_entry(
+                _audit_entry = _make_tool_audit_entry(
                     round_num=round_num + 1, tool=name,
                     status="ALLOW" if not tool_err else "DENY",
-                    duration_ms=duration_ms, path=path))
+                    duration_ms=duration_ms, path=path)
+                _lf = _get_loop_state().last_fallback
+                if _lf is not None:
+                    _audit_entry["fallback"] = _lf
+                audit_trail.append(_audit_entry)
                 # 모든 tool_call에 응답 (OpenAI 규약)
                 accumulated.append(
                     _prepare_llm_tool_message(name, tc["id"], result_text, tool_err))
