@@ -29,7 +29,7 @@ DEFAULT_LOG_DIR = ROOT / "tools" / "opportunity"
 
 REVERSIBILITY_PENALTY: dict = {"HIGH": 1.0, "MEDIUM": 1.5, "LOW": 2.0}
 VALID_REVERSIBILITY   = frozenset({"HIGH", "MEDIUM", "LOW"})
-VALID_STATUS          = frozenset({"active", "stale", "quarantine", "retired"})
+VALID_STATUS          = frozenset({"active", "stale", "quarantine", "retired", "rejected"})
 VALID_SIGNAL_SOURCES  = frozenset({"evidence", "assumption", "external", "review"})
 
 
@@ -428,6 +428,101 @@ class OpportunityIntelligenceEngine:
             with open(self._opportunity_log, "a", encoding="utf-8") as f:
                 f.write(json.dumps(matched, ensure_ascii=False) + "\n")
         return pm_entry
+
+    # --- Phase 2: Counter-Hypothesis Loop ---
+
+    def reject_opportunity(
+        self,
+        opportunity_id: str,
+        shattering_trigger_assumption_ids: List[str],
+        reason: str,
+        actor: str = "system",
+    ) -> dict:
+        """
+        Counter-Hypothesis Loop (Section 4.8). Opportunity를 'rejected' 상태로 전환.
+        shattering_trigger_assumption_ids: 이 가정(들)이 무너지면 재활성화 대상.
+        append-only + last-wins(reversed 순회 후 첫 매치) 원칙 준수.
+        EAG: EAG-S346-AIF-AREA1-COUNTERHYPO-001
+        """
+        if not opportunity_id or not str(opportunity_id).strip():
+            raise OpportunityError("required field missing: opportunity_id")
+        if not reason or not str(reason).strip():
+            raise OpportunityError("required field missing: reason")
+
+        all_ops = self._load_opportunities()
+        target = None
+        for entry in reversed(all_ops):
+            if entry.get("id") == opportunity_id:
+                target = entry
+                break
+        if target is None:
+            raise OpportunityError(f"Opportunity not found: {opportunity_id}")
+        if target.get("status") == "rejected":
+            raise OpportunityError(f"Opportunity already rejected: {opportunity_id}")
+
+        now = datetime.now(timezone.utc).isoformat()
+        rejected_entry = dict(target)
+        rejected_entry.update({
+            "status": "rejected",
+            "shattering_trigger_assumption_ids": list(shattering_trigger_assumption_ids),
+            "rejected_reason": reason.strip(),
+            "rejected_at": now,
+            "rejected_by": actor.strip(),
+        })
+        self._ensure_dir()
+        with open(self._opportunity_log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rejected_entry, ensure_ascii=False) + "\n")
+        return rejected_entry
+
+    def check_counter_hypothesis(
+        self,
+        assumption_id: str,
+        new_confidence: float,
+        threshold: float = 0.3,
+    ) -> list:
+        """
+        Counter-Hypothesis Loop (Section 4.8). assumption의 confidence가
+        threshold 미만으로 떨어지면, 이를 shattering_trigger로 등록한
+        'rejected' 상태 Opportunity들을 자동 재활성화('active').
+        2-pass last-wins: (1) id별 최신 entry 수집 (2) 조건 만족분만 재활성화.
+        EAG: EAG-S346-AIF-AREA1-COUNTERHYPO-001
+        """
+        if new_confidence >= threshold:
+            return []
+
+        all_ops = self._load_opportunities()
+        latest_ops: dict = {}
+        for entry in reversed(all_ops):
+            eid = entry.get("id")
+            if eid and eid not in latest_ops:
+                latest_ops[eid] = entry
+
+        triggered_ids = []
+        for eid, entry in latest_ops.items():
+            if entry.get("status") != "rejected":
+                continue
+            triggers = entry.get("shattering_trigger_assumption_ids", [])
+            if assumption_id in triggers:
+                triggered_ids.append(eid)
+        if not triggered_ids:
+            return []
+
+        now = datetime.now(timezone.utc).isoformat()
+        reactivated = []
+        for eid in triggered_ids:
+            target = latest_ops[eid]
+            reactivated_entry = dict(target)
+            reactivated_entry.update({
+                "status": "active",
+                "reactivated_at": now,
+                "reactivated_by": "counter_hypothesis",
+                "reactivation_trigger_assumption_id": assumption_id,
+            })
+            self._ensure_dir()
+            with open(self._opportunity_log, "a", encoding="utf-8") as f:
+                f.write(json.dumps(reactivated_entry, ensure_ascii=False) + "\n")
+            reactivated.append(reactivated_entry)
+        return reactivated
 
     # --- Query ---
 
