@@ -127,8 +127,9 @@ Execute in order:
    - architecture_state
    - next_steps
 
-All REST calls require Bearer token (OAuth: AIBA_DOMI_CLIENT_ID / CLIENT_SECRET).
-Token endpoint: `https://arss-protocol.org/token`
+현재 Domi의 State Boot는 읽기 전용 MCP 관측 도구(get_runtime_snapshot / read_file)로 수행된다. 위 단계의 `GET /domi/...` 표기는 이 읽기 전용 관측 도구 호출을 가리키며, 별도의 OAuth Bearer 토큰 인증 없이 동작한다.
+
+인증(OAuth) 기반 Boot는 현재 구현되어 있지 않으며, 향후 필요 시 별도 Architecture Proposal의 범위로 다룬다.
 
 ### Stage C — Boot Complete Declaration
 
