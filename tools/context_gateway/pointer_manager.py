@@ -292,6 +292,14 @@ def load_canonical_context(fallback_glob: bool = True) -> tuple[Optional[dict], 
             return None, PointerFailureClass.SCHEMA_INCOMPATIBLE
         return None, PointerFailureClass.POINTER_INVALID
 
+    # 계약 9: prev_tip 형식 검증 (git 짧은 해시 hex 또는 GENESIS)
+    # 순방향 일관성은 WRITER(create_pointer)+CLOSE측 위임 — LOAD는 형식/존재만
+    prev_tip = pointer.get("prev_tip")
+    if prev_tip != "GENESIS":
+        if (not isinstance(prev_tip, str) or not prev_tip.strip()
+                or not all(c in "0123456789abcdef" for c in prev_tip.lower())):
+            return None, PointerFailureClass.POINTER_INVALID
+
     context_path = resolve_canonical_path(pointer)
     if context_path is None:
         return None, PointerFailureClass.SOURCE_RESOLUTION_FAILURE
