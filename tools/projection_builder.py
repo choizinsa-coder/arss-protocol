@@ -284,21 +284,20 @@ def get_projection(role: Optional[str] = None) -> tuple[dict, bool]:
         return _cache["projection"], False
 
     # Pointer-first canonical load (Phase A 핵심 변경)
-    raw, canonical_source = load_canonical_context(fallback_glob=True)
+    raw, canonical_source = load_canonical_context(fallback_glob=False)
+
+    # 계약 16: GLOB_FALLBACK 결과는 canonical 미채택 -> NONE_STATE 취급
+    if raw is not None and canonical_source == "GLOB_FALLBACK":
+        raw = None
 
     if raw is None:
         _cache["refresh_failed"] = True
-        if _cache["projection"] is not None:
-            stale_proj = dict(_cache["projection"])
-            stale_proj["stale"] = True
-            stale_proj["projection_refresh_failed"] = True
-            stale_proj["stale_warning"] = "STALE_WARNING: SESSION_CONTEXT 로드 실패"
-            return stale_proj, True
         return {
             "AUTHORITY_LEVEL": "OBSERVATION_ONLY_NO_EXECUTION",
             "stale": True,
             "projection_refresh_failed": True,
             "execution_allowed": False,
+            "failure_source": "NONE_STATE",
             "message": STALE_OUTPUT,
         }, True
 

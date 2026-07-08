@@ -105,6 +105,7 @@ def test_get_projection_load_failure_returns_stale():
             proj, is_stale = get_projection()
     assert is_stale is True
     assert proj.get("projection_refresh_failed") is True
+    assert proj.get("failure_source") == "NONE_STATE"
 
 
 def test_get_projection_success():
@@ -132,3 +133,38 @@ def test_get_projection_role_domi():
                    return_value=(raw, "POINTER")):
             proj, _ = get_projection(role="domi")
     assert proj.get("role") == "domi"
+
+
+def test_get_projection_load_failure_fail_closed_no_cache_fallback():
+    # 계약 8: 캐시 만료 후 로드 실패 시 warm 캐시 partial fallback 금지 (fail-closed)
+    from tools.projection_builder import _cache
+    invalidate_cache()
+    raw = {"session_count": 175, "system_name": "AIBA"}
+    with patch("tools.projection_builder._check_manifest_blocking",
+               return_value=(False, "MANIFEST_OK")):
+        with patch("tools.projection_builder.load_canonical_context",
+                   return_value=(raw, "POINTER")):
+            get_projection()
+    _cache["built_at_epoch"] = 0.0
+    with patch("tools.projection_builder._check_manifest_blocking",
+               return_value=(False, "MANIFEST_OK")):
+        with patch("tools.projection_builder.load_canonical_context",
+                   return_value=(None, "NONE")):
+            proj, is_stale = get_projection()
+    assert is_stale is True
+    assert proj.get("failure_source") == "NONE_STATE"
+    assert "data" not in proj
+
+
+def test_get_projection_glob_fallback_rejected():
+    # 계약 16: GLOB_FALLBACK canonical 미채택 -> NONE_STATE fail-closed
+    invalidate_cache()
+    raw = {"session_count": 175, "system_name": "AIBA"}
+    with patch("tools.projection_builder._check_manifest_blocking",
+               return_value=(False, "MANIFEST_OK")):
+        with patch("tools.projection_builder.load_canonical_context",
+                   return_value=(raw, "GLOB_FALLBACK")):
+            proj, is_stale = get_projection()
+    assert is_stale is True
+    assert proj.get("failure_source") == "NONE_STATE"
+    assert "data" not in proj
