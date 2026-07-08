@@ -79,7 +79,7 @@ class TestContextWriter(unittest.TestCase):
         self.assertEqual(result["decision"], "COMMIT")
         pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
         self.assertEqual(pointer["current_session"], self.session)
-        self.assertEqual(pointer["current_file_id"], final_path.name)
+        self.assertEqual(pointer["final_file"], final_path.name)
 
     def test_T14_manifest_fresh_after_commit(self):
         final_path = self._create_final()

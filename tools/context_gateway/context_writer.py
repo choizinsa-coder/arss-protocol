@@ -175,7 +175,11 @@ class ContextWriter:
             }
 
         # Step 4 — MANIFEST fresh 생성 (timestamp 동기화)
+        # IAPG-III 4.0 정합 (S353): pointer.generated_at를 committed_at으로 동기화시켜
+        # validate_timestamp_alignment(pointer.generated_at == manifest.generated_at) 보장.
+        # updated_at은 하위호환을 위해 유지 (writer 자체 주입 계약).
         committed_at = datetime.now(KST).isoformat()
+        new_pointer["generated_at"] = committed_at
         new_pointer["updated_at"] = committed_at
 
         pointer_hash = get_pointer_hash(new_pointer)

@@ -62,14 +62,18 @@ def _write_json(path: Path, data: dict) -> str:
 
 
 def _make_pointer(session: int, context_hash: str, ts: str) -> dict:
+    """IAPG-III 4.0 스키마 (S353 EAG-S353-CLOSE-VALIDATOR-40-ALIGN-001).
+    pointer_manager.REQUIRED_POINTER_FIELDS 기준."""
     return {
         "current_session": session,
-        "current_file_id": f"SESSION_CONTEXT_S{session}_FINAL.json",
-        "session_count": session,
+        "canonical_file": "SESSION_CONTEXT.json",
+        "final_file": f"SESSION_CONTEXT_S{session}_FINAL.json",
+        "chain_tip": "GENESIS",
+        "prev_tip": "GENESIS",
         "context_hash": context_hash,
-        "updated_at": ts,
+        "generated_at": ts,
+        "schema_version": "4.0",
         "updated_by": "caddy",
-        "previous_pointer_hash": "GENESIS",
     }
 
 
@@ -165,10 +169,18 @@ class TestCloseBundleValidator(unittest.TestCase):
         self.ts = "2026-05-25T12:00:00+09:00"
 
     def _make_bundle(self, session=None, context_hash=None, ts=None, blocking_flags=None):
+        """IAPG-III 4.0 정합 (S353): context_hash를 정규화 방식으로 계산."""
         session = session or self.session
         ts = ts or self.ts
         final_path = Path(self.tmp) / f"SESSION_CONTEXT_S{session}_FINAL.json"
-        actual_hash = _write_json(final_path, _make_final_content(session))
+        _write_json(final_path, _make_final_content(session))
+        # pointer_manager와 동일 방식으로 정규화 hash 계산
+        with open(final_path, "r", encoding="utf-8") as _f:
+            _data = json.load(_f)
+        _payload = {k: v for k, v in _data.items() if k != "context_hash"}
+        actual_hash = hashlib.sha256(
+            json.dumps(_payload, sort_keys=True, ensure_ascii=False).encode()
+        ).hexdigest()
         context_hash = context_hash or actual_hash
 
         ptr = _make_pointer(session, context_hash, ts)
@@ -314,7 +326,7 @@ class TestContextWriter(unittest.TestCase):
         self.assertTrue(pointer_path.exists())
         pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
         self.assertEqual(pointer["current_session"], self.session)
-        self.assertEqual(pointer["current_file_id"], final_path.name)
+        self.assertEqual(pointer["final_file"], final_path.name)
 
     # T-14: commit 후 MANIFEST fresh 상태
     def test_T14_manifest_fresh_after_commit(self):
@@ -366,12 +378,17 @@ class TestPhaseC_Integration(unittest.TestCase):
 
         self.assertEqual(result["decision"], "COMMIT")
 
-        # 실제 파일 hash 재계산
-        actual_hash = hashlib.sha256(final_path.read_bytes()).hexdigest()
+        # 실제 파일 hash 재계산 (IAPG-III 4.0 S353: 정규화 방식)
+        with open(final_path, "r", encoding="utf-8") as _f:
+            _data = json.load(_f)
+        _payload = {k: v for k, v in _data.items() if k != "context_hash"}
+        actual_hash = hashlib.sha256(
+            json.dumps(_payload, sort_keys=True, ensure_ascii=False).encode()
+        ).hexdigest()
         pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
-        # 3-way 일치 확인
+        # 3-way 일치 확인 (pointer_manager와 동일한 정규화 hash)
         self.assertEqual(pointer["context_hash"], actual_hash)
         self.assertEqual(manifest["context_hash"], actual_hash)
         self.assertEqual(result["context_hash"], actual_hash)

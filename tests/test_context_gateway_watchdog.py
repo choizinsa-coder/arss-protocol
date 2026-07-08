@@ -57,14 +57,18 @@ def _make_fake_path(name: str) -> MagicMock:
 
 
 def _make_pointer(session: int, context_hash: str = "abc" * 21 + "ab") -> dict:
+    """IAPG-III 4.0 스키마 (S353 EAG-S353-CLOSE-VALIDATOR-40-ALIGN-001).
+    pointer_manager.REQUIRED_POINTER_FIELDS 기준."""
     return {
         "current_session": session,
-        "current_file_id": f"SESSION_CONTEXT_S{session}_FINAL.json",
-        "session_count": session,
+        "canonical_file": "SESSION_CONTEXT.json",
+        "final_file": f"SESSION_CONTEXT_S{session}_FINAL.json",
+        "chain_tip": "GENESIS",
+        "prev_tip": "GENESIS",
         "context_hash": context_hash,
-        "updated_at": "2026-05-25T10:00:00+09:00",
+        "generated_at": "2026-05-25T10:00:00+09:00",
+        "schema_version": "4.0",
         "updated_by": "caddy",
-        "previous_pointer_hash": "GENESIS",
     }
 
 

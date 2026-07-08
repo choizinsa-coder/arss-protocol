@@ -2,11 +2,14 @@
 pointer_manager.py
 AIBA Context Gateway — Pointer Manager
 SSOT: Domi Phase A Design / EAG-1 Approved (S151)
+IAPG â¢ 정합: EAG-S351-IAPG-PROJECTION-INTEGRITY-001
 
 역할:
   - SESSION_CONTEXT_POINTER.json 생성 / 갱신 / 검증 / 로드
   - canonical SESSION_CONTEXT 파일 결정 권위
-  - glob/mtime 방식 대체
+  - 계약 17: reader(validate_pointer)를 실제 writer schema(4.0)에 정합
+  - 계약 16: silent GLOB_FALLBACK(mtime 최신)의 canonical 채택 폐쇄
+  - 계약 3: 원천 결정 실패를 명시적 failure source로 반환 (silent fallback 금지)
 """
 
 import logging as _logging
@@ -16,7 +19,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
 
-# ── 상수 ───────────────────────────────────────────────────────────────────
+# ── 상수 ───────────────────────────────────────────────────────────────────────────
 
 VPS_ROOT = Path("/opt/arss/engine/arss-protocol")
 POINTER_FILENAME = "SESSION_CONTEXT_POINTER.json"
@@ -24,18 +27,42 @@ POINTER_PATH = VPS_ROOT / POINTER_FILENAME
 
 KST = timezone(timedelta(hours=9))
 
+# 계약 17: reader→writer schema 정합.
+# 실제 writer(SESSION CLOSE 생성기)가 산출하는 canonical schema = 4.0.
+POINTER_SCHEMA_VERSION = "4.0"
+MIN_COMPATIBLE_SCHEMA_VERSION = "4.0"
+
 REQUIRED_POINTER_FIELDS = {
     "current_session",
-    "current_file_id",
-    "session_count",
+    "canonical_file",
+    "final_file",
+    "chain_tip",
+    "prev_tip",
     "context_hash",
-    "updated_at",
-    "updated_by",
-    "previous_pointer_hash",
+    "generated_at",
+    "schema_version",
 }
 
+# 계약 17: canonical seal 대상 필드 (POINTER 무결성 seal 조합).
+POINTER_SEAL_FIELDS = ("context_hash", "current_session", "chain_tip", "prev_tip")
 
-# ── 내부 헬퍼 ──────────────────────────────────────────────────────────────
+
+class PointerFailureClass:
+    """계약 7: 원천 결정 실패 분류. silent fallback 금지 — 명시적 failure source로 반환."""
+    POINTER_MISSING = "NONE_POINTER_MISSING"
+    SCHEMA_INCOMPATIBLE = "NONE_SCHEMA_INCOMPATIBLE"
+    POINTER_INVALID = "NONE_POINTER_INVALID"
+    SOURCE_RESOLUTION_FAILURE = "NONE_SOURCE_RESOLUTION_FAILURE"
+    HASH_MISMATCH = "NONE_HASH_MISMATCH"
+    READ_ERROR = "NONE_READ_ERROR"
+
+
+# 계약 16: silent GLOB_FALLBACK로 canonical Authority를 채택하지 않는다.
+# 정상 source(POINTER)만 canonical. 그 외에는 명시적 failure source.
+CANONICAL_SOURCE_POINTER = "POINTER"
+
+
+# ── 내부 헬퍼 ──────────────────────────────────────────────────────────────────
 
 def _compute_hash(data: dict) -> str:
     """dict를 정렬된 JSON으로 직렬화 후 SHA256 반환"""
@@ -44,24 +71,47 @@ def _compute_hash(data: dict) -> str:
 
 
 def _compute_file_hash(path: Path) -> str:
-    """파일 내용 SHA256 반환"""
+    """\ud30c\uc77c \ub0b4\uc6a9 SHA256 \ubc18\ud658"""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _compute_context_hash(session_context_path: Path) -> Optional[str]:
-    """SESSION_CONTEXT 파일 SHA256 반환. 파일 없으면 None."""
+    """
+    SESSION_CONTEXT 파일 context_hash 계산.
+    계약 10 / item 8.2: writer(session_close_generator)와 동일 방식.
+      - JSON 파싱 → context_hash 필드 제외(자기 해시필드 self-ref 방지, adr_store 패턴 동일)
+      - json.dumps(sort_keys=True, ensure_ascii=False) → SHA256.
+    파일 없거나 파싱 실패 시 None.
+    """
     try:
-        return _compute_file_hash(session_context_path)
+        with open(session_context_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        payload = {k: v for k, v in data.items() if k != "context_hash"}
+        serialized = json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()
+        return hashlib.sha256(serialized).hexdigest()
     except Exception:
         return None
 
 
-# ── 공개 API ───────────────────────────────────────────────────────────────
+def _schema_compatible(schema_version) -> bool:
+    """
+    계약 17(C): schema_version이 MIN_COMPATIBLE_SCHEMA_VERSION 이상인지 (버전 진화 안전 처리).
+    문자열 사전식 비교가 아닌 튜플 수치 비교. 파싱 실패 시 비호환.
+    """
+    try:
+        cur = tuple(int(x) for x in str(schema_version).split("."))
+        minv = tuple(int(x) for x in MIN_COMPATIBLE_SCHEMA_VERSION.split("."))
+        return cur >= minv
+    except Exception:
+        return False
+
+
+# ── 공개 API ───────────────────────────────────────────────────────────────────
 
 def load_pointer() -> Optional[dict]:
     """
     POINTER_PATH에서 SESSION_CONTEXT_POINTER.json 로드.
-    파일 없음 또는 파싱 실패 시 None 반환 (glob fallback 트리거).
+    파일 없음 또는 파싱 실패 시 None 반환.
     """
     if not POINTER_PATH.exists():
         return None
@@ -74,12 +124,13 @@ def load_pointer() -> Optional[dict]:
 
 def validate_pointer(pointer: dict) -> tuple[bool, list[str]]:
     """
-    Pointer 구조 검증.
+    Pointer 구조 검증 (계약 17: 실제 writer schema 4.0 기준).
+    silent compatibility fallback 없음 — 불일치는 명시적 오류.
     반환: (is_valid: bool, errors: list[str])
     """
     errors = []
 
-    # 필수 필드 존재 여부
+    # 필수 필드 존재 여부 (4.0 schema)
     for field in REQUIRED_POINTER_FIELDS:
         if field not in pointer:
             errors.append(f"MISSING_FIELD: {field}")
@@ -87,24 +138,27 @@ def validate_pointer(pointer: dict) -> tuple[bool, list[str]]:
     if errors:
         return False, errors
 
-    # current_session / session_count 일치 여부
-    if pointer["current_session"] != pointer["session_count"]:
+    # 계약 17(C): schema_version 호환성 확인
+    schema_version = pointer.get("schema_version", "")
+    if not _schema_compatible(schema_version):
         errors.append(
-            f"SESSION_MISMATCH: current_session={pointer['current_session']} "
-            f"!= session_count={pointer['session_count']}"
+            f"SCHEMA_INCOMPATIBLE: schema_version={schema_version!r} "
+            f"< MIN {MIN_COMPATIBLE_SCHEMA_VERSION}"
         )
 
-    # current_file_id 형식 확인
-    file_id = pointer.get("current_file_id", "")
-    if not file_id.startswith("SESSION_CONTEXT_S") or not file_id.endswith("_FINAL.json"):
-        errors.append(f"INVALID_FILE_ID: {file_id}")
+    # final_file 형식 확인 (canonical SESSION_CONTEXT_S..._FINAL.json)
+    final_file = pointer.get("final_file", "")
+    if not (isinstance(final_file, str)
+            and final_file.startswith("SESSION_CONTEXT_S")
+            and final_file.endswith("_FINAL.json")):
+        errors.append(f"INVALID_FINAL_FILE: {final_file}")
 
     return len(errors) == 0, errors
 
 
 def verify_pointer_chain(pointer: dict) -> tuple[bool, str]:
     """
-    previous_pointer_hash 체인 검증.
+    previous_pointer_hash 체인 검증 (레거시 헬퍼, canonical 로드 경로 미사용 — 무변경 유지).
     이전 Pointer가 없으면 GENESIS로 허용.
     반환: (is_valid: bool, reason: str)
     """
@@ -113,8 +167,6 @@ def verify_pointer_chain(pointer: dict) -> tuple[bool, str]:
     if prev_hash == "GENESIS":
         return True, "GENESIS_POINTER"
 
-    # previous_pointer_hash가 있으면 실제 검증은 caller 책임
-    # (이전 Pointer 파일을 별도 보존하는 구조가 필요하므로 현재는 형식만 검증)
     if not prev_hash or len(prev_hash) != 64:
         return False, f"INVALID_PREV_HASH: {prev_hash!r}"
 
@@ -123,11 +175,13 @@ def verify_pointer_chain(pointer: dict) -> tuple[bool, str]:
 
 def resolve_canonical_path(pointer: dict) -> Optional[Path]:
     """
-    Pointer에서 canonical SESSION_CONTEXT 파일 경로 반환.
+    Pointer에서 canonical SESSION_CONTEXT 파일 경로 반환 (계약 17: final_file 사용).
     파일이 실제 존재하는지 확인.
     """
-    file_id = pointer.get("current_file_id", "")
-    candidate = VPS_ROOT / file_id
+    final_file = pointer.get("final_file", "")
+    if not final_file:
+        return None
+    candidate = VPS_ROOT / final_file
     if candidate.exists():
         return candidate
     return None
@@ -135,7 +189,8 @@ def resolve_canonical_path(pointer: dict) -> Optional[Path]:
 
 def verify_context_hash(pointer: dict, context_path: Path) -> tuple[bool, str]:
     """
-    Pointer의 context_hash와 실제 파일 hash 일치 여부 검증.
+    Pointer의 context_hash와 SC_FINAL 무결성 지문 일치 여부 검증.
+    계약 17(reader→writer 정합) + 계약 10(hash 패턴): writer와 동일 방식으로 재계산 후 대조.
     반환: (is_match: bool, reason: str)
     """
     expected = pointer.get("context_hash", "")
@@ -153,37 +208,36 @@ def create_pointer(
     context_path: Path,
     updated_by: str = "caddy",
     previous_pointer: Optional[dict] = None,
+    chain_tip: str = "GENESIS",
+    prev_tip: str = "GENESIS",
 ) -> dict:
     """
-    신규 SESSION_CONTEXT_POINTER 생성.
-    previous_pointer가 있으면 previous_pointer_hash 체인 연결.
+    신규 SESSION_CONTEXT_POINTER 생성 (계약 17: 4.0 schema 산출).
+    previous_pointer가 있으면 prev_tip을 이전 pointer hash로 연결.
     """
     context_hash = _compute_context_hash(context_path)
     if context_hash is None:
         raise FileNotFoundError(f"SESSION_CONTEXT 파일 없음: {context_path}")
 
     if previous_pointer is not None:
-        prev_hash = _compute_hash(previous_pointer)
-    else:
-        prev_hash = "GENESIS"
+        prev_tip = _compute_hash(previous_pointer)
 
     pointer = {
         "current_session": session,
-        "current_file_id": file_id,
-        "session_count": session,
+        "canonical_file": "SESSION_CONTEXT.json",
+        "final_file": file_id,
+        "chain_tip": chain_tip,
+        "prev_tip": prev_tip,
         "context_hash": context_hash,
-        "updated_at": datetime.now(KST).isoformat(),
+        "generated_at": datetime.now(KST).isoformat(),
+        "schema_version": POINTER_SCHEMA_VERSION,
         "updated_by": updated_by,
-        "previous_pointer_hash": prev_hash,
     }
     return pointer
 
 
 def save_pointer(pointer: dict) -> Path:
-    """
-    POINTER_PATH에 Pointer 저장.
-    반환: 저장된 파일 경로
-    """
+    """POINTER_PATH에 Pointer 저장. 반환: 저장된 파일 경로"""
     with open(POINTER_PATH, "w", encoding="utf-8") as f:
         json.dump(pointer, f, ensure_ascii=False, indent=2)
     return POINTER_PATH
@@ -194,43 +248,61 @@ def get_pointer_hash(pointer: dict) -> str:
     return _compute_hash(pointer)
 
 
+def diagnostic_glob_candidates() -> list:
+    """
+    계약 16: 진단·관측 목적의 glob 후보 목록.
+    ⚠️ 이 결과를 canonical Authority로 채택하는 것은 금지된다(silent fallback 폐쇄).
+    """
+    try:
+        return sorted(
+            (str(p) for p in VPS_ROOT.glob("SESSION_CONTEXT_S*_FINAL.json")),
+            reverse=True,
+        )
+    except Exception:
+        return []
+
+
 def load_canonical_context(fallback_glob: bool = True) -> tuple[Optional[dict], str]:
     """
     Pointer-first canonical SESSION_CONTEXT 로드.
-    반환: (context_dict, source)
-      source: "POINTER" | "GLOB_FALLBACK" | "NONE"
 
-    1. POINTER 로드 시도
-    2. POINTER 없으면 fallback_glob=True 시 기존 glob+mtime 방식
-    3. 둘 다 실패 시 (None, "NONE")
+    계약 3/16/17: silent GLOB_FALLBACK 폐쇄.
+      - POINTER 결정 실패(부재/schema 비호환/무효/경로해상/hash 불일치)는
+        mtime 최신 파일을 canonical로 조용히 채택하지 않고,
+        명시적 failure source(NONE_*)를 반환한다.
+      - fallback_glob 인자는 하위호환을 위해 유지되나,
+        GLOB 결과를 canonical Authority로 채택하지 않는다(진단 전용).
+
+    반환: (context_dict, source)
+      source: "POINTER"
+            | "NONE_POINTER_MISSING"
+            | "NONE_SCHEMA_INCOMPATIBLE"
+            | "NONE_POINTER_INVALID"
+            | "NONE_SOURCE_RESOLUTION_FAILURE"
+            | "NONE_HASH_MISMATCH"
+            | "NONE_READ_ERROR"
     """
     pointer = load_pointer()
+    if pointer is None:
+        return None, PointerFailureClass.POINTER_MISSING
 
-    if pointer is not None:
-        is_valid, errors = validate_pointer(pointer)
-        if is_valid:
-            context_path = resolve_canonical_path(pointer)
-            if context_path is not None:
-                hash_ok, _ = verify_context_hash(pointer, context_path)
-                if hash_ok:
-                    try:
-                        with open(context_path, "r", encoding="utf-8") as f:
-                            return json.load(f), "POINTER"
-                    except Exception as _rule6_e:
-                        _logging.debug("RULE6 pointer_manager: %s", _rule6_e)
+    is_valid, errors = validate_pointer(pointer)
+    if not is_valid:
+        if any(e.startswith("SCHEMA_INCOMPATIBLE") for e in errors):
+            return None, PointerFailureClass.SCHEMA_INCOMPATIBLE
+        return None, PointerFailureClass.POINTER_INVALID
 
-    # Pointer 실패 → glob fallback
-    if fallback_glob:
-        try:
-            candidates = sorted(
-                VPS_ROOT.glob("SESSION_CONTEXT_S*_FINAL.json"),
-                key=lambda p: p.stat().st_mtime,
-                reverse=True,
-            )
-            if candidates:
-                with open(candidates[0], "r", encoding="utf-8") as f:
-                    return json.load(f), "GLOB_FALLBACK"
-        except Exception as _rule6_e:
-            _logging.debug("RULE6 pointer_manager: %s", _rule6_e)
+    context_path = resolve_canonical_path(pointer)
+    if context_path is None:
+        return None, PointerFailureClass.SOURCE_RESOLUTION_FAILURE
 
-    return None, "NONE"
+    hash_ok, _ = verify_context_hash(pointer, context_path)
+    if not hash_ok:
+        return None, PointerFailureClass.HASH_MISMATCH
+
+    try:
+        with open(context_path, "r", encoding="utf-8") as f:
+            return json.load(f), CANONICAL_SOURCE_POINTER
+    except Exception as _rule6_e:
+        _logging.debug("RULE6 pointer_manager: %s", _rule6_e)
+        return None, PointerFailureClass.READ_ERROR

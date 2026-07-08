@@ -102,24 +102,53 @@ def _load_json_safe(path: Path) -> Optional[dict]:
         return None
 
 
+def _compute_normalized_hash(path: Path) -> Optional[str]:
+    """
+    SESSION_CONTEXT 파일 context_hash를 pointer_manager와 동일 방식으로 재계산.
+    IAPG-III 계약 (S351 EAG-IAPG-PROJECTION-INTEGRITY-001, S353 정합):
+      - JSON 파싱 → context_hash 필드 제외(self-ref 방지)
+      - json.dumps(sort_keys=True, ensure_ascii=False) → SHA256
+    pointer_manager._compute_context_hash와 원본 동치 — 공급자·소비자 정합.
+    파일 없거나 JSON 파싱 실패 시 None.
+    """
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        payload = {k: v for k, v in data.items() if k != "context_hash"}
+        serialized = json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()
+        return hashlib.sha256(serialized).hexdigest()
+    except Exception as exc:
+        logger.error("NORMALIZED_HASH_FAILED: cannot compute on %s — %s", path, exc)
+        return None
+
+
 # ── 검증 함수 ──────────────────────────────────────────────────────────────
 
 def validate_final_file(bundle: CloseBundleInput, result: ValidationResult) -> None:
     """
     [V-1] FINAL 파일 실존 및 hash 재계산 검증.
     제니 ADVISORY: 3-way check 전 해시 검증 시점 정합성 보장.
+    IAPG-III 4.0 정합 (S353): pointer_manager와 동일한 정규화 hash 사용.
+      - _fsync_read_hash: fsync 보장 역할 유지 (raw bytes hash 반환)
+      - _compute_normalized_hash: 실제 대조용 hash (JSON 정규화, context_hash 제외)
     """
     if not bundle.final_path.exists():
         result.add_error(f"FINAL_FILE_MISSING: {bundle.final_path.name}")
         return
 
-    # fsync 시도 후 hash 계산 — 실패 시 degraded 경고
-    computed_hash, fsync_ok = _fsync_read_hash(bundle.final_path)
-    if not fsync_ok and computed_hash is not None:
+    # fsync 보장 시도 — hash 값은 사용하지 않고 fsync_ok 상태만 관측
+    _raw_hash, fsync_ok = _fsync_read_hash(bundle.final_path)
+    if not fsync_ok and _raw_hash is not None:
         result.add_warning(
             "FSYNC_DEGRADED: hash computed from potentially unflushed buffer "
             f"on {bundle.final_path.name}"
         )
+    if _raw_hash is None:
+        result.add_error(f"FINAL_FILE_UNREADABLE: {bundle.final_path.name}")
+        return
+
+    # 실제 대조 hash — pointer_manager와 동일 방식(정규화)
+    computed_hash = _compute_normalized_hash(bundle.final_path)
     if computed_hash is None:
         result.add_error(f"FINAL_FILE_UNREADABLE: {bundle.final_path.name}")
         return
@@ -159,13 +188,16 @@ def validate_session_count(bundle: CloseBundleInput, result: ValidationResult) -
 
 
 def validate_pointer_chain(bundle: CloseBundleInput, result: ValidationResult) -> None:
-    """[V-3] POINTER chain hash 형식 검증"""
-    prev_hash = bundle.pointer.get("previous_pointer_hash", "")
+    """
+    [V-3] POINTER chain hash 형식 검증.
+    IAPG-III 4.0 정합 (S353): pointer_manager.REQUIRED_POINTER_FIELDS의 prev_tip 사용.
+    """
+    prev_hash = bundle.pointer.get("prev_tip", "")
     if prev_hash == "GENESIS":
         return
     if not prev_hash or len(prev_hash) != 64:
         result.add_error(
-            f"POINTER_CHAIN_INVALID: previous_pointer_hash={prev_hash!r}"
+            f"POINTER_CHAIN_INVALID: prev_tip={prev_hash!r}"
         )
 
 
@@ -185,12 +217,15 @@ def validate_manifest_clean(bundle: CloseBundleInput, result: ValidationResult) 
 
 
 def validate_timestamp_alignment(bundle: CloseBundleInput, result: ValidationResult) -> None:
-    """[V-5] POINTER updated_at / MANIFEST generated_at 일치 검증"""
-    ptr_ts = bundle.pointer.get("updated_at", "")
+    """
+    [V-5] POINTER generated_at / MANIFEST generated_at 일치 검증.
+    IAPG-III 4.0 정합 (S353): pointer_manager.REQUIRED_POINTER_FIELDS의 generated_at 사용.
+    """
+    ptr_ts = bundle.pointer.get("generated_at", "")
     mfst_ts = bundle.manifest.get("generated_at", "")
     if ptr_ts and mfst_ts and ptr_ts != mfst_ts:
         result.add_error(
-            f"TIMESTAMP_MISMATCH: pointer.updated_at={ptr_ts} manifest.generated_at={mfst_ts}"
+            f"TIMESTAMP_MISMATCH: pointer.generated_at={ptr_ts} manifest.generated_at={mfst_ts}"
         )
 
 

@@ -31,15 +31,33 @@ def _write_json(path: Path, data: dict) -> str:
     return hashlib.sha256(content.encode()).hexdigest()
 
 
+def _compute_normalized_hash_for_test(path: Path) -> str:
+    """pointer_manager._compute_context_hash와 동일 방식 (IAPG-III 4.0)."""
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    payload = {k: v for k, v in data.items() if k != "context_hash"}
+    serialized = json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()
+    return hashlib.sha256(serialized).hexdigest()
+
+
 def _make_bundle(tmp: str, session: int, ts: str, context_hash=None, blocking_flags=None):
+    """IAPG-III 4.0 스키마 (S353 EAG-S353-CLOSE-VALIDATOR-40-ALIGN-001).
+    pointer.context_hash에 정규화 hash 사용 (validator와 정합)."""
     final_path = Path(tmp) / f"SESSION_CONTEXT_S{session}_FINAL.json"
-    actual_hash = _write_json(final_path, {"session": session})
+    _write_json(final_path, {"session": session})
+    actual_hash = _compute_normalized_hash_for_test(final_path)
     context_hash = context_hash or actual_hash
 
     ptr = {
-        "current_session": session, "current_file_id": final_path.name,
-        "session_count": session, "context_hash": context_hash,
-        "updated_at": ts, "updated_by": "caddy", "previous_pointer_hash": "GENESIS",
+        "current_session": session,
+        "canonical_file": "SESSION_CONTEXT.json",
+        "final_file": final_path.name,
+        "chain_tip": "GENESIS",
+        "prev_tip": "GENESIS",
+        "context_hash": context_hash,
+        "generated_at": ts,
+        "schema_version": "4.0",
+        "updated_by": "caddy",
     }
     ptr_hash = hashlib.sha256(
         json.dumps(ptr, sort_keys=True, ensure_ascii=False).encode()
