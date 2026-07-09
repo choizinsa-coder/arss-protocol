@@ -195,7 +195,8 @@ def validate_pointer_chain(bundle: CloseBundleInput, result: ValidationResult) -
     prev_hash = bundle.pointer.get("prev_tip", "")
     if prev_hash == "GENESIS":
         return
-    if not prev_hash or len(prev_hash) != 64:
+    if (not isinstance(prev_hash, str) or not prev_hash.strip()
+            or not all(c in "0123456789abcdef" for c in prev_hash.lower())):
         result.add_error(
             f"POINTER_CHAIN_INVALID: prev_tip={prev_hash!r}"
         )

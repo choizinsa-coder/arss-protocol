@@ -18,6 +18,7 @@ import hashlib
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
+from tools.context_gateway._integrity import fsync_path  # 계약13(그룹C)
 
 # ── 상수 ───────────────────────────────────────────────────────────────────────────
 
@@ -55,6 +56,7 @@ class PointerFailureClass:
     SOURCE_RESOLUTION_FAILURE = "NONE_SOURCE_RESOLUTION_FAILURE"
     HASH_MISMATCH = "NONE_HASH_MISMATCH"
     READ_ERROR = "NONE_READ_ERROR"
+    TIMESTAMP_DESYNC = "NONE_TIMESTAMP_DESYNC"
 
 
 # 계약 16: silent GLOB_FALLBACK로 canonical Authority를 채택하지 않는다.
@@ -104,6 +106,24 @@ def _schema_compatible(schema_version) -> bool:
         return cur >= minv
     except Exception:
         return False
+
+
+def _seal_verify(pointer: dict) -> bool:
+    """계약 2(그룹 C): canonical seal 4필드 형식 무결성.
+    context_hash=64 hex / current_session=int>0 / chain_tip=hex|GENESIS / prev_tip=hex|GENESIS."""
+    ch = pointer.get("context_hash")
+    if not isinstance(ch, str) or len(ch) != 64 or not all(c in "0123456789abcdef" for c in ch.lower()):
+        return False
+    cs = pointer.get("current_session")
+    if not isinstance(cs, int) or isinstance(cs, bool) or cs <= 0:
+        return False
+    for _f in ("chain_tip", "prev_tip"):
+        _v = pointer.get(_f)
+        if _v == "GENESIS":
+            continue
+        if not isinstance(_v, str) or not _v.strip() or not all(c in "0123456789abcdef" for c in _v.lower()):
+            return False
+    return True
 
 
 # ── 공개 API ───────────────────────────────────────────────────────────────────
@@ -292,6 +312,10 @@ def load_canonical_context(fallback_glob: bool = True) -> tuple[Optional[dict], 
             return None, PointerFailureClass.SCHEMA_INCOMPATIBLE
         return None, PointerFailureClass.POINTER_INVALID
 
+    # 계약 2(그룹 C): canonical seal 4필드 형식 무결성
+    if not _seal_verify(pointer):
+        return None, PointerFailureClass.POINTER_INVALID
+
     # 계약 9: prev_tip 형식 검증 (git 짧은 해시 hex 또는 GENESIS)
     # 순방향 일관성은 WRITER(create_pointer)+CLOSE측 위임 — LOAD는 형식/존재만
     prev_tip = pointer.get("prev_tip")
@@ -303,6 +327,9 @@ def load_canonical_context(fallback_glob: bool = True) -> tuple[Optional[dict], 
     context_path = resolve_canonical_path(pointer)
     if context_path is None:
         return None, PointerFailureClass.SOURCE_RESOLUTION_FAILURE
+
+    # 계약 13(그룹 C): hash 검증 전 fsync 보장
+    fsync_path(context_path)
 
     hash_ok, _ = verify_context_hash(pointer, context_path)
     if not hash_ok:
