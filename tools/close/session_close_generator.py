@@ -13,6 +13,12 @@ S273 개정: EAG-S273-BOOTCLOSE-REDESIGN-001
 S276 개정: EAG-S276-JENI-CTX-CLOSE-001
   - Step 5.7 Jeni Session Context 생성: 외부 제니 부팅용 세션 컨텍스트 자동 생성
   - 저장 경로: tools/design/JENI_SESSION_CONTEXT_S{n+1}.md
+S357 개정: EAG-S357-IAPG-PHASE2-CONTRACT7-IMPL-001
+  - IAPG-III 계약7 Write-Pointer-Last 원자발행
+  - POINTER를 모든 번들 파일 완결·검증 이후 최후에 원자적으로 발행
+  - _atomic_write_pointer(): tempfile+fsync+os.rename 원자 쓰기
+  - _rollback_all(): 단계별 롤백 확장 (C7-4)
+  - 발행 순서: 단계I(번들파일) -> 단계II(검증게이트) -> 단계III(POINTER 원자발행+사후작업)
 
 사용법:
   # dry-run (파일 write 없음 — 산출 예정 경로·payload 출력만)
@@ -31,6 +37,7 @@ import hashlib
 import json
 import os
 import re
+import tempfile
 import subprocess
 import sys
 from datetime import datetime, timezone, timedelta
@@ -115,6 +122,69 @@ def _rollback(generated_files: list) -> None:
             print(f'[ROLLBACK] 삭제: {Path(fp).name}')
         except Exception as e:
             print(f'[ROLLBACK-WARN] 삭제 실패: {Path(fp).name} — {e}')
+
+def _atomic_write_pointer(pointer: dict, target_path: Path) -> None:
+    """
+    IAPG-III 계약7 (C7-3): POINTER 원자 발행.
+    tempfile(동일 디렉토리) -> json dump -> fsync -> os.rename (POSIX 원자 교체).
+    실패 시 임시파일 정리 후 예외 재발생 — POINTER 미발행 상태 유지.
+    EAG: EAG-S357-IAPG-PHASE2-CONTRACT7-IMPL-001
+    """
+    fd, tmp_path = tempfile.mkstemp(
+        prefix='.pointer_tmp_',
+        dir=str(target_path.parent),  # 동일 디렉토리 강제 (POSIX rename 원자성 보장)
+        suffix='.tmp'
+    )
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            json.dump(pointer, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno() if hasattr(f, 'fileno') else fd)
+        os.rename(tmp_path, str(target_path))
+        print(f'[OK] SESSION_CONTEXT_POINTER.json (atomic rename)')
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+def _rollback_all(stage: int, paths: dict) -> None:
+    """
+    IAPG-III 계약7 (C7-4): 단계별 롤백.
+    stage에 따라 삭제 대상 파일 범위가 확장된다.
+    paths 키: 'archive', 'sc_final', 'canonical', 'manifest', 'pointer'
+    stage 1: archive
+    stage 2: sc_final
+    stage 3: sc_final, canonical
+    stage 4: sc_final, canonical, manifest
+    stage 5 (POINTER 발행 후 실패): sc_final, canonical, manifest, pointer
+    C7-4: os.path.exists() 조건부 확인 후 삭제 (SC-5 반영)
+    EAG: EAG-S357-IAPG-PHASE2-CONTRACT7-IMPL-001
+    """
+    STAGE_TARGETS = {
+        1: ['archive'],
+        2: ['sc_final'],
+        3: ['sc_final', 'canonical'],
+        4: ['sc_final', 'canonical', 'manifest'],
+        5: ['sc_final', 'canonical', 'manifest', 'pointer'],
+    }
+    targets = STAGE_TARGETS.get(stage, [])
+    for key in targets:
+        fp = paths.get(key)
+        if fp is None:
+            continue
+        p = Path(fp)
+        if p.exists():
+            try:
+                p.unlink()
+                print(f'[ROLLBACK] 삭제: {p.name} (stage={stage})')
+            except Exception as e:
+                print(f'[ROLLBACK-WARN] 삭제 실패: {p.name} — {e}')
+        else:
+            print(f'[ROLLBACK-SKIP] 미존재 (stage={stage}): {p.name}')
+
 
 
 
@@ -971,10 +1041,18 @@ def main() -> None:
         print('[FAIL] --approval-id 미제공 또는 형식 불일치')
         sys.exit(1)
 
-    generated_files: list = []
+    # ── C7-1: 롤백 경로 딕셔너리 (단계별 _rollback_all 참조용)
+    n_val = n  # 클로저 캡처용
+    rollback_paths: dict = {}  # 파일 기록 시마다 등록
 
-    # ── [③ 원자 순서] archive 기록 + 무결성 검증
+    # ════════════════════════════════════════════════════════
+    # 단계 I: 번들 대상 파일 순차 기록 (POINTER 제외)
+    # C7-1 순서: ARCHIVE -> SC_FINAL -> canonical -> MANIFEST
+    # ════════════════════════════════════════════════════════
+
+    # ── I-1: ARCHIVE 기록 + 무결성 검증
     archive_path = ROOT / f'SESSION_CONTEXT_ARCHIVE_TIER_D_S{n}.json'
+    rollback_paths['archive'] = archive_path
     try:
         archive = build_archive(n, archive_candidates)
         with open(archive_path, 'w', encoding='utf-8') as f:
@@ -987,7 +1065,7 @@ def main() -> None:
         sys.exit(1)
 
     if not verify_archive_integrity(archive_path, archive_candidates):
-        archive_path.unlink(missing_ok=True)
+        _rollback_all(1, rollback_paths)
         print('[FAIL] archive 무결성 검증 실패 — FAIL_CLOSED')
         sys.exit(1)
 
@@ -1008,54 +1086,35 @@ def main() -> None:
     sc['context_hash'] = _context_hash(sc)
     computed_hash = sc['context_hash']
 
-    # Step 5: SC_FINAL 저장
+    # ── I-2: SC_FINAL 저장
     sc_final_path = ROOT / f'SESSION_CONTEXT_S{n}_FINAL.json'
+    rollback_paths['sc_final'] = sc_final_path
     try:
         with open(sc_final_path, 'w', encoding='utf-8') as f:
             json.dump(sc, f, ensure_ascii=False, indent=2)
-        generated_files.append(sc_final_path)
         print(f'[OK] SESSION_CONTEXT_S{n}_FINAL.json')
     except Exception as e:
         print(f'[FAIL] SC_FINAL 저장 실패: {e}')
         sys.exit(1)
 
-    # Step 7: canonical overwrite
+    # ── I-3: canonical overwrite
     sc_canonical_path = ROOT / 'SESSION_CONTEXT.json'
+    rollback_paths['canonical'] = sc_canonical_path
     try:
         with open(sc_canonical_path, 'w', encoding='utf-8') as f:
             json.dump(sc, f, ensure_ascii=False, indent=2)
         print(f'[OK] SESSION_CONTEXT.json canonical overwrite')
     except Exception as e:
-        _rollback(generated_files)
+        _rollback_all(3, rollback_paths)
         print(f'[FAIL] SESSION_CONTEXT.json overwrite 실패: {e}')
         sys.exit(1)
 
-    # [IAPG-III Phase1.5 계약5] 시각 단일공유: POINTER.generated_at == MANIFEST.updated_at
+    # ── I-4: STALE_MANIFEST 갱신
+    # [계약5] shared_ts 단일공유: POINTER.generated_at == MANIFEST.updated_at
+    # shared_ts는 MANIFEST 기록 직전 1회 계산 -> POINTER 발행까지 메모리 유지 (C7-9)
     shared_ts = _now()
-
-    # Step 8: POINTER 갱신
-    pointer_path = ROOT / 'SESSION_CONTEXT_POINTER.json'
-    try:
-        pointer = {
-            'current_session': sc['session_count'],
-            'canonical_file':  'SESSION_CONTEXT.json',
-            'final_file':      f'SESSION_CONTEXT_S{n}_FINAL.json',
-            'chain_tip':       sc['chain']['tip'],
-            'prev_tip':        sc['chain']['prev_tip'],
-            'context_hash':    sc['context_hash'],
-            'generated_at':    shared_ts,
-            'schema_version':  '4.0',
-        }
-        with open(pointer_path, 'w', encoding='utf-8') as f:
-            json.dump(pointer, f, ensure_ascii=False, indent=2)
-        print(f'[OK] SESSION_CONTEXT_POINTER.json')
-    except Exception as e:
-        _rollback(generated_files)
-        print(f'[FAIL] POINTER 갱신 실패: {e}')
-        sys.exit(1)
-
-    # Step 9: STALE_MANIFEST 갱신
     manifest_path = ROOT / 'SESSION_CONTEXT_STALE_MANIFEST.json'
+    rollback_paths['manifest'] = manifest_path
     try:
         manifest = {
             'session_count': sc['session_count'],
@@ -1067,54 +1126,89 @@ def main() -> None:
             json.dump(manifest, f, ensure_ascii=False, indent=2)
         print(f'[OK] SESSION_CONTEXT_STALE_MANIFEST.json')
     except Exception as e:
-        _rollback(generated_files)
+        _rollback_all(4, rollback_paths)
         print(f'[FAIL] STALE_MANIFEST 갱신 실패: {e}')
         sys.exit(1)
 
-    # ── [IAPG-III Phase1.5 계약14] validate_bundle 4축 self-check ──────────
+    # ════════════════════════════════════════════════════════
+    # 단계 II: 번들 완결 게이트 (POINTER 발행 전 필수 통과)
+    # C7-1 순서: validate_bundle -> Freeze Sync -> Freeze Verification -> close_manifest
+    # ════════════════════════════════════════════════════════
+
+    # ── II-1: validate_bundle 4축 self-check (C7-6, C7-14)
+    # POINTER 미발행 상태에서 메모리의 pointer_dict를 인자로 전달 (캐디 구현검토 의견)
+    pointer_path = ROOT / 'SESSION_CONTEXT_POINTER.json'
+    rollback_paths['pointer'] = pointer_path
+    pointer_dict = {
+        'current_session': sc['session_count'],
+        'canonical_file':  'SESSION_CONTEXT.json',
+        'final_file':      f'SESSION_CONTEXT_S{n}_FINAL.json',
+        'chain_tip':       sc['chain']['tip'],
+        'prev_tip':        sc['chain']['prev_tip'],
+        'context_hash':    sc['context_hash'],
+        'generated_at':    shared_ts,
+        'schema_version':  '4.0',
+    }
     print()
-    print('── IAPG-III 계약14 validate_bundle ──────────────────────────────')
+    print('── 단계II-1: IAPG-III 계약14 validate_bundle (POINTER 미발행 상태) ──')
     _bundle_ok, _bundle_errors = validate_bundle(
-        n, computed_hash, pointer, manifest, sc_final_path
+        n, computed_hash, pointer_dict, manifest, sc_final_path
     )
     if not _bundle_ok:
+        _rollback_all(4, rollback_paths)
         print(f'[FAIL] validate_bundle NONE_SYNC: {_bundle_errors}')
         print('[FAIL] CLOSE 중단 (FAIL_CLOSED). REPORT & WAIT.')
         sys.exit(1)
-    print('[OK] validate_bundle: 4축 PASS')
+    print('[OK] validate_bundle: 4축 PASS (POINTER 미발행 상태 검증 완료)')
 
-    # ── S291 Step 5: Session Report 자동 생성
+    # ── II-2: Freeze Sync (Step 5.5)
     print()
-    print('── S291 Step 5 Session Report 생성 ────────────────────────')
-    step_5_session_report(sc, n)
-
-    # ── S273 Step 5.5: Freeze Sync
-    print()
-    print('── S273 Step 5.5 Freeze Sync ──────────────────────────────')
+    print('── 단계II-2: S273 Step 5.5 Freeze Sync ────────────────────')
     step_5_5_freeze_sync()
 
-    # ── S273 Step 5.6: Freeze Verification (CLOSE SUCCESS 조건)
+    # ── II-3: Freeze Verification (Step 5.6) — C7-12: POINTER 발행 전 필수
     print()
-    print('── S273 Step 5.6 Freeze Verification ──────────────────────')
+    print('── 단계II-3: S273 Step 5.6 Freeze Verification (POINTER 발행 전) ──')
     step_5_6_freeze_verification()
 
-    # ── S273: close_manifest.json 생성 (run_script 대체)
+    # ── II-4: close_manifest.json 생성
     print()
-    print('── S273 close_manifest.json 생성 ──────────────────────────')
+    print('── 단계II-4: S273 close_manifest.json 생성 ─────────────────')
     build_close_manifest(n, chain_tip, computed_hash)
 
-    # ── S276 Step 5.7: Jeni Session Context 생성
+    # ════════════════════════════════════════════════════════
+    # 단계 III: 최종 원자 발행 + 사후 부수 작업
+    # C7-1: POINTER 원자 발행 -> Session Report -> Jeni Context -> run_verify
+    # ════════════════════════════════════════════════════════
+
+    # ── III-1: POINTER 원자 발행 (C7-3, _atomic_write_pointer)
+    # 모든 게이트 통과 후 최후 발행 — POINTER 존재 = 번들 완결 불변식 확립
     print()
-    print('── S276 Step 5.7 Jeni Session Context 생성 ─────────────────')
+    print('── 단계III-1: POINTER 원자 발행 (C7-3 atomic write) ────────')
+    try:
+        _atomic_write_pointer(pointer_dict, pointer_path)
+    except Exception as e:
+        _rollback_all(4, rollback_paths)  # POINTER 발행 실패 -> POINTER 미존재, 단계I 파일만 롤백
+        print(f'[FAIL] POINTER 원자 발행 실패: {e}')
+        sys.exit(1)
+
+    # ── III-2 (사후): Session Report 생성
+    print()
+    print('── 단계III-2: S291 Step 5 Session Report 생성 ─────────────')
+    step_5_session_report(sc, n)
+
+    # ── III-3 (사후): Jeni Session Context 생성 (Step 5.7)
+    print()
+    print('── 단계III-3: S276 Step 5.7 Jeni Session Context 생성 ──────')
     step_5_7_jeni_session_context(sc, n)
 
-    # Step 10: 3-way consistency 검증 (기존 유지)
+    # ── III-4 (사후): 3-way consistency 검증
     print()
-    print('── 3-way consistency verify ──────────────────────')
+    print('── 단계III-4: 3-way consistency verify ──────────────────────')
     run_verify(n, chain_tip, computed_hash)
 
     print()
-    print('[CLOSE SUCCESS] Freeze Verification PASS — SESSION CLOSE 완료 조건 충족')
+    print('[CLOSE SUCCESS] 계약7 Write-Pointer-Last 완료 — POINTER 원자 발행 확인')
     sys.exit(0)
 
 
