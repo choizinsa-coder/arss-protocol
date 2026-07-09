@@ -879,6 +879,54 @@ def run_verify(n: int, expected_chain: str, expected_hash: str) -> None:
         print('VERIFICATION PASSED: ALL CHECKS OK')
 
 
+
+# ── IAPG-III Phase1.5 (S356) 계약14 갈래 A — validate_bundle ──────────────
+
+def _normalized_context_hash_for_bundle(path):
+    """SC_FINAL 정규화 hash 재계산 (pointer_manager._compute_context_hash 동치)."""
+    try:
+        with open(path, encoding='utf-8') as f:
+            data = json.load(f)
+        payload = {k: v for k, v in data.items() if k != 'context_hash'}
+        serialized = json.dumps(payload, sort_keys=True, ensure_ascii=False).encode('utf-8')
+        return hashlib.sha256(serialized).hexdigest()
+    except Exception:
+        return None
+
+
+def validate_bundle(session, expected_hash, pointer, manifest, final_path):
+    """
+    IAPG-III 계약14 (갈래 A 최소 스키마) — 4축 bundle 정합 검증.
+    갈래 B(context_writer/close_bundle_validator)는 대상 아님.
+    반환: (is_ok: bool, errors: list[str]). 불일치 시 NONE_SYNC fail-closed.
+    EAG: EAG-S356-IAPG-PHASE15-IMPL-002
+    """
+    errors = []
+    fp = Path(final_path)
+    if pointer.get('current_session') != session:
+        errors.append(f"NONE_SYNC:SESSION(pointer={pointer.get('current_session')}!={session})")
+    if manifest.get('session_count') != session:
+        errors.append(f"NONE_SYNC:SESSION(manifest={manifest.get('session_count')}!={session})")
+    if pointer.get('context_hash') != expected_hash:
+        errors.append("NONE_SYNC:HASH(pointer!=expected)")
+    if manifest.get('context_hash') != expected_hash:
+        errors.append("NONE_SYNC:HASH(manifest!=expected)")
+    if pointer.get('generated_at') != manifest.get('updated_at'):
+        errors.append(
+            f"NONE_SYNC:TIMESTAMP(pointer.generated_at={pointer.get('generated_at')}"
+            f"!=manifest.updated_at={manifest.get('updated_at')})"
+        )
+    if not fp.exists():
+        errors.append(f"NONE_CONTENT:FINAL_MISSING({fp.name})")
+    else:
+        recomputed = _normalized_context_hash_for_bundle(fp)
+        if recomputed is None:
+            errors.append(f"NONE_CONTENT:FINAL_UNREADABLE({fp.name})")
+        elif recomputed != expected_hash:
+            errors.append("NONE_CONTENT:FINAL_HASH_MISMATCH")
+    return (len(errors) == 0, errors)
+
+
 # ── main ──────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -982,6 +1030,9 @@ def main() -> None:
         print(f'[FAIL] SESSION_CONTEXT.json overwrite 실패: {e}')
         sys.exit(1)
 
+    # [IAPG-III Phase1.5 계약5] 시각 단일공유: POINTER.generated_at == MANIFEST.updated_at
+    shared_ts = _now()
+
     # Step 8: POINTER 갱신
     pointer_path = ROOT / 'SESSION_CONTEXT_POINTER.json'
     try:
@@ -992,7 +1043,7 @@ def main() -> None:
             'chain_tip':       sc['chain']['tip'],
             'prev_tip':        sc['chain']['prev_tip'],
             'context_hash':    sc['context_hash'],
-            'generated_at':    _now(),
+            'generated_at':    shared_ts,
             'schema_version':  '4.0',
         }
         with open(pointer_path, 'w', encoding='utf-8') as f:
@@ -1009,7 +1060,7 @@ def main() -> None:
         manifest = {
             'session_count': sc['session_count'],
             'context_hash':  sc['context_hash'],
-            'updated_at':    _now(),
+            'updated_at':    shared_ts,
             'status':        'FRESH',
         }
         with open(manifest_path, 'w', encoding='utf-8') as f:
@@ -1019,6 +1070,18 @@ def main() -> None:
         _rollback(generated_files)
         print(f'[FAIL] STALE_MANIFEST 갱신 실패: {e}')
         sys.exit(1)
+
+    # ── [IAPG-III Phase1.5 계약14] validate_bundle 4축 self-check ──────────
+    print()
+    print('── IAPG-III 계약14 validate_bundle ──────────────────────────────')
+    _bundle_ok, _bundle_errors = validate_bundle(
+        n, computed_hash, pointer, manifest, sc_final_path
+    )
+    if not _bundle_ok:
+        print(f'[FAIL] validate_bundle NONE_SYNC: {_bundle_errors}')
+        print('[FAIL] CLOSE 중단 (FAIL_CLOSED). REPORT & WAIT.')
+        sys.exit(1)
+    print('[OK] validate_bundle: 4축 PASS')
 
     # ── S291 Step 5: Session Report 자동 생성
     print()

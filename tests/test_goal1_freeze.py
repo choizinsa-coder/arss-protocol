@@ -71,7 +71,7 @@ FROZEN_HASHES = {
     "tools/guard/govdoc_freeze_gate.py":
         "f339413646af55c344fd38910019cb583aaab40e33f302d5f4e2da55944e414c",
     "tools/close/session_close_generator.py":
-        "7092b44a82f1641245dfc14a947c8b7a7a0c36139621f86225d93ce745e222a5",
+        "d57a9ec78a0dda38db0acc463b36456f291b17baafb98df5877d8574c41cdeb9",
 }
 
 # ── WORM 특례: session_journal last_entry_hash 고정 (S239 기준) ─────────

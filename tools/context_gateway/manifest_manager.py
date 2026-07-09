@@ -186,46 +186,20 @@ def verify_close_bundle_consistency(
     manifest: dict,
 ) -> tuple[bool, list[str]]:
     """
-    Close Bundle 3-way 일치 검증.
-    SESSION_CONTEXT_FINAL / POINTER / MANIFEST의
-    session_count · context_hash · updated_at 일치 여부 확인.
-    반환: (is_consistent: bool, errors: list[str])
+    [DEPRECATED S356 IAPG-III Phase1.5 / EAG-S356-IAPG-PHASE15-IMPL-002]
+    운영 미사용(dead code) 확정. 갈래 A는 session_close_generator.validate_bundle(계약14),
+    갈래 B는 close_bundle_validator를 사용. 리치 스키마 전제로 실제 최소 manifest와 불일치.
+    호출 시 명시적 실패 반환(fail-closed, silent 금지).
     """
-    errors = []
-
-    ptr_session = pointer.get("current_session")
-    mfst_session = manifest.get("manifest_session")
-
-    if ptr_session != session_count:
-        errors.append(
-            f"SESSION_COUNT_MISMATCH: context={session_count} pointer={ptr_session}"
-        )
-    if mfst_session != session_count:
-        errors.append(
-            f"SESSION_COUNT_MISMATCH: context={session_count} manifest={mfst_session}"
-        )
-
-    ptr_hash = pointer.get("context_hash")
-    mfst_hash = manifest.get("context_hash")
-
-    if ptr_hash != context_hash:
-        errors.append(
-            f"CONTEXT_HASH_MISMATCH: context≠pointer ({context_hash[:8]}...≠{str(ptr_hash)[:8]}...)"
-        )
-    if mfst_hash != context_hash:
-        errors.append(
-            f"CONTEXT_HASH_MISMATCH: context≠manifest ({context_hash[:8]}...≠{str(mfst_hash)[:8]}...)"
-        )
-
-    ptr_updated = pointer.get("updated_at")
-    mfst_generated = manifest.get("generated_at")
-    if ptr_updated != mfst_generated:
-        errors.append(
-            f"TIMESTAMP_MISMATCH: pointer.updated_at={ptr_updated} "
-            f"manifest.generated_at={mfst_generated}"
-        )
-
-    return len(errors) == 0, errors
+    import warnings
+    warnings.warn(
+        "verify_close_bundle_consistency is deprecated (S356). "
+        "Track A: generator.validate_bundle (contract14). "
+        "Track B: close_bundle_validator.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return (False, ["DEPRECATED:verify_close_bundle_consistency"])
 
 
 def build_fresh_manifest(
