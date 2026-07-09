@@ -62,8 +62,8 @@ RUNTIME_PORT = 8447
 RUNTIME_VERSION = "4.11.6"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
-GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "gemini-2.0-flash")
-GEMINI_MODEL_ESCALATE = os.environ.get("AIBA_GEMINI_MODEL_ESCALATE", "gemini-2.5-pro")
+GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "").strip()
+GEMINI_MODEL_ESCALATE = os.environ.get("AIBA_GEMINI_MODEL_ESCALATE", "").strip()
 GEMINI_TIMEOUT = 55
 GEMINI_MAX_OUTPUT_TOKENS = 2500  # EAG-S316-TOKEN-FIX-001: 1500 → 2500 (효율 우선)
 
@@ -1482,6 +1482,17 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
 
 
+def _validate_model_config() -> None:
+    """기동 직전 1회 실행 — 모델 env 미설정/공백 시 FAIL_CLOSED (SSOT=secrets.env).
+    EAG-S362-MODEL-SSOT-IMPL-001."""
+    if not GEMINI_MODEL:
+        raise RuntimeError(
+            "FAIL_CLOSED: AIBA_GEMINI_MODEL not set. Check /etc/aiba/secrets.env (model SSOT).")
+    if not GEMINI_MODEL_ESCALATE:
+        raise RuntimeError(
+            "FAIL_CLOSED: AIBA_GEMINI_MODEL_ESCALATE not set. Check /etc/aiba/secrets.env (model SSOT).")
+
+
 def main():
     import signal
 
@@ -1491,6 +1502,7 @@ def main():
     signal.signal(signal.SIGTERM, _handle_shutdown)
     signal.signal(signal.SIGINT, _handle_shutdown)
 
+    _validate_model_config()  # EAG-S362: secrets.env SSOT, 모델 미설정 시 FAIL_CLOSED
     _ensure_memory_dirs()
     _load_cost_state()  # EAG-S308-BUDGET-PERSIST-001: 일일 비용 파일 복원
 
