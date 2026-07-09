@@ -27,6 +27,8 @@ from tools.context_gateway.manifest_manager import (
 TTL_SECONDS = 600  # 10분
 
 VPS_ROOT = Path("/opt/arss/engine/arss-protocol")
+# IAPG-III 계약11·15: STALE_MANIFEST 직접 읽기 대상 (갈래B manifest_manager 불간섭)
+STALE_MANIFEST_PATH = VPS_ROOT / "SESSION_CONTEXT_STALE_MANIFEST.json"
 SANDBOX_ROOT = Path("/opt/arss/engine/arss-protocol/tools/sandbox")
 
 KST = timezone(timedelta(hours=9))
@@ -118,6 +120,117 @@ STALE_PROJECTION_BLOCKED = (
 )
 
 # ── 캐시 ───────────────────────────────────────────────────────────────────
+
+
+# ── IAPG-III 그룹 D: 계약 11·15 (S357, EAG-S357-IAPG-GROUPD-CONTRACT11-15-IMPL-001) ──
+
+def _load_stale_manifest() -> Optional[dict]:
+    """
+    STALE_MANIFEST 직접 로드 (C16-1: manifest_manager 불호출, 갈래B 불간섭).
+    반환: manifest dict | None (파일 없거나 파싱 실패 시)
+    """
+    if not STALE_MANIFEST_PATH.exists():
+        return None
+    try:
+        with open(STALE_MANIFEST_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def validate_timestamp_alignment(
+    pointer: dict,
+    manifest: dict,
+) -> tuple[bool, Optional[str]]:
+    """
+    IAPG-III 계약 11: Timestamp Alignment 단독 검증.
+    비교: POINTER.generated_at vs MANIFEST.updated_at (C11-1)
+    tolerance = 0 (동등 비교, C11-2): 계약5 shared_ts가 동일값 보장.
+    POINTER 미발행 시 True 반환 스킵 (C11-3).
+    generated_at 파싱 실패 시 FAIL_CLOSED (C11-4).
+    반환: (True, None) | (False, reason_str)
+    EAG: EAG-S357-IAPG-GROUPD-CONTRACT11-15-IMPL-001
+    """
+    import logging as _log
+    _logger = _log.getLogger(__name__)
+
+    ptr_ts_raw = pointer.get("generated_at")
+    man_ts_raw = manifest.get("updated_at") if manifest else None
+
+    # C11-3: POINTER 미발행(필드 없음) 시 스킵
+    if ptr_ts_raw is None:
+        return True, None
+
+    # C11-4: generated_at str 타입 샄확인 후 파싱
+    if not isinstance(ptr_ts_raw, str):
+        reason = f"C11_FAIL_CLOSED: pointer.generated_at is not str (type={type(ptr_ts_raw).__name__})"
+        _logger.error("[PROJECTION] %s", reason)
+        return False, reason
+    try:
+        from datetime import datetime as _dt
+        _dt.fromisoformat(ptr_ts_raw)
+    except ValueError as e:
+        reason = f"C11_FAIL_CLOSED: pointer.generated_at parse error: {e}"
+        _logger.error("[PROJECTION] %s", reason)
+        return False, reason
+
+    # MANIFEST 미존재 또는 updated_at 누락 시 FAIL_CLOSED
+    if man_ts_raw is None:
+        reason = "C11_FAIL_CLOSED: manifest.updated_at 필드 없음"
+        _logger.error("[PROJECTION] %s", reason)
+        return False, reason
+
+    # C11-2: tolerance=0 동등 비교
+    if ptr_ts_raw != man_ts_raw:
+        reason = (
+            f"C11_TIMESTAMP_MISMATCH: "
+            f"pointer.generated_at={ptr_ts_raw} != manifest.updated_at={man_ts_raw}"
+        )
+        _logger.error("[PROJECTION] %s", reason)
+        return False, reason
+
+    return True, None
+
+
+def validate_projection_consistency(
+    pointer: dict,
+    manifest: dict,
+) -> tuple[bool, Optional[str]]:
+    """
+    IAPG-III 계약 15: Projection Consistency 단독 검증.
+    비교: POINTER.context_hash vs MANIFEST.context_hash (C15-1)
+    필드 부재 시 FAIL_CLOSED (C15-3).
+    POINTER 미발행 시 True 반환 스킵 (C15-2).
+    반환: (True, None) | (False, reason_str)
+    EAG: EAG-S357-IAPG-GROUPD-CONTRACT11-15-IMPL-001
+    """
+    import logging as _log
+    _logger = _log.getLogger(__name__)
+
+    ptr_hash = pointer.get("context_hash") if pointer else None
+    man_hash = manifest.get("context_hash") if manifest else None
+
+    # C15-2: POINTER 미발행(필드 없음) 시 스킵
+    if ptr_hash is None:
+        return True, None
+
+    # C15-3: 필드 부재 시 FAIL_CLOSED
+    if man_hash is None:
+        reason = "C15_FAIL_CLOSED: manifest.context_hash 필드 없음"
+        _logger.error("[PROJECTION] %s", reason)
+        return False, reason
+
+    # C15-1: 동등 비교
+    if ptr_hash != man_hash:
+        reason = (
+            f"C15_CONSISTENCY_MISMATCH: "
+            f"pointer.context_hash={ptr_hash[:16]}... != manifest.context_hash={man_hash[:16]}..."
+        )
+        _logger.error("[PROJECTION] %s", reason)
+        return False, reason
+
+    return True, None
+
 
 _cache: dict = {
     "projection": None,
@@ -218,6 +331,7 @@ def _build_projection(
 
     payload = {
         "AUTHORITY_LEVEL": "OBSERVATION_ONLY_NO_EXECUTION",
+        "pointer_context_hash": raw.get("context_hash"),  # C15: pointer.context_hash 포함
         "generated_at": now_kst.isoformat(),
         "epoch_ms": epoch_ms,
         "ttl_seconds": TTL_SECONDS,
@@ -300,6 +414,32 @@ def get_projection(role: Optional[str] = None) -> tuple[dict, bool]:
             "failure_source": "NONE_STATE",
             "message": STALE_OUTPUT,
         }, True
+
+    # C-COM-1: C11→C15 순차 검증 (POINTER 미발행 시 스킵, 갈래B 불간섭)
+    _stale_manifest = _load_stale_manifest()
+    if raw is not None and _stale_manifest is not None:
+        _ptr_for_check = {"generated_at": raw.get("generated_at"),
+                          "context_hash": raw.get("context_hash")}
+        _ts_ok, _ts_reason = validate_timestamp_alignment(_ptr_for_check, _stale_manifest)
+        if not _ts_ok:
+            _cache["refresh_failed"] = True
+            return {
+                "AUTHORITY_LEVEL": "OBSERVATION_ONLY_NO_EXECUTION",
+                "stale": True, "projection_refresh_failed": True,
+                "execution_allowed": False,
+                "failure_source": "C11_TIMESTAMP_MISMATCH",
+                "reason": _ts_reason,
+            }, True
+        _pc_ok, _pc_reason = validate_projection_consistency(_ptr_for_check, _stale_manifest)
+        if not _pc_ok:
+            _cache["refresh_failed"] = True
+            return {
+                "AUTHORITY_LEVEL": "OBSERVATION_ONLY_NO_EXECUTION",
+                "stale": True, "projection_refresh_failed": True,
+                "execution_allowed": False,
+                "failure_source": "C15_CONSISTENCY_MISMATCH",
+                "reason": _pc_reason,
+            }, True
 
     projection = _build_projection(raw, canonical_source, role=role)
 

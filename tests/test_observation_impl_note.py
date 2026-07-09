@@ -99,7 +99,8 @@ class TestImplNote03ActiveFileCount(unittest.TestCase):
              patch(
                  "tools.context_gateway.pointer_manager.load_canonical_context",
                  return_value=(fake_ctx, "MOCK")
-             ):
+             ), \
+             patch.object(pb, "_load_stale_manifest", return_value=None):  # C11·15: MANIFEST 없는 경우 검증 스킵
             _reset_projection_cache()
             projection, is_stale_flag = pb.get_projection()
         self.assertIsNotNone(projection)
