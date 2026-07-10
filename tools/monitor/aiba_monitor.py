@@ -271,6 +271,17 @@ class GovernanceMonitor:
             return {"trigger": "Promise_Gate", "fired": False,
                     "detail": f"promise_bridge_error: {e}"}
 
+
+    def _check_promise_violation_adapter_trigger(self) -> dict:
+        """P5: DENY 로그 스캔 -> promise_violations.jsonl 기록 어댑터. fired=False 고정."""
+        try:
+            from tools.monitor.promise_violation_adapter import scan_and_record
+            result = scan_and_record(self.run_id, self.timestamp_iso)
+            return {"trigger": "Violation_Adapter", "fired": False,
+                    "detail": f"scanned_a={result['scanned_a']} scanned_b={result['scanned_b']} recorded={result['recorded']}"}
+        except Exception as e:
+            return {"trigger": "Violation_Adapter", "fired": False,
+                    "detail": f"adapter_error: {e}"}
     def create_alert_workitem(self, trigger: str, detail: str) -> dict:
         item = {
             "type":       "WorkItem",
@@ -375,6 +386,7 @@ class GovernanceMonitor:
             self._check_external_change_trigger(),
             self._check_model_availability_trigger(),
             self._check_promise_gate_trigger(),
+            self._check_promise_violation_adapter_trigger(),
         ]
         triggers_fired = [t["trigger"] for t in triggers if t["fired"]]
 
