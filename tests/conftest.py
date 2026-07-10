@@ -117,4 +117,52 @@ def containment_state_provider(tmp_path):
     yield str(tmp_path / "containment_state_provider.json")
 
 
+
+# BEGIN-WP3-AUDIT-ISOLATION-v2  (INC-S373-001)
+# INC-S372-001 root fix + INC-S373-001 mock-guard.
+# _dispatch tests must not write synthetic TOOL_DENY to production audit_trail.log
+# (which would pollute area_15 failure_memory). No-op when mcp_audit_broker is
+# mock-injected (no production-write path). Precedent: containment_write_guard (S192).
+
+_PROD_AUDIT_LOG_PATH = (
+    "/opt/arss/engine/arss-protocol/tools/mcp/audit_trail.log"
+)
+
+
+@pytest.fixture(autouse=True)
+def audit_broker_write_guard(monkeypatch, tmp_path):
+    """WP-3 (S373) audit broker production-log isolation (autouse).
+    Applies only when the real mcp_audit_broker (real _AppendOnlyLedger class)
+    is loaded; no-op for mock-injected broker modules.
+    """
+    _ab = sys.modules.get("mcp_audit_broker")
+    if _ab is None or not isinstance(getattr(_ab, "_AppendOnlyLedger", None), type):
+        yield
+        return
+
+    test_log = str(tmp_path / "test_audit_trail.log")
+    monkeypatch.setattr(_ab, "AUDIT_LOG_PATH", test_log)
+
+    _orig_ledger_init = _ab._AppendOnlyLedger.__init__
+
+    def _guarded_ledger_init(self, path):
+        if path == _PROD_AUDIT_LOG_PATH:
+            pytest.fail(
+                "[AUDIT Isolation] Production audit ledger init BLOCKED. "
+                "path=" + str(path)
+            )
+        return _orig_ledger_init(self, path)
+
+    monkeypatch.setattr(_ab._AppendOnlyLedger, "__init__", _guarded_ledger_init)
+
+    _poc = sys.modules.get("mcp_server_poc")
+    if _poc is not None:
+        monkeypatch.setattr(_poc, "_audit_broker", None)
+
+    yield
+
+
+# END-WP3-AUDIT-ISOLATION-v2
+
+
 collect_ignore = ["test_observation_e2e.py"]
