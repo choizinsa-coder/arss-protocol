@@ -314,6 +314,11 @@ class GovernanceMonitor:
                     existing = json.load(f)
             except (json.JSONDecodeError, IOError):
                 existing = []
+        # S371 dedup: suppress duplicate (trigger, detail, status=waiting)
+        for _a in existing:
+            if (_a.get("trigger") == trigger and _a.get("detail") == detail
+                    and _a.get("status") == "waiting"):
+                return _a
         existing.append(item)
         with open(ALERTS_PATH, "w", encoding="utf-8") as f:
             json.dump(existing, f, ensure_ascii=False, indent=2)

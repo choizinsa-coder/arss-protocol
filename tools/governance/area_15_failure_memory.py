@@ -24,6 +24,8 @@ LOG_PATH = ROOT / "tools/governance/failure_memory.jsonl"
 
 VALID_COMPONENTS = frozenset({"domi", "jeni", "caddy", "beo", "system", "unknown"})
 
+CONSECUTIVE_REPEAT_WINDOW_MIN = 60  # S371: consecutive_repeat window (independent of frequency_burst window_minutes)
+
 
 class FailureCategory(Enum):
     """Failure Category RC1-RC4 -- AIF v1.4 Area 15"""
@@ -144,15 +146,25 @@ def get_failure_patterns(window_minutes: int = 60, threshold: int = 3) -> dict:
     now = datetime.now(timezone.utc)
     window_start = now - timedelta(minutes=window_minutes)
 
+    consecutive_window_start = now - timedelta(minutes=CONSECUTIVE_REPEAT_WINDOW_MIN)
+    cr_entries = []
+    for _e in all_entries:
+        try:
+            _rec_at = datetime.fromisoformat(_e["recorded_at"])
+            if _rec_at >= consecutive_window_start:
+                cr_entries.append(_e)
+        except (KeyError, ValueError):
+            pass
+
     consecutive_repeats = []
-    if len(all_entries) >= threshold:
+    if len(cr_entries) >= threshold:
         i = 0
-        while i < len(all_entries):
+        while i < len(cr_entries):
             j = i
-            key = (all_entries[i].get("component"), all_entries[i].get("error_code"))
-            while j < len(all_entries) and (
-                all_entries[j].get("component"),
-                all_entries[j].get("error_code"),
+            key = (cr_entries[i].get("component"), cr_entries[i].get("error_code"))
+            while j < len(cr_entries) and (
+                cr_entries[j].get("component"),
+                cr_entries[j].get("error_code"),
             ) == key:
                 j += 1
             if j - i >= threshold:
