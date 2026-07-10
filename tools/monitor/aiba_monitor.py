@@ -262,6 +262,15 @@ class GovernanceMonitor:
                     "detail": f"probe_infra_error: {e}"}
 
     # ── Alert 생성 ────────────────────────────────────────────
+    def _check_promise_gate_trigger(self) -> dict:
+        """그림자 P4: PromiseGate 판정을 감시 주기에 결선. SHADOW 격리(기록만)."""
+        try:
+            from tools.monitor.promise_gate_bridge import check_promise_gate_trigger
+            return check_promise_gate_trigger(self.run_id, self.timestamp_iso)
+        except Exception as e:
+            return {"trigger": "Promise_Gate", "fired": False,
+                    "detail": f"promise_bridge_error: {e}"}
+
     def create_alert_workitem(self, trigger: str, detail: str) -> dict:
         item = {
             "type":       "WorkItem",
@@ -365,6 +374,7 @@ class GovernanceMonitor:
             self._check_opportunity_decay_trigger(),
             self._check_external_change_trigger(),
             self._check_model_availability_trigger(),
+            self._check_promise_gate_trigger(),
         ]
         triggers_fired = [t["trigger"] for t in triggers if t["fired"]]
 
