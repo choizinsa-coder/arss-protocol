@@ -1407,6 +1407,53 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
 # ── HTTP Server ────────────────────────────────────────────────────────────────
 
 
+# ── Model Deprecation Probe (EAG-S363-MODEL-PROBE-IMPL-001) ───────────────
+# is_probe 격리: _call_gemini/서킷브레이커/일일예산가드 경로를 거치지 않는 독립 함수.
+# 최소 페이로드 실호출로 primary/escalate 모델 가용성만 확인.
+
+
+def _probe_single_model(model_name: str) -> dict:
+    """단일 모델 최소 실호출 probe → {model, http_status, body}. 격리 경로."""
+    if not model_name:
+        return {"model": model_name, "http_status": 0, "body": "model id empty"}
+    if not GEMINI_API_KEY:
+        return {"model": model_name, "http_status": 0,
+                "body": "API key not configured"}
+    payload = {
+        "contents": [{"role": "user", "parts": [{"text": "ping"}]}],
+        "generationConfig": {"maxOutputTokens": 1, "temperature": 0},
+    }
+    raw = json.dumps(payload).encode("utf-8")
+    url = f"{GEMINI_API_BASE}/{model_name}:generateContent"
+    req = urllib.request.Request(
+        url, data=raw,
+        headers={"Content-Type": "application/json",
+                 "x-goog-api-key": GEMINI_API_KEY,
+                 "Content-Length": str(len(raw))}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return {"model": model_name,
+                    "http_status": getattr(r, "status", 200), "body": ""}
+    except urllib.error.HTTPError as e:
+        return {"model": model_name, "http_status": e.code,
+                "body": _read_http_error_body(e)}
+    except Exception as e:
+        return {"model": model_name, "http_status": 0,
+                "body": f"probe_error: {e}"}
+
+
+def _run_model_probe() -> dict:
+    """primary + escalate 실호출 가용성 probe. 서킷브레이커/예산 미간섭."""
+    results = []
+    r_primary = _probe_single_model(GEMINI_MODEL)
+    r_primary["model_type"] = "primary"
+    results.append(r_primary)
+    r_escalate = _probe_single_model(GEMINI_MODEL_ESCALATE)
+    r_escalate["model_type"] = "escalate"
+    results.append(r_escalate)
+    return {"agent": "jeni", "probed_at": _utc_now_iso(), "results": results}
+
+
 class JeniRuntimeHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):
@@ -1440,6 +1487,9 @@ class JeniRuntimeHandler(BaseHTTPRequestHandler):
                 "daily_cost_total": round(_daily_cost_tracker["total_usd"], 5),
                 "payload_cap_bytes": MAX_FILE_BYTES,
                 "observe_endpoint": True})
+            return
+        if self.path == "/probe":
+            self._send_json(200, _run_model_probe())
             return
         self._send_json(403, {"error": "forbidden"})
 

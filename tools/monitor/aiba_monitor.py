@@ -23,6 +23,8 @@ JOURNAL_PATH     = MONITOR_DIR / "monitor_journal.jsonl"
 ALERTS_PATH      = MONITOR_DIR / "pending_alerts.json"
 BRIEFING_PATH    = MONITOR_DIR / "boot_briefing.json"
 GHS_HISTORY_PATH = MONITOR_DIR / "ghs_history.json"
+MODEL_PROBE_STATE_PATH = MONITOR_DIR / "model_probe_state.json"
+PROBE_INTERVAL_SEC = 1800  # 30분 (Domi 설계 의도, Caddy one-shot 영속 스로틀 구현)
 
 # 의존 경로 (읽기 전용)
 BOOT_GATE_PATH   = ROOT / "tools/boot/boot_gate_last_result.json"
@@ -222,6 +224,43 @@ class GovernanceMonitor:
         """Phase 1 플레이스홀더 — 항상 미발동"""
         return {"trigger": "External_Change", "fired": False, "detail": "Phase2_placeholder"}
 
+    # ── Model Deprecation Probe Trigger (EAG-S363-MODEL-PROBE-IMPL-001) ──────
+    def _check_model_availability_trigger(self) -> dict:
+        """제니·도미 모델 실호출 가용성 점검 → 폐기/키이상 시 발동.
+        30분 간격 영속 스로틀(one-shot 대응). 인프라오류·일시장애는 미발동(fail-safe)."""
+        import time
+        now = time.time()
+        last = 0.0
+        if MODEL_PROBE_STATE_PATH.exists():
+            try:
+                with open(MODEL_PROBE_STATE_PATH, encoding="utf-8") as f:
+                    last = float(json.load(f).get("last_probe_at", 0.0))
+            except Exception:
+                last = 0.0
+        if (now - last) < PROBE_INTERVAL_SEC:
+            return {"trigger": "Model_Deprecation", "fired": False,
+                    "detail": "throttled"}
+        # 스로틀 통과 → 시각 먼저 갱신(오류 시에도 재시도 폭주 방지)
+        try:
+            with open(MODEL_PROBE_STATE_PATH, "w", encoding="utf-8") as f:
+                json.dump({"last_probe_at": now,
+                           "last_probe_iso": datetime.now(timezone.utc).isoformat()},
+                          f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+        try:
+            from tools.monitor.model_probe import ModelProbeEngine
+            engine = ModelProbeEngine()
+            results = engine.probe_all()
+            alerting = ModelProbeEngine.deprecations(results)
+            if alerting:
+                return {"trigger": "Model_Deprecation", "fired": True,
+                        "detail": ModelProbeEngine.build_alert_detail(alerting)}
+            return {"trigger": "Model_Deprecation", "fired": False, "detail": ""}
+        except Exception as e:
+            return {"trigger": "Model_Deprecation", "fired": False,
+                    "detail": f"probe_infra_error: {e}"}
+
     # ── Alert 생성 ────────────────────────────────────────────
     def create_alert_workitem(self, trigger: str, detail: str) -> dict:
         item = {
@@ -325,6 +364,7 @@ class GovernanceMonitor:
             self._check_mission_drift_trigger(ghs["score"]),
             self._check_opportunity_decay_trigger(),
             self._check_external_change_trigger(),
+            self._check_model_availability_trigger(),
         ]
         triggers_fired = [t["trigger"] for t in triggers if t["fired"]]
 
