@@ -282,6 +282,18 @@ class GovernanceMonitor:
         except Exception as e:
             return {"trigger": "Violation_Adapter", "fired": False,
                     "detail": f"adapter_error: {e}"}
+
+    def _check_promise_failure_bridge_trigger(self) -> dict:
+        """학습루프: promise_violations.jsonl -> area_15.record_failure() 브리지. fired=False 고정(방향 A)."""
+        try:
+            from tools.monitor.promise_failure_bridge import bridge_promise_violations
+            r = bridge_promise_violations()
+            return {"trigger": "Failure_Bridge", "fired": False,
+                    "detail": f"bridged={r['bridged']} skipped={r['skipped']} errors={r['errors']}"}
+        except Exception as e:
+            return {"trigger": "Failure_Bridge", "fired": False,
+                    "detail": f"bridge_error: {e}"}
+
     def create_alert_workitem(self, trigger: str, detail: str) -> dict:
         item = {
             "type":       "WorkItem",
@@ -387,6 +399,7 @@ class GovernanceMonitor:
             self._check_model_availability_trigger(),
             self._check_promise_gate_trigger(),
             self._check_promise_violation_adapter_trigger(),
+            self._check_promise_failure_bridge_trigger(),
         ]
         triggers_fired = [t["trigger"] for t in triggers if t["fired"]]
 
