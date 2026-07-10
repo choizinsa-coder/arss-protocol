@@ -49,8 +49,8 @@ RUNTIME_PORT = 8448
 RUNTIME_VERSION = "1.7.12"
 
 OPENAI_API_URL = "https://api.deepseek.com/v1/chat/completions"
-OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "gpt-4o-mini")
-OPENAI_MODEL_ESCALATE = os.environ.get("AIBA_DOMI_MODEL_ESCALATE", "gpt-4o")
+OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "")
+OPENAI_MODEL_ESCALATE = os.environ.get("AIBA_DOMI_MODEL_ESCALATE", "")
 OPENAI_TIMEOUT = 55
 OPENAI_MAX_OUTPUT_TOKENS = 4096  # EAG-S316-TOKEN-FIX-001: 2048 → 4096 (효율 우선)
 OPENAI_HTTP_RETRY_MAX = 3        # EAG-S305-DOMI-RETRY-001: 503/429 재시도
@@ -78,6 +78,7 @@ MAX_FILE_BYTES = 20_000  # D-3: read_file 페이로드 캡
 # Required: 모델명·비용단가·일일예산·API키 — 모두 예산가드 정확성에 직결.
 # Optional: MODEL_ESCALATE(gpt-4o 디폴트), MAX_DAILY_USD_WARN(80% 디폴트) 등.
 _REQUIRED_ENVS = [
+    "AIBA_DOMI_MODEL_ESCALATE",   # escalate 모델명 (fail-loud 필수)
     "AIBA_DOMI_MODEL",             # 비용 단가 기준 모델명
     "AIBA_DOMI_COST_RATE_INPUT",   # 입력 토큰 단가 (USD/1M tokens)
     "AIBA_DOMI_COST_RATE_OUTPUT",  # 출력 토큰 단가 (USD/1M tokens)
@@ -89,7 +90,7 @@ _REQUIRED_ENVS = [
 def _check_required_envs() -> None:
     """EAG-S290-HARDSTOP-001: Required env 미설정 시 기동 거부 (Fail-Closed 원칙).
     누락 변수를 명시적으로 출력하여 운영자가 즉시 조치 가능하도록 함."""
-    missing = [k for k in _REQUIRED_ENVS if not os.environ.get(k)]
+    missing = [k for k in _REQUIRED_ENVS if not os.environ.get(k, "").strip()]
     if missing:
         print("[DOMI_RUNTIME] FATAL: Required environment variables not set.",
               file=sys.stderr)
