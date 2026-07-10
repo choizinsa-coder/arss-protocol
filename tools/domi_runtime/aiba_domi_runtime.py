@@ -1590,7 +1590,7 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
 
         tool_calls = call_result["tool_calls"]
         if tool_calls:
-            if round_num >= MAX_TOOL_ROUNDS:
+            if round_num >= _effective_rounds:
                 try:
                     _gcb_report_no_progress("domi")
                 except Exception:
