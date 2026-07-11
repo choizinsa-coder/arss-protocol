@@ -76,7 +76,7 @@ MAX_FILE_BYTES = 20_000  # D-3: read_file 페이로드 캡
 # ── Required Environment Variables — Hard-Stop (EAG-S290-HARDSTOP-001) ─────
 # Fail-Closed 원칙: 아래 변수 중 하나라도 미설정 시 기동 거부 + FATAL 진단 출력.
 # Required: 모델명·비용단가·일일예산·API키 — 모두 예산가드 정확성에 직결.
-# Optional: MODEL_ESCALATE(gpt-4o 디폴트), MAX_DAILY_USD_WARN(80% 디폴트) 등.
+# Optional: MAX_DAILY_USD_WARN(80% 디폴트) 등. (AIBA_DOMI_MODEL_ESCALATE는 _REQUIRED_ENVS로 이동·gpt-4o 표기 폐기)
 _REQUIRED_ENVS = [
     "AIBA_DOMI_MODEL_ESCALATE",   # escalate 모델명 (fail-loud 필수)
     "AIBA_DOMI_MODEL",             # 비용 단가 기준 모델명
