@@ -68,8 +68,15 @@ def test_truncation_caps_at_max(_stub, monkeypatch):
 
     monkeypatch.setattr(dr, "_call_openai", _always)
     res = dr._run_design_loop("p", "c", session="S-TEST")
+    # RC-E core contract (state transition): continue is capped at
+    # MAX_TRUNCATION_CONTINUE and the cap is never exceeded. Verified via the
+    # TRUNCATION_CONTINUE event sequence, NOT the raw call count, so RC-F's
+    # post-cap CHUNK_SWITCH stays decoupled (CHUNK_SWITCH is asserted in
+    # test_domi_runtime_rc_f.py, keeping RC-E and RC-F contracts separate).
+    continue_events = [e for e in _stub if e.get("tag") == "TRUNCATION_CONTINUE"]
     assert dr.MAX_TRUNCATION_CONTINUE == 2
-    assert len([e for e in _stub if e.get("tag") == "TRUNCATION_CONTINUE"]) == 2
-    assert calls["n"] == 3
+    assert len(continue_events) == dr.MAX_TRUNCATION_CONTINUE
+    attempts = [e.get("attempt") for e in continue_events]
+    assert attempts == list(range(1, dr.MAX_TRUNCATION_CONTINUE + 1))
+    assert max(attempts) <= dr.MAX_TRUNCATION_CONTINUE
     assert res["ok"] is True
-    assert res["text"] == "partial"

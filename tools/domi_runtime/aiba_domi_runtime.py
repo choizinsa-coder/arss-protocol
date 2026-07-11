@@ -59,6 +59,18 @@ OPENAI_HTTP_RETRY_BASE_SLEEP = 2 # 2s/4s/8s 지수 백오프
 
 OPENAI_API_KEY = os.environ.get("AIBA_DOMI_API_KEY", "")
 
+# --- [RC-F] EAG-S380-RC-F-PAYLOAD-001 lightweight payload constants ---
+SOFT_OUTPUT_TOKEN_TARGET = 2000   # R1: soft response-length target (49% of 4096 hard)
+SUMMARY_BUDGET_TOKENS = 500       # R4: context compression summary budget
+TOOL_RESPONSE_TOKEN_LIMIT = 2000  # R5: non-read_file tool response cap
+MAX_BTB_HANDOFF = 2               # R7: BTB cross-request handoff limit
+try:                              # R7: Behavioral Time Budget (env, 5s step, 30-115s)
+    BTB_BUDGET_SECONDS = max(30, min(115, int(os.environ.get("AIBA_DOMI_BTB_SECONDS", "50"))))
+    BTB_BUDGET_SECONDS = (BTB_BUDGET_SECONDS // 5) * 5
+except (TypeError, ValueError):
+    BTB_BUDGET_SECONDS = 50
+# --- [END RC-F constants] ---
+
 MAX_TOOL_ROUNDS = 8             # B-D-2: 5 → 8
 MAX_TOTAL_SECONDS = 180         # B-D-2: 120 → 180
 TIMEOUT_PREEMPT_SECONDS = 170   # B-D-2: 110 → 170
@@ -930,6 +942,12 @@ def _call_bridge_tool(tool: str, params: dict) -> tuple:
 def _truncate_tool_result(tool_name: str, result_text: str) -> str:
     """CHANGE_ID: S287-D3 — read_file 결과가 MAX_FILE_BYTES 초과 시 절단 + 경고."""
     if tool_name != "read_file":
+        # [RC-F R5] non-read_file tool response length cap (~4 bytes/token approx)
+        _r5_limit = TOOL_RESPONSE_TOKEN_LIMIT * 4
+        _r5_enc = result_text.encode("utf-8")
+        if len(_r5_enc) > _r5_limit:
+            return (_r5_enc[:_r5_limit].decode("utf-8", errors="ignore")
+                    + chr(10) + chr(10) + "[RC-F R5: TOOL RESPONSE TRUNCATED - 2000 token limit]")
         return result_text
     encoded = result_text.encode("utf-8")
     if len(encoded) <= MAX_FILE_BYTES:
@@ -1052,6 +1070,34 @@ def _read_json_safe(path: str) -> dict:
 
 def _load_runtime_state() -> dict:
     return _read_json_safe(MEM_STATE_FILE)
+
+
+def _rc_f_load_btb_handoff(session: str) -> int:
+    # [RC-F R7] load BTB cross-request handoff count (runtime_state.json, dedicated key)
+    try:
+        st = _load_runtime_state()
+        bh = st.get("btb_handoff", {})
+        return int(bh.get(session, 0)) if isinstance(bh, dict) else 0
+    except Exception:
+        return 0
+
+
+def _rc_f_save_btb_handoff(session: str, count: int) -> None:
+    # [RC-F R7] persist BTB handoff count (does not touch existing keys)
+    try:
+        _ensure_memory_dirs()
+        st = _read_json_safe(MEM_STATE_FILE)
+        if not isinstance(st, dict):
+            st = {}
+        bh = st.get("btb_handoff")
+        if not isinstance(bh, dict):
+            bh = {}
+        bh[session] = int(count)
+        st["btb_handoff"] = bh
+        with open(MEM_STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(st, f, ensure_ascii=False)
+    except Exception:
+        pass
 
 
 def _load_recent_conversation(max_turns: int = MAX_MEMORY_TURNS) -> list:
@@ -1557,6 +1603,12 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
     round_num = 0
     final_result = None
     _truncation_count = 0  # EAG-S378-RC-E
+    # [RC-F] EAG-S380-RC-F-PAYLOAD-001 entry state (RC-E _truncation_count untouched)
+    call_result = None
+    _rc_f_chunk_requested = False
+    _btb_resume_marker = "[BTB_HANDOFF_RESUME]"
+    _btb_is_resume = (_btb_resume_marker in (prompt or "")) or (_btb_resume_marker in (context or ""))
+    _btb_handoff_count = _rc_f_load_btb_handoff(session) if _btb_is_resume else 0
 
     _effective_rounds = (
         max_rounds if (isinstance(max_rounds, int) and 1 <= max_rounds <= 20)
@@ -1564,6 +1616,34 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
     )  # EAG-S318-ROUNDS-SCALE-001
     while round_num <= _effective_rounds:
         elapsed = time.time() - loop_start
+        # [RC-F R7] Behavioral Time Budget - cross-request handoff (RC-E untouched, BTB<preempt)
+        if elapsed >= BTB_BUDGET_SECONDS:
+            if _btb_handoff_count >= MAX_BTB_HANDOFF:
+                final_result = _make_fail_closed_result(
+                    "BTB_HANDOFF_LIMIT_EXCEEDED",
+                    f"btb_handoff={_btb_handoff_count} >= max={MAX_BTB_HANDOFF} "
+                    f"(elapsed={elapsed:.1f}s >= btb={BTB_BUDGET_SECONDS}s)",
+                    round_num, _make_audit_bundle(round_num, audit_trail))
+                break
+            _btb_handoff_count += 1
+            try:
+                _rc_f_save_btb_handoff(session, _btb_handoff_count)
+            except Exception:
+                pass
+            _emit_event({"tag": "BTB_HANDOFF", "agent": "domi",
+                         "session": session, "round": round_num,
+                         "elapsed_s": round(elapsed, 1), "handoff": _btb_handoff_count})
+            _btb_partial = call_result["text"] if (call_result and call_result.get("ok")) else ""
+            final_result = {
+                "ok": True,
+                "text": (_btb_partial + chr(10) + chr(10) + "[BTB_HANDOFF_RESUME] "
+                         "time budget reached; response split. "
+                         "Re-request including this marker to continue."),
+                "error": None,
+                "rounds_used": round_num,
+                "btb_handoff": _btb_handoff_count,
+                "audit": _make_audit_bundle(round_num, audit_trail)}
+            break
         if elapsed >= TIMEOUT_PREEMPT_SECONDS:
             try:
                 _gcb_report_no_progress("domi")
@@ -1697,6 +1777,19 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
                          "attempt": _truncation_count})
             continue
         # --- [END RC-E] ---
+        # --- [RC-F R3] chunk re-request when continue-limit exhausted (RC-E untouched) ---
+        if (call_result.get("truncated")
+                and _truncation_count >= MAX_TRUNCATION_CONTINUE
+                and not _rc_f_chunk_requested):
+            accumulated.append({
+                "role": "user",
+                "content": "[chunk] continue-limit reached. Split subsequent output into "
+                           "at most 3 sections, each self-contained, emitted sequentially."})
+            _rc_f_chunk_requested = True
+            _emit_event({"tag": "CHUNK_SWITCH", "agent": "domi",
+                         "session": session, "round": round_num})
+            continue
+        # --- [END RC-F R3] ---
 
         try:
             _gcb_report_progress("domi")
