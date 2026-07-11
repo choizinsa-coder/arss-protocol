@@ -38,6 +38,7 @@ AIBA Exec Runtime — exec_scoped 허용 명령 실행 서비스
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
@@ -273,6 +274,7 @@ def _validate_and_build_cmd(command: str, params: dict) -> tuple[bool, str, list
     if command == "write_script":
         filename = params.get("filename", "")
         script_content = params.get("content", "")
+        content_b64 = params.get("content_b64", None)
 
         if not filename:
             return False, "write_script: filename required", []
@@ -280,8 +282,15 @@ def _validate_and_build_cmd(command: str, params: dict) -> tuple[bool, str, list
             return False, f"write_script: filename must end with .py: {filename!r}", []
         if "/" in filename or "\\" in filename:
             return False, f"write_script: path separator not allowed in filename: {filename!r}", []
-        if not script_content:
-            return False, "write_script: content required", []
+        if content_b64 is not None:
+            if not isinstance(content_b64, str) or not content_b64.strip():
+                return False, "write_script: content_b64 must be non-empty string", []
+            try:
+                base64.b64decode(content_b64, validate=True)
+            except Exception:
+                return False, "write_script: content_b64 invalid base64", []
+        elif not script_content:
+            return False, "write_script: content required (or use content_b64)", []
 
         os.makedirs(CADDY_SANDBOX, exist_ok=True)
         target = os.path.realpath(os.path.join(CADDY_SANDBOX, filename))
@@ -290,6 +299,8 @@ def _validate_and_build_cmd(command: str, params: dict) -> tuple[bool, str, list
             return False, f"write_script: path escape detected: {target!r}", []
 
         spec = {"command": "write_script", "target": target, "content": script_content}
+        if content_b64 is not None:
+            spec["content_b64"] = content_b64
         return True, "", spec
 
     if command == "run_script":
@@ -351,8 +362,12 @@ def _run_command(command: str, cmd_list: list | dict, timeout: int) -> dict:
         if command == "write_script":
             spec = cmd_list  # write_script spec dict
             try:
-                with open(spec["target"], "w", encoding="utf-8") as f:
-                    f.write(spec["content"])
+                if "content_b64" in spec:
+                    with open(spec["target"], "wb") as f:
+                        f.write(base64.b64decode(spec["content_b64"]))
+                else:
+                    with open(spec["target"], "w", encoding="utf-8") as f:
+                        f.write(spec["content"])
                 return {
                     "stdout": f"WRITE_OK: {spec['target']}",
                     "stderr": "",
