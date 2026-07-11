@@ -131,3 +131,15 @@
 - Governance: Domi DESIGN + Caddy IMPLEMENTABLE + Jeni 2x TRUST (T-1 gate-freeze accepted, T-3 close no-code agreed). T-2 boot prompt-adoption dependency accepted by Beo EAG as residual bounded by close full-pytest backstop (<=1 session) -> OI-S251-T2-RESIDUAL.
 - Boot adoption recommended: add a SESSION BOOT step running govdoc_freeze_gate.py; non-zero => REPORT and WAIT (prompt adoption is Beo authority).
 - Self-hash co-update: GOAL1_FREEZE_RECORD.md 78b26b09 -> reflected in FROZEN_HASHES
+
+## Freeze Registry Update Log - S385 (EAG-S385-FREEZE-REGISTRY-UPDATE-001)
+- Date: 2026-07-12
+- Target: tools/close/session_close_generator.py (conditional freeze - bugfix allowed under EAG)
+- Change: EAG-S385-REVIEW-SCHEDULE-COMPLETION-IMPL-001 add-only block (review_schedule completion path).
+  delta['review_completed'] present -> that review_type last_run=today(KST), next_due=cycle-added. Existing init/preserve path unchanged.
+- Cause: review_schedule.last_run had NO update path in the codebase -> weekly_failure_audit permanently overdue (structural defect).
+- FROZEN_HASHES update:
+  - tools/close/session_close_generator.py : 6c3d519e95abdf54141393b8353e0755af0dbf6878fd2add72b3da58c8c6ce2d -> 7e24a6f1bac6cc89bb22dcc87a5b1c5d308236c4090077d9a9d9d91b3883e34c
+  - GOAL1_FREEZE_RECORD.md : self-hash co-update (S251 precedent), old=d641082eaec8878aa0e568ceedf0df9c6c0b0e9a1411a69f3268a94ebc34c56f -> reflected in FROZEN_HASHES
+- Governance: Domi DESIGN + Caddy IMPLEMENTABLE (2 corrections) + Jeni TRUST_READY + Beo EAG.
+- ORD-S249-GOV-002 compliance: manual EAG-based update only (no auto-sync), separate commit, pre/post freeze reproduction attached.

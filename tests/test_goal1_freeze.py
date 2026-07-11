@@ -41,7 +41,7 @@ FROZEN_HASHES = {
     "context/governance/rules.json":
         "4bbf4231917ec885a74ae6ab8cce0bc3114d3890396d13969e99193d15c08988",
     "GOAL1_FREEZE_RECORD.md":
-        "d641082eaec8878aa0e568ceedf0df9c6c0b0e9a1411a69f3268a94ebc34c56f",
+        "51edbc90999da6000f56156c3994fbf1b5621900723b0c56fccf83636159a0f8",
     "tools/ledger/ledger_writer.py":
         "16ece7b4523e8a97b116c0888c4ce8401b31f61dffc169686a5b5b1b56adc168",
     "tools/ledger/ledger_verifier.py":
@@ -71,7 +71,7 @@ FROZEN_HASHES = {
     "tools/guard/govdoc_freeze_gate.py":
         "f339413646af55c344fd38910019cb583aaab40e33f302d5f4e2da55944e414c",
     "tools/close/session_close_generator.py":
-        "6c3d519e95abdf54141393b8353e0755af0dbf6878fd2add72b3da58c8c6ce2d",
+        "7e24a6f1bac6cc89bb22dcc87a5b1c5d308236c4090077d9a9d9d91b3883e34c",
 }
 
 # ── WORM 특례: session_journal last_entry_hash 고정 (S239 기준) ─────────
