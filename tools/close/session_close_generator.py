@@ -853,6 +853,26 @@ def apply_delta(sc: dict, n: int, chain_tip: str, prev_tip: str, delta: dict):
             'quarterly_constitution_review': {'last_run': None, 'next_due': '2026-10-01'},
         }
         print('[OK] review_schedule init (Always-On Phase 1, EAG-S324-REVIEW-SCHEDULE-001)')
+
+    # --- [EAG-S385] review_schedule completion (add-only) ---
+    _completed = delta.get('review_completed') or []
+    _rs = sc.get('review_schedule')
+    if isinstance(_completed, list) and _completed and isinstance(_rs, dict):
+        _k = datetime.now(KST)
+        _m1 = (_k.replace(day=28) + timedelta(days=4)).replace(day=1)
+        _m2 = (_m1.replace(day=28) + timedelta(days=4)).replace(day=1)
+        _m3 = (_m2.replace(day=28) + timedelta(days=4)).replace(day=1)
+        _due = {
+            'weekly_failure_audit':          (_k + timedelta(days=7)).strftime('%Y-%m-%d'),
+            'monthly_assumption_review':     _m1.strftime('%Y-%m-%d'),
+            'quarterly_constitution_review': _m3.strftime('%Y-%m-%d'),
+        }
+        _today = _k.strftime('%Y-%m-%d')
+        for _rt in _completed:
+            if _rt in _due and isinstance(_rs.get(_rt), dict):
+                _rs[_rt]['last_run'] = _today
+                _rs[_rt]['next_due'] = _due[_rt]
+                print('[OK] review_schedule completed: %s -> last_run=%s next_due=%s (EAG-S385)' % (_rt, _today, _due[_rt]))
     archive_candidates = identify_archive_candidates(sc, n)
     return sc, archive_candidates
 

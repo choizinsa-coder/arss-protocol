@@ -59,3 +59,50 @@ def test_review_schedule_schema():
         assert "next_due" in rs[key]
         assert rs[key]["last_run"] is None
         assert rs[key]["next_due"] is not None
+
+
+# Test 4 (EAG-S385): review_completed -> last_run/next_due updated
+def test_review_completed_updates():
+    from datetime import datetime, timezone, timedelta
+    _KST = timezone(timedelta(hours=9))
+    sc = _base_sc()
+    sc["review_schedule"] = {
+        "weekly_failure_audit": {"last_run": None, "next_due": "2026-07-11"},
+        "monthly_assumption_review": {"last_run": None, "next_due": "2026-08-01"},
+        "quarterly_constitution_review": {"last_run": None, "next_due": "2026-10-01"},
+    }
+    d = dict(_DELTA)
+    d["review_completed"] = ["weekly_failure_audit"]
+    result, _ = apply_delta(sc, 385, "tip4", "ptip4", d)
+    k = datetime.now(_KST)
+    w = result["review_schedule"]["weekly_failure_audit"]
+    assert w["last_run"] == k.strftime("%Y-%m-%d")
+    assert w["next_due"] == (k + timedelta(days=7)).strftime("%Y-%m-%d")
+
+
+# Test 5 (EAG-S385): non-completed entries untouched
+def test_review_completed_scoped():
+    sc = _base_sc()
+    sc["review_schedule"] = {
+        "weekly_failure_audit": {"last_run": None, "next_due": "2026-07-11"},
+        "monthly_assumption_review": {"last_run": None, "next_due": "2026-08-01"},
+        "quarterly_constitution_review": {"last_run": None, "next_due": "2026-10-01"},
+    }
+    d = dict(_DELTA)
+    d["review_completed"] = ["weekly_failure_audit"]
+    result, _ = apply_delta(sc, 385, "tip5", "ptip5", d)
+    m = result["review_schedule"]["monthly_assumption_review"]
+    assert m["last_run"] is None
+    assert m["next_due"] == "2026-08-01"
+
+
+# Test 6 (EAG-S385): no review_completed -> preserve (regression)
+def test_review_completed_absent_preserves():
+    sc = _base_sc()
+    sc["review_schedule"] = {
+        "weekly_failure_audit": {"last_run": "2026-07-04", "next_due": "2026-07-11"},
+    }
+    result, _ = apply_delta(sc, 385, "tip6", "ptip6", dict(_DELTA))
+    w = result["review_schedule"]["weekly_failure_audit"]
+    assert w["last_run"] == "2026-07-04"
+    assert w["next_due"] == "2026-07-11"
