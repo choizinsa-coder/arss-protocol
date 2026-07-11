@@ -31,6 +31,7 @@ RC 분류(판단1):
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -80,6 +81,18 @@ def _get_inode(path: Path) -> int:
         return os.stat(path).st_ino
     except Exception:
         return 0
+
+
+def _compute_head_sig(path: Path) -> str:
+    """violations.jsonl first record (first line) SHA256 hex. empty str on failure."""
+    try:
+        with open(path, "rb") as f:
+            first_line = f.readline()
+        if not first_line:
+            return ""
+        return hashlib.sha256(first_line.rstrip(b"\n\r")).hexdigest()
+    except Exception:
+        return ""
 
 
 def _map_rc(rule_id: str):
@@ -145,13 +158,27 @@ def bridge_promise_violations() -> dict:
         stored = position.get(key)
 
         if stored is None:
-            position[key] = {"offset": size, "ino": inode}
+            initial_head_sig = _compute_head_sig(VIOLATIONS_PATH)
+            position[key] = {"offset": size, "ino": inode, "head_sig": initial_head_sig}
             _save_position(position)
             return result
 
         offset = stored.get("offset", 0)
-        if stored.get("ino", 0) != inode or size < offset:
+        stored_ino = stored.get("ino", 0)
+        stored_head_sig = stored.get("head_sig", "")
+
+        if stored_ino != inode:
+            # different inode -> new file (rotation). read from start
             offset = 0
+        elif size < offset:
+            # same inode, file shrank -> compare head signature
+            current_head_sig = _compute_head_sig(VIOLATIONS_PATH)
+            if stored_head_sig and current_head_sig == stored_head_sig:
+                # [vector B] head preserved -> truncation phantom. cap offset (no reread)
+                offset = size
+            else:
+                # [vector A] head changed or no stored sig -> rotation. read from start
+                offset = 0
 
         with open(VIOLATIONS_PATH, "rb") as f:
             f.seek(offset)
@@ -181,7 +208,12 @@ def bridge_promise_violations() -> dict:
             except Exception:
                 result["errors"] += 1
 
-        position[key] = {"offset": new_offset, "ino": inode}
+        current_head_sig = _compute_head_sig(VIOLATIONS_PATH)
+        position[key] = {
+            "offset": new_offset,
+            "ino": inode,
+            "head_sig": current_head_sig or stored_head_sig,
+        }
         _save_position(position)
 
         return result

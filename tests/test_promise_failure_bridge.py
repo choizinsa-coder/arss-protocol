@@ -202,5 +202,18 @@ def test_rotation_detected(env):
     assert res["bridged"] == 1
 
 
+def test_truncation_phantom_suppressed(env):
+    # vector B mirror of test_rotation_detected: head preserved, tail truncated.
+    # RC-G: head_sig unchanged -> offset capped -> no phantom re-bridge.
+    bridge, violations, position, fm_path, load_fm = env
+    _write(violations, [_v("seed", "L1:NOT_IN_REGISTRY"),
+                        _v("pad", "L1:NOT_IN_REGISTRY", reason="x" * 500)])
+    bridge.bridge_promise_violations()
+    # truncate tail but keep identical head (first line = seed)
+    _write(violations, [_v("seed", "L1:NOT_IN_REGISTRY")])
+    res = bridge.bridge_promise_violations()
+    assert res["bridged"] == 0
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
