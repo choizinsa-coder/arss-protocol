@@ -170,6 +170,9 @@ def scan_exec_audit_trail(path: Path, last_offset: int) -> tuple[list[dict], int
                 continue
 
             if entry.get("receipt_type") == "EVIDENCE_RECEIPT" and entry.get("result") == "FAIL":
+                # [P5-PHANTOM-FILTER-S374] exec self-test phantom receipts carry no_registry; skip to keep area_15 clean
+                if entry.get("constraint_registry_hash") == "no_registry":
+                    continue
                 action   = entry.get("action", "")
                 cmd_part = action.split(":", 1)[1] if ":" in action else action
                 rule_id  = f"EXEC:RECEIPT_FAIL:{cmd_part}" if cmd_part else "EXEC:RECEIPT_FAIL:UNKNOWN"
