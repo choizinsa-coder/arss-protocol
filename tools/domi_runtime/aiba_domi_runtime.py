@@ -53,6 +53,7 @@ OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "")
 OPENAI_MODEL_ESCALATE = os.environ.get("AIBA_DOMI_MODEL_ESCALATE", "")
 OPENAI_TIMEOUT = 55
 OPENAI_MAX_OUTPUT_TOKENS = 4096  # EAG-S316-TOKEN-FIX-001: 2048 → 4096 (효율 우선)
+MAX_TRUNCATION_CONTINUE = 2       # EAG-S378-RC-E: length 절단 이어받기 상한
 OPENAI_HTTP_RETRY_MAX = 3        # EAG-S305-DOMI-RETRY-001: 503/429 재시도
 OPENAI_HTTP_RETRY_BASE_SLEEP = 2 # 2s/4s/8s 지수 백오프
 
@@ -1308,9 +1309,13 @@ def _execute_openai_request(req: urllib.request.Request, loop_start: float = Non
             finish = _extract_finish_reason(data)
             return {"ok": False, "text": "", "tool_calls": [], "message": {},
                     "usage": {}, "error": f"NO_MESSAGE: finish_reason={finish}"}
-        return {"ok": True, "text": _extract_text_from_message(message),
+        finish = _extract_finish_reason(data)
+        result = {"ok": True, "text": _extract_text_from_message(message),
                 "tool_calls": _extract_tool_calls(message),
                 "message": message, "usage": data.get("usage", {}), "error": None}
+        if finish == "length":
+            result["truncated"] = True  # EAG-S378-RC-E
+        return result
 
     def _retry_http_with_backoff(code):
         tag = f"after_{code}_retry"
@@ -1551,6 +1556,7 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
     audit_trail: list = []
     round_num = 0
     final_result = None
+    _truncation_count = 0  # EAG-S378-RC-E
 
     _effective_rounds = (
         max_rounds if (isinstance(max_rounds, int) and 1 <= max_rounds <= 20)
@@ -1676,6 +1682,21 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
 
             round_num += 1
             continue
+
+        # --- [RC-E] length 절단 이어받기 (EAG-S378-RC-E-TRUNCATION-FIX-IMPL-001) ---
+        if (call_result.get("truncated")
+                and _truncation_count < MAX_TRUNCATION_CONTINUE
+                and (time.time() - loop_start + OPENAI_TIMEOUT + 5) < TIMEOUT_PREEMPT_SECONDS):
+            accumulated.append({
+                "role": "user",
+                "content": "[continue] 직전 응답이 최대 토큰 제한으로 절단되었습니다. "
+                           "중단된 지점부터 이어서 완전히 응답하십시오."})
+            _truncation_count += 1
+            _emit_event({"tag": "TRUNCATION_CONTINUE", "agent": "domi",
+                         "session": session, "round": round_num,
+                         "attempt": _truncation_count})
+            continue
+        # --- [END RC-E] ---
 
         try:
             _gcb_report_progress("domi")
