@@ -329,10 +329,12 @@ class GovernanceMonitor:
         for _a in existing:
             if (_a.get("trigger") == trigger and _a.get("detail") == detail
                     and _a.get("status") == "waiting"):
+                _a["_created"] = False
                 return _a
         existing.append(item)
         with open(ALERTS_PATH, "w", encoding="utf-8") as f:
             json.dump(existing, f, ensure_ascii=False, indent=2)
+        item["_created"] = True
         return item
 
     # ── 저널 + 브리핑 ─────────────────────────────────────────
@@ -427,8 +429,9 @@ class GovernanceMonitor:
         alerts_created = 0
         for t in triggers:
             if t["fired"]:
-                self.create_alert_workitem(t["trigger"], t.get("detail", ""))
-                alerts_created += 1
+                _item = self.create_alert_workitem(t["trigger"], t.get("detail", ""))
+                if _item.get("_created"):
+                    alerts_created += 1
 
         # ⑥ 저널 + 브리핑
         self._write_journal(ghs, triggers_fired, alerts_created, overdue_reviews)

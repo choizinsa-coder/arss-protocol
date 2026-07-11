@@ -281,5 +281,26 @@ class TestOverdueReviews(unittest.TestCase):
                 mon_mod.ROOT = orig
         self.assertEqual(result, [])
 
+class TestAlertCountFix(unittest.TestCase):
+    def test_dedup_created_flag_transient(self):
+        with tempfile.TemporaryDirectory() as td:
+            orig = mon_mod.ALERTS_PATH
+            mon_mod.ALERTS_PATH = Path(td) / "a.json"
+            try:
+                m = GovernanceMonitor.__new__(GovernanceMonitor)
+                m.run_id = "MON-DD"
+                m.timestamp_iso = "2026-07-03T00:00:00+00:00"
+                first = m.create_alert_workitem("Failure", "same")
+                dup = m.create_alert_workitem("Failure", "same")
+                with open(mon_mod.ALERTS_PATH) as f:
+                    saved = json.load(f)
+            finally:
+                mon_mod.ALERTS_PATH = orig
+        self.assertTrue(first["_created"])
+        self.assertFalse(dup["_created"])
+        self.assertEqual(len(saved), 1)
+        self.assertNotIn("_created", saved[0])
+
+
 if __name__ == "__main__":
     unittest.main()
