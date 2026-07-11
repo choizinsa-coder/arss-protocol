@@ -294,6 +294,17 @@ class GovernanceMonitor:
             return {"trigger": "Failure_Bridge", "fired": False,
                     "detail": f"bridge_error: {e}"}
 
+    def _check_area7_activation_trigger(self) -> dict:
+        """WP-2: area_7 학습리뷰 능동화. 실패패턴->improvement_proposal(pending_eag). fired=False 고정(alert 미발화)."""
+        try:
+            from tools.monitor.area7_activation import run_area7_activation
+            r = run_area7_activation()
+            return {"trigger": "Area7_Learning", "fired": False,
+                    "detail": f"ran={r['ran']} throttled={r['throttled']} opps={r['opportunities']} new={r['new_proposals']} dedup={r['dedup_skipped']}"}
+        except Exception as e:
+            return {"trigger": "Area7_Learning", "fired": False,
+                    "detail": f"area7_error: {e}"}
+
     def create_alert_workitem(self, trigger: str, detail: str) -> dict:
         item = {
             "type":       "WorkItem",
@@ -405,6 +416,7 @@ class GovernanceMonitor:
             self._check_promise_gate_trigger(),
             self._check_promise_violation_adapter_trigger(),
             self._check_promise_failure_bridge_trigger(),
+            self._check_area7_activation_trigger(),
         ]
         triggers_fired = [t["trigger"] for t in triggers if t["fired"]]
 
