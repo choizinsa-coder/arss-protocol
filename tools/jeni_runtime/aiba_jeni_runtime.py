@@ -69,6 +69,18 @@ GEMINI_MAX_OUTPUT_TOKENS = 2500  # EAG-S316-TOKEN-FIX-001: 1500 → 2500 (효율
 
 GEMINI_API_KEY = os.environ.get("AIBA_GEMINI_API_KEY", "")
 
+# -- Vendor Abstraction Layer (EAG-S399-JENI-VENDOR-ABSTRACTION-001) --
+# New AIBA_LLM_* envs take precedence; when absent, fall back to Gemini envs
+# so existing deployments keep identical behaviour (_IS_GEMINI stays True).
+LLM_BASE_URL = os.environ.get("AIBA_LLM_BASE_URL", "").strip() or GEMINI_API_BASE
+LLM_MODEL = os.environ.get("AIBA_LLM_MODEL", "").strip() or GEMINI_MODEL
+LLM_MODEL_ESCALATE = (os.environ.get("AIBA_LLM_MODEL_ESCALATE", "").strip()
+                      or GEMINI_MODEL_ESCALATE)
+LLM_API_KEY = os.environ.get("AIBA_LLM_API_KEY", "").strip() or GEMINI_API_KEY
+LLM_MAX_TOKENS = int(os.environ.get("AIBA_LLM_MAX_TOKENS", "").strip()
+                     or GEMINI_MAX_OUTPUT_TOKENS)
+_IS_GEMINI = "generativelanguage.googleapis.com" in LLM_BASE_URL
+
 GEMINI_503_RETRY_SLEEP = 2  # 503 재시도 대기 시간(초)
 GEMINI_429_RETRY_MAX_SLEEP = 60  # 429 Retry-After 상한(초)
 
@@ -1110,7 +1122,141 @@ def _execute_gemini_request(req: urllib.request.Request) -> dict:
                 "error": f"FAIL_CLOSED: unexpected error — {e}"}
 
 
+def _build_openai_tools() -> list:
+    """EAG-S399: wrap Gemini-style declarations into OpenAI tools format."""
+    return [{"type": "function", "function": f}
+            for f in _build_function_declarations()]
+
+
+def _openai_usage_to_gemini(usage: dict) -> dict:
+    """EAG-S399: normalise OpenAI usage keys to the Gemini names so that
+    _log_call_cost stays unmodified (minimal-edit decision)."""
+    return {"promptTokenCount": usage.get("prompt_tokens", 0),
+            "candidatesTokenCount": usage.get("completion_tokens", 0)}
+
+
+def _gemini_contents_to_openai_messages(contents: list) -> list:
+    """EAG-S399: adapter. Internal loop keeps Gemini contents format;
+    this converts it to OpenAI messages just before the HTTP call.
+    tool_call_id is threaded via the 'id' field stored on functionCall
+    and functionResponse parts."""
+    messages = [{"role": "system", "content": JENI_SYSTEM_INSTRUCTION}]
+    for msg in contents:
+        role = msg.get("role", "user")
+        parts = msg.get("parts", [])
+        texts = [p["text"] for p in parts if "text" in p]
+        fcs = [p["functionCall"] for p in parts if "functionCall" in p]
+        frs = [p["functionResponse"] for p in parts if "functionResponse" in p]
+        if role == "model":
+            entry = {"role": "assistant", "content": "".join(texts) or None}
+            if fcs:
+                entry["tool_calls"] = [
+                    {"id": fc.get("id") or f"call_{i}", "type": "function",
+                     "function": {"name": fc.get("name", ""),
+                                  "arguments": json.dumps(fc.get("args", {}),
+                                                          ensure_ascii=False)}}
+                    for i, fc in enumerate(fcs)]
+            messages.append(entry)
+        elif frs:
+            for fr in frs:
+                resp = fr.get("response", {})
+                if "result" in resp:
+                    content = resp.get("result", "")
+                else:
+                    content = json.dumps(resp, ensure_ascii=False)
+                messages.append({"role": "tool",
+                                 "tool_call_id": fr.get("id", ""),
+                                 "content": content})
+        else:
+            messages.append({"role": "user", "content": "\n\n".join(texts)})
+    return messages
+
+
+def _parse_openai_response(data: dict) -> dict:
+    """EAG-S399: parse an OpenAI-compatible response into the SAME contract
+    _call_gemini has always returned ({ok,text,function_calls,parts,usage,error})
+    so _run_verification_loop stays untouched."""
+    choices = data.get("choices", [])
+    if not choices:
+        return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                "usage": {}, "error": "NO_CHOICES"}
+    msg = choices[0].get("message", {})
+    text = msg.get("content") or ""
+    function_calls = []
+    parts = []
+    if text:
+        parts.append({"text": text})
+    for tc in msg.get("tool_calls") or []:
+        fn = tc.get("function", {})
+        try:
+            args = json.loads(fn.get("arguments") or "{}")
+        except (json.JSONDecodeError, TypeError):
+            args = {}
+        fc = {"id": tc.get("id", ""), "name": fn.get("name", ""), "args": args}
+        function_calls.append(fc)
+        parts.append({"functionCall": fc})
+    return {"ok": True, "text": text, "function_calls": function_calls,
+            "parts": parts,
+            "usage": _openai_usage_to_gemini(data.get("usage", {}) or {}),
+            "error": None}
+
+
+def _call_llm_openai(contents: list, escalate: bool = False) -> dict:
+    """EAG-S399: OpenAI-compatible vendor path. POST {base}/chat/completions.
+    Same return contract as the native path. 503/429 exponential backoff."""
+    if not LLM_API_KEY:
+        return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                "usage": {}, "error": "FAIL_CLOSED: AIBA_LLM_API_KEY not configured"}
+    model = LLM_MODEL_ESCALATE if escalate else LLM_MODEL
+    body = {"model": model,
+            "messages": _gemini_contents_to_openai_messages(contents),
+            "tools": _build_openai_tools(),
+            "temperature": 0,
+            "max_tokens": LLM_MAX_TOKENS}
+    raw_body = json.dumps(body, ensure_ascii=False).encode("utf-8")
+    url = LLM_BASE_URL.rstrip("/") + "/chat/completions"
+    started = time.time()
+    last_err = "UNKNOWN"
+    for attempt in range(HTTP_RETRY_MAX + 1):
+        if attempt:
+            sleep_sec = HTTP_RETRY_BASE_SLEEP * (2 ** (attempt - 1))
+            if (time.time() - started) + sleep_sec >= min(GEMINI_TIMEOUT, MAX_TOTAL_SECONDS):
+                return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                        "usage": {},
+                        "error": f"FAIL_CLOSED: retry budget exceeded ({last_err})"}
+            time.sleep(sleep_sec)
+        req = urllib.request.Request(
+            url, data=raw_body,
+            headers={"Content-Type": "application/json",
+                     "Authorization": f"Bearer {LLM_API_KEY}",
+                     "Content-Length": str(len(raw_body))}, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=GEMINI_TIMEOUT) as r:
+                return _parse_openai_response(json.loads(r.read().decode("utf-8")))
+        except urllib.error.HTTPError as e:
+            if e.code in (503, 429):
+                last_err = f"HTTP_{e.code}"
+                continue
+            return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                    "usage": {},
+                    "error": f"HTTP_{e.code}: {_read_http_error_body(e)}"}
+        except Exception as e:
+            return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                    "usage": {}, "error": f"FAIL_CLOSED: LLM unreachable - {e}"}
+    return {"ok": False, "text": "", "function_calls": [], "parts": [],
+            "usage": {},
+            "error": f"{last_err}: persisted after {HTTP_RETRY_MAX} retries"}
+
+
 def _call_gemini(contents: list, escalate: bool = False) -> dict:
+    """EAG-S399: vendor dispatch. Signature unchanged (existing TC mocks intact).
+    Gemini path preserved verbatim in _call_gemini_native."""
+    if _IS_GEMINI:
+        return _call_gemini_native(contents, escalate)
+    return _call_llm_openai(contents, escalate)
+
+
+def _call_gemini_native(contents: list, escalate: bool = False) -> dict:
     if not GEMINI_API_KEY:
         return {"ok": False, "text": "", "function_calls": [], "parts": [],
                 "usage": {},
@@ -1149,19 +1295,25 @@ def _build_initial_message(prompt: str, context: str, memory_preamble: str,
     return {"role": "user", "parts": [{"text": "\n\n".join(segments)}]}
 
 
-def _build_function_response_message(name: str, result_text: str, error) -> dict:
+def _build_function_response_message(name: str, result_text: str, error,
+                                     tool_call_id: str = "") -> dict:
+    # EAG-S399: optional tool_call_id threading. Default "" keeps the exact
+    # legacy Gemini shape (existing TCs unchanged).
     response_payload = {"error": error} if error else {"result": result_text}
-    return {"role": "user",
-            "parts": [{"functionResponse": {"name": name, "response": response_payload}}]}
+    fr = {"name": name, "response": response_payload}
+    if tool_call_id:
+        fr["id"] = tool_call_id
+    return {"role": "user", "parts": [{"functionResponse": fr}]}
 
 
-def _prepare_llm_tool_message(name: str, result_text: str, error) -> dict:
+def _prepare_llm_tool_message(name: str, result_text: str, error,
+                              tool_call_id: str = "") -> dict:
     """CHANGE_ID: S287-D3 — LLM 전달 직전 토큰 보호 전담 (책임 분리).
     _execute_function_call은 원본만 반환하고, D-3 truncate는 오직 여기서만 수행한다.
     /observe 등 내부 JSON 파싱 경로는 이 함수를 거치지 않으므로 절단되지 않는다."""
     if not error:
         result_text = _truncate_tool_result(name, result_text)
-    return _build_function_response_message(name, result_text, error)
+    return _build_function_response_message(name, result_text, error, tool_call_id)
 
 
 # ── Observe Loop (EAG-S279-OBSERVE-001) ──────────────────────────────────────
@@ -1315,7 +1467,7 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
 
         # C-4: 비용 로그 + 일일 누적
         _log_call_cost(
-            GEMINI_MODEL_ESCALATE if escalate else GEMINI_MODEL,
+            LLM_MODEL_ESCALATE if escalate else LLM_MODEL,
             call_result.get("usage", {}), session, round_num)
 
         model_parts = call_result["parts"]
@@ -1352,12 +1504,14 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
                 # C-1: Circuit Breaker (도구 결과 직후)
                 cb_text = tool_err if tool_err else ""
                 if _circuit_breaker_check(name, cb_text or "", round_num + 1):
-                    tool_msg = _prepare_llm_tool_message(name, result_text, tool_err)
+                    tool_msg = _prepare_llm_tool_message(
+                        name, result_text, tool_err, fc.get("id", ""))
                     all_parts.extend(tool_msg["parts"])
                     cb_triggered = True
                     break
 
-                tool_msg = _prepare_llm_tool_message(name, result_text, tool_err)
+                tool_msg = _prepare_llm_tool_message(
+                    name, result_text, tool_err, fc.get("id", ""))
                 all_parts.extend(tool_msg["parts"])
 
             round_num += 1
@@ -1471,7 +1625,8 @@ class JeniRuntimeHandler(BaseHTTPRequestHandler):
         if self.path == "/health":
             self._send_json(200, {
                 "status": "active", "version": RUNTIME_VERSION,
-                "model": GEMINI_MODEL, "model_escalate": GEMINI_MODEL_ESCALATE,
+                "model": LLM_MODEL, "model_escalate": LLM_MODEL_ESCALATE,
+                "llm_base_url": LLM_BASE_URL, "is_gemini": _IS_GEMINI,
                 "key_present": bool(GEMINI_API_KEY),
                 "max_tool_rounds": MAX_TOOL_ROUNDS,
                 "max_total_seconds": MAX_TOTAL_SECONDS,
@@ -1535,12 +1690,12 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 def _validate_model_config() -> None:
     """기동 직전 1회 실행 — 모델 env 미설정/공백 시 FAIL_CLOSED (SSOT=secrets.env).
     EAG-S362-MODEL-SSOT-IMPL-001."""
-    if not GEMINI_MODEL:
+    if not LLM_MODEL:
         raise RuntimeError(
-            "FAIL_CLOSED: AIBA_GEMINI_MODEL not set. Check /etc/aiba/secrets.env (model SSOT).")
-    if not GEMINI_MODEL_ESCALATE:
+            "FAIL_CLOSED: AIBA_LLM_MODEL/AIBA_GEMINI_MODEL not set. Check /etc/aiba/secrets.env (model SSOT).")
+    if not LLM_MODEL_ESCALATE:
         raise RuntimeError(
-            "FAIL_CLOSED: AIBA_GEMINI_MODEL_ESCALATE not set. Check /etc/aiba/secrets.env (model SSOT).")
+            "FAIL_CLOSED: AIBA_LLM_MODEL_ESCALATE/AIBA_GEMINI_MODEL_ESCALATE not set. Check /etc/aiba/secrets.env (model SSOT).")
 
 
 def main():
