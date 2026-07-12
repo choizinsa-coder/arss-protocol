@@ -64,7 +64,7 @@ RUNTIME_VERSION = "4.11.6"
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL = os.environ.get("AIBA_GEMINI_MODEL", "").strip()
 GEMINI_MODEL_ESCALATE = os.environ.get("AIBA_GEMINI_MODEL_ESCALATE", "").strip()
-GEMINI_TIMEOUT = 55
+GEMINI_TIMEOUT = int(os.environ.get("AIBA_LLM_TIMEOUT", "55"))  # EAG-S401
 GEMINI_MAX_OUTPUT_TOKENS = 2500  # EAG-S316-TOKEN-FIX-001: 1500 → 2500 (효율 우선)
 
 GEMINI_API_KEY = os.environ.get("AIBA_GEMINI_API_KEY", "")
@@ -91,8 +91,8 @@ HTTP_RETRY_MAX = 3              # 503/429 재시도 최대 횟수 (EAG-S284-JENI
 HTTP_RETRY_BASE_SLEEP = 2       # 503/429 기반 대기 시간(초) — 2s/4s/8s
 
 MAX_TOOL_ROUNDS = 8             # B-J-3: 5 → 8
-MAX_TOTAL_SECONDS = 180         # B-J-4: 120 → 180
-TIMEOUT_PREEMPT_SECONDS = 170   # B-J-4: 110 → 170
+MAX_TOTAL_SECONDS = int(os.environ.get("AIBA_MAX_TOTAL_SECONDS", "180"))  # EAG-S401         # B-J-4: 120 → 180
+TIMEOUT_PREEMPT_SECONDS = int(os.environ.get("AIBA_TIMEOUT_PREEMPT_SECONDS", "170"))  # EAG-S401   # B-J-4: 110 → 170
 
 # C-4: 비용 단가 (env 오버라이드 가능). 디폴트 = gemini-2.5-pro 표준 단가.
 GEMINI_COST_RATE_INPUT = float(os.environ.get("AIBA_GEMINI_COST_RATE_INPUT", "1.25"))
@@ -1197,9 +1197,34 @@ def _parse_openai_response(data: dict) -> dict:
         fc = {"id": tc.get("id", ""), "name": fn.get("name", ""), "args": args}
         function_calls.append(fc)
         parts.append({"functionCall": fc})
+    usage = _openai_usage_to_gemini(data.get("usage", {}) or {})
+    finish_reason = choices[0].get("finish_reason", "")
+
+    # EAG-S401: TRUNCATION GUARD.
+    # A reasoning model can burn the whole output budget on reasoning and come
+    # back with finish_reason="length" and NO content. Returning that as a
+    # successful empty answer makes the verification loop treat "" as the final
+    # verdict, and a model that was CUT OFF gets scored as a model that MISSED.
+    # RAW: GLM-5.2 emitted exactly LLM_MAX_TOKENS output tokens and no content.
+    # Same class as RC-E (EAG-S378). Fail-closed instead: ok=False routes to
+    # _make_fail_closed_result("VALIDATION_PARSE_FAILURE"), which the scorer
+    # already classifies as INFRA (excluded), never as a governance verdict.
+    if finish_reason == "length":
+        return {"ok": False, "text": text, "function_calls": function_calls,
+                "parts": parts, "usage": usage,
+                "error": "MAX_TOKENS_TRUNCATED: finish_reason=length "
+                         "content_len=%d tool_calls=%d max_tokens=%d"
+                         % (len(text), len(function_calls), LLM_MAX_TOKENS)}
+
+    if not text and not function_calls:
+        return {"ok": False, "text": "", "function_calls": [], "parts": [],
+                "usage": usage,
+                "error": "EMPTY_RESPONSE: no content and no tool_calls "
+                         "(finish_reason=%s)" % (finish_reason or "unknown")}
+
     return {"ok": True, "text": text, "function_calls": function_calls,
             "parts": parts,
-            "usage": _openai_usage_to_gemini(data.get("usage", {}) or {}),
+            "usage": usage,
             "error": None}
 
 
