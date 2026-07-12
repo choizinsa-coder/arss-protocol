@@ -34,6 +34,39 @@ EXEC_AUDIT_LOG_PATH = MCP_DIR / "exec_audit_trail.log"
 VIOLATIONS_PATH     = MONITOR_DIR / "promise_violations.jsonl"
 POSITION_PATH       = MONITOR_DIR / "promise_adapter_position.json"
 
+# [P5.1 C-AXIS] EAG-S397-P5.1-PHASE-C-AXIS-001
+# PHASE_C audit log: written by mcp_audit_broker.write_audit() (its DEFAULT path).
+# This is where the REAL read_server / bridge DENY records live. It has no
+# event_type field; DENY is discriminated by decision == "DENY".
+PHASE_C_LOG_PATH    = ROOT / "logs/mcp_audit/mcp_audit.log"
+
+# Governance-violation DENY reasons ONLY. Navigation/lookup errors
+# (NOT_A_FILE / PATH_DEPTH_EXCEEDED / NOT_A_DIRECTORY) are DELIBERATELY excluded:
+# they are agent path-probing noise (59% of all DENYs, ~30/day) and feeding them
+# into area_15 would saturate the GHS failure metrics and re-open the alert flood
+# sealed across S391/S392/S394. The PHASE_C log itself stays INTACT - the filter
+# limits only what is SUPPLIED to the learning loop, never what is RECORDED.
+GOVERNANCE_DENY_REASONS = frozenset({
+    "UNKNOWN_PURPOSE",
+    "FORBIDDEN_PURPOSE",
+    "PATH_NOT_IN_WHITELIST",
+    "FORBIDDEN_PATH_PATTERN",
+    "SERVICE_NOT_IN_ALLOWLIST",
+    "AGENT_NOT_IN_ALLOWLIST",
+    "UNKNOWN_ACTOR",
+    "UNKNOWN_CLIENT",
+    "AUTH_MISMATCH",
+    "NONCE_REPLAY",
+    "STALE_TIMESTAMP",
+    "PATH_RESOLVE_FAILED",
+    "AUDIT_WRITE_FAILED",
+    "METADATA_FILE_NOT_ALLOWED",
+})
+GOVERNANCE_DENY_PREFIXES = ("CONTAINMENT_",)
+NAVIGATION_DENY_REASONS = frozenset({
+    "NOT_A_FILE", "PATH_DEPTH_EXCEEDED", "NOT_A_DIRECTORY",
+})
+
 VIOLATIONS_MAX_LINES = 5000  # P4와 동일
 
 
@@ -192,6 +225,90 @@ def scan_exec_audit_trail(path: Path, last_offset: int) -> tuple[list[dict], int
 
 # ── promise_violation_v1 변환 ─────────────────────────────────────────────────
 
+_PHASE_C_DENY_SEP = ":DENY:"
+
+
+def _parse_phase_c_reason(reason_full: str):
+    """PHASE_C reason -> (tool, deny_reason).
+
+    Two formats exist [RAW S397]:
+      (a) read_server DENY : "{tool}:{purpose}:DENY:{deny_reason}"
+      (b) bridge DENY      : the reason IS the deny_reason (no ":DENY:" separator),
+                             e.g. "AGENT_NOT_IN_ALLOWLIST",
+                                  "CONTAINMENT_REQUEST_DENIED:initialize"
+
+    The tool name MUST come from the reason prefix, NEVER from returned_scope:
+    on the DENY path _audit() puts the *file path* into returned_scope, and using
+    a path as trigger_tool would explode pattern_hash cardinality and defeat dedup.
+    """
+    if _PHASE_C_DENY_SEP in reason_full:
+        head, deny_reason = reason_full.split(_PHASE_C_DENY_SEP, 1)
+        tool = head.split(":", 1)[0].strip()
+        return tool, deny_reason.strip()
+    return "", reason_full.strip()
+
+
+def _is_governance_deny(deny_reason: str) -> bool:
+    """True only for genuine governance violations. Navigation errors -> False."""
+    if not deny_reason:
+        return False
+    if deny_reason in NAVIGATION_DENY_REASONS:
+        return False
+    if deny_reason in GOVERNANCE_DENY_REASONS:
+        return True
+    for prefix in GOVERNANCE_DENY_PREFIXES:
+        if deny_reason.startswith(prefix):
+            return True
+    return False
+
+
+def scan_phase_c(path: Path, last_offset: int):
+    """C axis: PHASE_C log -> governance-violation DENY records only.
+    returns: (records, new_offset)
+    records: {rule_id, trigger_tool, agent, timestamp_iso, raw_reason}
+    """
+    records = []
+    if not path.exists():
+        return records, last_offset
+
+    try:
+        with open(path, "rb") as f:
+            f.seek(last_offset)
+            raw = f.read()
+            new_offset = last_offset + len(raw)
+
+        for line in raw.decode("utf-8", errors="replace").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            if entry.get("decision") != "DENY":
+                continue
+
+            reason_full = entry.get("reason", "") or ""
+            tool, deny_reason = _parse_phase_c_reason(reason_full)
+
+            if not _is_governance_deny(deny_reason):
+                continue
+
+            records.append({
+                "rule_id":       "PC:" + deny_reason,
+                "trigger_tool":  tool,
+                "agent":         entry.get("agent_id", "unknown") or "unknown",
+                "timestamp_iso": entry.get("timestamp", ""),
+                "raw_reason":    deny_reason,
+            })
+
+        return records, new_offset
+
+    except Exception:
+        return records, last_offset
+
+
 def _pattern_hash(rule_id: str, trigger_tool: str, agent: str) -> str:
     raw = f"{agent}|{rule_id}|{trigger_tool}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
@@ -280,7 +397,22 @@ def scan_and_record(run_id: str, timestamp_iso: str) -> dict:
         records_b, new_offset_b = scan_exec_audit_trail(EXEC_AUDIT_LOG_PATH, stored_b["offset"])
         positions[key_b] = {"offset": new_offset_b, "ino": inode_b}
 
-        all_records = records_a + records_b
+        # [P5.1 C-AXIS] EAG-S397-P5.1-PHASE-C-AXIS-001
+        # NO runtime seeding here. The default is IDENTICAL to axis A/B
+        # ({"offset": 0, "ino": 0}). Deploy-time seeding is the DEPLOYER's job:
+        # state-file absence is NOT a reliable first-deploy signal (OI-S393-002 /
+        # INC-S393-001). A runtime seed keyed on it would permanently skip fresh
+        # violations after any position-file loss.
+        key_c    = str(PHASE_C_LOG_PATH)
+        inode_c  = _get_inode(PHASE_C_LOG_PATH)
+        size_c   = PHASE_C_LOG_PATH.stat().st_size if PHASE_C_LOG_PATH.exists() else 0
+        stored_c = positions.get(key_c, {"offset": 0, "ino": 0})
+        if stored_c.get("ino", 0) != inode_c or size_c < stored_c.get("offset", 0):
+            stored_c = {"offset": 0, "ino": inode_c}
+        records_c, new_offset_c = scan_phase_c(PHASE_C_LOG_PATH, stored_c["offset"])
+        positions[key_c] = {"offset": new_offset_c, "ino": inode_c}
+
+        all_records = records_a + records_b + records_c
         violation_lines = [
             json.dumps(_to_violation(r, run_id, session_ref), ensure_ascii=False)
             for r in all_records
@@ -291,8 +423,9 @@ def scan_and_record(run_id: str, timestamp_iso: str) -> dict:
         return {
             "scanned_a": len(records_a),
             "scanned_b": len(records_b),
+            "scanned_c": len(records_c),
             "recorded":  len(all_records),
         }
 
     except Exception:
-        return {"scanned_a": 0, "scanned_b": 0, "recorded": 0}
+        return {"scanned_a": 0, "scanned_b": 0, "scanned_c": 0, "recorded": 0}
