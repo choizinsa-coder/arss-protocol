@@ -29,6 +29,7 @@ MONITOR_DIR     = ROOT / "tools/monitor"
 MODE_PATH       = MONITOR_DIR / "promise_gate_mode.json"
 VIOLATIONS_PATH = MONITOR_DIR / "promise_violations.jsonl"
 STATS_PATH      = MONITOR_DIR / "promise_gate_stats.json"
+DEDUP_STATE_PATH = MONITOR_DIR / "promise_dedup_seen.jsonl"
 POINTER_PATH    = ROOT / "SESSION_CONTEXT_POINTER.json"
 DECISION_LEDGER = ROOT / "tools/governance/decision_ledger.jsonl"
 EXEC_AUDIT_LOG  = ROOT / "tools/mcp/exec_audit_trail.log"
@@ -180,16 +181,71 @@ def _append_rotated(path: Path, lines):
         pass
 
 
-def _record(results, st, run_id, ts, mode):
-    if not results:
+def _dedup_key(session_ref, rid):
+    # EAG-S391: identifies one violation event across repeated batches.
+    return "%s|%s|%s" % (session_ref, rid, _pattern_hash(rid, ""))
+
+
+def _load_dedup_seen():
+    seen = set()
+    if not DEDUP_STATE_PATH.exists():
+        return seen
+    try:
+        with open(DEDUP_STATE_PATH, encoding="utf-8") as f:
+            for ln in f:
+                ln = ln.strip()
+                if not ln:
+                    continue
+                try:
+                    e = json.loads(ln)
+                except json.JSONDecodeError:
+                    continue
+                k = e.get("dedup_key")
+                if k:
+                    seen.add(k)
+    except Exception:
+        return seen
+    return seen
+
+
+def _append_dedup_seen(keys, run_id, ts):
+    # append-only. never rewritten, never trimmed.
+    if not keys:
         return
+    try:
+        with open(DEDUP_STATE_PATH, "a", encoding="utf-8") as f:
+            for k in keys:
+                f.write(json.dumps({
+                    "dedup_key":         k,
+                    "first_seen_run_id": run_id,
+                    "first_seen_ts":     ts,
+                    "schema":            "promise_dedup_seen_v1",
+                }, ensure_ascii=False) + chr(10))
+    except Exception:
+        pass
+
+
+def _record(results, st, run_id, ts, mode):
+    # EAG-S391: writes only violations not already seen.
+    # returns the list of results actually written (for stats).
+    if not results:
+        return []
+    seen = _load_dedup_seen()
+    session_ref = st["session_state"].get("session_ref")
+    written = []
+    new_keys = []
     lines = []
     for r in results:
         rid = _parse_rule_id(r.validator)
+        key = _dedup_key(session_ref, rid)
+        if key in seen:
+            continue
+        seen.add(key)
+        new_keys.append(key)
         rec = {
             "violation_id":  str(uuid.uuid4()),
             "timestamp_iso": ts,
-            "session_ref":   st["session_state"].get("session_ref"),
+            "session_ref":   session_ref,
             "run_id":        run_id,
             "agent":         "unknown",
             "rule_id":       rid,
@@ -202,7 +258,12 @@ def _record(results, st, run_id, ts, mode):
             "schema":        "promise_violation_v1",
         }
         lines.append(json.dumps(rec, ensure_ascii=False))
+        written.append(r)
+    if not lines:
+        return []
     _append_rotated(VIOLATIONS_PATH, lines)
+    _append_dedup_seen(new_keys, run_id, ts)
+    return written
 
 
 def _update_stats(deny_n, warn_n, inconclusive, mode, ts):
@@ -258,8 +319,10 @@ def check_promise_gate_trigger(run_id: str, timestamp_iso: str) -> dict:
     warns = [r for r in results if r.decision == DECISION_WARN]
     inconclusive = (len(st["session_trail"]) == 0)
 
-    _record(denies + warns, st, run_id, timestamp_iso, mode)
-    _update_stats(len(denies), len(warns), inconclusive, mode, timestamp_iso)
+    written = _record(denies + warns, st, run_id, timestamp_iso, mode)
+    w_deny = len([r for r in written if r.decision == DECISION_DENY])
+    w_warn = len([r for r in written if r.decision == DECISION_WARN])
+    _update_stats(w_deny, w_warn, inconclusive, mode, timestamp_iso)
 
     if mode == "ENFORCE":
         fired = len(denies) > 0

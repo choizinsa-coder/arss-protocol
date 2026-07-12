@@ -15,6 +15,7 @@ def _patch_tmp(monkeypatch, tmp_path):
     monkeypatch.setattr(bridge, "MODE_PATH", tmp_path / "mode.json")
     monkeypatch.setattr(bridge, "VIOLATIONS_PATH", tmp_path / "viol.jsonl")
     monkeypatch.setattr(bridge, "STATS_PATH", tmp_path / "stats.json")
+    monkeypatch.setattr(bridge, "DEDUP_STATE_PATH", tmp_path / "dedup.jsonl")
     monkeypatch.setattr(bridge, "POINTER_PATH", tmp_path / "pointer.json")
     monkeypatch.setattr(bridge, "DECISION_LEDGER", tmp_path / "ledger.jsonl")
     monkeypatch.setattr(bridge, "EXEC_AUDIT_LOG", tmp_path / "exec_audit.log")
@@ -183,3 +184,44 @@ def test_write_paths_under_monitor_dir():
     md = str(bridge.MONITOR_DIR)
     for p in (bridge.MODE_PATH, bridge.VIOLATIONS_PATH, bridge.STATS_PATH):
         assert str(p).startswith(md)
+
+
+def _write_pointer(tmp_path, sno):
+    (tmp_path / "pointer.json").write_text(
+        json.dumps({"current_session": sno}), encoding="utf-8")
+
+
+def test_dedup_suppresses_repeat_batch(monkeypatch, tmp_path):
+    # EAG-S391: same violation re-evaluated every batch must be recorded once.
+    _patch_tmp(monkeypatch, tmp_path)
+    _write_pointer(tmp_path, 390)
+    _write_exec_log(tmp_path, [("write_script", 390), ("git_commit", 390)])
+    bridge.check_promise_gate_trigger("MON-1", "2026-07-12T00:00:00+00:00")
+    bridge.check_promise_gate_trigger("MON-2", "2026-07-12T00:05:00+00:00")
+    bridge.check_promise_gate_trigger("MON-3", "2026-07-12T00:10:00+00:00")
+    viol = (tmp_path / "viol.jsonl").read_text(
+        encoding="utf-8").strip().splitlines()
+    assert len(viol) == 1
+    stats = json.loads((tmp_path / "stats.json").read_text(encoding="utf-8"))
+    assert stats["total_warn"] == 1
+    assert stats["total_runs"] == 3
+
+
+def test_dedup_distinct_sessions_not_suppressed(monkeypatch, tmp_path):
+    _patch_tmp(monkeypatch, tmp_path)
+    _write_pointer(tmp_path, 390)
+    _write_exec_log(tmp_path, [("write_script", 390), ("git_commit", 390)])
+    bridge.check_promise_gate_trigger("MON-1", "2026-07-12T00:00:00+00:00")
+    _write_pointer(tmp_path, 391)
+    _write_exec_log(tmp_path, [("write_script", 391), ("git_commit", 391)])
+    bridge.check_promise_gate_trigger("MON-2", "2026-07-12T00:05:00+00:00")
+    viol = (tmp_path / "viol.jsonl").read_text(
+        encoding="utf-8").strip().splitlines()
+    assert len(viol) == 2
+    stats = json.loads((tmp_path / "stats.json").read_text(encoding="utf-8"))
+    assert stats["total_warn"] == 2
+
+
+def test_dedup_state_path_under_monitor_dir():
+    assert str(bridge.DEDUP_STATE_PATH).startswith(str(bridge.MONITOR_DIR))
+    assert str(bridge.DEDUP_STATE_PATH).endswith("promise_dedup_seen.jsonl")
