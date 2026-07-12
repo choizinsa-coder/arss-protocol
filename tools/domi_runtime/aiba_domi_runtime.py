@@ -71,7 +71,7 @@ except (TypeError, ValueError):
     BTB_BUDGET_SECONDS = 50
 # --- [END RC-F constants] ---
 
-MAX_TOOL_ROUNDS = 8             # B-D-2: 5 → 8
+MAX_TOOL_ROUNDS = 12            # B-D-2: 5 → 8 → 12 [S386]
 MAX_TOTAL_SECONDS = 180         # B-D-2: 120 → 180
 TIMEOUT_PREEMPT_SECONDS = 170   # B-D-2: 110 → 170
 
@@ -291,6 +291,7 @@ DOMI_SYSTEM_INSTRUCTION = (
     "  - 읽을 파일 1: (정확한 경로) → 확인할 사실: (변수명/클래스명/설정값 등 단일 사실)\n"
     "  - 읽을 파일 2: (정확한 경로) → 확인할 사실: (단일 사실)\n"
     "  - 최대 Tool Budget: N 라운드\n"
+    "  - 탐색은 4라운드 이내 완료. 초과 시 보유 정보로 즉시 [DESIGN] 출력.\n"
     "  - 종료 조건: 위 '확인할 사실'이 모두 확보된 즉시, 잔여 Budget과 무관하게\n"
     "               [DESIGN] 출력을 시작한다. '충분히 이해함', '파악 완료' 등\n"
     "               주관적 표현 종료 조건 금지.\n"
