@@ -34,6 +34,8 @@ def env(tmp_path, monkeypatch):
     position   = tmp_path / ".promise_bridge_position.json"
     monkeypatch.setattr(bridge, "VIOLATIONS_PATH", violations)
     monkeypatch.setattr(bridge, "POSITION_PATH", position)
+    seen_path = tmp_path / "promise_failure_seen.jsonl"
+    monkeypatch.setattr(bridge, "SEEN_PATH", seen_path)
     monkeypatch.setattr(bridge, "MONITOR_DIR", tmp_path)
 
     def load_fm():
@@ -213,6 +215,38 @@ def test_truncation_phantom_suppressed(env):
     _write(violations, [_v("seed", "L1:NOT_IN_REGISTRY")])
     res = bridge.bridge_promise_violations()
     assert res["bridged"] == 0
+
+
+def test_seen_set_blocks_duplicate(env):
+    bridge, violations, position, fm_path, load_fm = env
+    _write(violations, [_v("seed", "L1:NOT_IN_REGISTRY")])
+    bridge.bridge_promise_violations()
+    _append(violations, [_v("dup", "L1:NOT_IN_REGISTRY")])
+    res1 = bridge.bridge_promise_violations()
+    assert res1["bridged"] == 1
+    _append(violations, [_v("dup", "L1:NOT_IN_REGISTRY")])
+    res2 = bridge.bridge_promise_violations()
+    assert res2["bridged"] == 0
+    assert res2["skipped"] == 1
+    assert len(load_fm()) == 1
+
+
+def test_seed_file_prevents_reflood(env):
+    bridge, violations, position, fm_path, load_fm = env
+    _write(violations, [_v("old1", "L1:NOT_IN_REGISTRY"),
+                        _v("old2", "L1:NOT_IN_REGISTRY", reason="x" * 500)])
+    bridge.bridge_promise_violations()
+    bridge.SEEN_PATH.write_text("old1\nold2\n", encoding="utf-8")
+    _write(violations, [_v("old2", "L1:NOT_IN_REGISTRY")])
+    res = bridge.bridge_promise_violations()
+    assert res["bridged"] == 0
+    assert load_fm() == []
+
+
+def test_seen_path_under_monitor_dir(env):
+    bridge, violations, position, fm_path, load_fm = env
+    assert bridge.SEEN_PATH.name == "promise_failure_seen.jsonl"
+    assert bridge.SEEN_PATH.parent == violations.parent
 
 
 if __name__ == "__main__":

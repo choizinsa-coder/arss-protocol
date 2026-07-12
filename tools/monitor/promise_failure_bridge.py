@@ -45,6 +45,7 @@ GOVERNANCE_DIR  = ROOT / "tools/governance"
 
 VIOLATIONS_PATH = MONITOR_DIR / "promise_violations.jsonl"
 POSITION_PATH   = MONITOR_DIR / ".promise_bridge_position.json"
+SEEN_PATH       = MONITOR_DIR / "promise_failure_seen.jsonl"
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -72,6 +73,32 @@ def _save_position(position: dict) -> None:
         MONITOR_DIR.mkdir(parents=True, exist_ok=True)
         with open(POSITION_PATH, "w", encoding="utf-8") as f:
             json.dump(position, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+
+def _load_seen_set() -> set:
+    """violation_id seen-set (EAG-S393). Absent file -> empty set."""
+    seen = set()
+    if not SEEN_PATH.exists():
+        return seen
+    try:
+        with open(SEEN_PATH, encoding="utf-8") as f:
+            for line in f:
+                vid = line.strip()
+                if vid:
+                    seen.add(vid)
+    except Exception:
+        return set()
+    return seen
+
+
+def _append_seen(vid: str) -> None:
+    """append-only. no trim (a trimmed id would be re-classified as unseen)."""
+    try:
+        SEEN_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(SEEN_PATH, "a", encoding="utf-8") as f:
+            f.write(vid + "\n")
     except Exception:
         pass
 
@@ -180,6 +207,8 @@ def bridge_promise_violations() -> dict:
                 # [vector A] head changed or no stored sig -> rotation. read from start
                 offset = 0
 
+        seen = _load_seen_set()
+
         with open(VIOLATIONS_PATH, "rb") as f:
             f.seek(offset)
             raw = f.read()
@@ -199,10 +228,18 @@ def bridge_promise_violations() -> dict:
                 result["skipped"] += 1
                 continue
 
+            vid = str(rec.get("violation_id", "") or "").strip()
+            if vid and vid in seen:
+                result["skipped"] += 1
+                continue
+
             kwargs = _to_failure_kwargs(rec)
             try:
                 record_failure(**kwargs)
                 result["bridged"] += 1
+                if vid:
+                    seen.add(vid)
+                    _append_seen(vid)
             except FailureMemoryError:
                 result["errors"] += 1
             except Exception:
