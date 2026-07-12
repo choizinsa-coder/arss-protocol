@@ -325,11 +325,13 @@ def check_promise_gate_trigger(run_id: str, timestamp_iso: str) -> dict:
     _update_stats(w_deny, w_warn, inconclusive, mode, timestamp_iso)
 
     if mode == "ENFORCE":
-        fired = len(denies) > 0
+        # EAG-S392: fire on NEWLY RECORDED violations only (dedup-aware).
+        # WARN included. Repeat batches yield written==[] -> no re-alert.
+        fired = len(written) > 0
         return {
             "trigger": "Promise_Gate",
             "fired": fired,
-            "detail": _build_detail(denies, st, mode) if fired else "",
+            "detail": _build_detail(written, st, mode) if fired else "",
         }
     return {
         "trigger": "Promise_Gate",

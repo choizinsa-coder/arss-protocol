@@ -116,14 +116,23 @@ def test_shadow_records_pc3_warn(monkeypatch, tmp_path):
     assert rec["schema"] == "promise_violation_v1"
 
 
-def test_enforce_pc3_warn_does_not_fire(monkeypatch, tmp_path):
+def test_enforce_pc3_warn_fires_once(monkeypatch, tmp_path):
+    # EAG-S392: WARN promotion. Supersedes test_enforce_pc3_warn_does_not_fire
+    # (S368 contract: WARN never fired). A new violation now fires exactly
+    # once; repeated batches must NOT re-alert (dedup, EAG-S391).
     _patch_tmp(monkeypatch, tmp_path)
+    _write_pointer(tmp_path, 390)
     (tmp_path / "mode.json").write_text(
         json.dumps({"mode": "ENFORCE"}), encoding="utf-8")
     _write_exec_log(tmp_path, [("write_script", 390), ("git_commit", 390)])
-    out = bridge.check_promise_gate_trigger(
-        "MON-TEST", "2026-07-10T00:00:00+00:00")
-    assert out["fired"] is False
+    out1 = bridge.check_promise_gate_trigger(
+        "MON-1", "2026-07-12T00:00:00+00:00")
+    assert out1["fired"] is True
+    assert "PC-3" in out1["detail"]
+    out2 = bridge.check_promise_gate_trigger(
+        "MON-2", "2026-07-12T00:05:00+00:00")
+    assert out2["fired"] is False
+    assert out2["detail"] == ""
 
 
 def test_enforce_clean_trail_no_fire(monkeypatch, tmp_path):
