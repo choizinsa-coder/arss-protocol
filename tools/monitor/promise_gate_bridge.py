@@ -15,6 +15,7 @@ PromiseGate는 순수 판정(파일 I/O 없음). 브리지 자체 예외는 상�
 from __future__ import annotations
 
 import json
+import re
 import uuid
 import hashlib
 from datetime import datetime, timezone
@@ -30,6 +31,21 @@ VIOLATIONS_PATH = MONITOR_DIR / "promise_violations.jsonl"
 STATS_PATH      = MONITOR_DIR / "promise_gate_stats.json"
 POINTER_PATH    = ROOT / "SESSION_CONTEXT_POINTER.json"
 DECISION_LEDGER = ROOT / "tools/governance/decision_ledger.jsonl"
+EXEC_AUDIT_LOG  = ROOT / "tools/mcp/exec_audit_trail.log"
+
+_EXEC_COMMANDS = (
+    "write_script", "run_script", "git_commit", "git_status",
+    "git_push", "systemctl_restart",
+)
+
+# EAG-S390-P4-RELINE-IMPL-001: rules with no usable input source.
+NOT_EVALUABLE = [
+    {"rule": "PC-1", "reason": "agent_output channel not captured anywhere"},
+    {"rule": "PC-6", "reason": "next_steps_checked has no supply source"},
+    {"rule": "LESSON-002", "reason": "approval_id required by exec_scoped; eag_present always True"},
+    {"rule": "LESSON-023", "reason": "agent_output channel not captured anywhere"},
+]
+EVALUABLE_RULES = ["PC-3"]
 
 VIOLATIONS_MAX_LINES = 5000
 
@@ -83,28 +99,55 @@ def _ledger_has_eag() -> bool:
     return False
 
 
-def _construct_promise_state() -> dict:
-    session_trail = []
-    if DECISION_LEDGER.exists():
-        try:
-            with open(DECISION_LEDGER, encoding="utf-8") as f:
-                lines = [ln for ln in f if ln.strip()][-20:]
-            for ln in lines:
+def _extract_session_no(approval_id):
+    m = re.match("EAG-S([0-9]+)", approval_id or "")
+    return int(m.group(1)) if m else -1
+
+
+def _load_exec_rows():
+    rows = []
+    if not EXEC_AUDIT_LOG.exists():
+        return rows
+    try:
+        with open(EXEC_AUDIT_LOG, encoding="utf-8") as f:
+            for ln in f:
+                ln = ln.strip()
+                if not ln:
+                    continue
                 try:
                     e = json.loads(ln)
-                    subj = e.get("subject", "")
-                    session_trail.append({"tool": _infer_tool(subj), "subject": subj})
                 except json.JSONDecodeError:
-                    pass
-        except Exception:
-            session_trail = []
-    eag_present = _ledger_has_eag() if DECISION_LEDGER.exists() else True
+                    continue
+                if "receipt_type" in e:
+                    continue
+                if e.get("stage") != "PRE":
+                    continue
+                cmd = e.get("command", "")
+                if cmd not in _EXEC_COMMANDS:
+                    continue
+                ap = e.get("approval_id", "")
+                rows.append({"tool": cmd, "subject": ap,
+                             "sno": _extract_session_no(ap)})
+    except Exception:
+        return []
+    return rows
+
+
+def _construct_promise_state() -> dict:
+    rows = _load_exec_rows()
+    session_trail = []
+    if rows:
+        max_sno = max(r["sno"] for r in rows)
+        if max_sno >= 0:
+            session_trail = [{"tool": r["tool"], "subject": r["subject"]}
+                             for r in rows if r["sno"] == max_sno]
     state = {
         "next_steps_checked": True,
-        "eag_present": eag_present,
+        "eag_present": True,
         "session_ref": _load_session_ref(),
     }
-    return {"session_trail": session_trail, "agent_output": "", "session_state": state}
+    return {"session_trail": session_trail, "agent_output": "",
+            "session_state": state}
 
 
 def _parse_rule_id(validator: str) -> str:
@@ -180,6 +223,11 @@ def _update_stats(deny_n, warn_n, inconclusive, mode, ts):
     stats["last_mode"] = mode
     stats["last_run_iso"] = ts
     stats["schema"] = "promise_gate_stats_v1"
+    stats["not_evaluable"] = NOT_EVALUABLE
+    stats["evaluable_rules"] = EVALUABLE_RULES
+    stats["total_rules"] = 5
+    stats["evaluated_count"] = len(EVALUABLE_RULES)
+    stats["not_evaluable_count"] = len(NOT_EVALUABLE)
     try:
         with open(STATS_PATH, "w", encoding="utf-8") as f:
             json.dump(stats, f, ensure_ascii=False, indent=2)

@@ -8,7 +8,7 @@ import json
 
 from tools.monitor import promise_gate_bridge as bridge
 from tools.guard.tool_gate_engine_p3 import PromiseGate
-from tools.guard.tool_gate_engine import DECISION_DENY
+from tools.guard.tool_gate_engine import DECISION_DENY, DECISION_WARN
 
 
 def _patch_tmp(monkeypatch, tmp_path):
@@ -17,6 +17,17 @@ def _patch_tmp(monkeypatch, tmp_path):
     monkeypatch.setattr(bridge, "STATS_PATH", tmp_path / "stats.json")
     monkeypatch.setattr(bridge, "POINTER_PATH", tmp_path / "pointer.json")
     monkeypatch.setattr(bridge, "DECISION_LEDGER", tmp_path / "ledger.jsonl")
+    monkeypatch.setattr(bridge, "EXEC_AUDIT_LOG", tmp_path / "exec_audit.log")
+
+
+def _write_exec_log(tmp_path, items):
+    lines = []
+    for cmd, sno in items:
+        lines.append(json.dumps({
+            "stage": "PRE", "command": cmd, "actor_id": "caddy",
+            "approval_id": "EAG-S%d-T-001" % sno}))
+    (tmp_path / "exec_audit.log").write_text(
+        chr(10).join(lines) + chr(10), encoding="utf-8")
 
 
 def test_read_mode_default_shadow_when_absent(monkeypatch, tmp_path):
@@ -89,43 +100,76 @@ def test_shadow_never_fires_absent_ledger(monkeypatch, tmp_path):
     assert stats["total_runs"] == 1
 
 
-def test_shadow_never_fires_even_with_deny(monkeypatch, tmp_path):
+def test_shadow_records_pc3_warn(monkeypatch, tmp_path):
     _patch_tmp(monkeypatch, tmp_path)
-    (tmp_path / "ledger.jsonl").write_text(
-        json.dumps({"subject": "caddy attempted python -c inline"}) + "\n",
-        encoding="utf-8")
-    out = bridge.check_promise_gate_trigger("MON-TEST", "2026-07-10T00:00:00+00:00")
+    _write_exec_log(tmp_path, [("write_script", 390), ("git_commit", 390)])
+    out = bridge.check_promise_gate_trigger(
+        "MON-TEST", "2026-07-10T00:00:00+00:00")
     assert out["fired"] is False
-    viol = (tmp_path / "viol.jsonl").read_text(encoding="utf-8").strip().splitlines()
-    assert len(viol) >= 1
+    viol = (tmp_path / "viol.jsonl").read_text(
+        encoding="utf-8").strip().splitlines()
     rec = json.loads(viol[0])
-    assert rec["rule_id"] == "PC-1"
-    assert rec["decision"] == DECISION_DENY
+    assert rec["rule_id"] == "PC-3"
+    assert rec["decision"] == DECISION_WARN
     assert rec["shadow_mode"] is True
     assert rec["schema"] == "promise_violation_v1"
 
 
-def test_enforce_deny_fires(monkeypatch, tmp_path):
+def test_enforce_pc3_warn_does_not_fire(monkeypatch, tmp_path):
     _patch_tmp(monkeypatch, tmp_path)
-    (tmp_path / "mode.json").write_text(json.dumps({"mode": "ENFORCE"}), encoding="utf-8")
-    (tmp_path / "ledger.jsonl").write_text(
-        json.dumps({"subject": "caddy attempted python -c inline"}) + "\n",
-        encoding="utf-8")
-    out = bridge.check_promise_gate_trigger("MON-TEST", "2026-07-10T00:00:00+00:00")
-    assert out["fired"] is True
-    detail = json.loads(out["detail"])
-    assert detail["mode"] == "ENFORCE"
-    assert any(v["rule_id"] == "PC-1" for v in detail["violations"])
-
-
-def test_enforce_clean_ledger_no_fire(monkeypatch, tmp_path):
-    _patch_tmp(monkeypatch, tmp_path)
-    (tmp_path / "mode.json").write_text(json.dumps({"mode": "ENFORCE"}), encoding="utf-8")
-    (tmp_path / "ledger.jsonl").write_text(
-        json.dumps({"subject": "caddy ran read_file for observation"}) + "\n",
-        encoding="utf-8")
-    out = bridge.check_promise_gate_trigger("MON-TEST", "2026-07-10T00:00:00+00:00")
+    (tmp_path / "mode.json").write_text(
+        json.dumps({"mode": "ENFORCE"}), encoding="utf-8")
+    _write_exec_log(tmp_path, [("write_script", 390), ("git_commit", 390)])
+    out = bridge.check_promise_gate_trigger(
+        "MON-TEST", "2026-07-10T00:00:00+00:00")
     assert out["fired"] is False
+
+
+def test_enforce_clean_trail_no_fire(monkeypatch, tmp_path):
+    _patch_tmp(monkeypatch, tmp_path)
+    (tmp_path / "mode.json").write_text(
+        json.dumps({"mode": "ENFORCE"}), encoding="utf-8")
+    _write_exec_log(tmp_path, [("git_status", 390), ("git_commit", 390)])
+    out = bridge.check_promise_gate_trigger(
+        "MON-TEST", "2026-07-10T00:00:00+00:00")
+    assert out["fired"] is False
+    assert not (tmp_path / "viol.jsonl").exists()
+
+
+def test_stats_exposes_not_evaluable(monkeypatch, tmp_path):
+    _patch_tmp(monkeypatch, tmp_path)
+    _write_exec_log(tmp_path, [("git_status", 390), ("git_commit", 390)])
+    bridge.check_promise_gate_trigger(
+        "MON-TEST", "2026-07-10T00:00:00+00:00")
+    stats = json.loads((tmp_path / "stats.json").read_text(encoding="utf-8"))
+    assert stats["evaluable_rules"] == ["PC-3"]
+    assert stats["not_evaluable_count"] == 4
+    rules = [x["rule"] for x in stats["not_evaluable"]]
+    assert rules == ["PC-1", "PC-6", "LESSON-002", "LESSON-023"]
+
+
+def test_receipt_and_post_lines_excluded(monkeypatch, tmp_path):
+    _patch_tmp(monkeypatch, tmp_path)
+    lines = [
+        json.dumps({"receipt_type": "EVIDENCE_RECEIPT",
+                    "action": "exec_scoped:git_commit"}),
+        json.dumps({"stage": "POST_OK", "command": "git_commit",
+                    "approval_id": "EAG-S390-T-001"}),
+        json.dumps({"stage": "PRE", "command": "git_status",
+                    "approval_id": "EAG-S390-T-001"}),
+    ]
+    (tmp_path / "exec_audit.log").write_text(
+        chr(10).join(lines) + chr(10), encoding="utf-8")
+    st = bridge._construct_promise_state()
+    assert [e["tool"] for e in st["session_trail"]] == ["git_status"]
+
+
+def test_session_filter_latest_only(monkeypatch, tmp_path):
+    _patch_tmp(monkeypatch, tmp_path)
+    _write_exec_log(tmp_path, [("git_commit", 389), ("git_status", 390),
+                               ("git_commit", 390)])
+    st = bridge._construct_promise_state()
+    assert [e["tool"] for e in st["session_trail"]] == ["git_status", "git_commit"]
 
 
 def test_promisegate_deny_path_direct():
