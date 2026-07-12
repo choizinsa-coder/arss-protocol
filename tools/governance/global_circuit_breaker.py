@@ -12,7 +12,8 @@ import urllib.request
 from datetime import datetime, timezone
 
 ARSS_ROOT = "/opt/arss/engine/arss-protocol"
-GCB_STATE_PATH = os.path.join(ARSS_ROOT, "runtime/governance/gcb/global_circuit_breaker_state.json")
+GCB_STATE_PATH = os.environ.get("AIBA_GCB_STATE_PATH") or os.path.join(  # EAG-S401
+    ARSS_ROOT, "runtime/governance/gcb/global_circuit_breaker_state.json")
 GCB_SCHEMA = "GCB_STATE_v1"
 
 NO_PROGRESS_TRIP_N = int(os.environ.get("AIBA_GCB_NO_PROGRESS_N", "5"))

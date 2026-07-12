@@ -58,7 +58,7 @@ from socketserver import ThreadingMixIn
 # ── 상수 ──────────────────────────────────────────────────────────────────────
 
 RUNTIME_HOST = "127.0.0.1"
-RUNTIME_PORT = 8447
+RUNTIME_PORT = int(os.environ.get("AIBA_RUNTIME_PORT", "8447"))  # EAG-S401
 RUNTIME_VERSION = "4.11.6"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -253,7 +253,8 @@ def _load_session_context() -> str | None:
 
 
 # WRITE_SCOPE = SANDBOX_ONLY (문제 1)
-SANDBOX_ROOT = os.path.join(ARSS_ROOT, "tools/sandbox/jeni")
+SANDBOX_ROOT = os.environ.get("AIBA_SANDBOX_ROOT") or os.path.join(  # EAG-S401
+    ARSS_ROOT, "tools/sandbox/jeni")
 SANDBOX_ACTIVE = os.path.join(SANDBOX_ROOT, "active")
 MEM_CONVERSATION_DIR = os.path.join(SANDBOX_ACTIVE, "conversation")
 MEM_FINDINGS_DIR = os.path.join(SANDBOX_ACTIVE, "findings")
@@ -383,7 +384,8 @@ _daily_cost_tracker: dict = {"date": "", "total_usd": 0.0}
 # ── EAG-S308-BUDGET-PERSIST-001: 일일 비용 파일 영속화 ────────────────────────
 # 재시작 시 in-memory tracker가 0으로 초기화되어 일일 예산 가드가 무력화되는
 # 결함(OI-S306-001) 해소. WF05_BUDGET_STATE.json 선행 패턴 준용.
-DAILY_COST_STATE_PATH = os.path.join(
+DAILY_COST_STATE_PATH = os.environ.get(  # EAG-S401
+    "AIBA_DAILY_COST_STATE_PATH") or os.path.join(
     ARSS_ROOT, "runtime/governance/budget/JENI_DAILY_COST_STATE.json")
 DAILY_COST_SCHEMA = "DAILY_BUDGET_STATE_v1"
 _cost_state_lock = threading.Lock()
