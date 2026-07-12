@@ -142,10 +142,14 @@ def _construct_promise_state() -> dict:
         if max_sno >= 0:
             session_trail = [{"tool": r["tool"], "subject": r["subject"]}
                              for r in rows if r["sno"] == max_sno]
+    # EAG-S396-P4-DEDUP-KEY-FIX-IMPL-001
+    # session_ref = trail max sno (the session that PRODUCED the violation),
+    # not POINTER (which increments at CLOSE and made the dedup key unstable).
+    trail_max_sno: int | None = max((r["sno"] for r in rows if r["sno"] >= 0), default=None)
     state = {
         "next_steps_checked": True,
         "eag_present": True,
-        "session_ref": _load_session_ref(),
+        "session_ref": trail_max_sno,
     }
     return {"session_trail": session_trail, "agent_output": "",
             "session_state": state}
