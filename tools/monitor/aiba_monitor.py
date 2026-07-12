@@ -175,10 +175,43 @@ class GovernanceMonitor:
             )
             fired  = bool(patterns.get("has_alert"))
             detail = ""
+            cause_type = ""
+            cause_component = ""
+            cause_rc = ""
+            cause_count = 0
             if fired:
-                cr = patterns.get("consecutive_repeat", [])
-                detail = str(cr[0]) if cr else "consecutive_repeat detected"
-            return {"trigger": "Failure", "fired": fired, "detail": detail}
+                cr = patterns.get("consecutive_repeat") or []
+                fb = patterns.get("frequency_burst") or []
+                xc = patterns.get("cross_component") or []
+                if cr:
+                    e0 = cr[0]
+                    cause_type = "consecutive_repeat"
+                    cause_component = str(e0.get("component", "") or "")
+                    cause_rc = str(e0.get("error_code", "") or "")
+                    cause_count = int(e0.get("count", 0) or 0)
+                elif fb:
+                    e0 = fb[0]
+                    cause_type = "frequency_burst"
+                    cause_component = str(e0.get("component", "") or "")
+                    cause_rc = str(e0.get("rc", "") or "")
+                    cause_count = int(e0.get("count", 0) or 0)
+                elif xc:
+                    cause_type = "cross_component"
+                    cause_component = "multiple"
+                    cause_rc = "RC-3"
+                    cause_count = len(xc)
+                if cause_type:
+                    detail = "%s:%s:%s (count=%d)" % (
+                        cause_type, cause_component, cause_rc, cause_count)
+                else:
+                    detail = "has_alert with no pattern detail"
+            return {
+                "trigger": "Failure", "fired": fired, "detail": detail,
+                "cause_type": cause_type,
+                "cause_component": cause_component,
+                "cause_rc": cause_rc,
+                "cause_count": cause_count,
+            }
         except Exception as e:
             return {"trigger": "Failure", "fired": False, "detail": str(e)}
 
@@ -305,7 +338,11 @@ class GovernanceMonitor:
             return {"trigger": "Area7_Learning", "fired": False,
                     "detail": f"area7_error: {e}"}
 
-    def create_alert_workitem(self, trigger: str, detail: str) -> dict:
+    def create_alert_workitem(self, trigger: str, detail: str, *,
+                              cause_type: str = "",
+                              cause_component: str = "",
+                              cause_rc: str = "",
+                              cause_count: int = 0) -> dict:
         item = {
             "type":       "WorkItem",
             "work_type":  "ALERT",
@@ -317,6 +354,10 @@ class GovernanceMonitor:
             "source":     "aiba-monitor.service",
             "run_id":     self.run_id,
             "session_ref": None,
+            "cause_type":      cause_type,
+            "cause_component": cause_component,
+            "cause_rc":        cause_rc,
+            "cause_count":     cause_count,
         }
         existing = []
         if ALERTS_PATH.exists():
@@ -325,12 +366,25 @@ class GovernanceMonitor:
                     existing = json.load(f)
             except (json.JSONDecodeError, IOError):
                 existing = []
-        # S371 dedup: suppress duplicate (trigger, detail, status=waiting)
+        # S394 dedup: cause-keyed when cause_type is set (count EXCLUDED so a
+        # rising count does not spawn a new alert); otherwise S371 fallback on
+        # (trigger, detail) so non-cause triggers keep their behaviour.
+        # No re-dump on a hit (protects the _created-not-persisted contract).
         for _a in existing:
-            if (_a.get("trigger") == trigger and _a.get("detail") == detail
-                    and _a.get("status") == "waiting"):
-                _a["_created"] = False
-                return _a
+            if _a.get("status") != "waiting":
+                continue
+            if _a.get("trigger") != trigger:
+                continue
+            if cause_type:
+                if (_a.get("cause_type") == cause_type
+                        and _a.get("cause_component") == cause_component
+                        and _a.get("cause_rc") == cause_rc):
+                    _a["_created"] = False
+                    return _a
+            else:
+                if _a.get("detail") == detail:
+                    _a["_created"] = False
+                    return _a
         existing.append(item)
         with open(ALERTS_PATH, "w", encoding="utf-8") as f:
             json.dump(existing, f, ensure_ascii=False, indent=2)
@@ -429,7 +483,13 @@ class GovernanceMonitor:
         alerts_created = 0
         for t in triggers:
             if t["fired"]:
-                _item = self.create_alert_workitem(t["trigger"], t.get("detail", ""))
+                _item = self.create_alert_workitem(
+                    t["trigger"], t.get("detail", ""),
+                    cause_type=t.get("cause_type", ""),
+                    cause_component=t.get("cause_component", ""),
+                    cause_rc=t.get("cause_rc", ""),
+                    cause_count=t.get("cause_count", 0),
+                )
                 if _item.get("_created"):
                     alerts_created += 1
 

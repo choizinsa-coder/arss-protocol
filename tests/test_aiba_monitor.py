@@ -302,5 +302,96 @@ class TestAlertCountFix(unittest.TestCase):
         self.assertNotIn("_created", saved[0])
 
 
+class TestFailureCauseDedup(unittest.TestCase):
+    def _mon(self):
+        m = GovernanceMonitor.__new__(GovernanceMonitor)
+        m.run_id = "MON-CD"
+        m.timestamp_iso = "2026-07-12T00:00:00+00:00"
+        m.FAILURE_REPEAT_THRESHOLD = 3
+        return m
+
+    def test_frequency_burst_cause_not_mislabelled(self):
+        m = self._mon()
+        pats = {"has_alert": True, "consecutive_repeat": [],
+                "frequency_burst": [{"component": "unknown", "rc": "RC-2", "count": 5}],
+                "cross_component": []}
+        with patch("tools.governance.area_15_failure_memory.get_failure_patterns",
+                   return_value=pats):
+            r = m._check_failure_trigger()
+        self.assertTrue(r["fired"])
+        self.assertEqual(r["cause_type"], "frequency_burst")
+        self.assertEqual(r["cause_component"], "unknown")
+        self.assertEqual(r["cause_rc"], "RC-2")
+        self.assertEqual(r["cause_count"], 5)
+        self.assertNotIn("consecutive_repeat detected", r["detail"])
+
+    def test_cross_component_cause(self):
+        m = self._mon()
+        pats = {"has_alert": True, "consecutive_repeat": [], "frequency_burst": [],
+                "cross_component": ["caddy", "domi", "jeni"]}
+        with patch("tools.governance.area_15_failure_memory.get_failure_patterns",
+                   return_value=pats):
+            r = m._check_failure_trigger()
+        self.assertEqual(r["cause_type"], "cross_component")
+        self.assertEqual(r["cause_component"], "multiple")
+        self.assertEqual(r["cause_rc"], "RC-3")
+        self.assertEqual(r["cause_count"], 3)
+
+    def test_dedup_ignores_rising_count(self):
+        with tempfile.TemporaryDirectory() as td:
+            orig = mon_mod.ALERTS_PATH
+            mon_mod.ALERTS_PATH = Path(td) / "a.json"
+            try:
+                m = self._mon()
+                a = m.create_alert_workitem(
+                    "Failure", "frequency_burst:unknown:RC-2 (count=3)",
+                    cause_type="frequency_burst", cause_component="unknown",
+                    cause_rc="RC-2", cause_count=3)
+                b = m.create_alert_workitem(
+                    "Failure", "frequency_burst:unknown:RC-2 (count=5)",
+                    cause_type="frequency_burst", cause_component="unknown",
+                    cause_rc="RC-2", cause_count=5)
+                with open(mon_mod.ALERTS_PATH) as f:
+                    saved = json.load(f)
+            finally:
+                mon_mod.ALERTS_PATH = orig
+        self.assertTrue(a["_created"])
+        self.assertFalse(b["_created"])
+        self.assertEqual(len(saved), 1)
+        self.assertNotIn("_created", saved[0])
+
+    def test_distinct_cause_not_suppressed(self):
+        with tempfile.TemporaryDirectory() as td:
+            orig = mon_mod.ALERTS_PATH
+            mon_mod.ALERTS_PATH = Path(td) / "a.json"
+            try:
+                m = self._mon()
+                m.create_alert_workitem(
+                    "Failure", "d1", cause_type="frequency_burst",
+                    cause_component="unknown", cause_rc="RC-2", cause_count=5)
+                m.create_alert_workitem(
+                    "Failure", "d2", cause_type="consecutive_repeat",
+                    cause_component="caddy", cause_rc="PC-3", cause_count=3)
+                with open(mon_mod.ALERTS_PATH) as f:
+                    saved = json.load(f)
+            finally:
+                mon_mod.ALERTS_PATH = orig
+        self.assertEqual(len(saved), 2)
+
+    def test_non_cause_trigger_keeps_detail_dedup(self):
+        with tempfile.TemporaryDirectory() as td:
+            orig = mon_mod.ALERTS_PATH
+            mon_mod.ALERTS_PATH = Path(td) / "a.json"
+            try:
+                m = self._mon()
+                m.create_alert_workitem("Calibration_Drift", "Calibration_Error=0.250")
+                m.create_alert_workitem("Calibration_Drift", "Calibration_Error=0.350")
+                with open(mon_mod.ALERTS_PATH) as f:
+                    saved = json.load(f)
+            finally:
+                mon_mod.ALERTS_PATH = orig
+        self.assertEqual(len(saved), 2)
+
+
 if __name__ == "__main__":
     unittest.main()
