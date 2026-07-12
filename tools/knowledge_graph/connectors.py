@@ -128,8 +128,9 @@ def register_new_decision(
 ) -> dict:
     """Area 11 record_decision() + KG 인덱스 동시 등록"""
     try:
+        dc_enum = dl.DecisionClass(dc) if isinstance(dc, str) else dc  # S397: str->enum
         entry = dl.record_decision(
-            dc=dc, subject=subject, rationale=rationale, eag=eag, actor=actor,
+            dc=dc_enum, subject=subject, rationale=rationale, eag=eag, actor=actor,
         )
     except Exception as exc:
         return {"registered": 0, "skipped": 0, "error": str(exc)}
