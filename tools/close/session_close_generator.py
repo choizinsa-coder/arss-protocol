@@ -1191,6 +1191,19 @@ def main() -> None:
     print('── 단계II-3: S273 Step 5.6 Freeze Verification (POINTER 발행 전) ──')
     step_5_6_freeze_verification()
 
+    # [EAG-S395] Decision Ledger: EAG gate -> DC-3 record.
+    # Placed after dry-run early exit and after the freeze fail-closed gate,
+    # so a rolled-back CLOSE leaves no orphan ledger entries.
+    _r = str(Path(__file__).resolve().parents[2])
+    if _r not in sys.path:
+        sys.path.insert(0, _r)
+    from tools.close.record_eag_gates import record_eag_gates
+    record_eag_gates(
+        n,
+        delta.get('caddy_governance_record', {}).get('eag_gates_this_session'),
+        _validate_approval_id,
+    )
+
     # ── II-4: close_manifest.json 생성
     print()
     print('── 단계II-4: S273 close_manifest.json 생성 ─────────────────')
