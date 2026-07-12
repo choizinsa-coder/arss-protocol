@@ -29,6 +29,8 @@ PROBE_INTERVAL_SEC = 1800  # 30분 (Domi 설계 의도, Caddy one-shot 영속 �
 # 의존 경로 (읽기 전용)
 BOOT_GATE_PATH   = ROOT / "tools/boot/boot_gate_last_result.json"
 DECISION_LEDGER  = ROOT / "tools/governance/decision_ledger.jsonl"
+EXEC_AUDIT_LOG_PATH = ROOT / "tools/mcp/exec_audit_trail.log"
+POINTER_PATH_W4  = ROOT / "SESSION_CONTEXT_POINTER.json"  # w4 전용
 
 # sys.path에 ROOT 추가 (tools.governance 임포트용)
 if str(ROOT) not in sys.path:
@@ -98,26 +100,61 @@ class GovernanceMonitor:
             return 0.0
 
     def _get_process_compliance_rate(self) -> float:
-        if not DECISION_LEDGER.exists():
+        """EAG coverage: exec_audit_trail(window=3세션) ∩ decision_ledger / total audit EAGs.
+        EAG-S396-W4-REDEFINE-IMPL-001 (OI-S395-001 항등식 타파)"""
+        import re
+        if not EXEC_AUDIT_LOG_PATH.exists():
             return 1.0
         try:
-            entries = []
+            current_session = 0
+            if POINTER_PATH_W4.exists():
+                with open(POINTER_PATH_W4, encoding="utf-8") as f:
+                    current_session = json.load(f).get("current_session", 0)
+            audit_eags: set = set()
+            with open(EXEC_AUDIT_LOG_PATH, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entry = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if entry.get("stage") != "PRE":
+                        continue
+                    aid = (entry.get("approval_id") or "").strip()
+                    if not aid:
+                        continue
+                    m = re.search(r"S(\d+)", aid)
+                    if not m:
+                        continue
+                    try:
+                        sess = int(m.group(1))
+                    except ValueError:
+                        continue
+                    if current_session - sess <= 3:
+                        audit_eags.add(aid)
+            if not audit_eags:
+                return 1.0
+            if not DECISION_LEDGER.exists():
+                return 0.0
+            ledger_eags: set = set()
             with open(DECISION_LEDGER, encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
-                    if line:
-                        try:
-                            entries.append(json.loads(line))
-                        except json.JSONDecodeError:
-                            pass
-            if not entries:
-                return 1.0
-            total = len(entries)
-            critical = [e for e in entries if e.get("dc") in ("DC-3", "DC-4")]
-            critical_compliant = sum(1 for e in critical if e.get("eag"))
-            routine = total - len(critical)
-            compliant = routine + critical_compliant
-            return round(compliant / total, 4)
+                    if not line:
+                        continue
+                    try:
+                        entry = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    eag = (entry.get("eag") or "").strip()
+                    if eag:
+                        ledger_eags.add(eag)
+            if not ledger_eags:
+                return 0.0
+            covered = audit_eags & ledger_eags
+            return round(len(covered) / len(audit_eags), 4)
         except Exception:
             return 1.0
 
