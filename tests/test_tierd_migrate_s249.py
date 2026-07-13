@@ -37,7 +37,7 @@ def _record_count(sc):
 # ── 식별 술어 (정착조건 a) ─────────────────────────────────────
 def test_identify_predicate_boundary():
     sc = _mock_sc()
-    cands = scg.identify_archive_candidates(sc, 249)        # threshold=240
+    cands = scg.identify_archive_candidates(sc, 249, N=10)  # N=10 explicit, threshold=240 (EAG-S405)
     record_cands = [k for k in cands if scg._RECORD_KEY_RE.match(k)]
     assert len(record_cands) == 50                           # s215..s239 ×2 (record 경계 불변)
     assert 'goal2_declaration' in cands                      # S250 group D 화이트리스트 이관
@@ -49,13 +49,11 @@ def test_identify_predicate_boundary():
 
 def test_identify_excludes_nontargets():
     sc = _mock_sc()
-    cands = scg.identify_archive_candidates(sc, 249)
-    # S250(EAG-S250-CANONSET-001): group D 화이트리스트(goal2_declaration)는 이관 대상.
-    # 위험 키 goal2_progress와 구조 키 system_changes는 여전히 비대상(안전 단언 강화).
-    assert 'goal2_progress' not in cands                     # 위험 키 active 유지
-    assert not any('system_changes' in k for k in cands)     # GOV-003 비대상
-    assert 'goal2_declaration' in cands                      # 화이트리스트 이관
-
+    cands = scg.identify_archive_candidates(sc, 249, N=10)  # N=10 explicit (EAG-S405)
+    # S250: goal2_declaration -> whitelist migration. goal2_progress -> active.
+    # system_changes: EAG-S405 adds to _RECORD_KEY_RE -> test_system_changes_archivable.
+    assert 'goal2_progress' not in cands
+    assert 'goal2_declaration' in cands
 
 def test_identify_nondestructive():
     sc = _mock_sc()
@@ -105,8 +103,36 @@ def test_context_hash_deterministic_and_ensure_ascii():
 # ── 정량 기준: 이관 후 active record 키 ≤ 2N ───────────────────
 def test_post_migration_record_cap():
     sc = _mock_sc()
-    cands = scg.identify_archive_candidates(sc, 249)
+    cands = scg.identify_archive_candidates(sc, 249, N=10)   # N=10 explicit (EAG-S405)
     for k in cands:
-        sc.pop(k, None)                                       # 성공 경로 pop
-    assert _record_count(sc) == 20                            # s240..s249 ×2
-    assert _record_count(sc) <= 2 * scg.N_RETENTION
+        sc.pop(k, None)
+    # EAG-S405: system_changes_s248 counted by _record_count (+1)
+    assert _record_count(sc) == 21                            # gov*10 + vis*10 + sys_s248 = 21
+    assert _record_count(sc) <= 2 * 10 + 1                   # N=10 hardcoded ceiling
+
+
+# -- EAG-S405-BOOT-DIET-ARCHIVE-001 new TCs --------------------
+def test_production_n3_boundary():
+    """N_RETENTION=3 boundary pin. FAIL if N changes."""
+    sc = _mock_sc()
+    # N=3 -> threshold=249-3+1=247
+    cands = scg.identify_archive_candidates(sc, 249)  # uses N_RETENTION default=3
+    # gov_s{215..246}(32) + vis_s{215..246}(32) + goal2_declaration(1) = 65
+    assert len(cands) == 65
+    assert 'caddy_governance_record_s246' in cands
+    assert 'caddy_governance_record_s247' not in cands
+    assert 'visibility_metrics_s246' in cands
+    assert 'system_changes_s248' not in cands  # 248 >= 247
+    for k in cands:
+        sc.pop(k, None)
+    # remaining: gov*3 + vis*3 + sys_s248 = 7
+    assert _record_count(sc) == 7
+
+
+def test_system_changes_archivable():
+    """Change 2: system_changes_s* becomes archive candidate. EAG-S405"""
+    sc = _mock_sc()
+    sc['system_changes_s220'] = {'commits': ['test']}  # 220 < threshold=240
+    cands = scg.identify_archive_candidates(sc, 249, N=10)
+    assert 'system_changes_s220' in cands   # Change 2: archive candidate
+    assert 'system_changes_s248' not in cands  # 248 >= 240

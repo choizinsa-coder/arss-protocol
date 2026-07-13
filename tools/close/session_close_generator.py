@@ -49,8 +49,8 @@ KST = timezone(timedelta(hours=9))
 APPROVAL_ID_PATTERN = re.compile(r'^EAG-S\d+-[A-Z0-9][A-Z0-9-]*[A-Z0-9]?$')
 
 # ── DEP-S249-TIERD-MIGRATE-001 (목표 ③) ──────────────────────────
-N_RETENTION = 10
-_RECORD_KEY_RE = re.compile(r'^(caddy_governance_record_s|visibility_metrics_s)(\d+)$')
+N_RETENTION = 3  # EAG-S405-BOOT-DIET-ARCHIVE-001
+_RECORD_KEY_RE = re.compile(r'^(caddy_governance_record_s|visibility_metrics_s|system_changes_s)(\d+)$')  # EAG-S405-BOOT-DIET-ARCHIVE-001
 
 GROUP_D_MIGRATE_WHITELIST = frozenset({
     'goal2_declaration', 'goal2_governance_rule',
@@ -841,7 +841,7 @@ def apply_delta(sc: dict, n: int, chain_tip: str, prev_tip: str, delta: dict):
     sc[f'visibility_metrics_s{n}']          = delta['visibility_metrics']
     sc['session_delta']                     = delta['session_delta']
     sc['sync_meta']                         = delta['sync_meta']
-    sc.pop(f'system_changes_s{n - 4}', None)
+    # EAG-S405-BOOT-DIET-ARCHIVE-001: system_changes_s -> _RECORD_KEY_RE archive path. pop removed.
     # Always-On Phase 1: review_schedule init/preserve (EAG-S324-REVIEW-SCHEDULE-001)
     if 'review_schedule' not in sc:
         _now_kst = datetime.now(KST)
