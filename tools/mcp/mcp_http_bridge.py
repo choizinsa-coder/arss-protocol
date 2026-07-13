@@ -1489,6 +1489,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self._send_json(503, {"error": "bridge_unavailable"})
 
     def do_GET(self):
+        self.path = self.path.split("?")[0]  # strip query string (S408)
         if self.path == "/bridge/health":
             self._send_json(200, {"bridge_state": _get_bridge_state(), "containment": containment_is_active(), "version": BRIDGE_VERSION})
             return
@@ -1545,6 +1546,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self.wfile.flush()
 
     def do_POST(self):
+        self.path = self.path.split("?")[0]  # strip query string (S408)
         if self.path == "/register":
             content_length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(content_length) if content_length > 0 else b"{}"
