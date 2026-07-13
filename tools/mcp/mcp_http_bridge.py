@@ -264,6 +264,38 @@ INTERNAL_CONNECTOR_IDENTITY = "claude.ai-arss-protocol"
 
 READ_ALLOWED_ACTORS = frozenset(AGENT_ROOT_ALLOWLIST.keys())  # domi, jeni, caddy
 
+# ── ARSS Read Contract Schema Constants (S409 OBS-NEW EAG-S409-OBS-NEW-001) ──
+PURPOSE_ENUM = [
+    "OBSERVATION",
+    "EVIDENCE_INSPECTION",
+    "AUDIT_INSPECTION",
+    "CONSISTENCY_CHECK",
+    "STALE_DETECTION",
+]
+
+PURPOSE_SCHEMA = {
+    "type": "string",
+    "enum": PURPOSE_ENUM,
+    "description": (
+        "ARSS read contract purpose. "
+        "OBSERVATION: routine data gathering. "
+        "EVIDENCE_INSPECTION: check specific fact. "
+        "AUDIT_INSPECTION: audit trail review. "
+        "CONSISTENCY_CHECK: cross-validate sources. "
+        "STALE_DETECTION: detect outdated entries."
+    ),
+}
+
+ACTOR_ID_SCHEMA = {
+    "type": "string",
+    "enum": list(READ_ALLOWED_ACTORS),
+    "description": (
+        "Agent ID. Internal agents: domi/jeni/caddy. "
+        "External MCP clients (Grok) must use jeni."
+    ),
+}
+
+
 # Write Plane 상수 (PT-S139-MCP-WRITE-BRIDGE-001)
 WRITE_ALLOWED_ACTOR = "caddy"
 WRITE_SERVER_URL = "http://127.0.0.1:8444/mcp/write"
@@ -1089,28 +1121,28 @@ def _build_base_tool_entries() -> list:
 def _build_read_tool_entries_fs() -> list:
     return [
         {"name": "read_file", "description": "[READ] 단일 파일 읽기 (whitelist 경로 전용)",
-         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["path", "actor_id", "purpose"]}},
+         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "actor_id": ACTOR_ID_SCHEMA, "purpose": PURPOSE_SCHEMA}, "required": ["path", "actor_id", "purpose"]}},
         {"name": "list_dir", "description": "[READ] 디렉토리 목록 (depth=1, recursive 금지)",
-         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["path", "actor_id", "purpose"]}},
+         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "actor_id": ACTOR_ID_SCHEMA, "purpose": PURPOSE_SCHEMA}, "required": ["path", "actor_id", "purpose"]}},
         {"name": "grep_scoped", "description": "[READ] 허용 경로 내 텍스트 검색 (depth=2)",
-         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "pattern": {"type": "string"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}, "max_results": {"type": "integer"}}, "required": ["path", "pattern", "actor_id", "purpose"]}},
+         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "pattern": {"type": "string"}, "actor_id": ACTOR_ID_SCHEMA, "purpose": PURPOSE_SCHEMA, "max_results": {"type": "integer"}}, "required": ["path", "pattern", "actor_id", "purpose"]}},
         {"name": "read_log", "description": "[READ] 로그 파일 tail 읽기 (최대 200줄)",
-         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "tail_lines": {"type": "integer"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["path", "tail_lines", "actor_id", "purpose"]}},
+         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "tail_lines": {"type": "integer"}, "actor_id": ACTOR_ID_SCHEMA, "purpose": PURPOSE_SCHEMA}, "required": ["path", "tail_lines", "actor_id", "purpose"]}},
         {"name": "check_service_state", "description": "[READ] 허용 서비스 상태 확인 (상태 조회만, 제어 금지)",
-         "inputSchema": {"type": "object", "properties": {"service_name": {"type": "string"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["service_name", "actor_id", "purpose"]}},
+         "inputSchema": {"type": "object", "properties": {"service_name": {"type": "string"}, "actor_id": ACTOR_ID_SCHEMA, "purpose": PURPOSE_SCHEMA}, "required": ["service_name", "actor_id", "purpose"]}},
     ]
 
 
 def _build_read_tool_entries_meta() -> list:
     return [
         {"name": "read_pytest_result", "description": "[READ] pytest result artifact 읽기 (실행 아님)",
-         "inputSchema": {"type": "object", "properties": {"artifact_path": {"type": "string"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["artifact_path", "actor_id", "purpose"]}},
+         "inputSchema": {"type": "object", "properties": {"artifact_path": {"type": "string"}, "actor_id": ACTOR_ID_SCHEMA, "purpose": PURPOSE_SCHEMA}, "required": ["artifact_path", "actor_id", "purpose"]}},
         {"name": "read_audit_event", "description": "[READ] audit event 읽기 (최대 100건, bulk dump 금지)",
-         "inputSchema": {"type": "object", "properties": {"log_path": {"type": "string"}, "event_range": {"type": "integer"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["log_path", "event_range", "actor_id", "purpose"]}},
+         "inputSchema": {"type": "object", "properties": {"log_path": {"type": "string"}, "event_range": {"type": "integer"}, "actor_id": ACTOR_ID_SCHEMA, "purpose": PURPOSE_SCHEMA}, "required": ["log_path", "event_range", "actor_id", "purpose"]}},
         {"name": "read_metadata", "description": "[READ] SESSION_CONTEXT / SESSION_BOOT / sync metadata 읽기",
-         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["path", "actor_id", "purpose"]}},
+         "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "actor_id": ACTOR_ID_SCHEMA, "purpose": PURPOSE_SCHEMA}, "required": ["path", "actor_id", "purpose"]}},
         {"name": "get_runtime_snapshot", "description": "[READ] 사전 정의된 read-only snapshot projection",
-         "inputSchema": {"type": "object", "properties": {"actor_id": {"type": "string", "enum": list(READ_ALLOWED_ACTORS)}, "purpose": {"type": "string"}}, "required": ["actor_id", "purpose"]}},
+         "inputSchema": {"type": "object", "properties": {"actor_id": ACTOR_ID_SCHEMA, "purpose": PURPOSE_SCHEMA}, "required": ["actor_id", "purpose"]}},
     ]
 
 
