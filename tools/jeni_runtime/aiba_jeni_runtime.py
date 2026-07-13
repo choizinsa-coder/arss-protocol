@@ -1657,7 +1657,7 @@ class JeniRuntimeHandler(BaseHTTPRequestHandler):
                 "key_present": bool(GEMINI_API_KEY),
                 "max_tool_rounds": MAX_TOOL_ROUNDS,
                 "max_total_seconds": MAX_TOTAL_SECONDS,
-                "max_output_tokens": GEMINI_MAX_OUTPUT_TOKENS,
+                "max_output_tokens": LLM_MAX_TOKENS,
                 "persistent_memory": True, "function_calling": True,
                 "gemini_503_retry": True,
                 "http_retry_backoff": "3x_2_4_8",
