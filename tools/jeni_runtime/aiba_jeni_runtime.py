@@ -1738,13 +1738,13 @@ def main():
     _ensure_memory_dirs()
     _load_cost_state()  # EAG-S308-BUDGET-PERSIST-001: 일일 비용 파일 복원
 
-    print(f"[JENI_RUNTIME] starting v{RUNTIME_VERSION} model={GEMINI_MODEL} "
-          f"key={_mask_key(GEMINI_API_KEY)} max_tool_rounds={MAX_TOOL_ROUNDS} "
-          f"max_total_seconds={MAX_TOTAL_SECONDS} max_output_tokens={GEMINI_MAX_OUTPUT_TOKENS} "
+    print(f"[JENI_RUNTIME] starting v{RUNTIME_VERSION} model={LLM_MODEL} is_gemini={_IS_GEMINI} "
+          f"key={_mask_key(LLM_API_KEY)} max_tool_rounds={MAX_TOOL_ROUNDS} "
+          f"max_total_seconds={MAX_TOTAL_SECONDS} max_output_tokens={LLM_MAX_TOKENS} "
           f"circuit_breaker=True cost_log=True max_daily_usd={MAX_DAILY_USD} "
           f"persistent_memory=True function_calling=True sc_auto_load=True", file=sys.stderr)
-    if not GEMINI_API_KEY:
-        print("[JENI_RUNTIME] WARN: AIBA_GEMINI_API_KEY not set — /ask will FAIL_CLOSED",
+    if not LLM_API_KEY:
+        print("[JENI_RUNTIME] WARN: AIBA_LLM_API_KEY not set — /ask will FAIL_CLOSED",
               file=sys.stderr)
 
     server = ThreadedHTTPServer((RUNTIME_HOST, RUNTIME_PORT), JeniRuntimeHandler)
