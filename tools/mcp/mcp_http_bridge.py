@@ -888,6 +888,14 @@ def _handle_exec_scoped(arguments: dict) -> dict:
         with urllib.request.urlopen(req, timeout=EXEC_RUNTIME_TIMEOUT) as resp:
             result = json.loads(resp.read().decode())
             result["session_audit_id"] = session_audit_id
+            # -- [EAG-S406] write_script success -> record written_path as L2 evidence --
+            # Rationale: write_script content is authored by caddy itself, which
+            # satisfies the L2 "inspected before exec" purpose more strongly than a
+            # read-back. run_script is already sandbox-confined to CADDY_SANDBOX, and
+            # write_script writes only there, so the executable set == the writable set.
+            _written = result.get("written_path")
+            if _written and result.get("exit_code") == 0:
+                _l2_record_read(_written)
             # ── EDA v1.2 Evidence Receipt (EAG-S275-EDA-IMPLEMENTATION) ──────
             _exec_text = json.dumps(result, ensure_ascii=False)
             _sa_match = SA_HASH_PATTERN.search(str(result.get("session_audit_id", "")))
