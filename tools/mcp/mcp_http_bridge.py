@@ -681,7 +681,9 @@ def _oauth_authorize(query_string: str) -> tuple:
     if not redirect_uri:
         return 400, None, {"error": "invalid_request", "error_description": "redirect_uri required"}
     if client_id not in _OAUTH_CLIENTS:
-        _OAUTH_CLIENTS[client_id] = {"client_secret": "", "client_name": "auto", "actor_id": "domi", "scopes": ["mcp:read"], "revoked": False, "auto_registered": True}
+        # [A2 S413] 미등록 client_id 자동등록 금지
+        self._send_error(400, "invalid_client", "Client not registered. Use /register endpoint with valid credentials.")
+        return
     auth_code  = _secrets.token_hex(16)
     expires_at = _time.time() + _OAUTH_CODE_TTL
     _OAUTH_CODES[auth_code] = {"client_id": client_id, "redirect_uri": redirect_uri, "expires_at": expires_at}
@@ -741,8 +743,8 @@ def _oauth_token(form_body: str) -> tuple:
         if not client or client.get("revoked"):
             return 401, {"error": "invalid_client"}
         if client.get("auto_registered") and client["client_secret"] == "":
-            client["client_secret"] = client_secret
-            client["auto_registered"] = False
+            # [A3a S413] 빈 secret 채택 금지
+            return 401, {"error": "invalid_client", "error_description": "Empty secret not accepted"}
         if client["client_secret"] != client_secret:
             return 401, {"error": "invalid_client"}
         token = _secrets.token_hex(32)
@@ -754,11 +756,9 @@ def _oauth_token(form_body: str) -> tuple:
     client = _OAUTH_CLIENTS.get(client_id)
     if not client or client.get("revoked"):
         return 401, {"error": "invalid_client"}
-    # 파일 복원 client: secret이 비어 있으면 새 secret으로 갱신 허용
+    # 파일 복원 client: [A3b S413] 빈 secret 채택 금지
     if client.get("restored_from_file") and client["client_secret"] == "":
-        client["client_secret"] = client_secret
-        client["restored_from_file"] = False
-        _persist_dynamic_client(client_id, client)
+        return 401, {"error": "invalid_client", "error_description": "Empty secret not accepted. Re-register."}
     if client["client_secret"] != client_secret:
         return 401, {"error": "invalid_client"}
     token = _secrets.token_hex(32)
@@ -1521,7 +1521,6 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self._send_json(503, {"error": "bridge_unavailable"})
 
     def do_GET(self):
-        self.path = self.path.split("?")[0]  # strip query string (S408)
         if self.path == "/bridge/health":
             self._send_json(200, {"bridge_state": _get_bridge_state(), "containment": containment_is_active(), "version": BRIDGE_VERSION})
             return
@@ -1578,8 +1577,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self.wfile.flush()
 
     def do_POST(self):
-        self.path = self.path.split("?")[0]  # strip query string (S408)
         if self.path == "/register":
+            # [A1 S413] Bearer 인증 필수
+            auth = self.headers.get("Authorization", "")
+            if not auth.startswith("Bearer "):
+                self._send_json(401, {"error": "unauthorized", "error_description": "Bearer token required"})
+                return
             content_length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(content_length) if content_length > 0 else b"{}"
             try:
