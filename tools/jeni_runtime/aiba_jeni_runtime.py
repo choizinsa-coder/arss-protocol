@@ -90,7 +90,7 @@ NO_PARTS_RETRY_BASE_SLEEP = 2   # NO_PARTS 기반 대기 시간(초) — 2s/4s/8
 HTTP_RETRY_MAX = 3              # 503/429 재시도 최대 횟수 (EAG-S284-JENI-RETRY-001)
 HTTP_RETRY_BASE_SLEEP = 2       # 503/429 기반 대기 시간(초) — 2s/4s/8s
 
-MAX_TOOL_ROUNDS = 8             # B-J-3: 5 → 8
+MAX_TOOL_ROUNDS = 12            # B-J-3: 5 -> 8 -> 12 (S418 EAG-S418-JENI-VERIFY-FIX-001)
 MAX_TOTAL_SECONDS = int(os.environ.get("AIBA_MAX_TOTAL_SECONDS", "180"))  # EAG-S401         # B-J-4: 120 → 180
 TIMEOUT_PREEMPT_SECONDS = int(os.environ.get("AIBA_TIMEOUT_PREEMPT_SECONDS", "170"))  # EAG-S401   # B-J-4: 110 → 170
 
@@ -676,6 +676,7 @@ _CB_THRESHOLDS: dict = {
     "FILE_ERROR": 2,
     "DEPTH_LIMIT_ERROR": 3,
     "TIMEOUT": 3,
+    "NO_SUCH_PATH": 10,   # EAG-S418-JENI-VERIFY-FIX-001 (C): tansaek file-not-found gwanyong
 }
 _CB_THRESHOLD_DEFAULT = 2
 
@@ -694,7 +695,9 @@ def _classify_tool_error(tool_name: str, result_text: str) -> str:
     # OI-S315-002 fix (EAG-S316-CB-FIX-001): PATH_DEPTH_EXCEEDED -> DEPTH_LIMIT_ERROR
     if "PATH_DEPTH_EXCEEDED" in result_text or "PATH_NOT_IN_WHITELIST" in result_text:
         return f"DEPTH_LIMIT_ERROR:{tool_name}"
-    if "NOT_A_FILE" in result_text or "DENIED" in result_text:
+    if "NOT_A_FILE" in result_text:
+        return f"NO_SUCH_PATH:{tool_name}"
+    if "DENIED" in result_text:
         return f"FILE_ERROR:{tool_name}"
     if "PERMISSION" in result_text or "403" in result_text:
         return f"AUTH_ERROR:{tool_name}"
@@ -1503,14 +1506,37 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
         function_calls = call_result["function_calls"]
         if function_calls:
             if round_num >= MAX_TOOL_ROUNDS:
+                # EAG-S418-JENI-VERIFY-FIX-001 (B): final round tool-only -> nudge + 1 extra call
+                accumulated.append({"role": "user", "parts": [{"text": (
+                    "[FINAL ROUND - TOOL UNAVAILABLE] "
+                    "deo isang do-gu-reul hocul hal su eopsseumnida. jigeumkkaji sujiphan modeun geun-geo-reul "
+                    "bataeng-euro jeuksi choejong geomjeung panjeong-eul naerisipsio. bandeusi "
+                    "PASS/FAIL/INCONCLUSIVE jung hanawa geun-geo-reul pohamhan gyeollon-eul jesihaseyo."
+                )}]})
+                nudge_result = _call_gemini(accumulated, escalate=escalate)
+                if not nudge_result.get("ok", False):
+                    final_result = _make_fail_closed_result(
+                        "VALIDATION_PARSE_FAILURE",
+                        nudge_result.get("error") or "nudge call failed",
+                        round_num, _make_audit_bundle(round_num, audit_trail))
+                    break
+                if nudge_result.get("function_calls"):
+                    try:
+                        _gcb_report_no_progress("jeni")
+                    except Exception:
+                        pass
+                    final_result = _make_fail_closed_result(
+                        "MAX_ROUNDS_EXCEEDED",
+                        f"nudge failed: model still requested tools at round {round_num}, max={MAX_TOOL_ROUNDS}",
+                        round_num, _make_audit_bundle(round_num, audit_trail))
+                    break
                 try:
-                    _gcb_report_no_progress("jeni")
+                    _gcb_report_progress("jeni")
                 except Exception:
                     pass
-                final_result = _make_fail_closed_result(
-                    "MAX_ROUNDS_EXCEEDED",
-                    f"function_call at round {round_num}, max={MAX_TOOL_ROUNDS}",
-                    round_num, _make_audit_bundle(round_num, audit_trail))
+                final_result = {"ok": True, "text": nudge_result["text"], "error": None,
+                                "rounds_used": round_num,
+                                "audit": _make_audit_bundle(round_num, audit_trail)}
                 break
 
             all_parts = []
