@@ -375,6 +375,35 @@ class GovernanceMonitor:
             return {"trigger": "Area7_Learning", "fired": False,
                     "detail": f"area7_error: {e}"}
 
+    def _check_budget_trigger(self) -> dict:
+        # STEP1 budget alert (ALERT-ONLY, no token action). cumulative -> single tick ok. cause-keyed dedup. fail-safe.
+        try:
+            from datetime import datetime, timezone
+            budget_dir = ROOT / 'runtime/governance/budget'
+            today = datetime.now(timezone.utc).strftime('%Y%m%d')
+            def _read(agent):
+                p = budget_dir / (agent + '_DAILY_COST_STATE.json')
+                if not p.exists():
+                    return 0.0
+                with open(p, encoding='utf-8') as f:
+                    d = json.load(f)
+                if str(d.get('date')) != today:
+                    return 0.0
+                return float(d.get('total_usd') or 0.0)
+            domi = _read('DOMI')
+            jeni = _read('JENI')
+            total = round(domi + jeni, 4)
+            status = 'alert' if total >= 4.5 else ('warn' if total >= 4.0 else 'ok')
+            try:
+                with open(budget_dir / 'sdes_budget_last.json', 'w', encoding='utf-8') as bf:
+                    json.dump({'total_usd': total, 'domi_usd': domi, 'jeni_usd': jeni, 'status': status, 'checked_at': datetime.now(timezone.utc).isoformat()}, bf, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+            detail = 'budget=$%.2f (domi=$%.2f + jeni=$%.2f) status=%s' % (total, domi, jeni, status)
+            return {'trigger': 'Budget', 'fired': total >= 4.5, 'detail': detail, 'cause_type': 'budget_exceeded', 'cause_component': 'domi_jeni_daily', 'cause_rc': 'OVER_4_5', 'cause_count': int(total * 100)}
+        except Exception as e:
+            return {'trigger': 'Budget', 'fired': False, 'detail': 'budget_probe_error: %s' % e}
+
     def create_alert_workitem(self, trigger: str, detail: str, *,
                               cause_type: str = "",
                               cause_component: str = "",
@@ -510,6 +539,7 @@ class GovernanceMonitor:
             self._check_promise_violation_adapter_trigger(),
             self._check_promise_failure_bridge_trigger(),
             self._check_area7_activation_trigger(),
+            self._check_budget_trigger(),
         ]
         triggers_fired = [t["trigger"] for t in triggers if t["fired"]]
 
