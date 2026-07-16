@@ -16,6 +16,7 @@ AICS — Safe Mode Kill Switch (언제 전부 정지되는가)
 from __future__ import annotations
 
 import os
+import sys
 
 from .schemas import AICSReason
 
@@ -23,17 +24,28 @@ from .schemas import AICSReason
 class SafeModeController:
     """Safe Mode 상태를 flag 파일로 관리. 인메모리 상태와 동기화."""
 
-    def __init__(self, flag_path: str):
+    def __init__(self, flag_path: str, runtime=None):
         self._flag_path = flag_path
         self._active = os.path.isfile(flag_path)
+        # EAG-S420-SAFEMODE-ENABLE-CALLER-001: enable()은 신뢰된 소유 런타임 경유만.
+        self._trusted_caller = runtime
 
     def is_active(self) -> bool:
         # 파일 기준 재확인 (외부 운영자 수동 개입 대비)
         self._active = os.path.isfile(self._flag_path)
         return self._active
 
-    def enable(self, reason: str = "UNSPECIFIED", token_manager=None) -> bool:
-        """Safe Mode 진입. 영역 2 AutoGuard 또는 운영자가 호출."""
+    def enable(self, reason: str = "UNSPECIFIED", token_manager=None,
+               *, caller=None) -> bool:
+        """Safe Mode 진입. 영역 2 AutoGuard 또는 운영자가 호출.
+
+        EAG-S420-SAFEMODE-ENABLE-CALLER-001: 신뢰된 소유 런타임
+        (caller is self._trusted_caller)을 통해서만 허용. 객체 동일성
+        비교이므로 신분 문자열 위장(spoofing) 불가. 미설정/불일치 시 fail-closed.
+        """
+        if self._trusted_caller is None or caller is not self._trusted_caller:
+            print("[SAFEMODE] UNAUTHORIZED enable() call rejected", file=sys.stderr)
+            return False
         try:
             os.makedirs(os.path.dirname(self._flag_path), exist_ok=True)
             with open(self._flag_path, "w", encoding="utf-8") as f:

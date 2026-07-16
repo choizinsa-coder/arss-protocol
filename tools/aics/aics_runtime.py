@@ -40,7 +40,7 @@ class AICSRuntime:
         self.registry = IdentityRegistry(persist_path=identity_registry_path)
         self.tokens = GovernanceTokenManager(
             registry=self.registry, persist_path=active_tokens_path)
-        self.safe_mode = SafeModeController(flag_path=safe_mode_flag_path)
+        self.safe_mode = SafeModeController(flag_path=safe_mode_flag_path, runtime=self)
         self.hermes = HermesGate(registry=self.registry)
 
     # ── 발급 ──────────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ class AICSRuntime:
 
     # ── Safe Mode 제어 ────────────────────────────────────────────────────
     def enable_safe_mode(self, reason: str = "UNSPECIFIED") -> bool:
-        return self.safe_mode.enable(reason=reason, token_manager=self.tokens)
+        return self.safe_mode.enable(reason=reason, token_manager=self.tokens, caller=self)
 
     def disable_safe_mode(self, eag_approval: str | None = None,
                           technical_match: bool = False) -> tuple[bool, str]:

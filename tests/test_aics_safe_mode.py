@@ -85,3 +85,17 @@ def test_recovery_requires_fresh_token(tmp_path):
     tok2 = rt.issue("domi", SESSION, CHAIN_TIP)
     assert tok2 is not None
     assert rt.admit(tok2.token_id, "domi", SESSION, CHAIN_TIP).ok is True
+
+
+def test_enable_rejects_unauthorized_caller(tmp_path):
+    """EAG-S420-SAFEMODE-ENABLE-CALLER-001: enable()은 신뢰된 소유 런타임 경유만.
+    직접 호출 및 신분 위장 시도는 거부(fail-closed)."""
+    rt = _runtime(tmp_path)
+    assert rt.enable_safe_mode(reason="TEST") is True
+    rt.disable_safe_mode(eag_approval="EAG-S271-RECOVER-001")
+    assert rt.safe_mode.is_active() is False
+    # 직접 호출(caller 미제공): 거부
+    assert rt.safe_mode.enable(reason="ATTACK") is False
+    # 신분 위장 시도(다른 객체): 거부
+    assert rt.safe_mode.enable(reason="ATTACK", caller=object()) is False
+    assert rt.safe_mode.is_active() is False
