@@ -692,6 +692,11 @@ def _reset_circuit_breaker() -> None:
 
 def _classify_tool_error(tool_name: str, result_text: str) -> str:
     """도구 오류 유형 분류. 정상 결과는 "" 반환."""
+    # EAG-S426-CB-POLICY-DENY-FIX-001: "FORBIDDEN_" denials are legitimate policy/security refusals,
+    # not system failures -> exclude from circuit-breaker counting.
+    # RAW: S414/S417/S421/S423 breaker trips were all legitimate denials (audit log).
+    if "FORBIDDEN_" in result_text:
+        return ""
     # OI-S315-002 fix (EAG-S316-CB-FIX-001): PATH_DEPTH_EXCEEDED -> DEPTH_LIMIT_ERROR
     if "PATH_DEPTH_EXCEEDED" in result_text or "PATH_NOT_IN_WHITELIST" in result_text:
         return f"DEPTH_LIMIT_ERROR:{tool_name}"
