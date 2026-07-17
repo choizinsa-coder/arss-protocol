@@ -32,6 +32,7 @@ ARSS_HUB_ROOT       = Path("/opt/arss/engine/arss-protocol/ARSS_HUB")
 LOG_ROOT            = Path("/opt/arss/engine/arss-protocol/tools/mcp")
 METADATA_ROOT       = Path("/opt/arss/engine/arss-protocol")
 SESSION_JOURNAL_ROOT = Path("/opt/arss/engine/arss-protocol/session_journal")  # S217 신규: Phase 1 Shared Memory
+LOGS_ROOT            = Path("/opt/arss/engine/arss-protocol/logs")  # S423 실제 로그 위치
 
 # ── 허용 Purpose Category ──────────────────────────────────────────
 ALLOWED_PURPOSES = {
@@ -76,11 +77,14 @@ ALLOWED_SERVICES = {
     "aiba-exec-runtime",
 }
 
+# S423 명시 제외: 시스템 내부 디렉터리 (읽기 금지)
+FORBIDDEN_DIR_SEGMENTS = {".git", "venv", ".venv", "__pycache__", ".pytest_cache", "node_modules"}
+
 # ── 에이전트별 허용 Semantic Root ──────────────────────────────────
 AGENT_ROOT_ALLOWLIST = {
-    "domi":  [CODE_ROOT, GOVERNANCE_ROOT, METADATA_ROOT, EVIDENCE_ROOT, SESSION_JOURNAL_ROOT],
-    "jeni":  [EVIDENCE_ROOT, LOG_ROOT, METADATA_ROOT, GOVERNANCE_ROOT, ARSS_HUB_ROOT, EVIDENCE_CODE_ROOT, SESSION_JOURNAL_ROOT],
-    "caddy": [CODE_ROOT, EVIDENCE_ROOT, LOG_ROOT, METADATA_ROOT, SESSION_JOURNAL_ROOT],
+    "domi":  [CODE_ROOT, GOVERNANCE_ROOT, METADATA_ROOT, EVIDENCE_ROOT, SESSION_JOURNAL_ROOT, LOGS_ROOT],
+    "jeni":  [EVIDENCE_ROOT, LOG_ROOT, METADATA_ROOT, GOVERNANCE_ROOT, ARSS_HUB_ROOT, EVIDENCE_CODE_ROOT, SESSION_JOURNAL_ROOT, LOGS_ROOT],
+    "caddy": [CODE_ROOT, EVIDENCE_ROOT, LOG_ROOT, METADATA_ROOT, SESSION_JOURNAL_ROOT, LOGS_ROOT],
 }
 
 # ── 허용 Connector Identity ────────────────────────────────────────
@@ -117,13 +121,24 @@ def _validate_path(path: Path, allowed_roots: list[Path], max_depth: int) -> Pat
     except Exception:
         raise DenyResult("PATH_RESOLVE_FAILED")
 
-    # 허용 루트 내부 확인
-    in_allowed = any(
-        str(resolved).startswith(str(root))
-        for root in allowed_roots
-    )
+    # 허용 루트 내부 확인 (S423 하드닝: startswith 접두어 우회 방지 -> relative_to)
+    def _within(_r):
+        try:
+            resolved.relative_to(_r)
+            return True
+        except ValueError:
+            return False
+    in_allowed = any(_within(root) for root in allowed_roots)
     if not in_allowed:
         raise DenyResult("PATH_NOT_IN_WHITELIST")
+
+    # S423 명시 제외: 시스템 내부·백업/덤프 차단 (경계 안이라도)
+    if set(resolved.parts) & FORBIDDEN_DIR_SEGMENTS:
+        raise DenyResult("FORBIDDEN_INTERNAL_AREA")
+    _name_low = resolved.name.lower()
+    if (_name_low.endswith("bak") or "_bak" in _name_low or ".bak" in _name_low
+            or ".pre_" in _name_low or _name_low.endswith(".dump")):
+        raise DenyResult("FORBIDDEN_BACKUP_OR_DUMP")
 
     # depth 확인 (CODE_ROOT 기준 상대 depth)
     for root in allowed_roots:
@@ -330,11 +345,13 @@ class ReadOnlyServer:
                 r for r in allowed_roots
                 if r in [CODE_ROOT, GOVERNANCE_ROOT, METADATA_ROOT]
             ]
-            target = _validate_path(Path(path), grep_allowed, max_depth=2)
+            target = _validate_path(Path(path), grep_allowed, max_depth=4)
 
             results = []
             compiled = re.compile(pattern)
-            for f in target.rglob("*.py") if target.is_dir() else [target]:
+            for f in (target.rglob("*.py") if target.is_dir() else [target]):
+                if set(f.parts) & FORBIDDEN_DIR_SEGMENTS:
+                    continue
                 try:
                     for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
                         if compiled.search(line):
@@ -375,7 +392,7 @@ class ReadOnlyServer:
                 actor_id, connector_identity, hmac_value,
                 nonce, timestamp, path, hmac_secret, purpose,
             )
-            log_allowed = [r for r in allowed_roots if r in [LOG_ROOT, EVIDENCE_ROOT]]
+            log_allowed = [r for r in allowed_roots if r in [LOG_ROOT, EVIDENCE_ROOT, LOGS_ROOT]]
             target = _validate_path(Path(path), log_allowed, max_depth=10)
 
             if not target.is_file():
@@ -478,7 +495,7 @@ class ReadOnlyServer:
                 actor_id, connector_identity, hmac_value,
                 nonce, timestamp, log_path, hmac_secret, purpose,
             )
-            audit_allowed = [r for r in allowed_roots if r in [LOG_ROOT, EVIDENCE_ROOT]]
+            audit_allowed = [r for r in allowed_roots if r in [LOG_ROOT, EVIDENCE_ROOT, LOGS_ROOT]]
             target = _validate_path(Path(log_path), audit_allowed, max_depth=10)
 
             if not target.is_file():
@@ -515,7 +532,7 @@ class ReadOnlyServer:
                 nonce, timestamp, path, hmac_secret, purpose,
             )
             meta_allowed = [r for r in allowed_roots if r == METADATA_ROOT]
-            target = _validate_path(Path(path), meta_allowed, max_depth=2)
+            target = _validate_path(Path(path), meta_allowed, max_depth=4)
 
             if not target.is_file():
                 raise DenyResult("NOT_A_FILE")
