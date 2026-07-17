@@ -157,6 +157,16 @@ def _validate_path(path: Path, allowed_roots: list[Path], max_depth: int) -> Pat
         if re.search(pattern, path_str):
             raise DenyResult(f"FORBIDDEN_PATH_PATTERN: {pattern}")
 
+    # Layer 2: SECURITY_LABEL_REGISTRY + Break-Glass (S427)
+    try:
+        from security_label_policy import enforce_label_policy as _elp, LabelPolicyDeny as _LPD
+    except Exception:
+        raise DenyResult("LABEL_MODULE_LOAD_FAILED")
+    try:
+        _elp(resolved)
+    except _LPD as _lpe:
+        raise DenyResult(_lpe.reason)
+
     return resolved
 
 
@@ -351,6 +361,13 @@ class ReadOnlyServer:
             compiled = re.compile(pattern)
             for f in (target.rglob("*.py") if target.is_dir() else [target]):
                 if set(f.parts) & FORBIDDEN_DIR_SEGMENTS:
+                    continue
+                try:
+                    from security_label_policy import enforce_label_policy as _elp2, LabelPolicyDeny as _LPD2
+                    _elp2(f.resolve())
+                except _LPD2:
+                    continue
+                except Exception:
                     continue
                 try:
                     for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
