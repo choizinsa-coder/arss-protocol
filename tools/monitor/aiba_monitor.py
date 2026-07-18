@@ -522,6 +522,13 @@ class GovernanceMonitor:
             return []
 
     # ── 메인 실행 ─────────────────────────────────────────────
+    def _check_sensitive_file_trigger(self) -> dict:
+        try:
+            from tools.monitor.sensitive_file_trigger import check_sensitive_file_trigger
+            return check_sensitive_file_trigger(self.timestamp_iso, str(ROOT), MONITOR_DIR)
+        except Exception as e:
+            return {"trigger": "Sensitive_File", "fired": False, "detail": "sensitive_probe_error: %s" % e}
+
     def run(self) -> dict:
         # ① GHS
         ghs = self.calculate_ghs()
@@ -540,6 +547,7 @@ class GovernanceMonitor:
             self._check_promise_failure_bridge_trigger(),
             self._check_area7_activation_trigger(),
             self._check_budget_trigger(),
+            self._check_sensitive_file_trigger(),
         ]
         triggers_fired = [t["trigger"] for t in triggers if t["fired"]]
 
