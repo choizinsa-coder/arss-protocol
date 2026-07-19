@@ -13,6 +13,7 @@ Wires area_7.detect_improvement_opportunities() into the monitor batch:
 C2: area_7 / area_15 modules UNCHANGED.
 """
 import json
+import re
 import time
 import hashlib
 from pathlib import Path
@@ -50,12 +51,57 @@ def _save_state(path, state):
         pass
 
 
+_ID_PATTERN  = re.compile(r'([A-Za-z]+-\d+)')   # PC-3, RC-2, DC-3 -> preserved
+_HEX_PATTERN = re.compile(r'\b[a-f0-9]{6,}\b')  # context_hash[:8] -> {H}
+_NUM_PATTERN = re.compile(r'\d+')               # remaining counts -> {N}
+
+
+def _to_letters(n):
+    """0->a, 1->b, ... 25->z, 26->aa. Digit-free placeholder index."""
+    result = ""
+    while True:
+        result = chr(97 + n % 26) + result
+        n = n // 26
+        if n == 0:
+            break
+    return result
+
+
+def _description_pattern(description):
+    """v3 (S431): normalise volatile counts out of description, keep signal identity.
+    Steps: preserve identifier tokens -> mask hex hashes -> mask digits -> restore.
+    Placeholders are digit-free, so the digit mask cannot corrupt them.
+    Note: 'Area 13' also becomes 'Area {N}' (13 is not an identifier token);
+    harmless because channel 2 is the sole ghs_decline signal."""
+    if not isinstance(description, str):
+        return ""
+    preserved = {}
+    counter = [0]
+
+    def _save_id(m):
+        token = m.group(0)
+        ph = "__K%s__" % _to_letters(counter[0])
+        counter[0] += 1
+        preserved[ph] = token
+        return ph
+
+    s = _ID_PATTERN.sub(_save_id, description)
+    s = _HEX_PATTERN.sub("{H}", s)
+    s = _NUM_PATTERN.sub("{N}", s)
+    for ph, token in preserved.items():
+        s = s.replace(ph, token)
+    return s
+
+
 def _stable_hash(opp):
     """Hash over STABLE fields only (excludes volatile id/detected_at/source_ref).
-    C1 fix: hashing the full opp dict would never match (uuid id + timestamp) -> dedup broken."""
+    C1 fix: hashing the full opp dict would never match (uuid id + timestamp) -> dedup broken.
+    v3 (S431): description is normalised by _description_pattern so that count
+    increments stop producing new keys, while PC-1/PC-3, RC-1/RC-2 and component
+    names stay distinct."""
     stable = {
         "trigger":     opp.get("trigger", ""),
-        "description": opp.get("description", ""),
+        "description": _description_pattern(opp.get("description", "")),
         "priority":    opp.get("priority", ""),
     }
     content = json.dumps(stable, sort_keys=True, ensure_ascii=False)

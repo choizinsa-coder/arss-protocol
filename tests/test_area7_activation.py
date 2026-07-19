@@ -112,3 +112,40 @@ def test_timestamp_persisted_before_generate(tmp_path):
     state = json.loads(tp.read_text())
     assert state["last_run_ts"] == 8000.0
     assert r["new_proposals"] == 0
+
+
+# --- S431 v3 stable-hash normalisation (EAG-S431-AREA7-STABLE-HASH-V3-001) ---
+from tools.monitor.area7_activation import _description_pattern
+
+
+def test_v3_t1_identifier_discrimination():
+    """PC-1 and PC-3 must remain distinct signals."""
+    assert _stable_hash(_opp(desc="5x: caddy/PC-1")) != _stable_hash(_opp(desc="5x: caddy/PC-3"))
+
+
+def test_v3_t2_count_increment_ignored():
+    """D4 regression guard: the '{count}x:' prefix must be masked."""
+    assert _stable_hash(_opp(desc="3x: caddy/RC-2")) == _stable_hash(_opp(desc="5x: caddy/RC-2"))
+
+
+def test_v3_t3_hex_masked():
+    assert _description_pattern("context_hash changed: deadbeef -> cafebabe") == "context_hash changed: {H} -> {H}"
+
+
+def test_v3_t4_component_discrimination():
+    assert _stable_hash(_opp(desc="3x: caddy/RC-2")) != _stable_hash(_opp(desc="3x: domi/RC-2"))
+
+
+def test_v3_t5_channel2_pattern_and_dedup():
+    assert _description_pattern("Area 13: total_failed=1") == "Area {N}: total_failed={N}"
+    assert _stable_hash(_opp(desc="Area 13: total_failed=1")) == _stable_hash(_opp(desc="Area 13: total_failed=9"))
+
+
+def test_v3_t6_non_string_safe():
+    assert _description_pattern(None) == ""
+
+
+def test_v3_burst_count_ignored():
+    a = "3x: caddy/RC-2; burst 4x: domi/RC-1"
+    b = "3x: caddy/RC-2; burst 9x: domi/RC-1"
+    assert _stable_hash(_opp(desc=a)) == _stable_hash(_opp(desc=b))
