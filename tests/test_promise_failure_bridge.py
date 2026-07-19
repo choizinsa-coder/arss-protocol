@@ -249,5 +249,37 @@ def test_seen_path_under_monitor_dir(env):
     assert bridge.SEEN_PATH.parent == violations.parent
 
 
+# ── [S430-B] PC:* RC mapping — mandatory gate (EAG-S430-PC-RC-REMAP-IMPL-001) ──
+
+def _pc_rc(env, rule_id):
+    bridge, violations, position, fm_path, load_fm = env
+    _write(violations, [_v("seed", "L1:NOT_IN_REGISTRY")])
+    bridge.bridge_promise_violations()
+    _append(violations, [_v("pc", rule_id)])
+    bridge.bridge_promise_violations()
+    return {e["error_code"]: e["rc"] for e in load_fm()}
+
+
+def test_pc_rc1_known_deny(env):
+    rc = _pc_rc(env, "PC:UNKNOWN_PURPOSE")
+    assert rc["PC:UNKNOWN_PURPOSE"] == "RC-1"
+
+
+def test_pc_rc2_auth_mismatch(env):
+    rc = _pc_rc(env, "PC:AUTH_MISMATCH")
+    assert rc["PC:AUTH_MISMATCH"] == "RC-2"
+
+
+def test_pc_containment_rc1(env):
+    rid = "PC:CONTAINMENT_REQUEST_DENIED:initialize"
+    rc = _pc_rc(env, rid)
+    assert rc[rid] == "RC-1"
+
+
+def test_pc_unknown_fallback_rc2(env):
+    rc = _pc_rc(env, "PC:UNKNOWN_X_NOT_IN_LIST")
+    assert rc["PC:UNKNOWN_X_NOT_IN_LIST"] == "RC-2"
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

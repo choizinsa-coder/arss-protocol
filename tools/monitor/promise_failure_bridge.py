@@ -122,10 +122,40 @@ def _compute_head_sig(path: Path) -> str:
         return ""
 
 
+# [S430-B] (C) axis PC:* RC-1 deny reasons — gate working correctly.
+# CONTAINMENT_* is handled by prefix check in _map_rc (rule_id carries a
+# trailing segment, e.g. "PC:CONTAINMENT_REQUEST_DENIED:initialize").
+# EAG-S430-PC-RC-REMAP-IMPL-001
+_PC_RC1_DENY_REASONS = frozenset({
+    "UNKNOWN_PURPOSE",
+    "FORBIDDEN_PURPOSE",
+    "PATH_NOT_IN_WHITELIST",
+    "FORBIDDEN_PATH_PATTERN",
+    "SERVICE_NOT_IN_ALLOWLIST",
+    "AGENT_NOT_IN_ALLOWLIST",
+    "UNKNOWN_ACTOR",
+    "UNKNOWN_CLIENT",
+    "PATH_RESOLVE_FAILED",
+    "METADATA_FILE_NOT_ALLOWED",
+})
+
+
 def _map_rc(rule_id: str):
     from tools.governance.area_15_failure_memory import FailureCategory
+    # (A) axis — UNCHANGED
     if rule_id in _RC1_RULE_IDS:
         return FailureCategory.RC1
+    # (C) axis — PC:* governance deny
+    if rule_id.startswith("PC:"):
+        deny_reason = rule_id[3:]
+        if deny_reason.startswith("CONTAINMENT_"):
+            return FailureCategory.RC1
+        if deny_reason in _PC_RC1_DENY_REASONS:
+            return FailureCategory.RC1
+        # AUTH_MISMATCH / NONCE_REPLAY / STALE_TIMESTAMP / AUDIT_WRITE_FAILED
+        # + unregistered reasons -> fail-closed
+        return FailureCategory.RC2
+    # (B) axis — UNCHANGED
     return FailureCategory.RC2
 
 
