@@ -65,10 +65,10 @@ SUMMARY_BUDGET_TOKENS = 500       # R4: context compression summary budget
 TOOL_RESPONSE_TOKEN_LIMIT = 2000  # R5: non-read_file tool response cap
 MAX_BTB_HANDOFF = 2               # R7: BTB cross-request handoff limit
 try:                              # R7: Behavioral Time Budget (env, 5s step, 30-115s)
-    BTB_BUDGET_SECONDS = max(30, min(115, int(os.environ.get("AIBA_DOMI_BTB_SECONDS", "50"))))
+    BTB_BUDGET_SECONDS = max(30, min(115, int(os.environ.get("AIBA_DOMI_BTB_SECONDS", "110"))))
     BTB_BUDGET_SECONDS = (BTB_BUDGET_SECONDS // 5) * 5
 except (TypeError, ValueError):
-    BTB_BUDGET_SECONDS = 50
+    BTB_BUDGET_SECONDS = 110
 # --- [END RC-F constants] ---
 
 MAX_TOOL_ROUNDS = 12            # B-D-2: 5 → 8 → 12 [S386]
