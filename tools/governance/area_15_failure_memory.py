@@ -26,6 +26,24 @@ VALID_COMPONENTS = frozenset({"domi", "jeni", "caddy", "beo", "system", "unknown
 
 CONSECUTIVE_REPEAT_WINDOW_MIN = 60  # S371: consecutive_repeat window (independent of frequency_burst window_minutes)
 
+CROSS_SESSION_THRESHOLD_DEFAULT = 3   # S432 channel5: distinct-session repeat threshold
+BRIDGE_SOURCE = "promise_failure_bridge"  # S432: M05 guard target
+
+
+def _entry_session(entry: dict):
+    """S432: context.session 우선, 없으면 context.session_ref.
+    'S431' / '431' / 431 을 모두 '431'로 정규화한다. 없으면 None."""
+    ctx = entry.get("context") or {}
+    raw = ctx.get("session")
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        raw = ctx.get("session_ref")
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    if s and s[0] in ("S", "s"):
+        s = s[1:]
+    return s or None
+
 
 class FailureCategory(Enum):
     """Failure Category RC1-RC4 -- AIF v1.4 Area 15"""
@@ -132,7 +150,8 @@ def get_recent_failures(n: int = 10) -> list:
     return list(reversed(all_entries[-n:])) if all_entries else []
 
 
-def get_failure_patterns(window_minutes: int = 60, threshold: int = 3) -> dict:
+def get_failure_patterns(window_minutes: int = 60, threshold: int = 3,
+                         cross_session_threshold: int = CROSS_SESSION_THRESHOLD_DEFAULT) -> dict:
     """
     패턴 감지:
       consecutive_repeat: 동일 (component, error_code) 연속 threshold회 이상
@@ -200,14 +219,36 @@ def get_failure_patterns(window_minutes: int = 60, threshold: int = 3) -> dict:
             except (KeyError, ValueError):
                 pass
 
+    # --- S432 channel5: cross_session_repeat (시간창 무관, 세션 경계 기준) ---
+    session_keys: dict = defaultdict(set)
+    for e in all_entries:
+        comp_v = e.get("component")
+        ec_v = e.get("error_code")
+        sess_v = _entry_session(e)
+        if comp_v and ec_v and sess_v:
+            session_keys[(comp_v, ec_v)].add(sess_v)
+    cross_session_repeats = []
+    for (comp_v, ec_v), sessions_set in session_keys.items():
+        if len(sessions_set) >= cross_session_threshold:
+            cross_session_repeats.append({
+                "component":         comp_v,
+                "error_code":        ec_v,
+                "distinct_sessions": len(sessions_set),
+                "sessions":          sorted(sessions_set),
+            })
+    cross_session_repeats.sort(key=lambda d: (-d["distinct_sessions"], d["component"], d["error_code"]))
+
     return {
-        "window_minutes":     window_minutes,
-        "threshold":          threshold,
-        "consecutive_repeat": consecutive_repeats,
-        "frequency_burst":    frequency_bursts,
-        "cross_component":    sorted(rc3_components) if len(rc3_components) >= 3 else [],
-        "has_alert":          bool(
+        "window_minutes":          window_minutes,
+        "threshold":               threshold,
+        "cross_session_threshold": cross_session_threshold,
+        "consecutive_repeat":      consecutive_repeats,
+        "frequency_burst":         frequency_bursts,
+        "cross_component":         sorted(rc3_components) if len(rc3_components) >= 3 else [],
+        "cross_session_repeat":    cross_session_repeats,
+        "has_alert":               bool(
             consecutive_repeats or frequency_bursts or len(rc3_components) >= 3
+            or cross_session_repeats
         ),
     }
 
@@ -240,7 +281,8 @@ def get_m04_contribution(window_minutes: int = 1440) -> dict:
     }
 
 
-def get_m05_contribution(session: str) -> dict:
+def get_m05_contribution(session: str,
+                         exclude_sources: frozenset = frozenset({BRIDGE_SOURCE})) -> dict:
     """
     Area 13 M05 연계: session_inc_count
     해당 session에서 RC-2 이상 실패 건수 반환.
@@ -249,10 +291,13 @@ def get_m05_contribution(session: str) -> dict:
     all_entries = _load_all_entries()
     inc_rcs = {"RC-2", "RC-3", "RC-4"}
     count = 0
+    want = session_str[1:] if session_str[:1] in ("S", "s") else session_str
     for e in all_entries:
         if e.get("rc") in inc_rcs:
-            ctx = e.get("context", {})
-            if ctx.get("session") == session_str:
+            ctx = e.get("context") or {}
+            if exclude_sources and ctx.get("source") in exclude_sources:
+                continue
+            if _entry_session(e) == want:
                 count += 1
     return {
         "metric":      "M05",
