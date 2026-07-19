@@ -1612,6 +1612,7 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
     round_num = 0
     final_result = None
     _truncation_count = 0  # EAG-S378-RC-E
+    _text_parts: list = []  # EAG-S429-DOMI-TEXT-ACCUM-IMPL-001
     # [RC-F] EAG-S380-RC-F-PAYLOAD-001 entry state (RC-E _truncation_count untouched)
     call_result = None
     _rc_f_chunk_requested = False
@@ -1642,7 +1643,8 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
             _emit_event({"tag": "BTB_HANDOFF", "agent": "domi",
                          "session": session, "round": round_num,
                          "elapsed_s": round(elapsed, 1), "handoff": _btb_handoff_count})
-            _btb_partial = call_result["text"] if (call_result and call_result.get("ok")) else ""
+            _btb_partial = "".join(_text_parts) if _text_parts else (
+                call_result["text"] if (call_result and call_result.get("ok")) else "")
             final_result = {
                 "ok": True,
                 "text": (_btb_partial + chr(10) + chr(10) + "[BTB_HANDOFF_RESUME] "
@@ -1650,6 +1652,7 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
                          "Re-request including this marker to continue."),
                 "error": None,
                 "rounds_used": round_num,
+                "text_complete": False,
                 "btb_handoff": _btb_handoff_count,
                 "audit": _make_audit_bundle(round_num, audit_trail)}
             break
@@ -1772,6 +1775,11 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
             round_num += 1
             continue
 
+        # EAG-S429-DOMI-TEXT-ACCUM: accumulate non-tool text exactly once per call
+        _ct = call_result.get("text") or ""
+        if _ct:
+            _text_parts.append(_ct)
+
         # --- [RC-E] length 절단 이어받기 (EAG-S378-RC-E-TRUNCATION-FIX-IMPL-001) ---
         if (call_result.get("truncated")
                 and _truncation_count < MAX_TRUNCATION_CONTINUE
@@ -1804,8 +1812,11 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
             _gcb_report_progress("domi")
         except Exception:
             pass
-        final_result = {"ok": True, "text": call_result["text"], "error": None,
+        final_result = {"ok": True,
+                        "text": "".join(_text_parts) or call_result["text"],
+                        "error": None,
                         "rounds_used": round_num,
+                        "text_complete": not bool(call_result.get("truncated")),
                         "audit": _make_audit_bundle(round_num, audit_trail)}
         break
 

@@ -1,4 +1,5 @@
 # EAG-S378-RC-E-TC-ADD-001
+# EAG-S429-RC-E-CONTRACT-SUPERSEDE-001: `text` expectation superseded (accumulate, not last-wins).
 # RC-E truncation-continuation regression lock:
 #   Domi runtime finish_reason=="length" detection + _run_design_loop continuation + cap (MAX_TRUNCATION_CONTINUE)
 import pytest
@@ -53,7 +54,10 @@ def test_truncation_continues_then_completes(_stub, monkeypatch):
     monkeypatch.setattr(dr, "_call_openai", _fake)
     res = dr._run_design_loop("p", "c", session="S-TEST")
     assert res["ok"] is True
-    assert res["text"] == "full-final"
+    # EAG-S429-RC-E-CONTRACT-SUPERSEDE: S378 last-wins `text` superseded by S429 accumulation.
+    # RC-E core (detect/continue/cap) unchanged; only `text` semantics updated.
+    assert res["text"] == "part1full-final"
+    assert res.get("text_complete") is True
     assert res["rounds_used"] == 0
     assert calls["n"] == 2
     assert len([e for e in _stub if e.get("tag") == "TRUNCATION_CONTINUE"]) == 1
