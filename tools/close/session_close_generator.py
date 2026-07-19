@@ -372,6 +372,123 @@ def step_5_session_report(sc: dict, n: int) -> None:
     except Exception as e:
         print(f'[WARN] step_5_session_report 생성 실패 (SESSION CLOSE 계속): {e}')
 
+# ── S432 신규: 세션 자책 기록 -> failure_memory 적재 (채륄5) ──────
+# EAG-S432-CH5-INGEST-IMPL-001
+
+SELF_FAILURE_SOURCE = 'session_close'
+
+_INCIDENT_DESIGN_RE = re.compile(r'^(D[1-9]\d?)\s*[:：]')
+
+_INCIDENT_KEYWORDS = (
+    ('타임아웃', 'SELF-TIMEOUT'),
+    ('응답 절단', 'SELF-BTB-HANDOFF'),
+    ('분할', 'SELF-BTB-HANDOFF'),
+    ('회귀', 'SELF-REGRESSION'),
+    ('파라미터', 'SELF-TOOL-PARAM'),
+    ('HTTP 400', 'SELF-TOOL-PARAM'),
+    ('재발', 'SELF-RECURRENCE'),
+)
+
+_NEG_KEYWORDS = (
+    ('정보', 'SELF-NEG-INFO'),
+    ('누락', 'SELF-NEG-OMIT'),
+    ('순서', 'SELF-NEG-ORDER'),
+    ('오산', 'SELF-NEG-COUNT'),
+    ('건수', 'SELF-NEG-COUNT'),
+    ('추측', 'SELF-NEG-GUESS'),
+    ('오진단', 'SELF-NEG-MISDIAG'),
+)
+
+
+def _self_failure_code(text: str, origin: str) -> str:
+    """자연어 자책 문장 -> 고정 error_code. 미등록은 문장 해시로 수렴한다."""
+    t = (text or '').strip()
+    if origin == 'incidents':
+        m = _INCIDENT_DESIGN_RE.match(t)
+        if m:
+            return 'SELF-DESIGN-' + m.group(1).upper()
+        for kw, code in _INCIDENT_KEYWORDS:
+            if kw in t:
+                return code
+        return 'SELF-UNKNOWN-' + hashlib.sha256(t.encode('utf-8')).hexdigest()[:8]
+    body = t
+    if body.upper().startswith('NEG:'):
+        body = body[4:].strip()
+    for kw, code in _NEG_KEYWORDS:
+        if kw in body:
+            return code
+    return 'SELF-NEG-UNKNOWN-' + hashlib.sha256(body.encode('utf-8')).hexdigest()[:8]
+
+
+def ingest_self_failures(sc: dict, n: int) -> None:
+    """단계III-2.5: caddy_governance_record_s{n}의 incidents / caddy_self_report(NEG)를
+    area_15 failure_memory에 적재한다. POS는 적재하지 않는다.
+    - 세션 내 동일 error_code는 1건으로 축약하되 occurrences로 원본 건수 보존.
+    - CLOSE 재실행 시 동일 (session, error_code) 선재적분은 SKIP.
+    - 어떤 경우에도 예외를 올리지 않는다(CLOSE 중단 금지).
+    EAG: EAG-S432-CH5-INGEST-IMPL-001
+    """
+    try:
+        _r = str(Path(__file__).resolve().parents[2])
+        if _r not in sys.path:
+            sys.path.insert(0, _r)
+        from tools.governance import area_15_failure_memory as a15
+
+        gov = sc.get('caddy_governance_record_s%d' % n) or {}
+        incidents = [x for x in (gov.get('incidents') or [])
+                     if isinstance(x, str) and x.strip()]
+        negs = [x for x in (gov.get('caddy_self_report') or [])
+                if isinstance(x, str) and x.strip().upper().startswith('NEG:')]
+        if not incidents and not negs:
+            print('[SKIP] ingest_self_failures: 대상 없음')
+            return
+
+        session_key = str(n)
+        existing = set()
+        for e in a15._load_all_entries():
+            ctx = e.get('context') or {}
+            if ctx.get('session_report') is True and a15._entry_session(e) == session_key:
+                existing.add(e.get('error_code'))
+
+        groups = {}
+        for origin, rc, items in (('incidents', a15.FailureCategory.RC2, incidents),
+                                  ('neg', a15.FailureCategory.RC1, negs)):
+            for raw in items:
+                code = _self_failure_code(raw, origin)
+                g = groups.get(code)
+                if g is None:
+                    groups[code] = {'rc': rc, 'origin': origin,
+                                    'text': raw.strip(), 'count': 1}
+                else:
+                    g['count'] += 1
+
+        recorded = 0
+        skipped = 0
+        for code, g in groups.items():
+            if code in existing:
+                skipped += 1
+                continue
+            a15.record_failure(
+                category=g['rc'],
+                component='caddy',
+                error_code=code,
+                description=g['text'][:500],
+                context={
+                    'session':        session_key,
+                    'session_report': True,
+                    'source':         SELF_FAILURE_SOURCE,
+                    'origin':         g['origin'],
+                    'occurrences':    g['count'],
+                },
+                actor='caddy',
+            )
+            recorded += 1
+        print('[SELF-FAILURE-INGEST] {"session": %d, "codes": %d, "recorded": %d, "skipped": %d}'
+              % (n, len(groups), recorded, skipped))
+    except Exception as e:
+        print('[WARN] ingest_self_failures 실패 (SESSION CLOSE 계속): %s' % e)
+
+
 # ── S273 신규: Step 5.5 Freeze Sync ──────────────────────────────
 
 def step_5_5_freeze_sync() -> str:
@@ -1229,6 +1346,11 @@ def main() -> None:
     print()
     print('── 단계III-2: S291 Step 5 Session Report 생성 ─────────────')
     step_5_session_report(sc, n)
+
+    # ── III-2.5 (사후): S432 채륄5 자책 기록 적재
+    print()
+    print('── 단계III-2.5: S432 세션 자책 기록 -> failure_memory 적재 ──')
+    ingest_self_failures(sc, n)
 
     # ── III-3 (사후): Jeni Session Context 생성 (Step 5.7)
     print()
