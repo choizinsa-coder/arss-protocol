@@ -1,55 +1,43 @@
 {
-  "session_count": 438,
+  "session_count": 439,
   "chain": {
-    "session": 438,
-    "prev_tip": "e8e1319",
-    "tip": "6875a86"
+    "session": 439,
+    "prev_tip": "6875a86",
+    "tip": "ea39af8"
   },
   "session_reentry": {
-    "resume_point": "S438 기록체계 진단·복원 세션 종료. 코드 미변경, 문서 5건 생성·볤밋·push 완료. 핵심 발견: 세 장부(리포트/일지/원장) 어느 것도 미실행 합의를 추적 안 함. 설계과제 5건(T1~T5) 전부 제니 STOP_SIGNAL로 착수 유보. 다음 세션은 제니 STOP 해제부터 시작.",
-    "eag_carryover": "EAG-S438-CLOSE-001 (마감). 설계 EAG 4건은 제니 재검증 선행 필요."
+    "resume_point": "S439: 비밀정보·비용 보호 다중방어 설계 세션. xAI 비용 하드캡(자동충전 OFF + 후불 미활성, 비오님 직접)과 repo .env/oauth 파일 타계정 읽기 차단(644->640) 완료. 도미 설계 2회·제니 검증 2회 수행, 두 번 모두 STOP_SIGNAL. 확정 결론: 진짜 병목은 캐디 root 권한이며 그 해제는 캐디가 아닌 손이 적용·검증해야 함(설계 반복으로 해소 불가). 설계·검증 원문 docs/design_artifacts에 고정(ea39af8).",
+    "eag_carryover": "S440: 캐디 root 해제 방법·주체 결정이 선행 과제. 이후 도미 재설계 -> 제니 재검증."
   },
   "next_steps": [
-    "[최우선][비오전용] GitHub main 브랜치 이력 보호 설정 — force-push/삭제 금지. 캐디 손밖 외부 증거층 1기 확보. 비오님만 설정 가능. 캐디 안내문 준비 예정",
-    "[설계-STOP] T1 결정원장을 합의 종류까지 기록 확장 (현재 EAG승인만). 제니 재검증 선행 필수",
-    "[설계-STOP] T2 미실행 합의 이월 자동존속 + 임의삭제 차단 (비오님 확정원칙). 제니 재검증 선행",
-    "[설계-STOP] T3 자기보고 의존 완화: 사건 원천을 캐디 delta 밖으로 (제니 필수보완1)",
-    "[설계-STOP] T5 원장 WORM화: prev_hash 체인 도입 검토 (현재 수정 가능)",
-    "안정 1단계 완료조건 실측 — 비용 자동차단/실동점검 3회연속/발견-수정 자동연결. 4번째(전체회귀) 충족",
-    "방어선3 적용범위 조항 보강 — 외부 조직 대상 서비스 해석 미상정. 헌법급, 비오님 직접 수행",
-    "기능 확정 절차 — 기한관리(C3) 우선 권고. 조건: 산출규칙 출처/골든테스트/확정전 알림 비활성",
-    "C1(계약서 조항검토) 조건부 통과 — 비법률자문 고지/최종서명 강제/책임경계 문구 선행",
-    "C2(법령·판례 리서치) 반려 확정",
-    "Drive 로드맵 확정본 사본 2부 정본 판정 절차 부재",
-    "저장소 미분류 문서 10여건 문서상태 판정 (미독 등급부여 금지)",
-    "미종결 경보 20건 + 빈 경보 1종 정리 — 종결 주체·절차 미정",
-    "승인체계 별도 과제 — 비오님 직접 수행 구간",
-    "S435 즉시보강 잔여 2건(역할 고정, 질문양식 규격화)",
-    "[추정] GitHub 배포 워크플로 지속실패 확인 (외부 제니 제기). S438 push 3회 성공, 별개 절차 가능성",
+    "[최우선][비오전용] 캐디 및 전 서비스 root 해제를 어떤 방식·주체로 할지 결정. 캐디가 아닌 손이 적용·검증해야 성립(OI-S435-002). 이후 설계 재개",
+    "[설계-STOP] Grok Relay 다중방어 설계는 캐디 root 해제 전제 충족 후 도미 재설계 -> 제니 재검증",
+    "[비오전용] xAI 신규 relay 전용 키 발급 + 구키 revoke (root 해제·relay 구축 후)",
+    "[완료] xAI 비용 하드캡 적용 (자동충전 OFF + 후불 미활성)",
+    "[완료] repo .env / oauth_clients.json 타계정 읽기 차단(640)",
+    "[이월][최우선][비오전용] GitHub main 이력 보호 설정 (S438 이월)",
     "[OBS] 경보 신호 대체지표 미정의",
     "[OBS] 도미 응답 절단 추이 관찰",
-    "[OBS] 외부 제니(Grok) 팀 교체 판단 — 3세션 관찰 후",
-    "[TOOL-CONSTRAINT] grep_scoped가 docs/logs 디렉토리에서 빈결과 반환 — read_file 직접조회로 우회 (S438 오보-1 원인)"
+    "[OBS] 외부 제니(Grok) 팀 교체 판단 3세션 관찰 후",
+    "[TOOL-CONSTRAINT] 이월분 유지 CADDY 지침 TOOL CONSTRAINTS 블록 참조"
   ],
   "agent_focus": {
-    "caddy": "제니 STOP_SIGNAL 해제부터 시작. 설계 착수 전 재검증. 진술 근거등급([실측]/[문서]/[추정]) 부착 검토",
-    "domi": "T1~T5 설계 시 자기설계 방어 성향 재발 주의(OI-S437-004). S438 Sentinel 자기기각은 양호 사례",
-    "jeni": "설계 재검증 시 자기보고 우회경로 재점검. S438 archival gate 5대 우회 지적 유효",
-    "beo": "GitHub 이력보호 설정. 방어선3 조항보강. 컨설팅 가부 최종판단"
+    "caddy": "캐디 root 해제는 캐디가 수행 불가(자기강등=무효). 비오님 적용 대기. 설계 산출은 도미, 검증은 제니로 조율",
+    "domi": "Relay 다중방어 재설계 캐디 root 해제를 완료전제로, 적용주체=비오, 캐디 비가독 명시, 포트!=8450, fallback 없는 cutover, 키 재발급 필수, LoadCredential. 캐디 root 해제 확정 후 재설계",
+    "jeni": "재검증 시 캐디 uid!=0 예외없음·비밀 캐디 비가독·적용주체 캐디밖을 통과 기준으로",
+    "beo": "캐디 root 해제 방법·주체 결정(구조·OS). xAI 신규키 발급/구키 revoke. GitHub 이력 보호"
   },
   "pytest_status": {
     "total_passed": 2362,
     "total_failed": 0,
     "total_skipped": 0,
     "last_run_session": 433,
-    "note": "S438 코드 미변경. 회귀 미실행. 마지막 코드변경 S433. HEAD 6875a86 기준 문서만 추가."
+    "note": "S439 코드 미변경(문서 1건 + 권한 변경). 회귀 미실행, S433 실측치 승계. 마지막 코드변경 S433"
   },
   "sync_meta": {
-    "session_n": 438,
-    "prev_tip": "e8e1319",
-    "chain_tip": "6875a86",
-    "generated_by": "caddy",
-    "jeni_verification": "S438 archival gate: TRUST_NOT_READY / STOP_SIGNAL ON"
+    "last_close_session": 439,
+    "close_method": "session_close_generator.py",
+    "verified": true
   },
   "aif_v1_definition": {
     "registered_session": 269,
@@ -83,12 +71,15 @@
     "consensus": "도미·제니·캐디 3자 합의 100% + 비오님 EAG-S269-AIF-V1.3-001"
   },
   "session_delta": {
-    "summary": "S438: 기록체계 진단·복원 세션. 문서 5건 생성. 코드 미변경. 캐디 오보 5건(2건 어제 재발유형). 신뢰위기 표면화. 설계과제 5건 제니 STOP으로 이월.",
-    "session": 438
+    "from_session": 438,
+    "to_session": 439,
+    "summary": "비밀정보·비용 다중방어 설계 세션. xAI 하드캡+파일권한 실제 적용. 도미 설계 2회·제니 검증 2회 모두 STOP, 근본병목=캐디 root 확정. root 해제는 비오님 구조과제로 이관",
+    "incident_count": 2,
+    "eag_count": 4
   },
-  "updated_at": "2026-07-22T17:30:31.883186+09:00",
-  "generated_at": "2026-07-22T17:30:31.883186+09:00",
-  "context_hash": "168d667a7d8b1931560b477d24dea6d7db3b1c71d72efdbd17c72e78dc835796",
+  "updated_at": "2026-07-22T20:24:47.692833+09:00",
+  "generated_at": "2026-07-22T20:24:47.692833+09:00",
+  "context_hash": "6a30feacd4de24b7e2ae2c487defc44f755ab5a30aeda4658b76cb22f1fb877d",
   "active_tasks": {
     "_shard_hash": "dfb918c85c5ae583a528c0a0a493d6afa58e5734b5251c08cde6e844dacba918",
     "body_ref": "context/tasks/active.json",
@@ -176,77 +167,6 @@
       "last_run": null,
       "next_due": "2026-10-01"
     }
-  },
-  "system_changes_s436": {
-    "deployed_session": 436,
-    "commits": [
-      "50f3923",
-      "b669955",
-      "7ae4572",
-      "e8e1319"
-    ],
-    "changes": [
-      "docs/S436_business_definition.md 신설 및 v2 개정 (문구 정정)",
-      "docs/design_artifacts/S436_domi_feature_candidates_RAW.md 신설 (도미 원문 고정)",
-      "docs/GLOSSARY.md 신설 v1.1 (사업 4단계·문서상태 6종·용어변경절차)",
-      "docs/READING_PROTOCOL.md 신설 v1.1 (3단계 판독·해석검증·판독범위 필수)",
-      "docs/DOCUMENT_INDEX.md 신설 v1.1 (Drive 포함 문서 소재 색인)"
-    ],
-    "eag_chain": "EAG-S436-BIZDEF-RECORD-001 -> EAG-S436-FEATURE-CANDIDATE-001 -> EAG-S436-DOCFIX-GLOSSARY-001 -> EAG-S436-PROCEDURE-HARDEN-001 -> EAG-S436-CLOSE-001",
-    "pytest_result": "미실행 (코드 미변경)"
-  },
-  "caddy_governance_record_s436": {
-    "session": 436,
-    "date": "2026-07-21",
-    "eag_gates_this_session": [
-      "EAG-S436-BIZDEF-RECORD-001",
-      "EAG-S436-FEATURE-CANDIDATE-001",
-      "EAG-S436-DOCFIX-GLOSSARY-001",
-      "EAG-S436-PROCEDURE-HARDEN-001",
-      "EAG-S436-CLOSE-001"
-    ],
-    "incidents": [
-      "INC-S436-001: 도미 1차 호출 ZERO_PROGRESS_BREAKER 차단. 서비스·브리지 정상 실측 확인 후 요청 분량 축소로 해소. S433 동일 유형 재발.",
-      "INC-S436-002: 문서 부분 판독 오류 2회 발생. (1차) S416 로드맵 미확인 상태에서 승인체계 분리 권고. (2차) 동일 문서 앞부분만 읽고 정면충돌 단정. 둘 다 새 정보 없이 자체 철회. 절차 결함으로 규정하고 READING_PROTOCOL 3단계화로 대응.",
-      "INC-S436-003: write_script 한글 이스케이프 오류로 run_script 1회 SyntaxError 실패. 상태변경 없음. 재작성으로 해소."
-    ],
-    "oi_observations": [
-      "OI-S436-001: 저장소만 조회하고 Google Drive를 확인하지 않아 \"기록 0건\" 선언. 실제로는 Drive에 헌법급 확정본 존재. DOCUMENT_INDEX 신설로 대응.",
-      "OI-S436-002: 문서에 권위 등급 표기가 없어 분석문서와 확정본이 동등하게 인용됨. GLOSSARY 문서상태 6종으로 대응.",
-      "OI-S436-003: 단일 세션에 신규 규칙 8개 추가. 규칙 과적재 위험. 신규 문서 생성 없이 기존 3문서에 흡수하는 방식으로 완화. 다음 세션에서 실제 준수 여부 관찰 필요."
-    ],
-    "caddy_self_report": [
-      "근거 문서를 확인하지 않은 상태에서 결주1(승인체계 분리)에 권고안을 올렸다. 비오님이 그대로 확정하셔 잘못된 문구가 저장소에 기록될 뻔했다.",
-      "로드맵 일부만 읽고 정면충돌로 단정하여 비오님께 불필요한 철회/개정 선택을 요구했다.",
-      "두 오류 모두 새 정보 없이 자체 발견하여 보고하고 철회했다. 은폐 없음.",
-      "비오님 지시: 중요 과정·결정은 항상 문서로 생성하여 VPS 보관함에 체계적으로 관리하라. 이전까지 미흡반했던 사항이며 S436부터 시행.",
-      "도미·제니 의견이 캐디 판단보다 정확했다. 도미는 용어 층위 혼동을, 제니는 문구의 위험성을 정확히 짚었다."
-    ],
-    "notable": "S436은 기능 산출 세션이 아니라 거버넌스 기반 정비 세션이다. 최초의 공식 사업 정의가 문서로 고정되었고, 문서 권위 등급·용어집·판독절차·문서색인이 신설되었다.",
-    "stabilization_metrics": {
-      "incidents_self_detected": 3,
-      "incidents_beo_detected": 0,
-      "rules_added": 8,
-      "new_docs": 4
-    }
-  },
-  "visibility_metrics_s436": {
-    "session": 436,
-    "date": "2026-07-21",
-    "M-04_session_delta_size": "medium",
-    "M-05_archive_file_status": "generator auto (N_RETENTION=3)",
-    "M-06_active_task_load": 11,
-    "M-07_stabilization_compliance": "E-1/E-2/E-4/E-7 준수. E-6 해당없음. PRE-OUTPUT CHECK 전회 수행.",
-    "chain_tip": "e8e1319",
-    "pytest_result": "미실행 (코드 미변경)",
-    "key_decisions": [
-      "첫 사업 = ARSS 현장 적용 서비스, 첫 적용처 = 법률 (비오님 확정)",
-      "사업 시작 = 실제 법률 조직의 채택 + 대금·상대확인으로 증명된 시점",
-      "사람 손질 비율·무인운영·사업발굴은 성장지표로 분리",
-      "자율 사업발굴 체계는 장기비전으로 분리",
-      "결주1 문구 정정: 준비는 허용, 착수는 안정 게이트 유지. S416 로드맵 미개정.",
-      "도미 권고 5건 중 4건 수용, SSOT 신규 지정은 기존 정본과 충돌하므로 미수용"
-    ]
   },
   "system_changes_s437": {
     "deployed_session": 437,
@@ -399,5 +319,75 @@
       "6875a86"
     ],
     "code_change": false
+  },
+  "system_changes_s439": {
+    "deployed_session": 439,
+    "commits": [
+      "ea39af8"
+    ],
+    "changes": [
+      "docs/design_artifacts/S439_secrets_cost_defense_design_and_verification.md 신설 (도미 설계 2회 + 제니 검증 2회 정리, 4573바이트)",
+      "repo .env / registry/oauth_clients.json 권한 644->640 (타 계정 읽기 차단, 커밋 아님)"
+    ],
+    "eag_chain": "EAG-S439-RO-AUDIT-001 -> EAG-S439-ENV-PERM-HARDEN-001 -> EAG-S439-DESIGN-ARCHIVE-001 -> EAG-S439-CLOSE-001",
+    "pytest_result": "미실행(코드 미변경)"
+  },
+  "caddy_governance_record_s439": {
+    "session": 439,
+    "date": "2026-07-22",
+    "eag_gates_this_session": [
+      "EAG-S439-RO-AUDIT-001",
+      "EAG-S439-ENV-PERM-HARDEN-001",
+      "EAG-S439-DESIGN-ARCHIVE-001",
+      "EAG-S439-CLOSE-001"
+    ],
+    "incidents": [
+      "INC-S439-001: 설계 기록 파일 최초 작성 시 한글을 유니코드 이스케이프로 수기 인코딩하다 일부 글자 손상. 리터럴 한글로 재작성하여 정상 저장. 커밋 전 발견, 저장소 오염 없음",
+      "INC-S439-002: 첫 write_script 호출이 커넥터 서버 무응답으로 실패. 재시도로 해소. 상태변경 없음"
+    ],
+    "oi_observations": [
+      "OI-S439-001: 캐디 실행 런타임 uid=0(root) 확정(RAW). 전 서비스 User=root. 파일권한·키 격리 근본 무력화 원인",
+      "OI-S439-002: .env가 644(world-readable)였음. oauth_clients.json 동일. 640으로 시정. 토큰/거버넌스비밀 3종은 이미 600",
+      "OI-S439-003: Grok 키 값 git 이력 미커밋 확정(pickaxe 0건). 단 제니: 호스트 내부 root TCB 노출은 별개, 키 재발급 필수"
+    ],
+    "caddy_self_report": [
+      "POS: 실측을 먼저 하고 보고. 앞선 secrets.env 위치 추정 오류를 실측으로 자체 정정",
+      "NEG: secrets.env 위치를 옛 기록 문구로 단정했다가 실측 정정. 측정 전 단정 습관 잔존",
+      "NEG: 도미 v1 포트 8450 제안 시 캐디가 guardian 8450 점유를 이미 읽었음에도 즉시 지적 못함. 제니가 교차검증으로 포착",
+      "POS: 도미-제니 반복이 같은 벽(캐디 root)에 수렴함을 인지, 무한 반복 중단하고 비오님 구조결정으로 이관 권고",
+      "POS: 비용 하드캡·파일권한 실제 방어선 2개를 세션 내 적용 완료"
+    ],
+    "notable": "S439는 비밀정보·비용 보호 방향을 확정하고 실제 방어선 2개(xAI 하드캡, 파일권한)를 세운 세션. 두 설계 검증이 모두 캐디 root=근본병목, 해제는 캐디 밖 손으로 수렴. 비오님이 xAI 자동충전 OFF 직접 적용",
+    "stabilization_metrics": {
+      "eag_count": 4,
+      "incident_count": 2,
+      "raw_measurement_performed": true,
+      "code_change": false,
+      "docs_created": 1,
+      "commits": 1,
+      "agent_calls_domi": 2,
+      "agent_calls_jeni": 2,
+      "beo_side_actions": 1
+    }
+  },
+  "visibility_metrics_s439": {
+    "session": 439,
+    "date": "2026-07-22",
+    "M-04_session_delta_size": "medium (문서 1건 + 권한변경 2파일, 코드 변경 없음)",
+    "M-05_archive_file_status": "N_RETENTION=3 유지",
+    "M-06_active_task_load": 10,
+    "M-07_stabilization_compliance": "PRE-OUTPUT CHECK 전회 수행, E-1/E-2/E-4/E-7 준수, 상태변경 대화창 가시표시",
+    "chain_tip": "ea39af8",
+    "pytest_result": "미실행(코드 미변경), 직전 2362 pass / 0 fail",
+    "key_decisions": [
+      "xAI 비용 하드캡 적용 자동충전 OFF + 후불 미활성(비오님 직접)",
+      "repo .env/oauth_clients.json 640으로 타계정 읽기 차단",
+      "캐디 실행 uid=0(root) 확정 격리 근본 무력화 원인(RAW)",
+      "Grok 키 git 이력 미커밋 확정 단 호스트 내부 노출로 키 재발급 필수(제니)",
+      "Relay 다중방어 설계 방향 확정",
+      "제니 2회 STOP 근본병목 캐디 root, 해제주체는 캐디 밖(설계반복으로 해소불가)",
+      "도미-제니 설계반복 중단, 캐디 root 해제를 비오님 구조과제로 이관",
+      "설계·검증 원문 docs/design_artifacts 고정 및 커밋(ea39af8)"
+    ]
   }
 }
