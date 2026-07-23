@@ -18,8 +18,8 @@ ERROR_LOG = ROOT + '/tools/caddy_error_log/caddy_errors.jsonl'
 AUDIT_LOG = ROOT + '/runtime/governance/audit/wf05_audit.log'
 OUTPUT = ROOT + '/runtime/governance/audit/ollama_analysis_latest.json'
 OLLAMA_BASE = 'http://127.0.0.1:11434'
-OLLAMA_TIMEOUT = 120
-MAX_ENTRIES = 30
+OLLAMA_TIMEOUT = 240
+MAX_ENTRIES = 12
 KST = timezone(timedelta(hours=9))
 
 
@@ -62,7 +62,8 @@ def ask_ollama(prompt):
         'model': 'phi4-mini',
         'prompt': prompt,
         'stream': False,
-        'options': {'num_predict': 300, 'temperature': 0.1}
+        'keep_alive': '10m',
+        'options': {'num_predict': 200, 'temperature': 0.1}
     }).encode()
     req = urllib.request.Request(
         OLLAMA_BASE + '/api/generate',
