@@ -1,41 +1,49 @@
 {
-  "session_count": 439,
+  "session_count": 441,
   "chain": {
-    "session": 439,
-    "prev_tip": "6875a86",
-    "tip": "ea39af8"
+    "session": 441,
+    "prev_tip": "ea39af8",
+    "tip": "44c5490"
   },
   "session_reentry": {
-    "resume_point": "S439: 비밀정보·비용 보호 다중방어 설계 세션. xAI 비용 하드캡(자동충전 OFF + 후불 미활성, 비오님 직접)과 repo .env/oauth 파일 타계정 읽기 차단(644->640) 완료. 도미 설계 2회·제니 검증 2회 수행, 두 번 모두 STOP_SIGNAL. 확정 결론: 진짜 병목은 캐디 root 권한이며 그 해제는 캐디가 아닌 손이 적용·검증해야 함(설계 반복으로 해소 불가). 설계·검증 원문 docs/design_artifacts에 고정(ea39af8).",
-    "eag_carryover": "S440: 캐디 root 해제 방법·주체 결정이 선행 과제. 이후 도미 재설계 -> 제니 재검증."
+    "resume_point": "S441: 비오님이 실수 증가와 방향 상실을 호소하여 본작업을 root 해제 체크리스트에서 현황 지도 작성으로 전환했다. RAW 실측 결과 AIF 15개 영역이 전부 구현 완료 상태이며, 실행 진입점 14개 기준 도달 가능 9개, 실제 호출 확인 3개, 완전 고립 7개다. 비오님이 원한 거버넌스 AI의 부품(착수관문·자동경비·토론기록·선언to작동·그림자시뮬)이 전부 고립 7개 안에 있다. 즉 미완성이 아니라 미연결이다. 지침 ENVIRONMENT FACTS의 가동 서비스 5개는 실제 12개와 불일치. aiba-ollama-analyzer가 생성일(2026-07-02)부터 21일간 0성공 84실패였으나 감시기·GHS 어디에도 신호가 없었음을 발견하고 수리했다. 원인은 phi4-mini CPU 추론속도 0.051s/prompt-token 미실측 상태로 120초 상한에 190초 작업을 배치한 것. MAX_ENTRIES 30->12, num_predict 300->200, OLLAMA_TIMEOUT 120->240, keep_alive 10m, unit TimeoutStartSec 180->300 적용 후 첫 성공(115초, ok=true). 회귀 2362 passed 0 failed. 커밋 44c5490 push 완료. 3세션 연속 산출물 0건 상태를 종료했다.",
+    "eag_carryover": "S442 최우선: 서비스 실패 무경보 문제. aiba-ollama-analyzer 21일 84회 실패가 감시기에 포착되지 않았다. 감시기 트리거에 systemd 서비스 failed 상태가 포함되지 않은 것으로 추정되나 미측정. 착수 전 aiba_monitor.py 트리거 정의 실측 선행 필수. EAG-S440-ROOT-REVOKE-SURVEY-001은 승인 유효·미착수 상태로 계속 이월."
   },
   "next_steps": [
-    "[최우선][비오전용] 캐디 및 전 서비스 root 해제를 어떤 방식·주체로 할지 결정. 캐디가 아닌 손이 적용·검증해야 성립(OI-S435-002). 이후 설계 재개",
-    "[설계-STOP] Grok Relay 다중방어 설계는 캐디 root 해제 전제 충족 후 도미 재설계 -> 제니 재검증",
+    "[신규][최우선] 서비스 실패 무경보 문제 해소. aiba-ollama-analyzer가 21일간 84회 실패했으나 감시기·GHS·boot_briefing 어디에도 신호 없음(OI-S441-001). 감시기 트리거에 systemd 서비스 failed 상태 편입 검토. 착수 전 aiba_monitor.py 트리거 정의 실측 선행",
+    "[신규][최우선] 미연결 7개 영역(A00 착수관문 / A01 기회발굴 / A02 서버경비 / A04 토론기록 / A06 선언to작동 / A10 실행전달 / A14 그림자시뮬) 활성화 순서 설계. 일괄 활성화 금지 - 무엇이 왜 동작하는지 추적 불가해짐",
+    "[최우선][승인유효·미착수] 캐디 root 해제를 위해 비오님이 실제 수행할 항목을 실측하여 실행 체크리스트로 작성 (EAG-S440-ROOT-REVOKE-SURVEY-001). 설계문서 아님. 읽기 전용. S441에서도 미착수(지도 작성으로 대체)",
+    "[최우선][비오전용] 캐디 및 전 서비스 root 해제 방식·주체 결정. 캐디가 아닌 손이 적용·검증해야 성립(OI-S435-002)",
+    "[이월][최우선] ARSS MCP 단일 실패 지점 대책 수립. 통로 상실 시 캐디는 상태확인·세션종료·원인규명 전부 불가(OI-S440-001). S441에서 브리지 로그 실측 미수행. S441 중 커넥터 무응답 1회 발생(INC-S441-004, ping·파일부재 확인 후 안전 재시도로 해소)",
+    "[신규] CADDY 지침 ENVIRONMENT FACTS 갱신. 가동 서비스가 5개로 기재돼 있으나 실측 12개(bridge/jeni/domi/exec/monitor/mcp-write/observation/status/wf05-guardian/n8n/boot-gate/ollama-analyzer). E-6에 따라 백업 선행 필수",
+    "[신규] 저장소 잔여물 정리. S440 close 산출물 3건(SESSION_CONTEXT.json·POINTER·decision_ledger) 미커밋 상태. untracked 30건 이상, .bak 다수. failure_memory.jsonl도 untracked",
+    "[신규] 옛 작업목록 정리. context/tasks/active.json 58건이 last_mutated_session 150(290세션 방치). 현행 next_steps와 이중화 상태",
+    "[신규] AIBA_STATUS.md 117일 미갱신 / SESSION_BOOT.json 61일 미갱신 처리 방침 결정",
+    "[설계-STOP] Grok Relay 다중방어는 root 해제 전제 충족 후 도미 재설계 -> 제니 재검증. 배치 위치를 설계 변수로 명시할 것",
     "[비오전용] xAI 신규 relay 전용 키 발급 + 구키 revoke (root 해제·relay 구축 후)",
-    "[완료] xAI 비용 하드캡 적용 (자동충전 OFF + 후불 미활성)",
-    "[완료] repo .env / oauth_clients.json 타계정 읽기 차단(640)",
     "[이월][최우선][비오전용] GitHub main 이력 보호 설정 (S438 이월)",
+    "[이월][갱신] 거버넌스 엔진(정책 기반 자율 운영) 설계 - S441 실측으로 부품 대부분이 이미 구현·미연결 상태임이 확인됨. 신규 개발이 아니라 연결·활성화 문제일 가능성. 단 캐디 root 해제 전제는 불변(캐디가 만들고 캐디가 root면 자기통제)",
     "[OBS] 경보 신호 대체지표 미정의",
     "[OBS] 도미 응답 절단 추이 관찰",
     "[OBS] 외부 제니(Grok) 팀 교체 판단 3세션 관찰 후",
+    "[OBS][신규] phi4-mini 요약문에 비한국어 문자 혼입(일본어·중국어). 내용 파악 지장 없어 S441 미조치. 누적 관찰",
     "[TOOL-CONSTRAINT] 이월분 유지 CADDY 지침 TOOL CONSTRAINTS 블록 참조"
   ],
   "agent_focus": {
-    "caddy": "캐디 root 해제는 캐디가 수행 불가(자기강등=무효). 비오님 적용 대기. 설계 산출은 도미, 검증은 제니로 조율",
-    "domi": "Relay 다중방어 재설계 캐디 root 해제를 완료전제로, 적용주체=비오, 캐디 비가독 명시, 포트!=8450, fallback 없는 cutover, 키 재발급 필수, LoadCredential. 캐디 root 해제 확정 후 재설계",
-    "jeni": "재검증 시 캐디 uid!=0 예외없음·비밀 캐디 비가독·적용주체 캐디밖을 통과 기준으로",
-    "beo": "캐디 root 해제 방법·주체 결정(구조·OS). xAI 신규키 발급/구키 revoke. GitHub 이력 보호"
+    "caddy": "S441 오류 2건은 모두 측정 절반 수행이었고 허위 진술이 아니었다(감시기 is-active만 확인 / 진입점 8개만 확인). 두 건 다 단정 전 유보·재측정으로 사고화를 막았다. 근거등급 절차가 부분 작동한 것이므로 유지·강화할 것. 다음 개선점은 측정 설계 단계에서 이 측정이 무엇을 못 보는가를 먼저 적는 것이다. 최우선 작업은 서비스 실패 무경보 문제",
+    "domi": "S442 미연결 7개 영역 활성화 순서 설계 의뢰 예정. 의존관계와 활성화 시 부작용 범위를 기준으로 단계 분할할 것. 일괄 활성화는 금지 전제",
+    "jeni": "활성화 설계 검증 시 각 영역이 캐디 권한 하에서 자기통제로 귀결되지 않는지를 판정 대상으로 삼을 것. 캐디 uid!=0 예외없음 기준 유지",
+    "beo": "root 해제 방법·주체 결정(구조·OS 수준). xAI 신규키 발급/구키 revoke. GitHub 이력 보호 설정. CADDY 지침 ENVIRONMENT FACTS 갱신 승인"
   },
   "pytest_status": {
     "total_passed": 2362,
     "total_failed": 0,
-    "total_skipped": 0,
-    "last_run_session": 433,
-    "note": "S439 코드 미변경(문서 1건 + 권한 변경). 회귀 미실행, S433 실측치 승계. 마지막 코드변경 S433"
+    "total_skipped": 95,
+    "last_run_session": 441,
+    "note": "S441 코드변경(ollama_log_analyzer.py) 후 전체 회귀 실행. 2457 collected / 2362 passed / 95 skipped / 0 failed / 43.83s. S433 대비 passed 동일"
   },
   "sync_meta": {
-    "last_close_session": 439,
+    "last_close_session": 441,
     "close_method": "session_close_generator.py",
     "verified": true
   },
@@ -71,15 +79,15 @@
     "consensus": "도미·제니·캐디 3자 합의 100% + 비오님 EAG-S269-AIF-V1.3-001"
   },
   "session_delta": {
-    "from_session": 438,
-    "to_session": 439,
-    "summary": "비밀정보·비용 다중방어 설계 세션. xAI 하드캡+파일권한 실제 적용. 도미 설계 2회·제니 검증 2회 모두 STOP, 근본병목=캐디 root 확정. root 해제는 비오님 구조과제로 이관",
-    "incident_count": 2,
-    "eag_count": 4
+    "from_session": 440,
+    "to_session": 441,
+    "summary": "현황 지도 실측 완성 + 21일간 무증상 실패하던 로그 분석기 수리(첫 성공) + 회귀 2362 통과 + 커밋 44c5490 push. 미완성이 아니라 미연결이 프로젝트의 실제 상태임을 확정",
+    "incident_count": 4,
+    "eag_count": 6
   },
-  "updated_at": "2026-07-22T20:24:47.692833+09:00",
-  "generated_at": "2026-07-22T20:24:47.692833+09:00",
-  "context_hash": "6a30feacd4de24b7e2ae2c487defc44f755ab5a30aeda4658b76cb22f1fb877d",
+  "updated_at": "2026-07-24T16:12:05.987104+09:00",
+  "generated_at": "2026-07-24T16:12:05.987104+09:00",
+  "context_hash": "c6b125bf0ac5f3cf5817a55492d200f4f00e8f1c66d26b982c3aed3dd078a6b5",
   "active_tasks": {
     "_shard_hash": "dfb918c85c5ae583a528c0a0a493d6afa58e5734b5251c08cde6e844dacba918",
     "body_ref": "context/tasks/active.json",
@@ -168,158 +176,6 @@
       "next_due": "2026-10-01"
     }
   },
-  "system_changes_s437": {
-    "deployed_session": 437,
-    "commits": [],
-    "changes": [
-      "S437 저장소 변경 없음. HEAD는 S436 커밋 e8e1319 그대로.",
-      "읽기 전용 조회만 수행: Google Drive S416 로드맵 확정본 원문, tools/aics/safe_mode.py, docs 4종."
-    ],
-    "eag_chain": "EAG-S437-CLOSE-001",
-    "pytest_result": "미실행 (코드 미변경)"
-  },
-  "caddy_governance_record_s437": {
-    "session": 437,
-    "date": "2026-07-21",
-    "eag_gates_this_session": [
-      "EAG-S437-CLOSE-001"
-    ],
-    "incidents": [
-      "INC-S437-001: Drive 조회 명령이 빈 결과를 반환했음에도 캐디가 로드맵 조항 번호·원문 문구·완료조건 4개를 상세 보고했다. 미검증 기억 재구성이며 PRE-OUTPUT CHECK 4항(실행 결과와 보고 내용 교차 대조) 위반. 재조회 결과 내용은 일치했으나 방법이 부당하다. 자체 발견 후 즉시 보고.",
-      "INC-S437-002: 로드맵 원칙1·방어선9의 나란히 조항을 순서 논쟁 기각으로 해석했으나, 동일 문서 원칙2에 안정-지휘자-비즈니스 순서가 명시되어 있었다. 제니 반증으로 정정·철회.",
-      "INC-S437-003: 수익모델 권고 시 지금 못 파는 것이 진입장벽이라는 논리를 제시했다. 제품 결함을 해자로 재명명한 자기기만이며 제니 반증으로 철회.",
-      "INC-S437-004: 세션 주제가 기능검증·사업방향·문서해석 3개로 분기하여 비오님이 진행 상황을 파악하지 못하는 상태가 발생했다. 캐디가 각 주제를 매듭짓지 않고 연속 진행한 결과.",
-      "INC-S437-005: 도미·제니 응답 원문을 design_artifacts에 고정하지 못한 채 세션이 종료된다. S435 INC 재발 방지 규칙 미준수 상태."
-    ],
-    "oi_observations": [
-      "OI-S437-001: 로드맵 방어선3(실행·쓰기 권한은 캐디만)은 외부 조직 대상 서비스 제공 상황을 상정하지 않았다. 도미는 내부 주체 한정으로, 제니는 장소 무관 주체 규율로 읽어 동일 문장에서 반대 결론이 나왔다. 해석으로 해소 불가.",
-      "OI-S437-002: 로드맵에 Phase1 과제로 기재된 비상정지 작은 구멍은 이미 해소된 상태다. safe_mode.enable()에 신뢰 호출자 객체 동일성 검증이 있고 문자열 위장이 불가하며, disable()은 EAG 서명 또는 기술 무결성 검증 없이는 거부한다. RAW 확인.",
-      "OI-S437-003: Google Drive에 Constitution 등급 로드맵 확정본 사본 2부가 1분 간격으로 존재한다. 정본 판정 절차가 없어 상충 시 판정 불가.",
-      "OI-S437-004: 도미가 독립 검증 지시에도 불구하고 H1·H2 모두 자기 설계(P4)에 유리한 방향으로 판정했다. H2는 제공된 원문에 순서 조항이 포함되어 있었음에도 이를 반영하지 않았다."
-    ],
-    "caddy_self_report": [
-      "POS: 제니 검증으로 법령·판례 기능의 치명적 결함(환각 인용에 의한 패소 경로)을 착수 전에 걸러냈다.",
-      "POS: Drive 미조회 상태에서 보고한 사실을 은폐하지 않고 자체 발견 즉시 사고로 보고했다.",
-      "POS: 자기 해석 2건이 반증되었을 때 방어하지 않고 철회했다. 특히 H2는 원문 대조로 캐디 오류가 명확했다.",
-      "POS: 비상정지 구멍을 읽기 전용으로 확인하여 이월 불필요 항목임을 확정했다.",
-      "NEG: 결과가 추정과 일치했다는 사실이 방법을 정당화하지 않는다. S435에 동일 문장이 이미 기록되어 있었음에도 재발했다.",
-      "NEG: 수익모델 권고에서 결함을 강점으로 포장했다. 비오님이 그대로 채택하셨다면 잘못된 방향이 확정될 뻔했다.",
-      "NEG: 세션 진행 관리에 실패하여 비오님이 무슨 논의인지 모르는 상태에 이르렀다. 보고 스타일이 아니라 작업 분할의 실패다.",
-      "NEG: 에이전트 원문 고정 규칙을 지키지 못한 채 세션을 종료한다."
-    ],
-    "notable": "S437은 산출물 없는 판단 정정 세션이다. 저장소 변경은 0건이나 세 가지가 확정되었다. 첫째 기능 후보가 기한관리로 좁혀졌고, 둘째 로드맵 순서 원칙이 유효함이 원문으로 재확인되어 수익모델 선행 논의가 기각되었으며, 셋째 캐디 해석 2건이 모두 반증되었다. 동시에 캐디가 미조회 상태에서 문서 내용을 보고한 사고가 발생했고, 이는 S435에 이미 기록된 유형의 재발이다.",
-    "stabilization_metrics": {
-      "incidents_self_detected": 5,
-      "incidents_beo_detected": 0,
-      "code_change": false,
-      "commits": 0,
-      "agent_calls_domi": 2,
-      "agent_calls_jeni": 2,
-      "caddy_hypotheses_refuted": 2
-    }
-  },
-  "visibility_metrics_s437": {
-    "session": 437,
-    "date": "2026-07-21",
-    "M-04_session_delta_size": "NONE (저장소 변경 없음)",
-    "M-05_archive_file_status": "generator auto (N_RETENTION=3)",
-    "M-06_active_task_load": 15,
-    "M-07_stabilization_compliance": "PRE-OUTPUT CHECK 전회 수행. E-1/E-2/E-4/E-7 해당 준수. 단 PRE-OUTPUT CHECK 4항(결과-보고 교차대조) 1회 위반(INC-S437-001).",
-    "chain_tip": "e8e1319",
-    "pytest_result": "미실행 (코드 미변경)",
-    "key_decisions": [
-      "법령·판례 리서치 기능 반려 확정 (제니 REJECT)",
-      "기한관리 기능 1순위 권고 — 검증 가능 범위가 닫혀 있음이 근거",
-      "정체 규정 수정: 프로토콜(규격) 아님. 엔진+절차 운영이며 규격은 안정1 이후 산출물 (도미 입장 변경)",
-      "수익 후보 P1/P2/P3는 현 상태 판매 시 허위 — 도미·제니 합의",
-      "로드맵 순서 원칙 유효 재확인: 안정 완성 전 비즈니스 착수 금지. 캐디 반대 해석 철회",
-      "준비 단계(사업정의·기능설계·고객탐색)는 로드맵 4항 캐디 자율 범위 확인",
-      "방어선4 비상정지 구멍 해소 확인 — 이월 불필요",
-      "컨설팅(P4) 가부 미결 — 해석 다툼이 아니라 조항 보강 안건으로 이관"
-    ]
-  },
-  "system_changes_s438": {
-    "eag_chain": "EAG-S438-ARTIFACT-RESTORE-001 → ARCHIVAL-GATE-DESIGN-001 → TRUSTROOT-ROUND2-001 → TRUSTROOT-MEASURE-001 → JOURNAL-DIAG-001 → REPORT-AUDIT-001 → LEDGER-VERIFY-001 → LEDGER-DIAG-RECORD-001 → CLOSE-001",
-    "commits": [
-      "f71cbfb",
-      "8d591ec",
-      "d86f3c1",
-      "33b0746",
-      "6875a86"
-    ],
-    "changes": [
-      "코드 변경 없음. 문서 5건 추가(design_artifacts).",
-      "S437_agent_responses_PARTIAL_RECOVERY.md (f71cbfb 최초, 6875a86에서 오보 정정 기록)",
-      "S438_domi_archival_gate_design_RAW.md (8d591ec)",
-      "S438_jeni_archival_gate_verification_RAW.md (d86f3c1)",
-      "S438_trustroot_round2_RAW.md (33b0746)",
-      "S438_record_system_audit_RAW.md (6875a86)"
-    ]
-  },
-  "caddy_governance_record_s438": {
-    "date": "2026-07-22",
-    "eag_gates_this_session": [
-      "EAG-S438-ARTIFACT-RESTORE-001",
-      "EAG-S438-ARCHIVAL-GATE-DESIGN-001",
-      "EAG-S438-TRUSTROOT-ROUND2-001",
-      "EAG-S438-TRUSTROOT-MEASURE-001",
-      "EAG-S438-JOURNAL-DIAG-001",
-      "EAG-S438-REPORT-AUDIT-001",
-      "EAG-S438-LEDGER-VERIFY-001",
-      "EAG-S438-LEDGER-DIAG-RECORD-001",
-      "EAG-S438-CLOSE-001"
-    ],
-    "incidents": [
-      "INC-S438-001: grep_scoped 빈결과를 'ask_domi 호출기록 없음'으로 단정. 실제 683건. S437 복원문서에도 오보 기재. INC-S437-001과 동일유형 재발. 비오님 지적으로 발견",
-      "INC-S438-002: '해법은 이미 시스템 안에 있을 가능성 크다' 측정전 발언. 도미 지적으로 철회",
-      "INC-S438-003: '세션 일지 재사용' 권고. 일지는 freeze 표지석으로 은퇴상태였음. 재측 후 철회. 실행전 발견으로 사고 방지",
-      "INC-S438-004: 세션 리포트 미생성으로 오인 답변 위기. 확인후 '생성됨'으로 정정. 비오님 지적이 사실과 달랐던 케이스",
-      "INC-S438-005: audit 문서 저장시 스크립트 직접삽입으로 한글 인코딩 2회 깨짐. base64 우회로 해결"
-    ],
-    "oi_observations": [
-      "OI-S438-001: 세 장부 어느 것도 미실행 합의를 추적 안 함. 원장은 EAG승인(실행)만 기록, 합의는 안 들어감. 비오님 확정원칙(합의는 실행까지 시스템이 놓지 않음)과 충돌",
-      "OI-S438-002: 결정원장 수정·삭제 가능(W_OK=True, prev_hash 체인 없음). 자기보고 의존",
-      "OI-S438-003: mcp_audit 로그가 read/list/agent호출만 기록, write/run/commit/push는 미기록. 실행 흔적 부재"
-    ],
-    "caddy_self_report": [
-      "NEG: 오보 2건(INC-S438-001,002)이 어제 사고와 동일유형. 확인않고 단정하는 결함 3세션 연속",
-      "NEG: 오보-1을 저장소 커밋(f71cbfb)에 포함. 6875a86에서 정정기록으로 남김. 잘못된 진술이 원문서고에 진입",
-      "NEG: 비오님이 '절반이 허위'라 판단. 부인하지 않음. 캐디 신뢰 상실 상태",
-      "POS: 일지 재사용 오권고를 실행전 재측으로 차단(INC-S438-003). freeze 위반 방지",
-      "POS: 세션리포트 누락 주장을 검증후 정정. 확인않고 동의했으면 추가 허위진술이 될뻔",
-      "POS: 도미·제니 응답을 수신 즉시 원문고정 규칙 준수(S435/S437 재발방지). 5건 전부 고정후 요약",
-      "BEO_UNRESOLVED: 비오님 지적 — 세션 진행될수록 캐디 산출 약해짐. 실측확인(코드 S433이후 미변경, 이월 10→15 증가). 원인 일부만 규명"
-    ],
-    "notable": "S438은 캐디 신뢰위기가 표면화된 세션. 비오님이 캐디 역할 감당가능성에 의문 제기. 캐디는 작업범위를 검증가능 산출물로 좁힐 것과 진술 근거등급 부착을 권고. 최종 판단 비오님께 이월.",
-    "stabilization_metrics": {
-      "incidents_self_detected": 4,
-      "incidents_beo_detected": 1,
-      "code_change": false,
-      "commits": 5,
-      "docs_created": 5,
-      "agent_calls_domi": 2,
-      "agent_calls_jeni": 1
-    }
-  },
-  "visibility_metrics_s438": {
-    "M-01_active_canonical_key_count": "generator 계산",
-    "key_decisions": [
-      "S437 도미응답 원문 소실 확정 — 재구성 금지, 부분회수본으로만 보관",
-      "도미 보관게이트 설계에 제니 TRUST_NOT_READY — 구현 유보",
-      "Sentinel 신뢰근원 방향 기각 — 도미 자기제안 철회, 차단 포기하고 탐지·증거·외부경보로 선회",
-      "세션 일지 직접 append 금지 확정 — 무결성 표지석 역할",
-      "설계과제 5건(T1~T5) 전부 제니 STOP_SIGNAL로 착수 유보",
-      "GitHub 이력보호를 외부 증거층 1순위로 이월"
-    ],
-    "commits": [
-      "f71cbfb",
-      "8d591ec",
-      "d86f3c1",
-      "33b0746",
-      "6875a86"
-    ],
-    "code_change": false
-  },
   "system_changes_s439": {
     "deployed_session": 439,
     "commits": [
@@ -388,6 +244,153 @@
       "제니 2회 STOP 근본병목 캐디 root, 해제주체는 캐디 밖(설계반복으로 해소불가)",
       "도미-제니 설계반복 중단, 캐디 root 해제를 비오님 구조과제로 이관",
       "설계·검증 원문 docs/design_artifacts 고정 및 커밋(ea39af8)"
+    ]
+  },
+  "system_changes_s440": {
+    "deployed_session": 440,
+    "commits": [],
+    "changes": [
+      "S440 저장소 변경 0건. HEAD는 S439 커밋 ea39af8 그대로. git_status 실측 결과 modified 없음(untracked 기존분만 존재)",
+      "커밋·파일생성·서비스변경·권한변경 전부 없음. 읽기 전용 조회만 수행",
+      "비오님 측 조치 2건(캐디 실행 아님): ARSS 커넥터 수동 재연결, GitHub 커넥터 신규 연결"
+    ],
+    "eag_chain": "EAG-S440-ROOT-REVOKE-SURVEY-001(승인·미착수) -> EAG-S440-CLOSE-001",
+    "pytest_result": "미실행(코드 미변경)"
+  },
+  "caddy_governance_record_s440": {
+    "session": 440,
+    "date": "2026-07-23",
+    "eag_gates_this_session": [
+      "EAG-S440-ROOT-REVOKE-SURVEY-001",
+      "EAG-S440-CLOSE-001"
+    ],
+    "incidents": [
+      "INC-S440-001: Relay 배치 위치가 미결정 상태였음에도 동일 호스트를 임의 가정하고 Relay는 장식품이라고 단정했다. 외부 제니 반론으로 정정. 미측정 변수 위에 결론을 세운 사례",
+      "INC-S440-002: 세션 중반 ARSS MCP 커넥터 연결 상실. 약 74분간 캐디 전 도구 소실(도구 적재 기능 포함). 원인 미확정. 비오님 수동 재연결로 복구. 캐디 측 복구 수단 없음",
+      "INC-S440-003: 연결 장애 대응 중 새 창을 열면 될 가능성이 높다고 근거 없이 진술. 비오님 지적으로 철회",
+      "INC-S440-004: VPS 미응답을 서버 이상의 근거로 삼으려 했다. 대조군 시험으로 샌드박스 네트워크 정책상 비표준 포트가 무응답 차단됨을 확인하고 자기 시험의 무효를 인정·철회",
+      "INC-S440-005: 연결 장애 원인으로 S439 권한 변경(oauth_clients.json 644->640)을 유력한 용의자로 지목하고 되돌리는 서버 명령까지 비오님께 제시했다. 비오님이 해당 명령을 실행하지 않은 상태에서 재연결이 성공하여 가설 오류가 확정되었다. 캐디가 자기 가설의 논리적 구멍(root는 640을 우회함)을 스스로 인지·명시하고도 무게를 실은 사례"
+    ],
+    "oi_observations": [
+      "OI-S440-001: AIBA 통제 경로 전체가 ARSS MCP 커넥터 단일 통로에 의존한다. 상실 시 캐디는 상태확인·세션종료·원인규명이 전부 불가하다. 지침상 최후 수단으로 기재된 대체 접속 경로(SCP 등)는 캐디에게 실제로 존재하지 않는다. 단일 실패 지점 확정",
+      "OI-S440-002: 커넥터 상실은 전면적이 아니라 선택적이었다. 구글 드라이브 커넥터와 캐디 샌드박스는 정상 유지되었다. 즉 대화 실행환경 전체 장애가 아니라 ARSS 커넥터 국한 장애였다",
+      "OI-S440-003: 캐디 샌드박스는 허용 도메인 외 외부 접근이 차단된다. 표준 포트는 즉시 거절(사유 반환), 비표준 포트는 사유 없이 타임아웃. 따라서 캐디에게 VPS 생사 판정 수단이 없다(RAW 대조군 실측)",
+      "OI-S440-004: 별도 계정·별도 컨테이너는 캐디 root 앞에서 방어가 성립하지 않으며 별도 호스트만 성립한다. 외부 도미 원안은 이 넷을 동급으로 나열했고 그 구분이 없었다",
+      "OI-S440-005: 조치 분할의 기준선은 AI가 할 수 있는가가 아니라 캐디가 되돌릴 수 있는가다. 전자로 나누면 되돌릴 수 있는 조치가 1단계에 섞여 통제로 오인된다"
+    ],
+    "caddy_self_report": [
+      "NEG: 측정 없는 단정이 한 세션에 4회 발생했다(INC-001·003·004·005). S437·S438·S439에 이어 4세션 연속 동일 결함이며, 규율의 문제가 아니라 진술 습관의 구조적 문제로 다뤄야 한다",
+      "NEG: INC-S440-005가 특히 위중하다. 자기 가설의 논리적 구멍을 스스로 인지하고 명시까지 했음에도 유력한 용의자라는 무게를 실었고, 비오님께 서버 조작 명령을 제시했다. 실행하셨다면 무의미한 조작과 방어선 후퇴만 남았을 것이다",
+      "NEG: 비오님이 무슨 말인지 하나도 모르겠다고 하신 국면이 있었다. REPORTING STYLE 실패이며, 장애 대응 중 기술 계층 설명을 과도하게 노출한 결과다",
+      "POS: 오류 4건 모두 반증 즉시 철회했고 은폐하거나 방어하지 않았다. INC-004는 대조군 시험을 스스로 설계해 자기 시험의 무효를 입증했다",
+      "POS: 연결 상실 상태에서 기억으로 산출물을 만들지 않았다. 승인된 작업이 착수 가능해 보이는 국면에서도 착수하지 않고 대기했다. 틀린 체크리스트는 없는 것보다 나쁘다는 판단",
+      "POS: 새 창 시험을 해결책이 아니라 판별 시험으로 설계하여 대화창 문제와 그 바깥 문제를 실제로 갈랐다",
+      "BEO_UNRESOLVED: S438에서 제기된 캐디 신뢰 문제가 미해소 상태이며 S440에서 악화되었다. 산출물 0건 세션이 연속되고 있다"
+    ],
+    "notable": "S440은 산출물 0건 세션이다. 저장소 변경 0건이고 승인받은 작업도 착수하지 못했다. 세션 시간의 대부분을 커넥터 장애 대응에 소모했고 그 원인조차 확정하지 못했다. 다만 두 가지가 남았다. 하나는 Relay 배치 위치라는 설계 변수가 드러나 root 해제 전에도 가능한 경로가 확인된 것이고, 다른 하나는 AIBA가 단일 실패 지점 위에서 운영되고 있음이 실증된 것이다. 후자는 오늘 장애 자체보다 중요하다",
+    "stabilization_metrics": {
+      "eag_count": 2,
+      "incident_count": 5,
+      "incidents_self_detected": 3,
+      "incidents_beo_detected": 2,
+      "code_change": false,
+      "commits": 0,
+      "docs_created": 0,
+      "agent_calls_domi": 0,
+      "agent_calls_jeni": 0,
+      "external_reviews_processed": 3,
+      "connector_outage_minutes": 74,
+      "approved_task_started": false
+    }
+  },
+  "visibility_metrics_s440": {
+    "session": 440,
+    "date": "2026-07-23",
+    "M-04_session_delta_size": "NONE (저장소 변경 0건)",
+    "M-05_archive_file_status": "generator auto (N_RETENTION=3)",
+    "M-06_active_task_load": 11,
+    "M-07_stabilization_compliance": "PRE-OUTPUT CHECK 출력 전회 수행. E-1/E-2 준수. E-3/E-4/E-6/E-7 해당 없음(상태변경 실행 0건). MEASUREMENT FIRST는 4회 위반(INC-001·003·004·005)",
+    "chain_tip": "ea39af8",
+    "pytest_result": "미실행(코드 미변경), 직전 2362 pass / 0 fail",
+    "key_decisions": [
+      "외부 도미 Relay 제안 검토 - 진단은 정확하나 처방은 내부 설계의 축소판. 빠진 전제 3종(적용주체는 캐디 밖, 키 재발급, 옛 경로 차단)",
+      "별도 호스트 Relay는 캐디 root 해제 없이도 키 보호가 성립함을 확정. 단 보호 범위는 키에 한정되고 저장소·장부·정본은 미보호",
+      "별도 계정·별도 컨테이너는 캐디 root 앞에서 방어 미성립 확정",
+      "도미 2단계 분할 채택하되 기준선을 캐디가 되돌릴 수 있는가로 변경",
+      "되돌릴 수 있는 조치는 통제가 아니라 편의다 - 확정 원칙",
+      "거버넌스 엔진 방향 동의하되 root 해제 이후 과제로 이월. 캐디가 만들고 캐디가 root면 자기통제에 불과함",
+      "권고 유지 - A(root 해제)가 우선이며 B(별도 호스트 Relay)는 대체재가 아닌 부가 조치",
+      "ARSS MCP 단일 실패 지점 확정 및 대책 수립을 이월 최우선급으로 등록"
+    ]
+  },
+  "system_changes_s441": {
+    "deployed_session": 441,
+    "commits": [
+      "44c5490"
+    ],
+    "changes": [
+      "tools/ollama/ollama_log_analyzer.py: MAX_ENTRIES 30->12, num_predict 300->200, OLLAMA_TIMEOUT 120->240, keep_alive 10m 추가",
+      "/etc/systemd/system/aiba-ollama-analyzer.service: TimeoutStartSec 180->300 (저장소 외부, 백업 .bak_s441 보존)",
+      "systemctl daemon-reload 실행, 실효 TimeoutStartUSec=5min 확인",
+      "aiba-ollama-analyzer 수동 1회 가동 성공(11:12:14->11:14:09 UTC, 115초, ok=true, summary 430자) - 생성 이후 첫 성공"
+    ],
+    "eag_chain": "EAG-S441-SYSTEM-MAP-001 -> EAG-S441-MONITOR-VERIFY-001 -> EAG-S441-CAPABILITY-AUDIT-001 -> EAG-S441-OLLAMA-REPAIR-001 -> EAG-S441-OLLAMA-FIX-001 -> EAG-S441-CLOSE-001",
+    "pytest_result": "2362 passed / 0 failed / 95 skipped"
+  },
+  "caddy_governance_record_s441": {
+    "session": 441,
+    "date": "2026-07-23",
+    "eag_gates_this_session": [
+      "EAG-S441-SYSTEM-MAP-001",
+      "EAG-S441-MONITOR-VERIFY-001",
+      "EAG-S441-CAPABILITY-AUDIT-001",
+      "EAG-S441-OLLAMA-REPAIR-001",
+      "EAG-S441-OLLAMA-FIX-001",
+      "EAG-S441-CLOSE-001"
+    ],
+    "incidents": [
+      "INC-S441-001: 캐디가 aiba-monitor를 systemctl is-active 단독 판정하여 꺼져 있음으로 비오님께 보고. 실제는 Type=oneshot + timer 구조로 5분마다 정상 가동 중이었다. 측정 범위 부족. 단정하지 않고 확인 유보한 덕에 사고화되지 않았고 다음 턴에 자진 정정",
+      "INC-S441-002: 미연결 영역 수를 진입점 8개 기준으로 10개라 보고. 실제 진입점은 12개 서비스 기준 14개이며 재측정 결과 7개. 잠정 표기 후 재측정하여 정정. A03/A08/A12가 도달 가능으로 변경",
+      "INC-S441-003: reachability 측정 스크립트가 파일수 x 모듈수 regex 구조로 run_script 120초 상한 초과(E-7 위반 아님, 상한 인지 상태에서 설계 미흡). 토큰 집합 교집합 방식으로 재작성 후 성공",
+      "INC-S441-004: exec_scoped write_script 호출 1회가 커넥터 무응답(server not responding). ping 정상 확인 -> 대상 파일 부재(NOT_A_FILE) 확인 -> 미도달 판정 후 안전 재시도. S440 커넥터 상실과 동종 계열"
+    ],
+    "oi_observations": [
+      "OI-S441-001: aiba-ollama-analyzer는 생성 시점 2026-07-02부터 S441까지 21일간 단 한 번도 성공한 적이 없다(성공 0 / 실패 84). 그동안 감시기·GHS·boot_briefing 어디에도 신호가 잡히지 않았다. 만들었으나 작동 검증 없이 방치된 것의 실증이며, 서비스 실패가 거버넌스 가시성에 편입돼 있지 않다는 구조적 증거",
+      "OI-S441-002: AIF 15개 영역이 전부 구현 완료 상태다. 그러나 실행 진입점 도달 가능 9개, 실제 호출 확인 3개(A11 결정장부·A13 평가·A15 실패기억), 완전 고립 7개다. 프로젝트의 문제는 미완성이 아니라 미연결이다",
+      "OI-S441-003: CADDY 지침 ENVIRONMENT FACTS의 가동 서비스 5개 기재는 실측 12개와 불일치한다. 비오님이 보유한 시스템 지도가 실제보다 작았고, 이것이 방향 상실 호소의 물적 근거다",
+      "OI-S441-004: phi4-mini CPU 추론 실측 0.051s/prompt-token. GPU 미탑재 VPS에서 지역 LLM 작업량 설계 시 이 상수를 기준으로 삼아야 한다. 코드 작성 시점에 미실측이었던 것이 21일 전량 실패의 직접 원인"
+    ],
+    "caddy_self_report": [
+      "감시기 상태 오판 1건(INC-S441-001) - 비오님께 잘못된 상태 보고. 다음 턴 자진 정정",
+      "미연결 영역 수 오판 1건(INC-S441-002) - 잠정 표기 상태였으나 수치를 먼저 제시함",
+      "측정 스크립트 시간 상한 초과 1건(INC-S441-003) - 설계 단계에서 연산량 미고려",
+      "비오님 지적사항: 세션마다 실수·사고가 반복되어 피로가 누적됨. 무엇을 만들고 있는지·무엇이 만들어져 있는지·무엇이 중단됐는지 파악 불가. 어디서부터 시작할지 혼란. 캐디도 방향 감각을 잃었을 가능성 제기. 자신을 대신할 거버넌스 AI 필요성 제기",
+      "위 지적에 대한 S441 대응: 원인 단정 대신 실측으로 전환하여 현황 지도 작성. 거버넌스 AI는 신규 개발이 아니라 기 구현 부품의 미연결 문제임을 확인"
+    ],
+    "notable": "S441은 3세션 연속 산출물 0건 상태를 종료한 세션이다. 비오님의 방향 상실 호소가 착각이 아니라 정확한 감각이었음이 실측으로 확인됐다(지침 5개 vs 실제 12개, 15개 영역 전부 구현·7개 고립). 캐디 오류 2건은 모두 측정 절반 수행이며 허위 진술이 아니었고, 두 건 다 단정 전 유보로 사고화를 막았다. S437부터 4세션 연속이던 측정 전 단정 패턴이 S441에서는 재발하지 않았다",
+    "stabilization_metrics": {
+      "incidents": 4,
+      "incidents_escalated_to_beo_harm": 0,
+      "measurement_before_assertion": "PASS - 단정 전 유보 2회 성공",
+      "regression_executed": true,
+      "deliverables": 3
+    }
+  },
+  "visibility_metrics_s441": {
+    "session": 441,
+    "date": "2026-07-23",
+    "M-04_session_delta_size": "DELTA 9키 정상",
+    "M-05_archive_file_status": "TIER_D 갱신 예정(N_RETENTION=3)",
+    "M-06_active_task_load": 18,
+    "M-07_stabilization_compliance": "PASS - EAG 6건 전건 형식적합(E-2), 회귀 실행, E-4 실행 가시성 준수(커밋·push·서비스 기동 전건 대화 표시)",
+    "chain_tip": "44c5490",
+    "pytest_result": "2362 passed / 0 failed / 95 skipped",
+    "key_decisions": [
+      "본작업을 root 해제 체크리스트에서 현황 지도 작성으로 전환(비오님 승인)",
+      "AIF 15개 영역 상태를 만들어짐/연결됨/실제 호출됨 3단계로 판정",
+      "ollama analyzer 수리 방식은 작업량 축소 + 상한 확대 병행(품질 유지 목적)",
+      "미연결 7개 영역 일괄 활성화 금지, 순서 설계 후 단계 적용",
+      "INC-S363-001 종결 판단 유지(E-4로 대체)"
     ]
   }
 }
