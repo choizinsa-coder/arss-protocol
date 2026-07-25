@@ -54,6 +54,8 @@ class GovernanceMonitor:
     CALIBRATION_DRIFT_THRESHOLD = 0.20
     FAILURE_REPEAT_THRESHOLD    = 3
     MISSION_DRIFT_CONSECUTIVE   = 3
+    PHASE2_MIN_ESCALATE_OK = 10  # S446 EAG-S446-MODEL-METRICS-STAGE1-001 (adjustable)
+    PHASE2_MIN_NORMAL_OK   = 10  # S446 (adjustable)
 
     def __init__(self, run_id: Optional[str] = None):
         self.run_id        = run_id or f"MON-{int(datetime.now(timezone.utc).timestamp())}"
@@ -501,6 +503,55 @@ class GovernanceMonitor:
         except Exception as e:
             return {"trigger": "Sensitive_File", "fired": False, "detail": "sensitive_probe_error: %s" % e}
 
+    def _check_phase2_model_metrics_trigger(self) -> dict:
+        """S446: model_call_log.jsonl 표본이 2단계 조건 임계 도달 여부 확인.
+        진짜 벤더 응답(model_served)·성공(ok) 호출만 집계. 부재/손상 시 fired=False."""
+        log_path = ROOT / "tools/governance/model_call_log.jsonl"
+        base = {"trigger": "Phase2_Model_Metrics", "fired": False, "detail": "",
+                "cause_type": "phase2_ready", "cause_component": "model_call_log",
+                "cause_rc": "READY", "cause_count": 0}
+        if not log_path.exists():
+            base["detail"] = "model_call_log.jsonl absent"
+            return base
+        counts = {"domi": {"esc": 0, "norm": 0}, "jeni": {"esc": 0, "norm": 0}}
+        try:
+            with open(log_path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        e = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if not e.get("ok"):
+                        continue
+                    if not e.get("model_served"):
+                        continue
+                    ag = e.get("agent")
+                    if ag not in counts:
+                        continue
+                    if e.get("escalate"):
+                        counts[ag]["esc"] += 1
+                    else:
+                        counts[ag]["norm"] += 1
+        except Exception as ex:
+            base["detail"] = "read error: %s" % ex
+            return base
+        ready = []
+        for ag in ("domi", "jeni"):
+            if (counts[ag]["esc"] >= self.PHASE2_MIN_ESCALATE_OK
+                    and counts[ag]["norm"] >= self.PHASE2_MIN_NORMAL_OK):
+                ready.append("%s(E%d/N%d)" % (ag, counts[ag]["esc"], counts[ag]["norm"]))
+        dc = "domi E%d/N%d, jeni E%d/N%d" % (counts["domi"]["esc"], counts["domi"]["norm"], counts["jeni"]["esc"], counts["jeni"]["norm"])
+        if ready:
+            base["fired"] = True
+            base["detail"] = "PHASE2_READY: " + ", ".join(ready) + " | " + dc
+            base["cause_count"] = max(counts["domi"]["esc"], counts["domi"]["norm"], counts["jeni"]["esc"], counts["jeni"]["norm"])
+        else:
+            base["detail"] = "accumulating: " + dc
+        return base
+
     def run(self) -> dict:
         # ① GHS
         ghs = self.calculate_ghs()
@@ -509,6 +560,7 @@ class GovernanceMonitor:
         # ② ~ ④ Trigger 점검
         triggers = [
             self._check_failure_trigger(),
+            self._check_phase2_model_metrics_trigger(),
             self._check_calibration_drift_trigger(cal_err),
             self._check_mission_drift_trigger(ghs["score"]),
             self._check_opportunity_decay_trigger(),

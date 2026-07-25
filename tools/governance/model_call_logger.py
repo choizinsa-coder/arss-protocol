@@ -52,6 +52,8 @@ def append_model_call(agent=None, session_id=None, escalate=False, reason=None,
                       usage=None, llm_duration_ms=None, round_index=None,
                       log_path=None):
     """Append one model-call record as a JSONL line. Fail-soft; never raises."""
+    if (log_path is None) and (os.environ.get("PYTEST_CURRENT_TEST") or "pytest" in sys.modules):
+        return None  # S446: do not pollute production log during test runs
     path = log_path or MODEL_CALL_LOG_PATH
     try:
         p_tok, c_tok = _extract_tokens(usage)
