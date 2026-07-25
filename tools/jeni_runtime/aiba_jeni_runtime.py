@@ -1110,7 +1110,8 @@ def _parse_openai_response(data: dict) -> dict:
     return {"ok": True, "text": text, "function_calls": function_calls,
             "parts": parts,
             "usage": usage,
-            "error": None}
+            "error": None,
+            "model_served": data.get("model", "")}
 
 
 def _call_llm_openai(contents: list, escalate: bool = False) -> dict:
@@ -1144,7 +1145,13 @@ def _call_llm_openai(contents: list, escalate: bool = False) -> dict:
                      "Content-Length": str(len(raw_body))}, method="POST")
         try:
             with urllib.request.urlopen(req, timeout=GEMINI_TIMEOUT) as r:
-                return _parse_openai_response(json.loads(r.read().decode("utf-8")))
+                _result = _parse_openai_response(json.loads(r.read().decode("utf-8")))
+                _result["model_requested"] = model
+                _emit_event({"tag": "MODEL_CALL", "agent": "jeni", "escalate": bool(escalate),
+                             "model_requested": model,
+                             "model_served": _result.get("model_served", ""),
+                             "ok": _result.get("ok")})
+                return _result
         except urllib.error.HTTPError as e:
             if e.code in (503, 429):
                 last_err = f"HTTP_{e.code}"
@@ -1461,6 +1468,9 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
             pass
         final_result = {"ok": True, "text": call_result["text"], "error": None,
                         "rounds_used": round_num,
+                        "model_served": call_result.get("model_served", ""),
+                        "model_requested": call_result.get("model_requested", ""),
+                        "escalate": bool(escalate),
                         "audit": _make_audit_bundle(round_num, audit_trail)}
         break
 

@@ -1243,7 +1243,8 @@ def _execute_openai_request(req: urllib.request.Request, loop_start: float = Non
         finish = _extract_finish_reason(data)
         result = {"ok": True, "text": _extract_text_from_message(message),
                 "tool_calls": _extract_tool_calls(message),
-                "message": message, "usage": data.get("usage", {}), "error": None}
+                "message": message, "usage": data.get("usage", {}), "error": None,
+                "model_served": data.get("model", "")}
         if finish == "length":
             result["truncated"] = True  # EAG-S378-RC-E
         return result
@@ -1311,7 +1312,13 @@ def _call_openai(messages: list, escalate: bool = False, loop_start: float = Non
         headers={"Content-Type": "application/json",
                  "Authorization": f"Bearer {OPENAI_API_KEY}",
                  "Content-Length": str(len(raw_body))}, method="POST")
-    return _execute_openai_request(req, loop_start)
+    _result = _execute_openai_request(req, loop_start)
+    _result["model_requested"] = _model
+    _emit_event({"tag": "MODEL_CALL", "agent": "domi", "escalate": bool(escalate),
+                 "model_requested": _model,
+                 "model_served": _result.get("model_served", ""),
+                 "ok": _result.get("ok")})
+    return _result
 
 
 # ── Message 조립 ──────────────────────────────────────────────────────────────
@@ -1678,6 +1685,9 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
                         "error": None,
                         "rounds_used": round_num,
                         "text_complete": not bool(call_result.get("truncated")),
+                        "model_served": call_result.get("model_served", ""),
+                        "model_requested": call_result.get("model_requested", ""),
+                        "escalate": bool(escalate),
                         "audit": _make_audit_bundle(round_num, audit_trail)}
         break
 
