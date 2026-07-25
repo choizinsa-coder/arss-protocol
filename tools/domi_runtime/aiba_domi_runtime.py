@@ -146,6 +146,12 @@ except Exception:
     def _gcb_report_failure(component):
         return None
 SESSION_POINTER_PATH = os.path.join(ARSS_ROOT, "SESSION_CONTEXT_POINTER.json")
+# S446 EAG-S446-MODEL-METRICS-STAGE1-001: durable model-call metrics (fail-soft)
+try:
+    from tools.governance.model_call_logger import append_model_call as _append_model_call
+except Exception:
+    def _append_model_call(**kwargs):
+        return False
 
 # ── Session Context Auto-Load (B-D-1 + C-5 + B-D-1b Fail-Closed) ─────────────
 
@@ -1446,7 +1452,7 @@ def _run_observe_loop(targets: list, session: str = "S000") -> dict:
 # ── Persistent Multi-Turn Loop ────────────────────────────────────────────────
 
 
-def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate: bool = False, max_rounds=None) -> dict:
+def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate: bool = False, max_rounds=None, reason=None) -> dict:
     loop_start = time.time()
 
     # [GCB] 진입 게이트: 전역 서킷브레이커 TRIPPED 시 진입 차단 (EAG-S336-GCB-PHASE2-001)
@@ -1539,7 +1545,17 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
                 round_num, _make_audit_bundle(round_num, audit_trail))
             break
 
+        _mcl_t0 = time.monotonic()
         call_result = _call_openai(accumulated, escalate=escalate, loop_start=loop_start)
+        try:
+            _append_model_call(agent="domi", session_id=session, escalate=escalate, reason=reason,
+                               model_requested=call_result.get("model_requested"),
+                               model_served=call_result.get("model_served"), ok=call_result.get("ok"),
+                               usage=call_result.get("usage"),
+                               llm_duration_ms=int((time.monotonic() - _mcl_t0) * 1000),
+                               round_index=round_num)
+        except Exception:
+            pass
         if not call_result["ok"]:
             try:
                 _gcb_report_failure("domi")
@@ -1828,7 +1844,7 @@ class DomiRuntimeHandler(BaseHTTPRequestHandler):
         if not prompt:
             self._send_json(400, {"ok": False, "error": "prompt required"})
             return
-        result = _run_design_loop(prompt, context, session, escalate=escalate, max_rounds=max_rounds)
+        result = _run_design_loop(prompt, context, session, escalate=escalate, max_rounds=max_rounds, reason=req_body.get("reason"))
         if not result.get("ok"):
             print(f"[DOMI_RUNTIME] FAIL: {result.get('error', 'unknown')}",
                   file=sys.stderr, flush=True)

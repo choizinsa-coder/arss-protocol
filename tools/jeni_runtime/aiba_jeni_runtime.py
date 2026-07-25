@@ -136,6 +136,12 @@ try:
     from tools.jeni_verify.verification_trace import VerificationTraceRecord
 except Exception:
     VerificationTraceRecord = None
+# S446 EAG-S446-MODEL-METRICS-STAGE1-001: durable model-call metrics (fail-soft)
+try:
+    from tools.governance.model_call_logger import append_model_call as _append_model_call
+except Exception:
+    def _append_model_call(**kwargs):
+        return False
 
 # ── Session Context Auto-Load (B-J-1 + C-5 + B-J-5) ──────────────────────────
 
@@ -1322,7 +1328,7 @@ def _run_observe_loop(targets: list, session: str = "S000") -> dict:
 # ── Persistent Multi-Turn Loop ────────────────────────────────────────────────
 
 
-def _run_verification_loop(prompt: str, context: str, session: str = "S000", escalate: bool = False) -> dict:
+def _run_verification_loop(prompt: str, context: str, session: str = "S000", escalate: bool = False, reason=None) -> dict:
     loop_start = time.time()
 
     # [GCB] 진입 게이트: 전역 서킷브레이커 TRIPPED 시 진입 차단 (EAG-S336-GCB-PHASE2-001)
@@ -1366,7 +1372,17 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
                 round_num, _make_audit_bundle(round_num, audit_trail))
             break
 
+        _mcl_t0 = time.monotonic()
         call_result = _call_gemini(accumulated, escalate=escalate)
+        try:
+            _append_model_call(agent="jeni", session_id=session, escalate=escalate, reason=reason,
+                               model_requested=call_result.get("model_requested"),
+                               model_served=call_result.get("model_served"), ok=call_result.get("ok"),
+                               usage=call_result.get("usage"),
+                               llm_duration_ms=int((time.monotonic() - _mcl_t0) * 1000),
+                               round_index=round_num)
+        except Exception:
+            pass
         if not call_result["ok"]:
             try:
                 _gcb_report_failure("jeni")
@@ -1612,7 +1628,7 @@ class JeniRuntimeHandler(BaseHTTPRequestHandler):
         if not prompt:
             self._send_json(400, {"ok": False, "error": "prompt required"})
             return
-        result = _run_verification_loop(prompt, context, session, escalate=escalate)
+        result = _run_verification_loop(prompt, context, session, escalate=escalate, reason=req_body.get("reason"))
         self._send_json(200, result)
 
 
