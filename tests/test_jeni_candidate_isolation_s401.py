@@ -24,7 +24,6 @@ GCB_PATH = os.path.join(ROOT, "tools/governance/global_circuit_breaker.py")
 
 ISOLATION_ENVS = (
     "AIBA_RUNTIME_PORT",
-    "AIBA_DAILY_COST_STATE_PATH",
     "AIBA_SANDBOX_ROOT",
     "AIBA_GCB_STATE_PATH",
 )
@@ -52,8 +51,6 @@ def _clean_isolation_env(monkeypatch):
 def test_defaults_unchanged_when_envs_unset():
     m = _load(JENI_PATH, "_s401_jeni_default")
     assert m.RUNTIME_PORT == 8447
-    assert m.DAILY_COST_STATE_PATH == os.path.join(
-        m.ARSS_ROOT, "runtime/governance/budget/JENI_DAILY_COST_STATE.json")
     assert m.SANDBOX_ROOT == os.path.join(m.ARSS_ROOT, "tools/sandbox/jeni")
 
 
@@ -71,13 +68,6 @@ def test_port_override(monkeypatch):
     assert m.RUNTIME_PORT == 8450
 
 
-def test_cost_state_override_does_not_touch_incumbent(tmp_path, monkeypatch):
-    candidate = str(tmp_path / "CANDIDATE_COST.json")
-    monkeypatch.setenv("AIBA_DAILY_COST_STATE_PATH", candidate)
-    m = _load(JENI_PATH, "_s401_jeni_cost")
-    assert m.DAILY_COST_STATE_PATH == candidate
-    # the incumbent's budget file must not be the write target
-    assert "JENI_DAILY_COST_STATE.json" not in m.DAILY_COST_STATE_PATH
 
 
 def test_sandbox_override_moves_every_memory_dir(tmp_path, monkeypatch):

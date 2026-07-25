@@ -94,14 +94,6 @@ MAX_TOOL_ROUNDS = 12            # B-J-3: 5 -> 8 -> 12 (S418 EAG-S418-JENI-VERIFY
 MAX_TOTAL_SECONDS = int(os.environ.get("AIBA_MAX_TOTAL_SECONDS", "180"))  # EAG-S401         # B-J-4: 120 → 180
 TIMEOUT_PREEMPT_SECONDS = int(os.environ.get("AIBA_TIMEOUT_PREEMPT_SECONDS", "170"))  # EAG-S401   # B-J-4: 110 → 170
 
-# C-4: 비용 단가 (env 오버라이드 가능). 디폴트 = gemini-2.5-pro 표준 단가.
-GEMINI_COST_RATE_INPUT = float(os.environ.get("AIBA_GEMINI_COST_RATE_INPUT", "1.25"))
-GEMINI_COST_RATE_OUTPUT = float(os.environ.get("AIBA_GEMINI_COST_RATE_OUTPUT", "10.00"))
-
-# 제니 J-2: 일일 비용 하드 리밋 (env 제어). 디폴트 $1.0/일 (비오 비용 기준 반영).
-MAX_DAILY_USD = float(os.environ.get("AIBA_MAX_DAILY_USD", "1.0"))
-# CHANGE_ID: S287-J2-WARN (도미 ④ — 2단계 예산 가드: WARN 임계 = cap 80%)
-MAX_DAILY_USD_WARN = float(os.environ.get("AIBA_MAX_DAILY_USD_WARN", str(round(MAX_DAILY_USD * 0.8, 5))))
 
 MAX_FILE_BYTES = 20_000  # D-3: read_file 결과 페이로드 캡 (약 500줄)
 
@@ -377,67 +369,6 @@ def _extract_function_calls(parts: list) -> list:
     return calls
 
 
-# ── C-4: 비용 관측 로그 + 일일 누적 추적 (제니 J-2 Hard Limit) ────────────────
-
-_daily_cost_tracker: dict = {"date": "", "total_usd": 0.0}
-
-# ── EAG-S308-BUDGET-PERSIST-001: 일일 비용 파일 영속화 ────────────────────────
-# 재시작 시 in-memory tracker가 0으로 초기화되어 일일 예산 가드가 무력화되는
-# 결함(OI-S306-001) 해소. WF05_BUDGET_STATE.json 선행 패턴 준용.
-DAILY_COST_STATE_PATH = os.environ.get(  # EAG-S401
-    "AIBA_DAILY_COST_STATE_PATH") or os.path.join(
-    ARSS_ROOT, "runtime/governance/budget/JENI_DAILY_COST_STATE.json")
-DAILY_COST_SCHEMA = "DAILY_BUDGET_STATE_v1"
-_cost_state_lock = threading.Lock()
-_cost_state_loaded = False
-
-
-def _persist_cost_state() -> None:
-    """tmp 파일 → fsync → os.replace 원자적 쓰기. 호출자가 lock 보유 전제."""
-    try:
-        os.makedirs(os.path.dirname(DAILY_COST_STATE_PATH), exist_ok=True)
-        payload = {
-            "schema": DAILY_COST_SCHEMA,
-            "date": _daily_cost_tracker["date"],
-            "total_usd": round(_daily_cost_tracker["total_usd"], 6),
-            "updated_at": _utc_now_iso(),
-        }
-        tmp = DAILY_COST_STATE_PATH + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, DAILY_COST_STATE_PATH)
-    except Exception as e:
-        _emit_event({"tag": "COST_STATE_PERSIST_FAIL", "agent": "jeni",
-                     "error": str(e)})
-
-
-def _load_cost_state() -> None:
-    """기동 시 1회 파일 복원. Fail-Open: 부재/손상 시 today 0.0으로 시작."""
-    global _cost_state_loaded
-    today = _today_str()
-    try:
-        with open(DAILY_COST_STATE_PATH, encoding="utf-8") as f:
-            data = json.load(f)
-        stored_date = data.get("date", "")
-        stored_total = float(data.get("total_usd", 0.0))
-        if stored_date == today:
-            _daily_cost_tracker["date"] = today
-            _daily_cost_tracker["total_usd"] = stored_total
-            _emit_event({"tag": "COST_STATE_RESTORED", "agent": "jeni",
-                         "date": today, "total_usd": round(stored_total, 5)})
-        else:
-            _daily_cost_tracker["date"] = today
-            _daily_cost_tracker["total_usd"] = 0.0
-            _emit_event({"tag": "COST_STATE_NEW_DAY", "agent": "jeni",
-                         "date": today, "prev_date": stored_date})
-    except Exception as e:
-        _daily_cost_tracker["date"] = today
-        _daily_cost_tracker["total_usd"] = 0.0
-        _emit_event({"tag": "COST_STATE_FAIL_OPEN", "agent": "jeni",
-                     "date": today, "note": str(e)})
-    _cost_state_loaded = True
 
 
 def _emit_event(event: dict) -> None:
@@ -449,47 +380,6 @@ def _today_str() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d")
 
 
-def _daily_budget_exceeded() -> bool:
-    """제니 J-2: 당일 누적 비용이 MAX_DAILY_USD 초과 시 True (다음 호출 차단).
-    EAG-S308-BUDGET-PERSIST-001: 날짜 경계 전환 시 파일에도 즉시 반영."""
-    today = _today_str()
-    if _daily_cost_tracker["date"] != today:
-        with _cost_state_lock:
-            _daily_cost_tracker["date"] = today
-            _daily_cost_tracker["total_usd"] = 0.0
-            _persist_cost_state()
-    return _daily_cost_tracker["total_usd"] >= MAX_DAILY_USD
-
-
-def _log_call_cost(model: str, usage: dict, session: str, round_num: int) -> float:
-    """CHANGE_ID: S287-C4 / 도미 ③ — usage 부재 시 WARN(중단 금지). 출력은 JSON Lines."""
-    if not usage:
-        _emit_event({"tag": "COST_LOG", "level": "WARN", "agent": "jeni",
-                     "session": session, "round": round_num, "model": model,
-                     "note": "usage metadata missing, cost tracking skipped"})
-        return 0.0
-    inp = usage.get("promptTokenCount", 0)
-    out = usage.get("candidatesTokenCount", 0)
-    cost = (inp / 1_000_000 * GEMINI_COST_RATE_INPUT) + (out / 1_000_000 * GEMINI_COST_RATE_OUTPUT)
-    today = _today_str()
-    # EAG-S308-BUDGET-PERSIST-001: 누적 + 파일 영속화 (lock 보호, 원자적 쓰기)
-    with _cost_state_lock:
-        if _daily_cost_tracker["date"] != today:
-            _daily_cost_tracker["date"] = today
-            _daily_cost_tracker["total_usd"] = 0.0
-        _daily_cost_tracker["total_usd"] += cost
-        _persist_cost_state()
-    _emit_event({"tag": "COST_LOG", "agent": "jeni", "session": session,
-                 "round": round_num, "model": model, "input": inp, "output": out,
-                 "est_usd": round(cost, 5),
-                 "daily_total": round(_daily_cost_tracker["total_usd"], 5),
-                 "daily_cap": MAX_DAILY_USD})
-    # CHANGE_ID: S287-J2-WARN / 도미 ④ — WARN 임계 도달 시 경고 (HARD 차단 전 가시성)
-    if _daily_cost_tracker["total_usd"] >= MAX_DAILY_USD_WARN:
-        _emit_event({"tag": "BUDGET_WARN", "agent": "jeni",
-                     "daily_total": round(_daily_cost_tracker["total_usd"], 5),
-                     "warn": MAX_DAILY_USD_WARN, "cap": MAX_DAILY_USD})
-    return cost
 
 
 # ── OAuth Token ───────────────────────────────────────────────────────────────
@@ -998,19 +888,6 @@ def _make_fail_closed_result(reason: str, detail: str, rounds_used: int,
     return result
 
 
-def _make_budget_block_result(detail: str) -> dict:
-    """CHANGE_ID: S287-J2 / 도미 ④ — 예산 차단은 거버넌스 판정(TRUST_READY=FAIL)과 구분.
-    verification_run=False 로 '검증 미실행(인프라 가드)'임을 명시하여 거버넌스 오인 방지."""
-    text = (
-        "[JENI RUNTIME — BUDGET GUARD]\n"
-        "VERIFICATION_RUN = FALSE\n"
-        "REASON = DAILY_BUDGET_EXCEEDED\n"
-        f"DETAIL = {detail}\n"
-        "NOTE = 제니의 설계 판정이 아니라 인프라 비용 가드에 의한 검증 미실행 상태입니다. "
-        "예산 한도 조정 또는 DEP 승인 후 재요청하십시오.\n"
-    )
-    return {"ok": False, "text": text, "error": "DAILY_BUDGET_EXCEEDED",
-            "budget_block": True, "verification_run": False, "rounds_used": 0}
 
 
 # ── Gemini 호출 ────────────────────────────────────────────────────────────────
@@ -1139,8 +1016,8 @@ def _build_openai_tools() -> list:
 
 
 def _openai_usage_to_gemini(usage: dict) -> dict:
-    """EAG-S399: normalise OpenAI usage keys to the Gemini names so that
-    _log_call_cost stays unmodified (minimal-edit decision)."""
+    """EAG-S399: normalise OpenAI usage keys to the Gemini names.
+    S444: 비용계산 제거 이후에도 usage 정규화는 응답 처리 경로에서 사용된다."""
     return {"promptTokenCount": usage.get("prompt_tokens", 0),
             "candidatesTokenCount": usage.get("completion_tokens", 0)}
 
@@ -1451,13 +1328,6 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
     except Exception:
         pass
 
-    # CHANGE_ID: S287-J2 / 제니 J-2 + 도미 ④ — 일일 예산 HARD 차단 (이벤트 로그 후 Fail-Closed)
-    if _daily_budget_exceeded():
-        _emit_event({"tag": "BUDGET_BLOCK", "agent": "jeni",
-                     "daily_total": round(_daily_cost_tracker["total_usd"], 5),
-                     "cap": MAX_DAILY_USD, "action": "FAIL_CLOSED"})
-        return _make_budget_block_result(
-            f"daily_total={_daily_cost_tracker['total_usd']:.5f} >= cap={MAX_DAILY_USD:.2f} USD")
 
     # B-J-5: SC_FINAL 로드 실패 시 Fail-Closed
     sc_context = _load_session_context()
@@ -1500,10 +1370,6 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
                 round_num, _make_audit_bundle(round_num, audit_trail))
             break
 
-        # C-4: 비용 로그 + 일일 누적
-        _log_call_cost(
-            LLM_MODEL_ESCALATE if escalate else LLM_MODEL,
-            call_result.get("usage", {}), session, round_num)
 
         model_parts = call_result["parts"]
         accumulated.append({"role": "model", "parts": model_parts})
@@ -1625,22 +1491,24 @@ def _run_verification_loop(prompt: str, context: str, session: str = "S000", esc
 
 
 def _probe_single_model(model_name: str) -> dict:
-    """단일 모델 최소 실호출 probe → {model, http_status, body}. 격리 경로."""
+    """단일 모델 최소 실호출 probe → {model, http_status, body}. 격리 경로.
+    EAG-S444: Gemini native → LLM_BASE_URL(OpenAI 호환, x.ai) 교정 (OI-S443-003)."""
     if not model_name:
         return {"model": model_name, "http_status": 0, "body": "model id empty"}
-    if not GEMINI_API_KEY:
+    if not LLM_API_KEY:
         return {"model": model_name, "http_status": 0,
                 "body": "API key not configured"}
     payload = {
-        "contents": [{"role": "user", "parts": [{"text": "ping"}]}],
-        "generationConfig": {"maxOutputTokens": 1, "temperature": 0},
+        "model": model_name,
+        "messages": [{"role": "user", "content": "ping"}],
+        "max_tokens": 1, "temperature": 0,
     }
     raw = json.dumps(payload).encode("utf-8")
-    url = f"{GEMINI_API_BASE}/{model_name}:generateContent"
+    url = f"{LLM_BASE_URL.rstrip('/')}/chat/completions"
     req = urllib.request.Request(
         url, data=raw,
         headers={"Content-Type": "application/json",
-                 "x-goog-api-key": GEMINI_API_KEY,
+                 "Authorization": f"Bearer {LLM_API_KEY}",
                  "Content-Length": str(len(raw))}, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
@@ -1657,10 +1525,10 @@ def _probe_single_model(model_name: str) -> dict:
 def _run_model_probe() -> dict:
     """primary + escalate 실호출 가용성 probe. 서킷브레이커/예산 미간섭."""
     results = []
-    r_primary = _probe_single_model(GEMINI_MODEL)
+    r_primary = _probe_single_model(LLM_MODEL)
     r_primary["model_type"] = "primary"
     results.append(r_primary)
-    r_escalate = _probe_single_model(GEMINI_MODEL_ESCALATE)
+    r_escalate = _probe_single_model(LLM_MODEL_ESCALATE)
     r_escalate["model_type"] = "escalate"
     results.append(r_escalate)
     return {"agent": "jeni", "probed_at": _utc_now_iso(), "results": results}
@@ -1695,9 +1563,6 @@ class JeniRuntimeHandler(BaseHTTPRequestHandler):
                 "sc_context_loaded": _sc_cache["loaded"],
                 "sc_cache_invalidation": "pointer_hash+sc_final_mtime",
                 "circuit_breaker": True,
-                "cost_log": True,
-                "max_daily_usd": MAX_DAILY_USD,
-                "daily_cost_total": round(_daily_cost_tracker["total_usd"], 5),
                 "payload_cap_bytes": MAX_FILE_BYTES,
                 "observe_endpoint": True})
             return
@@ -1767,12 +1632,11 @@ def main():
 
     _validate_model_config()  # EAG-S362: secrets.env SSOT, 모델 미설정 시 FAIL_CLOSED
     _ensure_memory_dirs()
-    _load_cost_state()  # EAG-S308-BUDGET-PERSIST-001: 일일 비용 파일 복원
 
     print(f"[JENI_RUNTIME] starting v{RUNTIME_VERSION} model={LLM_MODEL} is_gemini={_IS_GEMINI} "
           f"key={_mask_key(LLM_API_KEY)} max_tool_rounds={MAX_TOOL_ROUNDS} "
           f"max_total_seconds={MAX_TOTAL_SECONDS} max_output_tokens={LLM_MAX_TOKENS} "
-          f"circuit_breaker=True cost_log=True max_daily_usd={MAX_DAILY_USD} "
+          f"circuit_breaker=True "
           f"persistent_memory=True function_calling=True sc_auto_load=True", file=sys.stderr)
     if not LLM_API_KEY:
         print("[JENI_RUNTIME] WARN: AIBA_LLM_API_KEY not set — /ask will FAIL_CLOSED",

@@ -48,7 +48,7 @@ RUNTIME_HOST = "127.0.0.1"
 RUNTIME_PORT = 8448
 RUNTIME_VERSION = "1.7.12"
 
-OPENAI_API_URL = "https://api.deepseek.com/v1/chat/completions"
+OPENAI_API_URL = os.environ.get("AIBA_DOMI_API_URL", "").strip()  # EAG-S444: env 주도 전환 (S443 R3, 도미 전용 소켓)
 OPENAI_MODEL = os.environ.get("AIBA_DOMI_MODEL", "")
 OPENAI_MODEL_ESCALATE = os.environ.get("AIBA_DOMI_MODEL_ESCALATE", "")
 OPENAI_TIMEOUT = 55
@@ -75,27 +75,16 @@ MAX_TOOL_ROUNDS = 12            # B-D-2: 5 → 8 → 12 [S386]
 MAX_TOTAL_SECONDS = 180         # B-D-2: 120 → 180
 TIMEOUT_PREEMPT_SECONDS = 170   # B-D-2: 110 → 170
 
-# C-4: 비용 단가 (env 오버라이드). 디폴트 = 현재 모델 gpt-4o-mini 실단가 (정확 측정).
-DOMI_COST_RATE_INPUT = float(os.environ.get("AIBA_DOMI_COST_RATE_INPUT", "0.15"))
-DOMI_COST_RATE_OUTPUT = float(os.environ.get("AIBA_DOMI_COST_RATE_OUTPUT", "0.60"))
-
-# 도미 ④ / 제니 J-2: 일일 예산 가드 (env 제어). 디폴트 $1.0/일.
-MAX_DAILY_USD = float(os.environ.get("AIBA_MAX_DAILY_USD", "1.0"))
-# CHANGE_ID: S287-J2-WARN — 2단계 가드 WARN 임계 = cap 80%
-MAX_DAILY_USD_WARN = float(os.environ.get("AIBA_MAX_DAILY_USD_WARN", str(round(MAX_DAILY_USD * 0.8, 5))))
 
 MAX_FILE_BYTES = 20_000  # D-3: read_file 페이로드 캡
 
 # ── Required Environment Variables — Hard-Stop (EAG-S290-HARDSTOP-001) ─────
 # Fail-Closed 원칙: 아래 변수 중 하나라도 미설정 시 기동 거부 + FATAL 진단 출력.
-# Required: 모델명·비용단가·일일예산·API키 — 모두 예산가드 정확성에 직결.
-# Optional: MAX_DAILY_USD_WARN(80% 디폴트) 등. (AIBA_DOMI_MODEL_ESCALATE는 _REQUIRED_ENVS로 이동·gpt-4o 표기 폐기)
+# Required: 엔드포인트·모델명·API키. (S444: 비용단가·일일예산 항목은 비용계산 전면제거로 삭제)
 _REQUIRED_ENVS = [
-    "AIBA_DOMI_MODEL_ESCALATE",   # escalate 모델명 (fail-loud 필수)
-    "AIBA_DOMI_MODEL",             # 비용 단가 기준 모델명
-    "AIBA_DOMI_COST_RATE_INPUT",   # 입력 토큰 단가 (USD/1M tokens)
-    "AIBA_DOMI_COST_RATE_OUTPUT",  # 출력 토큰 단가 (USD/1M tokens)
-    "AIBA_MAX_DAILY_USD",          # 일일 예산 한도 (USD)
+    "AIBA_DOMI_API_URL",           # API 엔드포인트 (도미 전용 소켓, EAG-S444)
+    "AIBA_DOMI_MODEL",             # 기본 모델명
+    "AIBA_DOMI_MODEL_ESCALATE",    # escalate 모델명 (fail-loud 필수)
     "AIBA_DOMI_API_KEY",           # Domi API 인증키
 ]
 
@@ -434,66 +423,6 @@ def _extract_tool_calls(message: dict) -> list:
     return calls
 
 
-# ── C-4: 비용 관측 로그 + 일일 누적 추적 (도미 ③ + 도미 ④) ────────────────────
-
-_daily_cost_tracker: dict = {"date": "", "total_usd": 0.0}
-
-# ── EAG-S308-BUDGET-PERSIST-001: 일일 비용 파일 영속화 ────────────────────────
-# 재시작 시 in-memory tracker가 0으로 초기화되어 일일 예산 가드가 무력화되는
-# 결함(OI-S306-001) 해소. WF05_BUDGET_STATE.json 선행 패턴 준용.
-DAILY_COST_STATE_PATH = os.path.join(
-    ARSS_ROOT, "runtime/governance/budget/DOMI_DAILY_COST_STATE.json")
-DAILY_COST_SCHEMA = "DAILY_BUDGET_STATE_v1"
-_cost_state_lock = threading.Lock()
-_cost_state_loaded = False
-
-
-def _persist_cost_state() -> None:
-    """tmp 파일 → fsync → os.replace 원자적 쓰기. 호출자가 lock 보유 전제."""
-    try:
-        os.makedirs(os.path.dirname(DAILY_COST_STATE_PATH), exist_ok=True)
-        payload = {
-            "schema": DAILY_COST_SCHEMA,
-            "date": _daily_cost_tracker["date"],
-            "total_usd": round(_daily_cost_tracker["total_usd"], 6),
-            "updated_at": _utc_now_iso(),
-        }
-        tmp = DAILY_COST_STATE_PATH + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, DAILY_COST_STATE_PATH)
-    except Exception as e:
-        _emit_event({"tag": "COST_STATE_PERSIST_FAIL", "agent": "domi",
-                     "error": str(e)})
-
-
-def _load_cost_state() -> None:
-    """기동 시 1회 파일 복원. Fail-Open: 부재/손상 시 today 0.0으로 시작."""
-    global _cost_state_loaded
-    today = _today_str()
-    try:
-        with open(DAILY_COST_STATE_PATH, encoding="utf-8") as f:
-            data = json.load(f)
-        stored_date = data.get("date", "")
-        stored_total = float(data.get("total_usd", 0.0))
-        if stored_date == today:
-            _daily_cost_tracker["date"] = today
-            _daily_cost_tracker["total_usd"] = stored_total
-            _emit_event({"tag": "COST_STATE_RESTORED", "agent": "domi",
-                         "date": today, "total_usd": round(stored_total, 5)})
-        else:
-            _daily_cost_tracker["date"] = today
-            _daily_cost_tracker["total_usd"] = 0.0
-            _emit_event({"tag": "COST_STATE_NEW_DAY", "agent": "domi",
-                         "date": today, "prev_date": stored_date})
-    except Exception as e:
-        _daily_cost_tracker["date"] = today
-        _daily_cost_tracker["total_usd"] = 0.0
-        _emit_event({"tag": "COST_STATE_FAIL_OPEN", "agent": "domi",
-                     "date": today, "note": str(e)})
-    _cost_state_loaded = True
 
 
 def _emit_event(event: dict) -> None:
@@ -505,47 +434,6 @@ def _today_str() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d")
 
 
-def _daily_budget_exceeded() -> bool:
-    """도미 ④: 당일 누적 비용이 MAX_DAILY_USD 초과 시 True.
-    EAG-S308-BUDGET-PERSIST-001: 날짜 경계 전환 시 파일에도 즉시 반영."""
-    today = _today_str()
-    if _daily_cost_tracker["date"] != today:
-        with _cost_state_lock:
-            _daily_cost_tracker["date"] = today
-            _daily_cost_tracker["total_usd"] = 0.0
-            _persist_cost_state()
-    return _daily_cost_tracker["total_usd"] >= MAX_DAILY_USD
-
-
-def _log_call_cost(model: str, usage: dict, session: str, round_num: int) -> float:
-    """CHANGE_ID: S287-C4 / 도미 ③ — usage 부재 시 WARN(중단 금지). 출력은 JSON Lines."""
-    if not usage:
-        _emit_event({"tag": "COST_LOG", "level": "WARN", "agent": "domi",
-                     "session": session, "round": round_num, "model": model,
-                     "note": "usage metadata missing, cost tracking skipped"})
-        return 0.0
-    inp = usage.get("prompt_tokens", 0)
-    out = usage.get("completion_tokens", 0)
-    cost = (inp / 1_000_000 * DOMI_COST_RATE_INPUT) + (out / 1_000_000 * DOMI_COST_RATE_OUTPUT)
-    today = _today_str()
-    # EAG-S308-BUDGET-PERSIST-001: 누적 + 파일 영속화 (lock 보호, 원자적 쓰기)
-    with _cost_state_lock:
-        if _daily_cost_tracker["date"] != today:
-            _daily_cost_tracker["date"] = today
-            _daily_cost_tracker["total_usd"] = 0.0
-        _daily_cost_tracker["total_usd"] += cost
-        _persist_cost_state()
-    _emit_event({"tag": "COST_LOG", "agent": "domi", "session": session,
-                 "round": round_num, "model": model, "input": inp, "output": out,
-                 "est_usd": round(cost, 5),
-                 "daily_total": round(_daily_cost_tracker["total_usd"], 5),
-                 "daily_cap": MAX_DAILY_USD})
-    # CHANGE_ID: S287-J2-WARN / 도미 ④ — WARN 임계 도달 시 경고
-    if _daily_cost_tracker["total_usd"] >= MAX_DAILY_USD_WARN:
-        _emit_event({"tag": "BUDGET_WARN", "agent": "domi",
-                     "daily_total": round(_daily_cost_tracker["total_usd"], 5),
-                     "warn": MAX_DAILY_USD_WARN, "cap": MAX_DAILY_USD})
-    return cost
 
 
 # ── C-1: Circuit Breaker ──────────────────────────────────────────────────────
@@ -1318,18 +1206,6 @@ def _make_fail_closed_result(reason: str, detail: str, rounds_used: int,
     return result
 
 
-def _make_budget_block_result(detail: str) -> dict:
-    """CHANGE_ID: S287-J2 / 도미 ④ — 예산 차단을 설계 판정(DESIGN_READY=FAIL)과 구분."""
-    text = (
-        "[DOMI RUNTIME — BUDGET GUARD]\n"
-        "DESIGN_RUN = FALSE\n"
-        "REASON = DAILY_BUDGET_EXCEEDED\n"
-        f"DETAIL = {detail}\n"
-        "NOTE = 도미의 설계 판정이 아니라 인프라 비용 가드에 의한 설계 미실행 상태입니다. "
-        "예산 한도 조정 또는 DEP 승인 후 재요청하십시오.\n"
-    )
-    return {"ok": False, "text": text, "error": "DAILY_BUDGET_EXCEEDED",
-            "budget_block": True, "design_run": False, "rounds_used": 0}
 
 
 # ── OpenAI 호출 ────────────────────────────────────────────────────────────────
@@ -1380,10 +1256,6 @@ def _execute_openai_request(req: urllib.request.Request, loop_start: float = Non
                 return {"ok": False, "text": "", "tool_calls": [], "message": {},
                         "usage": {},
                         "error": f"FAIL_CLOSED: HTTP_{code} retry would exceed time budget ({tag})"}
-            if _daily_budget_exceeded():
-                return {"ok": False, "text": "", "tool_calls": [], "message": {},
-                        "usage": {},
-                        "error": f"FAIL_CLOSED: HTTP_{code} retry blocked by daily budget ({tag})"}
             time.sleep(sleep_sec)
             try:
                 with urllib.request.urlopen(_new_req(), timeout=OPENAI_TIMEOUT) as resp_r:
@@ -1580,13 +1452,6 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
     except Exception:
         pass
 
-    # CHANGE_ID: S287-J2 / 도미 ④ — 일일 예산 HARD 차단 (이벤트 로그 후 Fail-Closed)
-    if _daily_budget_exceeded():
-        _emit_event({"tag": "BUDGET_BLOCK", "agent": "domi",
-                     "daily_total": round(_daily_cost_tracker["total_usd"], 5),
-                     "cap": MAX_DAILY_USD, "action": "FAIL_CLOSED"})
-        return _make_budget_block_result(
-            f"daily_total={_daily_cost_tracker['total_usd']:.5f} >= cap={MAX_DAILY_USD:.2f} USD")
 
     # B-D-1b: SC_FINAL 로드 실패 시 Fail-Closed
     sc_context = _load_session_context()
@@ -1678,10 +1543,6 @@ def _run_design_loop(prompt: str, context: str, session: str = "S000", escalate:
                 round_num, _make_audit_bundle(round_num, audit_trail))
             break
 
-        # C-4: 비용 로그 + 일일 누적
-        _log_call_cost(
-            OPENAI_MODEL_ESCALATE if escalate else OPENAI_MODEL,
-            call_result.get("usage", {}), session, round_num)
 
         model_message = call_result["message"]
         accumulated.append(model_message)
@@ -1917,9 +1778,6 @@ class DomiRuntimeHandler(BaseHTTPRequestHandler):
                 "visited_paths_guard": True,
                 "zero_progress_breaker": True,
                 "circuit_breaker": True,
-                "cost_log": True,
-                "max_daily_usd": MAX_DAILY_USD,
-                "daily_cost_total": round(_daily_cost_tracker["total_usd"], 5),
                 "payload_cap_bytes": MAX_FILE_BYTES,
                 "observe_endpoint": True})
             return
@@ -1982,13 +1840,11 @@ def main():
 
     _check_required_envs()  # EAG-S290-HARDSTOP-001: 기동 전 필수 env 검증
     _ensure_memory_dirs()
-    _load_cost_state()  # EAG-S308-BUDGET-PERSIST-001: 일일 비용 파일 복원
 
     print(f"[DOMI_RUNTIME] starting v{RUNTIME_VERSION} model={OPENAI_MODEL} "
           f"key={_mask_key(OPENAI_API_KEY)} max_tool_rounds={MAX_TOOL_ROUNDS} "
           f"max_total_seconds={MAX_TOTAL_SECONDS} max_output_tokens={OPENAI_MAX_OUTPUT_TOKENS} "
           f"obs_plan=True visited_guard=True zpb=True circuit_breaker=True "
-          f"cost_log=True max_daily_usd={MAX_DAILY_USD} "
           f"persistent_memory=True function_calling=True sc_auto_load=True", file=sys.stderr)
     if not OPENAI_API_KEY:
         print("[DOMI_RUNTIME] WARN: AIBA_OPENAI_API_KEY not set — /ask will FAIL_CLOSED",

@@ -19,7 +19,6 @@ def _mk(text, truncated=False):
 def _stub(monkeypatch):
     events = []
     monkeypatch.setattr(dr, "_gcb_check", lambda: False)
-    monkeypatch.setattr(dr, "_daily_budget_exceeded", lambda: False)
     monkeypatch.setattr(dr, "_load_session_context", lambda: "ctx")
     monkeypatch.setattr(dr, "_begin_observation", lambda s: "obs")
     monkeypatch.setattr(dr, "_reset_loop_state", lambda: None)
@@ -27,7 +26,6 @@ def _stub(monkeypatch):
     monkeypatch.setattr(dr, "_build_memory_preamble", lambda m: "")
     monkeypatch.setattr(dr, "_build_initial_messages",
                         lambda p, c, mp, sc="": [{"role": "system", "content": "x"}])
-    monkeypatch.setattr(dr, "_log_call_cost", lambda *a, **k: None)
     monkeypatch.setattr(dr, "_persist_results", lambda *a, **k: None)
     monkeypatch.setattr(dr, "_make_audit_bundle", lambda *a, **k: {})
     monkeypatch.setattr(dr, "_gcb_report_progress", lambda c: None)
