@@ -682,7 +682,7 @@ def _oauth_authorize(query_string: str) -> tuple:
         return 400, None, {"error": "invalid_request", "error_description": "redirect_uri required"}
     if client_id not in _OAUTH_CLIENTS:
         # [A2 S413] 미등록 client_id 자동등록 금지
-        self._send_error(400, "invalid_client", "Client not registered. Use /register endpoint with valid credentials.")
+        return 400, None, {"error": "invalid_client", "error_description": "Client not registered. Use /register endpoint with valid credentials."}
         return
     auth_code  = _secrets.token_hex(16)
     expires_at = _time.time() + _OAUTH_CODE_TTL
