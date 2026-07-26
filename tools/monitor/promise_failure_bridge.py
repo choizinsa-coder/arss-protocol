@@ -196,7 +196,7 @@ def _to_failure_kwargs(rec: dict) -> dict:
 
 
 def bridge_promise_violations() -> dict:
-    result = {"bridged": 0, "skipped": 0, "errors": 0}
+    result = {"bridged": 0, "skipped": 0, "errors": 0, "filtered": 0}
 
     try:
         from tools.governance.area_15_failure_memory import (
@@ -262,6 +262,30 @@ def bridge_promise_violations() -> dict:
             if vid and vid in seen:
                 result["skipped"] += 1
                 continue
+
+            # [S452-PERMDENY-INTAKE-BLOCK] EAG-S452-PERMDENY-INTAKE-BLOCK-001
+            # A governance DENY that the gate correctly refused is NOT a failure.
+            # Feeding it into area_15 dilutes the real signal (RAW S452: 30 of
+            # 218 failure_memory rows, 2 of 6 standing cross_session_repeat).
+            # Only the RC-1 PC:* class is blocked - the gate working as designed.
+            # RC-2 PC:* (AUTH_MISMATCH / NONCE_REPLAY / STALE_TIMESTAMP /
+            # AUDIT_WRITE_FAILED) and every UNREGISTERED deny reason keep flowing:
+            # fail-closed, an unclassifiable reason is never silently dropped.
+            # The audit trail is untouched - promise_violations.jsonl and the
+            # PHASE_C log still hold every DENY. This limits only what is
+            # SUPPLIED to the learning loop, never what is RECORDED. (jeni J1/J2)
+            _rule_id = str(rec.get("rule_id", "") or "").strip()
+            if _rule_id.startswith("PC:"):
+                try:
+                    _is_rc1 = _map_rc(_rule_id).value == "RC-1"
+                except Exception:
+                    _is_rc1 = False  # fail-closed: undecidable -> keep recording
+                if _is_rc1:
+                    # deliberately NOT added to the seen-set: the offset already
+                    # advanced, so no re-read occurs, and an un-recorded id keeps
+                    # the seen file a record of what was BRIDGED, not what was seen.
+                    result["filtered"] += 1
+                    continue
 
             kwargs = _to_failure_kwargs(rec)
             try:

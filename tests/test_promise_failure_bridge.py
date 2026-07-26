@@ -74,7 +74,9 @@ def test_I2_retroactive_skip(env):
     bridge, violations, position, fm_path, load_fm = env
     _write(violations, [_v("a", "L1:NOT_IN_REGISTRY"), _v("b", "EXEC:FAIL:run_script")])
     res = bridge.bridge_promise_violations()
-    assert res == {"bridged": 0, "skipped": 0, "errors": 0}
+    # S452: the return contract gained a "filtered" counter. Key-wise assertions
+    # keep the original intent; the exact key set is pinned in the S452 suite.
+    assert res["bridged"] == 0 and res["skipped"] == 0 and res["errors"] == 0
     assert load_fm() == []
     pos = json.loads(position.read_text())
     assert pos[str(violations)]["offset"] == violations.stat().st_size
@@ -261,8 +263,11 @@ def _pc_rc(env, rule_id):
 
 
 def test_pc_rc1_known_deny(env):
-    rc = _pc_rc(env, "PC:UNKNOWN_PURPOSE")
-    assert rc["PC:UNKNOWN_PURPOSE"] == "RC-1"
+    # S452: RC-1 PC:* is now filtered before record_failure, so the S430-B gate
+    # asserts the CLASSIFICATION directly - that was always its intent (jeni J7).
+    bridge = env[0]
+    assert bridge._map_rc("PC:UNKNOWN_PURPOSE").value == "RC-1"
+    assert _pc_rc(env, "PC:UNKNOWN_PURPOSE") == {}
 
 
 def test_pc_rc2_auth_mismatch(env):
@@ -271,9 +276,11 @@ def test_pc_rc2_auth_mismatch(env):
 
 
 def test_pc_containment_rc1(env):
+    # S452: see test_pc_rc1_known_deny - classification asserted directly.
     rid = "PC:CONTAINMENT_REQUEST_DENIED:initialize"
-    rc = _pc_rc(env, rid)
-    assert rc[rid] == "RC-1"
+    bridge = env[0]
+    assert bridge._map_rc(rid).value == "RC-1"
+    assert _pc_rc(env, rid) == {}
 
 
 def test_pc_unknown_fallback_rc2(env):
