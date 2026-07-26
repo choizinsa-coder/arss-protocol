@@ -159,11 +159,70 @@ def scan_audit_trail(path: Path, last_offset: int) -> tuple[list[dict], int]:
 
 # ── exec_audit_trail.log 스캔 ─────────────────────────────────────────────────
 
-def scan_exec_audit_trail(path: Path, last_offset: int) -> tuple[list[dict], int]:
+# ── [S451-EXEC-DEDUP] EAG-S451-BRIDGE-DEDUP-001 ───────────────────────
+# One exec failure emits TWO rows into exec_audit_trail.log: a POST_FAIL stage
+# row and an EVIDENCE_RECEIPT result=FAIL row, correlated by session_audit_id.
+# Emitting a violation for both double-counts every exec failure downstream
+# (failure_memory -> cross_session_repeat). RAW S451: 143/143 receipts pair with
+# a POST_FAIL, 0 orphans, receipt always AFTER its POST_FAIL, session_audit_id
+# present on 100% of both. POST_FAIL is the strict superset (188) and the richer
+# record (carries exit_code), so the RECEIPT row is the one suppressed.
+#
+# Cross-batch pairs (POST_FAIL read in batch N, receipt in batch N+1) are handled
+# by a pending map. fail-open by design: a missing or corrupt state file degrades
+# to the pre-S451 behaviour (both rows emitted), never to a lost receipt.
+DEDUP_STATE_NAME = ".exec_dedup_state.json"
+DEDUP_STATE_SCHEMA = "exec_dedup_state_v1"
+DEDUP_PENDING_TTL_BATCHES = 2
+DEDUP_PENDING_MAX = 500
+
+
+def _dedup_state_path(explicit=None) -> Path:
+    """Resolved at CALL time from module-global MONITOR_DIR.
+
+    Existing tests monkeypatch MONITOR_DIR for isolation; a module-level
+    constant would ignore that patch and write into the live monitor dir.
     """
-    exec_audit_trail.log에서 FAIL 이벤트를 수집.
-    - stage=="POST_FAIL": 실행 실패 (exit_code != 0)
-    - receipt_type=="EVIDENCE_RECEIPT" AND result=="FAIL": 영수증 실패
+    if explicit is not None:
+        return Path(explicit)
+    return MONITOR_DIR / DEDUP_STATE_NAME
+
+
+def _load_dedup_state(path: Path) -> dict:
+    """fail-open: absent/corrupt -> {} (no suppression, pre-S451 behaviour)."""
+    try:
+        if not path.exists():
+            return {}
+        with open(path, encoding="utf-8") as f:
+            state = json.load(f)
+        if not isinstance(state, dict):
+            return {}
+        if not isinstance(state.get("pending"), dict):
+            state["pending"] = {}
+        return state
+    except Exception:
+        return {}
+
+
+def _save_dedup_state(path: Path, state: dict) -> None:
+    """Atomic temp+replace. A concurrent lost update degrades to fail-open."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(path.name + ".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+    except Exception:
+        pass
+
+
+def scan_exec_audit_trail(path: Path, last_offset: int, state_path=None) -> tuple[list[dict], int]:
+    """exec_audit_trail.log -> FAIL records.
+
+    - stage=="POST_FAIL": execution failure (exit_code != 0)
+    - receipt_type=="EVIDENCE_RECEIPT" AND result=="FAIL": receipt failure,
+      SUPPRESSED when a POST_FAIL with the same session_audit_id was already
+      emitted (this batch or a recent one). Orphan receipts are preserved.
     returns: (records, new_offset)
     """
     records: list[dict] = []
@@ -175,6 +234,17 @@ def scan_exec_audit_trail(path: Path, last_offset: int) -> tuple[list[dict], int
             f.seek(last_offset)
             raw = f.read()
             new_offset = last_offset + len(raw)
+
+        dedup_path = _dedup_state_path(state_path)
+        state = _load_dedup_state(dedup_path)
+        pending = state.get("pending") or {}
+        try:
+            batch_counter = int(state.get("batch_counter", 0) or 0)
+        except (TypeError, ValueError):
+            batch_counter = 0
+        next_batch = batch_counter + 1
+        pending_before = set(pending)
+        same_batch = set()
 
         for line in raw.decode("utf-8", errors="replace").splitlines():
             line = line.strip()
@@ -189,6 +259,7 @@ def scan_exec_audit_trail(path: Path, last_offset: int) -> tuple[list[dict], int
             actor_id  = entry.get("actor_id", "unknown")
             timestamp = entry.get("timestamp", "")
             stage     = entry.get("stage", "")
+            sa_id     = entry.get("session_audit_id") or ""
 
             if stage == "POST_FAIL":
                 exit_code = entry.get("exit_code")
@@ -200,12 +271,22 @@ def scan_exec_audit_trail(path: Path, last_offset: int) -> tuple[list[dict], int
                     "timestamp_iso": timestamp,
                     "raw_reason":    f"exit_code={exit_code}",
                 })
+                if sa_id:
+                    same_batch.add(sa_id)
+                    if sa_id not in pending:
+                        pending[sa_id] = {"first_seen_batch": next_batch}
                 continue
 
             if entry.get("receipt_type") == "EVIDENCE_RECEIPT" and entry.get("result") == "FAIL":
                 # [P5-PHANTOM-FILTER-S374] exec self-test phantom receipts carry no_registry; skip to keep area_15 clean
                 if entry.get("constraint_registry_hash") == "no_registry":
                     continue
+
+                # [S451] paired receipt -> suppress. orphan / no correlation id -> preserve.
+                if sa_id and (sa_id in same_batch or sa_id in pending):
+                    pending.pop(sa_id, None)
+                    continue
+
                 action   = entry.get("action", "")
                 cmd_part = action.split(":", 1)[1] if ":" in action else action
                 rule_id  = f"EXEC:RECEIPT_FAIL:{cmd_part}" if cmd_part else "EXEC:RECEIPT_FAIL:UNKNOWN"
@@ -217,11 +298,33 @@ def scan_exec_audit_trail(path: Path, last_offset: int) -> tuple[list[dict], int
                     "raw_reason":    "EVIDENCE_RECEIPT result=FAIL",
                 })
 
+        stale = [
+            k for k, v in pending.items()
+            if next_batch - int((v or {}).get("first_seen_batch", next_batch)) >= DEDUP_PENDING_TTL_BATCHES
+        ]
+        for k in stale:
+            pending.pop(k, None)
+
+        if len(pending) > DEDUP_PENDING_MAX:
+            ordered = sorted(
+                pending.items(),
+                key=lambda kv: int((kv[1] or {}).get("first_seen_batch", 0)),
+            )
+            for k, _v in ordered[: len(pending) - DEDUP_PENDING_MAX]:
+                pending.pop(k, None)
+
+        # no-op scans must not touch the state file: existing tests call
+        # scan_and_record against production paths without monkeypatching.
+        if set(pending) != pending_before or (pending and len(raw) > 0):
+            state["pending"] = pending
+            state["batch_counter"] = next_batch
+            state["schema"] = DEDUP_STATE_SCHEMA
+            _save_dedup_state(dedup_path, state)
+
         return records, new_offset
 
     except Exception:
         return records, last_offset
-
 
 # ── promise_violation_v1 변환 ─────────────────────────────────────────────────
 
