@@ -148,3 +148,31 @@ tools/close/*_delta.json
 
 # GCB SYSTEM veto secret (EAG-S337-GCB-CONSEC-PAUSE-001)
 runtime/governance/gcb/.gcb_secret
+
+# === S456 repository hygiene (EAG-S456-REPO-CLEAN-FIX-001) ===
+# sandbox blanket: per-subdir listing left gaps whenever a new subdir appeared
+tools/sandbox/
+# session archive (TIER_D history + reports + agent contexts)
+archive/
+# active governance runtime data (written by live code, not source)
+tools/governance/*.jsonl
+tools/governance/*.json
+tools/close/session_close_result.json
+SECURITY_LABEL_REGISTRY.json
+runtime/governance/audit/
+runtime/governance/gcb/
+runtime/governance/conditional_eag_registry.jsonl
+runtime/governance/WF05-OPS-WINDOW-PERMANENT.json
+tools/autoroute/runtime/
+aiba-mcp-bridge/
+tools/tmp/
+# purge/backfill audit snapshots - preserved on disk, never committed
+*.pre_purge_S*
+*.pre_purge_D_S*
+*.pre_p5c_purge_S*
+*.pre_backfill_S*
+*.pre_cleanup_S*
+# ad-hoc backup suffixes (the plain *.bak rule never matched these)
+*_bak
+*.s[0-9][0-9][0-9]bak
+*.s[0-9][0-9][0-9]_*_bak
