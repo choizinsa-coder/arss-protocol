@@ -9,6 +9,13 @@ EAG: EAG-S322-AIF-AREA15-001
   - record_failure() 필드 검증 -> entry dict -> jsonl append
   - get_*() 구조 일치
   - schema, recorded_at, actor 필드
+
+S450 확장 (EAG-S450-FAILURE-MEMORY-RESOLVED-001, add-only):
+  - resolved_entries.jsonl 부속 장부 신설. failure_memory.jsonl은 무수정이다.
+  - resolved_entries.jsonl 부재 / 빈 파일은 정상 상태이며 no-op이다.
+    본 기능은 배포 시점의 동작이 배포 전과 완전히 동일하므로,
+    E-3(배포-시딩 원자성)이 전제하는 "소비될 백로그"가 존재하지 않는다.
+    시딩은 배포와 독립된 후속 데이터 작업이다(제니 V5-1).
 """
 import json
 from datetime import datetime, timezone
@@ -21,6 +28,7 @@ EAG_ID  = "EAG-S322-AIF-AREA15-001"
 
 ROOT     = Path("/opt/arss/engine/arss-protocol")
 LOG_PATH = ROOT / "tools/governance/failure_memory.jsonl"
+RESOLVED_PATH = ROOT / "tools/governance/resolved_entries.jsonl"  # S450
 
 VALID_COMPONENTS = frozenset({"domi", "jeni", "caddy", "beo", "system", "unknown"})
 
@@ -43,6 +51,112 @@ def _entry_session(entry: dict):
     if s and s[0] in ("S", "s"):
         s = s[1:]
     return s or None
+
+
+RESOLUTION_SCHEMA = "failure_resolution_v1"
+RESOLUTION_REQUIRED_FIELDS = (
+    "session", "component", "error_code",
+    "resolved_at", "resolved_by", "resolution_note",
+)
+
+
+def _normalize_session(raw):
+    """S450: 'S449' / '449' / 449 -> '449'. 빈값은 None."""
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    if s and s[0] in ("S", "s"):
+        s = s[1:]
+    return s or None
+
+
+def _resolution_key(entry: dict):
+    """S450: failure entry -> resolved 대조 키 (session, component, error_code).
+
+    rc를 키에 넣지 않는다. 실측상 205건 중 175건이 RC-2로 편중되어
+    식별력이 없고, 1건 resolve가 무관 항목을 일괄 제외하는 과잉 필터가 된다.
+    error_code를 포함해야 cross_session_repeat 그룹핑 축과 일치한다.
+    """
+    return (
+        _entry_session(entry),
+        entry.get("component"),
+        entry.get("error_code"),
+    )
+
+
+def _load_resolved_keys() -> set:
+    """S450: resolved_entries.jsonl -> {(session, component, error_code)} set.
+
+    캐시를 두지 않는다. 파일 규모가 failure_memory와 동급이고,
+    aiba_monitor는 5분 주기로 새로 기동되는 별개 프로세스라
+    프로세스 내 캐시 재사용 기회가 없다. mtime 캐시는 초 단위
+    해상도로 stale 창을 만들 뿐 이득이 없다(제니 V4-2).
+
+    파일 부재 / 빈 파일은 정상 상태이며 빈 set을 반환한다(no-op).
+    중복 줄은 set이므로 자동 합치기된다(제니 V4-1).
+    """
+    keys = set()
+    if not RESOLVED_PATH.exists():
+        return keys
+    with open(RESOLVED_PATH, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            k = (
+                _normalize_session(rec.get("session")),
+                rec.get("component"),
+                rec.get("error_code"),
+            )
+            if all(k):
+                keys.add(k)
+    return keys
+
+
+def record_resolution(session, component, error_code,
+                      resolved_by, resolution_note) -> dict:
+    """S450: 실패 항목의 해결을 resolved_entries.jsonl에 append 기록한다.
+
+    failure_memory.jsonl은 수정하지 않는다(append-only 불변).
+    필수 필드가 하나라도 비면 FailureMemoryError.
+    """
+    sess = _normalize_session(session)
+    comp = str(component).strip().lower() if component else ""
+    ecode = str(error_code).strip() if error_code else ""
+    rby = str(resolved_by).strip() if resolved_by else ""
+    note = str(resolution_note).strip() if resolution_note else ""
+    if not sess:
+        raise FailureMemoryError("required field missing: 'session'")
+    if not comp:
+        raise FailureMemoryError("required field missing: 'component'")
+    if comp not in VALID_COMPONENTS:
+        raise FailureMemoryError(
+            "Invalid component: '{}'. Must be one of {}".format(
+                component, sorted(VALID_COMPONENTS)))
+    if not ecode:
+        raise FailureMemoryError("required field missing: 'error_code'")
+    if not rby:
+        raise FailureMemoryError("required field missing: 'resolved_by'")
+    if not note:
+        raise FailureMemoryError("required field missing: 'resolution_note'")
+    rec = {
+        "schema":          RESOLUTION_SCHEMA,
+        "version":         VERSION,
+        "session":         sess,
+        "component":       comp,
+        "error_code":      ecode,
+        "resolved_at":     datetime.now(timezone.utc).isoformat(),
+        "resolved_by":     rby,
+        "resolution_note": note,
+    }
+    RESOLVED_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(RESOLVED_PATH, "a", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    return rec
 
 
 class FailureCategory(Enum):
@@ -151,7 +265,8 @@ def get_recent_failures(n: int = 10) -> list:
 
 
 def get_failure_patterns(window_minutes: int = 60, threshold: int = 3,
-                         cross_session_threshold: int = CROSS_SESSION_THRESHOLD_DEFAULT) -> dict:
+                         cross_session_threshold: int = CROSS_SESSION_THRESHOLD_DEFAULT,
+                         filter_resolved: bool = False) -> dict:
     """
     패턴 감지:
       consecutive_repeat: 동일 (component, error_code) 연속 threshold회 이상
@@ -162,6 +277,11 @@ def get_failure_patterns(window_minutes: int = 60, threshold: int = 3,
     from datetime import timedelta
 
     all_entries = _load_all_entries()
+    if filter_resolved:
+        _resolved = _load_resolved_keys()
+        if _resolved:
+            all_entries = [e for e in all_entries
+                           if _resolution_key(e) not in _resolved]
     now = datetime.now(timezone.utc)
     window_start = now - timedelta(minutes=window_minutes)
 

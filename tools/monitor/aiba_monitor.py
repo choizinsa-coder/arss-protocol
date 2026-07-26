@@ -79,7 +79,8 @@ class GovernanceMonitor:
             from tools.governance.area_15_failure_memory import get_failure_patterns
             patterns = get_failure_patterns(
                 window_minutes=1440,
-                threshold=self.FAILURE_REPEAT_THRESHOLD
+                threshold=self.FAILURE_REPEAT_THRESHOLD,
+                filter_resolved=True
             )
             repeats = patterns.get("consecutive_repeat", [])
             if not repeats:
@@ -210,7 +211,8 @@ class GovernanceMonitor:
             from tools.governance.area_15_failure_memory import get_failure_patterns
             patterns = get_failure_patterns(
                 window_minutes=1440,
-                threshold=self.FAILURE_REPEAT_THRESHOLD
+                threshold=self.FAILURE_REPEAT_THRESHOLD,
+                filter_resolved=True
             )
             fired  = bool(patterns.get("has_alert"))
             detail = ""
