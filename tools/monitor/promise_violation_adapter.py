@@ -256,7 +256,7 @@ def scan_exec_audit_trail(path: Path, last_offset: int, state_path=None) -> tupl
                 continue
 
             command   = entry.get("command", "")
-            actor_id  = entry.get("actor_id", "unknown")
+            actor_id  = entry.get("actor_id") or entry.get("actor") or "unknown"
             timestamp = entry.get("timestamp", "")
             stage     = entry.get("stage", "")
             sa_id     = entry.get("session_audit_id") or ""
