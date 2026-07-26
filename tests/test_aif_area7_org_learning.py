@@ -24,7 +24,11 @@ _NO_ALERT = {
     "window_minutes": 43200,
     "threshold": 3,
 }
-_NO_FAIL_SNAP = {"total_failed": 0, "total_passed": 1869}
+_NO_FAIL_SNAP = {
+    "M01": 1869, "M02": 0, "M03": None, "M04": None,
+    "M05": None, "M06": None, "M07": None,
+    "pytest_skipped": 95, "snapshot_at": "2026-07-27T00:00:00+00:00",
+}  # S455: mirrors the real get_current_snapshot() key set
 
 
 # 01: record_learning basic
@@ -113,7 +117,11 @@ def test_06_detect_improvement_failure_repeat(tmp_path):
 # 07: detect_improvement ghs_decline
 def test_07_detect_improvement_ghs_decline(tmp_path):
     engine = OrgLearningEngine(log_dir=tmp_path)
-    fail_snap = {"total_failed": 3, "total_passed": 1866}
+    fail_snap = {
+        "M01": 1866, "M02": 3, "M03": None, "M04": None,
+        "M05": None, "M06": None, "M07": None,
+        "pytest_skipped": 95, "snapshot_at": "2026-07-27T00:00:00+00:00",
+    }  # S455: mirrors the real get_current_snapshot() key set
     with patch.object(m7, "_get_failure_patterns", return_value=_NO_ALERT):
         with patch.object(m7, "_get_current_snapshot", return_value=fail_snap):
             result = engine.detect_improvement_opportunities()

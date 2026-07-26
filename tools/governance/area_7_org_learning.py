@@ -138,7 +138,7 @@ class OrgLearningEngine:
         """
         Detects improvement opportunities from 2 channels (Phase 1):
         1. Area 15 Failure Repeat patterns
-        2. Area 13 pytest metrics (total_failed > 0)
+        2. Area 13 pytest metrics (M02 pytest_failed > 0)
         Phase 2: External Change detection placeholder.
         """
         opportunities = []
@@ -178,7 +178,7 @@ class OrgLearningEngine:
         # Channel 2: Area 13 pytest metrics
         try:
             snapshot = _get_current_snapshot()
-            total_failed = snapshot.get("total_failed", 0)
+            total_failed = snapshot.get("M02", 0)  # real key is M02 (pytest_failed); "total_failed" never existed in the snapshot (S455)
             if total_failed and int(total_failed) > 0:
                 opportunities.append({
                     "id":          f"IO-{uuid.uuid4()}",
