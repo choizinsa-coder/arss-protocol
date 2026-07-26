@@ -129,10 +129,15 @@ class TestArea13Evaluation:
         assert snapshot["M01"] is not None
         assert isinstance(snapshot["M01"], int)
 
-    def test_get_current_snapshot_m07_populated(self):
+    def test_get_current_snapshot_m07_unavailable(self):
+        """M07(daily_api_cost): S444에서 생산자가 삭제되어 None이 정상이다."""
         snapshot = ev.get_current_snapshot()
-        assert snapshot["M07"] is not None
-        assert isinstance(snapshot["M07"], float)
+        assert "M07" in snapshot
+        assert snapshot["M07"] is None
+
+    def test_m07_source_not_deleted_file(self):
+        """M07 정의의 source가 삭제된 상태파일을 더 이상 가리키지 않는다."""
+        assert "DOMI_DAILY_COST_STATE" not in ev.METRICS_7["M07"]["source"]
 
     def test_get_current_snapshot_manual_metrics_none(self):
         snapshot = ev.get_current_snapshot()

@@ -11,7 +11,7 @@ EAG: EAG-S321-AIF-AREA11-13-001
   M04 -- agent_cb_zpb_count     (수동)
   M05 -- session_inc_count      (수동)
   M06 -- dep_completion_rate    (수동)
-  M07 -- daily_api_cost         (DOMI_DAILY_COST_STATE.json 자동)
+  M07 -- daily_api_cost         (DEPRECATED S444: 생산자 삭제 -> 자동수집 불가, None 정상)
 
 준용: sovereign_authority.py (Area 5) 패턴
 """
@@ -34,7 +34,7 @@ METRICS_7: dict = {
     "M04": {"id": "M04", "name": "agent_cb_zpb_count",      "unit": "count",   "source": "manual"},
     "M05": {"id": "M05", "name": "session_inc_count",       "unit": "count",   "source": "manual"},
     "M06": {"id": "M06", "name": "dep_completion_rate",     "unit": "percent", "source": "manual"},
-    "M07": {"id": "M07", "name": "daily_api_cost",          "unit": "usd",     "source": "DOMI_DAILY_COST_STATE.json"},
+    "M07": {"id": "M07", "name": "daily_api_cost",          "unit": "usd",     "source": "deprecated_s444_producer_removed"},
 }
 
 _VALID_METRIC_IDS = frozenset(METRICS_7.keys())
@@ -151,7 +151,7 @@ def get_current_snapshot() -> dict:
     자동 수집 가능 지푗10 실측:
       M01/M02: SESSION_CONTEXT POINTER -> SC_FINAL -> pytest_status
                FIX: POINTER key = 'current_session' (실측 확인)
-      M07: runtime/governance/budget/DOMI_DAILY_COST_STATE.json -> total_usd
+      M07: DEPRECATED -- S444에서 생산자(비용 상태파일)가 삭제되어 None 반환이 정상
            FIX: 실제 키 = 'total_usd' ('daily_cost' 아님)
       M03~M06: 수동 기록 필요 -> None
     """
@@ -181,7 +181,7 @@ def get_current_snapshot() -> dict:
     except (json.JSONDecodeError, IOError, OSError):
         pass
 
-    # M07: DOMI_DAILY_COST_STATE.json
+    # M07: DEPRECATED (S444 생산자 삭제). 파일이 복원되면 자동으로 다시 값을 읽는다
     cost_path = ROOT / "runtime/governance/budget/DOMI_DAILY_COST_STATE.json"
     try:
         if cost_path.exists():
