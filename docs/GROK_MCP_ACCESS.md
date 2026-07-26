@@ -2,7 +2,7 @@
 
 ## SuperAssistant에 입력할 서버 주소
 
-https://arss-protocol.org/grok/mcp?token=WnZ9CxVWf1Blo59wg_4dvBIRujR8j5poN0F-OsPHDkE
+https://arss-protocol.org/grok/mcp?token=<REDACTED-S449>
 
 ## 보관 위치
 - 토큰 원본: /etc/arss/grok_token.txt
