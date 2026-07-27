@@ -59,3 +59,25 @@ def test_c6_write_file_not_publicly_exposed():
     if not os.access(NGINX, os.R_OK):
         pytest.skip("nginx conf not readable")
     assert "/domi/write_file" not in open(NGINX).read()
+
+
+def test_c7_domi_read_endpoints_exposed():
+    if not os.access(NGINX, os.R_OK):
+        pytest.skip("nginx conf not readable")
+    s = open(NGINX).read()
+    for tool in ["read_file", "list_dir", "grep_scoped", "read_log", "get_runtime_snapshot"]:
+        assert "location = /domi/%s {" % tool in s
+
+
+def test_c8_domi_endpoints_rate_limited():
+    if not os.access(NGINX, os.R_OK):
+        pytest.skip("nginx conf not readable")
+    s = open(NGINX).read()
+    i = s.index("location = /domi/read_file {")
+    assert "limit_req" in s[i:i + 400]
+
+
+def test_c9_jeni_endpoints_not_public():
+    if not os.access(NGINX, os.R_OK):
+        pytest.skip("nginx conf not readable")
+    assert "location = /jeni/" not in open(NGINX).read()
