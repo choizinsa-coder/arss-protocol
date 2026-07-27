@@ -1332,11 +1332,17 @@ def _handle_agent_request(handler, actor_id: str, endpoint_prefix: str) -> None:
     actor_id: "domi" or "jeni"
     endpoint_prefix: "/domi/" or "/jeni/"
     """
-    # Bearer token 검증
+    # Bearer token 검증 + 신원 일치 (EAG-S457-IDENTITY-SEAL-001)
+    # token에서 actor를 해석하여 경로 actor와 비교한다.
+    # 경로가 신원을 정하면 유효한 타인 토큰으로 위장이 가능하다.
     auth_header = handler.headers.get("Authorization", "")
-    is_valid, err = _verify_agent_bearer_token(auth_header)
-    if not is_valid:
+    token_actor, err = _resolve_actor_from_token(auth_header)
+    if token_actor is None:
         handler._send_json(401, err)
+        return
+    if token_actor != actor_id:
+        handler._send_json(403, {"error": "actor_mismatch",
+            "error_description": f"token actor '{token_actor}' may not use {endpoint_prefix} endpoints"})
         return
 
     # body 파싱
