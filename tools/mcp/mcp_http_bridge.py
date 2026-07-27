@@ -831,6 +831,38 @@ def _handle_write_tool(tool_name: str, arguments: dict) -> dict:
 
 # ── ask_domi 핸들러 (PT-S194-DOMI-RUNTIME-001, S194 EAG-1) ───────────────────
 
+# -- S443 conditional-5 stage 1 (EAG-S459-ESCALATE-DECL-001) ------------------
+def _record_escalate_declaration(tool_name: str, arguments: dict, session: str) -> bool:
+    """
+    Bridge entry point: determine whether the escalate key was actually declared.
+    Distinguishes MISSING (key absent) from an explicit False and records a WARN
+    audit event for MISSING. Stage 1 does NOT reject the call
+    (S458 jeni 2nd verdict: TRUST_ADVISORY, STOP_SIGNAL OFF).
+
+    Rationale (S458 measurement): immediately after this point forward_body always
+    fills escalate, so downstream runtimes can never observe the MISSING state.
+    Absence checks are only valid here.
+
+    Returns declared(bool). Does not alter control flow.
+    """
+    declared = "escalate" in arguments
+    if declared:
+        return True
+    try:
+        write_audit(
+            agent_id=arguments.get("actor_id", "unknown"),
+            requested_shard="agent_call/" + tool_name,
+            returned_scope="escalate_declaration",
+            decision="WARN",
+            reason="ESCALATE_MISSING: escalate key not declared (session=" + str(session) + ")",
+            load_state=_get_bridge_state(),
+            retrieval_class="CLASS-B",
+        )
+    except Exception as _esc_err:
+        print("[ESCALATE_MISSING audit best-effort failure]", repr(_esc_err), file=sys.stderr)
+    return False
+
+
 def _handle_ask_domi(arguments: dict) -> dict:
     """
     ask_domi — 캐디가 도미(OpenAI)에게 설계를 의뢰.
@@ -847,6 +879,7 @@ def _handle_ask_domi(arguments: dict) -> dict:
         return {"isError": True, "content": [{"type": "text", "text": "DENY: prompt required"}]}
 
     session = arguments.get("session", "S000")
+    _record_escalate_declaration("ask_domi", arguments, session)
     escalate = bool(arguments.get("escalate", False))
     reason = arguments.get("reason")
     forward_body = json.dumps({"prompt": prompt, "context": context, "session": session, "escalate": escalate, "reason": reason}).encode("utf-8")
@@ -976,6 +1009,7 @@ def _handle_ask_jeni(arguments: dict) -> dict:
         return {"isError": True, "content": [{"type": "text", "text": "DENY: prompt required"}]}
 
     session = arguments.get("session", "S000")
+    _record_escalate_declaration("ask_jeni", arguments, session)
     escalate = bool(arguments.get("escalate", False))
     reason = arguments.get("reason")
     forward_body = json.dumps({"prompt": prompt, "context": context, "session": session, "escalate": escalate, "reason": reason}).encode("utf-8")
